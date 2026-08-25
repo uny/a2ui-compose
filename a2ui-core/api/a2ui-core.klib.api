@@ -6,6 +6,1325 @@
 // - Show declarations: true
 
 // Library unique name: <dev.ynagai.a2ui:a2ui-core>
+final enum class dev.ynagai.a2ui.core.protocol/AllowedCallers : kotlin/Enum<dev.ynagai.a2ui.core.protocol/AllowedCallers> { // dev.ynagai.a2ui.core.protocol/AllowedCallers|null[0]
+    enum entry AGENT_ONLY // dev.ynagai.a2ui.core.protocol/AllowedCallers.AGENT_ONLY|null[0]
+    enum entry RENDERER_ONLY // dev.ynagai.a2ui.core.protocol/AllowedCallers.RENDERER_ONLY|null[0]
+    enum entry RENDERER_OR_AGENT // dev.ynagai.a2ui.core.protocol/AllowedCallers.RENDERER_OR_AGENT|null[0]
+
+    final val entries // dev.ynagai.a2ui.core.protocol/AllowedCallers.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.ynagai.a2ui.core.protocol/AllowedCallers> // dev.ynagai.a2ui.core.protocol/AllowedCallers.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val wireName // dev.ynagai.a2ui.core.protocol/AllowedCallers.wireName|{}wireName[0]
+        final fun <get-wireName>(): kotlin/String // dev.ynagai.a2ui.core.protocol/AllowedCallers.wireName.<get-wireName>|<get-wireName>(){}[0]
+
+    final fun valueOf(kotlin/String): dev.ynagai.a2ui.core.protocol/AllowedCallers // dev.ynagai.a2ui.core.protocol/AllowedCallers.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.ynagai.a2ui.core.protocol/AllowedCallers> // dev.ynagai.a2ui.core.protocol/AllowedCallers.values|values#static(){}[0]
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/AllowedCallers.Companion|null[0]
+        final val DEFAULT // dev.ynagai.a2ui.core.protocol/AllowedCallers.Companion.DEFAULT|{}DEFAULT[0]
+            final fun <get-DEFAULT>(): dev.ynagai.a2ui.core.protocol/AllowedCallers // dev.ynagai.a2ui.core.protocol/AllowedCallers.Companion.DEFAULT.<get-DEFAULT>|<get-DEFAULT>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/AllowedCallers> // dev.ynagai.a2ui.core.protocol/AllowedCallers.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/AllowedCallers.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+final enum class dev.ynagai.a2ui.core.protocol/LiveRegion : kotlin/Enum<dev.ynagai.a2ui.core.protocol/LiveRegion> { // dev.ynagai.a2ui.core.protocol/LiveRegion|null[0]
+    enum entry ASSERTIVE // dev.ynagai.a2ui.core.protocol/LiveRegion.ASSERTIVE|null[0]
+    enum entry OFF // dev.ynagai.a2ui.core.protocol/LiveRegion.OFF|null[0]
+    enum entry POLITE // dev.ynagai.a2ui.core.protocol/LiveRegion.POLITE|null[0]
+
+    final val entries // dev.ynagai.a2ui.core.protocol/LiveRegion.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.ynagai.a2ui.core.protocol/LiveRegion> // dev.ynagai.a2ui.core.protocol/LiveRegion.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): dev.ynagai.a2ui.core.protocol/LiveRegion // dev.ynagai.a2ui.core.protocol/LiveRegion.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.ynagai.a2ui.core.protocol/LiveRegion> // dev.ynagai.a2ui.core.protocol/LiveRegion.values|values#static(){}[0]
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/LiveRegion.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/LiveRegion> // dev.ynagai.a2ui.core.protocol/LiveRegion.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/LiveRegion.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+final enum class dev.ynagai.a2ui.core.protocol/ReturnType : kotlin/Enum<dev.ynagai.a2ui.core.protocol/ReturnType> { // dev.ynagai.a2ui.core.protocol/ReturnType|null[0]
+    enum entry ANY // dev.ynagai.a2ui.core.protocol/ReturnType.ANY|null[0]
+    enum entry ARRAY // dev.ynagai.a2ui.core.protocol/ReturnType.ARRAY|null[0]
+    enum entry BOOLEAN // dev.ynagai.a2ui.core.protocol/ReturnType.BOOLEAN|null[0]
+    enum entry NUMBER // dev.ynagai.a2ui.core.protocol/ReturnType.NUMBER|null[0]
+    enum entry OBJECT // dev.ynagai.a2ui.core.protocol/ReturnType.OBJECT|null[0]
+    enum entry STRING // dev.ynagai.a2ui.core.protocol/ReturnType.STRING|null[0]
+    enum entry VALIDATION_RESULT // dev.ynagai.a2ui.core.protocol/ReturnType.VALIDATION_RESULT|null[0]
+    enum entry VOID // dev.ynagai.a2ui.core.protocol/ReturnType.VOID|null[0]
+
+    final val entries // dev.ynagai.a2ui.core.protocol/ReturnType.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.ynagai.a2ui.core.protocol/ReturnType> // dev.ynagai.a2ui.core.protocol/ReturnType.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val wireName // dev.ynagai.a2ui.core.protocol/ReturnType.wireName|{}wireName[0]
+        final fun <get-wireName>(): kotlin/String // dev.ynagai.a2ui.core.protocol/ReturnType.wireName.<get-wireName>|<get-wireName>(){}[0]
+
+    final fun valueOf(kotlin/String): dev.ynagai.a2ui.core.protocol/ReturnType // dev.ynagai.a2ui.core.protocol/ReturnType.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.ynagai.a2ui.core.protocol/ReturnType> // dev.ynagai.a2ui.core.protocol/ReturnType.values|values#static(){}[0]
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/ReturnType.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/ReturnType> // dev.ynagai.a2ui.core.protocol/ReturnType.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/ReturnType.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+final enum class dev.ynagai.a2ui.core.protocol/Severity : kotlin/Enum<dev.ynagai.a2ui.core.protocol/Severity> { // dev.ynagai.a2ui.core.protocol/Severity|null[0]
+    enum entry ERROR // dev.ynagai.a2ui.core.protocol/Severity.ERROR|null[0]
+    enum entry INFO // dev.ynagai.a2ui.core.protocol/Severity.INFO|null[0]
+    enum entry WARNING // dev.ynagai.a2ui.core.protocol/Severity.WARNING|null[0]
+
+    final val entries // dev.ynagai.a2ui.core.protocol/Severity.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.ynagai.a2ui.core.protocol/Severity> // dev.ynagai.a2ui.core.protocol/Severity.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val wireName // dev.ynagai.a2ui.core.protocol/Severity.wireName|{}wireName[0]
+        final fun <get-wireName>(): kotlin/String // dev.ynagai.a2ui.core.protocol/Severity.wireName.<get-wireName>|<get-wireName>(){}[0]
+
+    final fun valueOf(kotlin/String): dev.ynagai.a2ui.core.protocol/Severity // dev.ynagai.a2ui.core.protocol/Severity.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.ynagai.a2ui.core.protocol/Severity> // dev.ynagai.a2ui.core.protocol/Severity.values|values#static(){}[0]
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/Severity.Companion|null[0]
+        final val DEFAULT // dev.ynagai.a2ui.core.protocol/Severity.Companion.DEFAULT|{}DEFAULT[0]
+            final fun <get-DEFAULT>(): dev.ynagai.a2ui.core.protocol/Severity // dev.ynagai.a2ui.core.protocol/Severity.Companion.DEFAULT.<get-DEFAULT>|<get-DEFAULT>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/Severity> // dev.ynagai.a2ui.core.protocol/Severity.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/Severity.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+final enum class dev.ynagai.a2ui.core.protocol/ValidationErrorCode : kotlin/Enum<dev.ynagai.a2ui.core.protocol/ValidationErrorCode> { // dev.ynagai.a2ui.core.protocol/ValidationErrorCode|null[0]
+    enum entry UNALLOWED_CHILD // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.UNALLOWED_CHILD|null[0]
+    enum entry UNALLOWED_PARENT // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.UNALLOWED_PARENT|null[0]
+    enum entry VALIDATION_FAILED // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.VALIDATION_FAILED|null[0]
+
+    final val entries // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.ynagai.a2ui.core.protocol/ValidationErrorCode> // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val wireName // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.wireName|{}wireName[0]
+        final fun <get-wireName>(): kotlin/String // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.wireName.<get-wireName>|<get-wireName>(){}[0]
+
+    final fun valueOf(kotlin/String): dev.ynagai.a2ui.core.protocol/ValidationErrorCode // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.ynagai.a2ui.core.protocol/ValidationErrorCode> // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.values|values#static(){}[0]
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/ValidationErrorCode> // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/ValidationErrorCode.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/Action { // dev.ynagai.a2ui.core.protocol/Action|null[0]
+    final class Event : dev.ynagai.a2ui.core.protocol/Action { // dev.ynagai.a2ui.core.protocol/Action.Event|null[0]
+        constructor <init>(dev.ynagai.a2ui.core.protocol/ActionEvent) // dev.ynagai.a2ui.core.protocol/Action.Event.<init>|<init>(dev.ynagai.a2ui.core.protocol.ActionEvent){}[0]
+
+        final val event // dev.ynagai.a2ui.core.protocol/Action.Event.event|{}event[0]
+            final fun <get-event>(): dev.ynagai.a2ui.core.protocol/ActionEvent // dev.ynagai.a2ui.core.protocol/Action.Event.event.<get-event>|<get-event>(){}[0]
+
+        final fun component1(): dev.ynagai.a2ui.core.protocol/ActionEvent // dev.ynagai.a2ui.core.protocol/Action.Event.component1|component1(){}[0]
+        final fun copy(dev.ynagai.a2ui.core.protocol/ActionEvent = ...): dev.ynagai.a2ui.core.protocol/Action.Event // dev.ynagai.a2ui.core.protocol/Action.Event.copy|copy(dev.ynagai.a2ui.core.protocol.ActionEvent){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/Action.Event.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/Action.Event.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/Action.Event.toString|toString(){}[0]
+    }
+
+    final class Invoke : dev.ynagai.a2ui.core.protocol/Action { // dev.ynagai.a2ui.core.protocol/Action.Invoke|null[0]
+        constructor <init>(dev.ynagai.a2ui.core.protocol/FunctionCall) // dev.ynagai.a2ui.core.protocol/Action.Invoke.<init>|<init>(dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+
+        final val functionCall // dev.ynagai.a2ui.core.protocol/Action.Invoke.functionCall|{}functionCall[0]
+            final fun <get-functionCall>(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.protocol/Action.Invoke.functionCall.<get-functionCall>|<get-functionCall>(){}[0]
+
+        final fun component1(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.protocol/Action.Invoke.component1|component1(){}[0]
+        final fun copy(dev.ynagai.a2ui.core.protocol/FunctionCall = ...): dev.ynagai.a2ui.core.protocol/Action.Invoke // dev.ynagai.a2ui.core.protocol/Action.Invoke.copy|copy(dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/Action.Invoke.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/Action.Invoke.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/Action.Invoke.toString|toString(){}[0]
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/Action.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/Action> // dev.ynagai.a2ui.core.protocol/Action.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/Action.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/AgentToRendererMessage { // dev.ynagai.a2ui.core.protocol/AgentToRendererMessage|null[0]
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/AgentToRendererMessage.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/AgentToRendererMessage> // dev.ynagai.a2ui.core.protocol/AgentToRendererMessage.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/AgentToRendererMessage.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/BoundValue : dev.ynagai.a2ui.core.protocol/DynamicBoolean, dev.ynagai.a2ui.core.protocol/DynamicNumber, dev.ynagai.a2ui.core.protocol/DynamicString, dev.ynagai.a2ui.core.protocol/DynamicStringList, dev.ynagai.a2ui.core.protocol/DynamicValue { // dev.ynagai.a2ui.core.protocol/BoundValue|null[0]
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/BoundValue.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/BoundValue> // dev.ynagai.a2ui.core.protocol/BoundValue.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/BoundValue.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/ChildList { // dev.ynagai.a2ui.core.protocol/ChildList|null[0]
+    final class Static : dev.ynagai.a2ui.core.protocol/ChildList { // dev.ynagai.a2ui.core.protocol/ChildList.Static|null[0]
+        constructor <init>(kotlin.collections/List<kotlin/String>) // dev.ynagai.a2ui.core.protocol/ChildList.Static.<init>|<init>(kotlin.collections.List<kotlin.String>){}[0]
+
+        final val ids // dev.ynagai.a2ui.core.protocol/ChildList.Static.ids|{}ids[0]
+            final fun <get-ids>(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.protocol/ChildList.Static.ids.<get-ids>|<get-ids>(){}[0]
+
+        final fun component1(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.protocol/ChildList.Static.component1|component1(){}[0]
+        final fun copy(kotlin.collections/List<kotlin/String> = ...): dev.ynagai.a2ui.core.protocol/ChildList.Static // dev.ynagai.a2ui.core.protocol/ChildList.Static.copy|copy(kotlin.collections.List<kotlin.String>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/ChildList.Static.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/ChildList.Static.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/ChildList.Static.toString|toString(){}[0]
+    }
+
+    final class Template : dev.ynagai.a2ui.core.protocol/ChildList { // dev.ynagai.a2ui.core.protocol/ChildList.Template|null[0]
+        constructor <init>(kotlin/String, kotlin/String) // dev.ynagai.a2ui.core.protocol/ChildList.Template.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+        final val componentId // dev.ynagai.a2ui.core.protocol/ChildList.Template.componentId|{}componentId[0]
+            final fun <get-componentId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/ChildList.Template.componentId.<get-componentId>|<get-componentId>(){}[0]
+        final val path // dev.ynagai.a2ui.core.protocol/ChildList.Template.path|{}path[0]
+            final fun <get-path>(): kotlin/String // dev.ynagai.a2ui.core.protocol/ChildList.Template.path.<get-path>|<get-path>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/ChildList.Template.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.ynagai.a2ui.core.protocol/ChildList.Template.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ...): dev.ynagai.a2ui.core.protocol/ChildList.Template // dev.ynagai.a2ui.core.protocol/ChildList.Template.copy|copy(kotlin.String;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/ChildList.Template.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/ChildList.Template.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/ChildList.Template.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/ChildList.Template> { // dev.ynagai.a2ui.core.protocol/ChildList.Template.$serializer|null[0]
+            final val descriptor // dev.ynagai.a2ui.core.protocol/ChildList.Template.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/ChildList.Template.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/ChildList.Template.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/ChildList.Template // dev.ynagai.a2ui.core.protocol/ChildList.Template.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/ChildList.Template) // dev.ynagai.a2ui.core.protocol/ChildList.Template.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.ChildList.Template){}[0]
+        }
+
+        final object Companion { // dev.ynagai.a2ui.core.protocol/ChildList.Template.Companion|null[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/ChildList.Template> // dev.ynagai.a2ui.core.protocol/ChildList.Template.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/ChildList.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/ChildList> // dev.ynagai.a2ui.core.protocol/ChildList.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/ChildList.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/DynamicBoolean { // dev.ynagai.a2ui.core.protocol/DynamicBoolean|null[0]
+    final class Literal : dev.ynagai.a2ui.core.protocol/DynamicBoolean { // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Literal|null[0]
+        constructor <init>(kotlin/Boolean) // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Literal.<init>|<init>(kotlin.Boolean){}[0]
+
+        final val value // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Literal.value|{}value[0]
+            final fun <get-value>(): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Literal.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Literal.component1|component1(){}[0]
+        final fun copy(kotlin/Boolean = ...): dev.ynagai.a2ui.core.protocol/DynamicBoolean.Literal // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Literal.copy|copy(kotlin.Boolean){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Literal.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Literal.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Literal.toString|toString(){}[0]
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/DynamicBoolean> // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/DynamicBoolean.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/DynamicNumber { // dev.ynagai.a2ui.core.protocol/DynamicNumber|null[0]
+    final class Literal : dev.ynagai.a2ui.core.protocol/DynamicNumber { // dev.ynagai.a2ui.core.protocol/DynamicNumber.Literal|null[0]
+        constructor <init>(kotlin/Double) // dev.ynagai.a2ui.core.protocol/DynamicNumber.Literal.<init>|<init>(kotlin.Double){}[0]
+
+        final val value // dev.ynagai.a2ui.core.protocol/DynamicNumber.Literal.value|{}value[0]
+            final fun <get-value>(): kotlin/Double // dev.ynagai.a2ui.core.protocol/DynamicNumber.Literal.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): kotlin/Double // dev.ynagai.a2ui.core.protocol/DynamicNumber.Literal.component1|component1(){}[0]
+        final fun copy(kotlin/Double = ...): dev.ynagai.a2ui.core.protocol/DynamicNumber.Literal // dev.ynagai.a2ui.core.protocol/DynamicNumber.Literal.copy|copy(kotlin.Double){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/DynamicNumber.Literal.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/DynamicNumber.Literal.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/DynamicNumber.Literal.toString|toString(){}[0]
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/DynamicNumber.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/DynamicNumber> // dev.ynagai.a2ui.core.protocol/DynamicNumber.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/DynamicNumber.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/DynamicString { // dev.ynagai.a2ui.core.protocol/DynamicString|null[0]
+    final class Literal : dev.ynagai.a2ui.core.protocol/DynamicString { // dev.ynagai.a2ui.core.protocol/DynamicString.Literal|null[0]
+        constructor <init>(kotlin/String) // dev.ynagai.a2ui.core.protocol/DynamicString.Literal.<init>|<init>(kotlin.String){}[0]
+
+        final val value // dev.ynagai.a2ui.core.protocol/DynamicString.Literal.value|{}value[0]
+            final fun <get-value>(): kotlin/String // dev.ynagai.a2ui.core.protocol/DynamicString.Literal.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/DynamicString.Literal.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): dev.ynagai.a2ui.core.protocol/DynamicString.Literal // dev.ynagai.a2ui.core.protocol/DynamicString.Literal.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/DynamicString.Literal.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/DynamicString.Literal.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/DynamicString.Literal.toString|toString(){}[0]
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/DynamicString.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/DynamicString> // dev.ynagai.a2ui.core.protocol/DynamicString.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/DynamicString.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/DynamicStringList { // dev.ynagai.a2ui.core.protocol/DynamicStringList|null[0]
+    final class Literal : dev.ynagai.a2ui.core.protocol/DynamicStringList { // dev.ynagai.a2ui.core.protocol/DynamicStringList.Literal|null[0]
+        constructor <init>(kotlin.collections/List<kotlin/String>) // dev.ynagai.a2ui.core.protocol/DynamicStringList.Literal.<init>|<init>(kotlin.collections.List<kotlin.String>){}[0]
+
+        final val value // dev.ynagai.a2ui.core.protocol/DynamicStringList.Literal.value|{}value[0]
+            final fun <get-value>(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.protocol/DynamicStringList.Literal.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.protocol/DynamicStringList.Literal.component1|component1(){}[0]
+        final fun copy(kotlin.collections/List<kotlin/String> = ...): dev.ynagai.a2ui.core.protocol/DynamicStringList.Literal // dev.ynagai.a2ui.core.protocol/DynamicStringList.Literal.copy|copy(kotlin.collections.List<kotlin.String>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/DynamicStringList.Literal.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/DynamicStringList.Literal.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/DynamicStringList.Literal.toString|toString(){}[0]
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/DynamicStringList.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/DynamicStringList> // dev.ynagai.a2ui.core.protocol/DynamicStringList.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/DynamicStringList.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/DynamicValue { // dev.ynagai.a2ui.core.protocol/DynamicValue|null[0]
+    final class Literal : dev.ynagai.a2ui.core.protocol/DynamicValue { // dev.ynagai.a2ui.core.protocol/DynamicValue.Literal|null[0]
+        constructor <init>(kotlinx.serialization.json/JsonElement) // dev.ynagai.a2ui.core.protocol/DynamicValue.Literal.<init>|<init>(kotlinx.serialization.json.JsonElement){}[0]
+
+        final val value // dev.ynagai.a2ui.core.protocol/DynamicValue.Literal.value|{}value[0]
+            final fun <get-value>(): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.protocol/DynamicValue.Literal.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.protocol/DynamicValue.Literal.component1|component1(){}[0]
+        final fun copy(kotlinx.serialization.json/JsonElement = ...): dev.ynagai.a2ui.core.protocol/DynamicValue.Literal // dev.ynagai.a2ui.core.protocol/DynamicValue.Literal.copy|copy(kotlinx.serialization.json.JsonElement){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/DynamicValue.Literal.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/DynamicValue.Literal.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/DynamicValue.Literal.toString|toString(){}[0]
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/DynamicValue.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/DynamicValue> // dev.ynagai.a2ui.core.protocol/DynamicValue.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/DynamicValue.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/FunctionResponse { // dev.ynagai.a2ui.core.protocol/FunctionResponse|null[0]
+    abstract val functionCallId // dev.ynagai.a2ui.core.protocol/FunctionResponse.functionCallId|{}functionCallId[0]
+        abstract fun <get-functionCallId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionResponse.functionCallId.<get-functionCallId>|<get-functionCallId>(){}[0]
+
+    final class Failure : dev.ynagai.a2ui.core.protocol/FunctionResponse { // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure|null[0]
+        constructor <init>(kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionError) // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure.<init>|<init>(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionError){}[0]
+
+        final val error // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure.error|{}error[0]
+            final fun <get-error>(): dev.ynagai.a2ui.core.protocol/FunctionError // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure.error.<get-error>|<get-error>(){}[0]
+        final val functionCallId // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure.functionCallId|{}functionCallId[0]
+            final fun <get-functionCallId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure.functionCallId.<get-functionCallId>|<get-functionCallId>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure.component1|component1(){}[0]
+        final fun component2(): dev.ynagai.a2ui.core.protocol/FunctionError // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., dev.ynagai.a2ui.core.protocol/FunctionError = ...): dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure.copy|copy(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionError){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionResponse.Failure.toString|toString(){}[0]
+    }
+
+    final class Success : dev.ynagai.a2ui.core.protocol/FunctionResponse { // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success|null[0]
+        constructor <init>(kotlin/String, kotlinx.serialization.json/JsonElement) // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success.<init>|<init>(kotlin.String;kotlinx.serialization.json.JsonElement){}[0]
+
+        final val functionCallId // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success.functionCallId|{}functionCallId[0]
+            final fun <get-functionCallId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success.functionCallId.<get-functionCallId>|<get-functionCallId>(){}[0]
+        final val value // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success.value|{}value[0]
+            final fun <get-value>(): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success.component1|component1(){}[0]
+        final fun component2(): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlinx.serialization.json/JsonElement = ...): dev.ynagai.a2ui.core.protocol/FunctionResponse.Success // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success.copy|copy(kotlin.String;kotlinx.serialization.json.JsonElement){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionResponse.Success.toString|toString(){}[0]
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/FunctionResponse.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/FunctionResponse> // dev.ynagai.a2ui.core.protocol/FunctionResponse.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/FunctionResponse.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/RendererErrorMessage : dev.ynagai.a2ui.core.protocol/RendererToAgentMessage { // dev.ynagai.a2ui.core.protocol/RendererErrorMessage|null[0]
+    abstract val code // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.code|{}code[0]
+        abstract fun <get-code>(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.code.<get-code>|<get-code>(){}[0]
+    abstract val message // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.message|{}message[0]
+        abstract fun <get-message>(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.message.<get-message>|<get-message>(){}[0]
+
+    sealed interface Scope { // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope|null[0]
+        final class OnCall : dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope { // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnCall|null[0]
+            constructor <init>(kotlin/String) // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnCall.<init>|<init>(kotlin.String){}[0]
+
+            final val functionCallId // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnCall.functionCallId|{}functionCallId[0]
+                final fun <get-functionCallId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnCall.functionCallId.<get-functionCallId>|<get-functionCallId>(){}[0]
+
+            final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnCall.component1|component1(){}[0]
+            final fun copy(kotlin/String = ...): dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnCall // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnCall.copy|copy(kotlin.String){}[0]
+            final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnCall.equals|equals(kotlin.Any?){}[0]
+            final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnCall.hashCode|hashCode(){}[0]
+            final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnCall.toString|toString(){}[0]
+        }
+
+        final class OnSurface : dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope { // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnSurface|null[0]
+            constructor <init>(kotlin/String) // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnSurface.<init>|<init>(kotlin.String){}[0]
+
+            final val surfaceId // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnSurface.surfaceId|{}surfaceId[0]
+                final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnSurface.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+
+            final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnSurface.component1|component1(){}[0]
+            final fun copy(kotlin/String = ...): dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnSurface // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnSurface.copy|copy(kotlin.String){}[0]
+            final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnSurface.equals|equals(kotlin.Any?){}[0]
+            final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnSurface.hashCode|hashCode(){}[0]
+            final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope.OnSurface.toString|toString(){}[0]
+        }
+    }
+
+    final class Generic : dev.ynagai.a2ui.core.protocol/RendererErrorMessage { // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic|null[0]
+        constructor <init>(kotlin/String, kotlin/String, dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope, kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...) // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.<init>|<init>(kotlin.String;kotlin.String;dev.ynagai.a2ui.core.protocol.RendererErrorMessage.Scope;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
+
+        final val additional // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.additional|{}additional[0]
+            final fun <get-additional>(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.additional.<get-additional>|<get-additional>(){}[0]
+        final val code // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.code|{}code[0]
+            final fun <get-code>(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.code.<get-code>|<get-code>(){}[0]
+        final val message // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.message|{}message[0]
+            final fun <get-message>(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.message.<get-message>|<get-message>(){}[0]
+        final val scope // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.scope|{}scope[0]
+            final fun <get-scope>(): dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.scope.<get-scope>|<get-scope>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.component2|component2(){}[0]
+        final fun component3(): dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.component3|component3(){}[0]
+        final fun component4(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.component4|component4(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ..., dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Scope = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...): dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.copy|copy(kotlin.String;kotlin.String;dev.ynagai.a2ui.core.protocol.RendererErrorMessage.Scope;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Generic.toString|toString(){}[0]
+    }
+
+    final class Validation : dev.ynagai.a2ui.core.protocol/RendererErrorMessage { // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation|null[0]
+        constructor <init>(dev.ynagai.a2ui.core.protocol/ValidationErrorCode, kotlin/String, kotlin/String, kotlin/String) // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.<init>|<init>(dev.ynagai.a2ui.core.protocol.ValidationErrorCode;kotlin.String;kotlin.String;kotlin.String){}[0]
+
+        final val code // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.code|{}code[0]
+            final fun <get-code>(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.code.<get-code>|<get-code>(){}[0]
+        final val message // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.message|{}message[0]
+            final fun <get-message>(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.message.<get-message>|<get-message>(){}[0]
+        final val path // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.path|{}path[0]
+            final fun <get-path>(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.path.<get-path>|<get-path>(){}[0]
+        final val surfaceId // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.surfaceId|{}surfaceId[0]
+            final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+        final val validationCode // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.validationCode|{}validationCode[0]
+            final fun <get-validationCode>(): dev.ynagai.a2ui.core.protocol/ValidationErrorCode // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.validationCode.<get-validationCode>|<get-validationCode>(){}[0]
+
+        final fun component1(): dev.ynagai.a2ui.core.protocol/ValidationErrorCode // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.component2|component2(){}[0]
+        final fun component3(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.component3|component3(){}[0]
+        final fun component4(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.component4|component4(){}[0]
+        final fun copy(dev.ynagai.a2ui.core.protocol/ValidationErrorCode = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...): dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.copy|copy(dev.ynagai.a2ui.core.protocol.ValidationErrorCode;kotlin.String;kotlin.String;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Validation.toString|toString(){}[0]
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/RendererErrorMessage> // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/RendererErrorMessage.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.protocol/RendererToAgentMessage { // dev.ynagai.a2ui.core.protocol/RendererToAgentMessage|null[0]
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/RendererToAgentMessage.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/RendererToAgentMessage> // dev.ynagai.a2ui.core.protocol/RendererToAgentMessage.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/RendererToAgentMessage.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/A2uiFormatException : kotlinx.serialization/SerializationException { // dev.ynagai.a2ui.core.protocol/A2uiFormatException|null[0]
+    constructor <init>(kotlin/String, kotlin/Throwable? = ...) // dev.ynagai.a2ui.core.protocol/A2uiFormatException.<init>|<init>(kotlin.String;kotlin.Throwable?){}[0]
+}
+
+final class dev.ynagai.a2ui.core.protocol/AccessibilityAttributes { // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes|null[0]
+    constructor <init>(dev.ynagai.a2ui.core.protocol/DynamicString? = ..., dev.ynagai.a2ui.core.protocol/DynamicString? = ..., dev.ynagai.a2ui.core.protocol/LiveRegion? = ..., dev.ynagai.a2ui.core.protocol/DynamicBoolean? = ...) // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.<init>|<init>(dev.ynagai.a2ui.core.protocol.DynamicString?;dev.ynagai.a2ui.core.protocol.DynamicString?;dev.ynagai.a2ui.core.protocol.LiveRegion?;dev.ynagai.a2ui.core.protocol.DynamicBoolean?){}[0]
+
+    final val description // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.description|{}description[0]
+        final fun <get-description>(): dev.ynagai.a2ui.core.protocol/DynamicString? // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.description.<get-description>|<get-description>(){}[0]
+    final val hidden // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.hidden|{}hidden[0]
+        final fun <get-hidden>(): dev.ynagai.a2ui.core.protocol/DynamicBoolean? // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.hidden.<get-hidden>|<get-hidden>(){}[0]
+    final val label // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.label|{}label[0]
+        final fun <get-label>(): dev.ynagai.a2ui.core.protocol/DynamicString? // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.label.<get-label>|<get-label>(){}[0]
+    final val live // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.live|{}live[0]
+        final fun <get-live>(): dev.ynagai.a2ui.core.protocol/LiveRegion? // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.live.<get-live>|<get-live>(){}[0]
+
+    final fun component1(): dev.ynagai.a2ui.core.protocol/DynamicString? // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.component1|component1(){}[0]
+    final fun component2(): dev.ynagai.a2ui.core.protocol/DynamicString? // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.component2|component2(){}[0]
+    final fun component3(): dev.ynagai.a2ui.core.protocol/LiveRegion? // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.component3|component3(){}[0]
+    final fun component4(): dev.ynagai.a2ui.core.protocol/DynamicBoolean? // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.component4|component4(){}[0]
+    final fun copy(dev.ynagai.a2ui.core.protocol/DynamicString? = ..., dev.ynagai.a2ui.core.protocol/DynamicString? = ..., dev.ynagai.a2ui.core.protocol/LiveRegion? = ..., dev.ynagai.a2ui.core.protocol/DynamicBoolean? = ...): dev.ynagai.a2ui.core.protocol/AccessibilityAttributes // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.copy|copy(dev.ynagai.a2ui.core.protocol.DynamicString?;dev.ynagai.a2ui.core.protocol.DynamicString?;dev.ynagai.a2ui.core.protocol.LiveRegion?;dev.ynagai.a2ui.core.protocol.DynamicBoolean?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/AccessibilityAttributes> { // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/AccessibilityAttributes // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/AccessibilityAttributes) // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.AccessibilityAttributes){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.Companion|null[0]
+        final val $childSerializers // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/AccessibilityAttributes> // dev.ynagai.a2ui.core.protocol/AccessibilityAttributes.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/ActionEvent { // dev.ynagai.a2ui.core.protocol/ActionEvent|null[0]
+    constructor <init>(kotlin/String, dev.ynagai.a2ui.core.protocol/DynamicString? = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/DynamicValue>? = ...) // dev.ynagai.a2ui.core.protocol/ActionEvent.<init>|<init>(kotlin.String;dev.ynagai.a2ui.core.protocol.DynamicString?;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.DynamicValue>?){}[0]
+
+    final val context // dev.ynagai.a2ui.core.protocol/ActionEvent.context|{}context[0]
+        final fun <get-context>(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/DynamicValue>? // dev.ynagai.a2ui.core.protocol/ActionEvent.context.<get-context>|<get-context>(){}[0]
+    final val name // dev.ynagai.a2ui.core.protocol/ActionEvent.name|{}name[0]
+        final fun <get-name>(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionEvent.name.<get-name>|<get-name>(){}[0]
+    final val userMessage // dev.ynagai.a2ui.core.protocol/ActionEvent.userMessage|{}userMessage[0]
+        final fun <get-userMessage>(): dev.ynagai.a2ui.core.protocol/DynamicString? // dev.ynagai.a2ui.core.protocol/ActionEvent.userMessage.<get-userMessage>|<get-userMessage>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionEvent.component1|component1(){}[0]
+    final fun component2(): dev.ynagai.a2ui.core.protocol/DynamicString? // dev.ynagai.a2ui.core.protocol/ActionEvent.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/DynamicValue>? // dev.ynagai.a2ui.core.protocol/ActionEvent.component3|component3(){}[0]
+    final fun copy(kotlin/String = ..., dev.ynagai.a2ui.core.protocol/DynamicString? = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/DynamicValue>? = ...): dev.ynagai.a2ui.core.protocol/ActionEvent // dev.ynagai.a2ui.core.protocol/ActionEvent.copy|copy(kotlin.String;dev.ynagai.a2ui.core.protocol.DynamicString?;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.DynamicValue>?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/ActionEvent.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/ActionEvent.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionEvent.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/ActionEvent> { // dev.ynagai.a2ui.core.protocol/ActionEvent.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/ActionEvent.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/ActionEvent.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/ActionEvent.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/ActionEvent // dev.ynagai.a2ui.core.protocol/ActionEvent.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/ActionEvent) // dev.ynagai.a2ui.core.protocol/ActionEvent.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.ActionEvent){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/ActionEvent.Companion|null[0]
+        final val $childSerializers // dev.ynagai.a2ui.core.protocol/ActionEvent.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/ActionEvent> // dev.ynagai.a2ui.core.protocol/ActionEvent.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/ActionMessage : dev.ynagai.a2ui.core.protocol/RendererToAgentMessage { // dev.ynagai.a2ui.core.protocol/ActionMessage|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlinx.serialization.json/JsonObject, kotlin/String? = ..., dev.ynagai.a2ui.core.protocol/Metadata? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...) // dev.ynagai.a2ui.core.protocol/ActionMessage.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlinx.serialization.json.JsonObject;kotlin.String?;dev.ynagai.a2ui.core.protocol.Metadata?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
+
+    final val additional // dev.ynagai.a2ui.core.protocol/ActionMessage.additional|{}additional[0]
+        final fun <get-additional>(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/ActionMessage.additional.<get-additional>|<get-additional>(){}[0]
+    final val context // dev.ynagai.a2ui.core.protocol/ActionMessage.context|{}context[0]
+        final fun <get-context>(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.protocol/ActionMessage.context.<get-context>|<get-context>(){}[0]
+    final val metadata // dev.ynagai.a2ui.core.protocol/ActionMessage.metadata|{}metadata[0]
+        final fun <get-metadata>(): dev.ynagai.a2ui.core.protocol/Metadata? // dev.ynagai.a2ui.core.protocol/ActionMessage.metadata.<get-metadata>|<get-metadata>(){}[0]
+    final val name // dev.ynagai.a2ui.core.protocol/ActionMessage.name|{}name[0]
+        final fun <get-name>(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionMessage.name.<get-name>|<get-name>(){}[0]
+    final val sourceComponentId // dev.ynagai.a2ui.core.protocol/ActionMessage.sourceComponentId|{}sourceComponentId[0]
+        final fun <get-sourceComponentId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionMessage.sourceComponentId.<get-sourceComponentId>|<get-sourceComponentId>(){}[0]
+    final val surfaceId // dev.ynagai.a2ui.core.protocol/ActionMessage.surfaceId|{}surfaceId[0]
+        final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionMessage.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+    final val timestamp // dev.ynagai.a2ui.core.protocol/ActionMessage.timestamp|{}timestamp[0]
+        final fun <get-timestamp>(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionMessage.timestamp.<get-timestamp>|<get-timestamp>(){}[0]
+    final val userMessage // dev.ynagai.a2ui.core.protocol/ActionMessage.userMessage|{}userMessage[0]
+        final fun <get-userMessage>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/ActionMessage.userMessage.<get-userMessage>|<get-userMessage>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionMessage.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionMessage.component2|component2(){}[0]
+    final fun component3(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionMessage.component3|component3(){}[0]
+    final fun component4(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionMessage.component4|component4(){}[0]
+    final fun component5(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.protocol/ActionMessage.component5|component5(){}[0]
+    final fun component6(): kotlin/String? // dev.ynagai.a2ui.core.protocol/ActionMessage.component6|component6(){}[0]
+    final fun component7(): dev.ynagai.a2ui.core.protocol/Metadata? // dev.ynagai.a2ui.core.protocol/ActionMessage.component7|component7(){}[0]
+    final fun component8(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/ActionMessage.component8|component8(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlinx.serialization.json/JsonObject = ..., kotlin/String? = ..., dev.ynagai.a2ui.core.protocol/Metadata? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...): dev.ynagai.a2ui.core.protocol/ActionMessage // dev.ynagai.a2ui.core.protocol/ActionMessage.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlinx.serialization.json.JsonObject;kotlin.String?;dev.ynagai.a2ui.core.protocol.Metadata?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/ActionMessage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/ActionMessage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/ActionMessage.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/ActionMessage.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/ActionMessage> // dev.ynagai.a2ui.core.protocol/ActionMessage.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/AgentCapabilities { // dev.ynagai.a2ui.core.protocol/AgentCapabilities|null[0]
+    constructor <init>(dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1) // dev.ynagai.a2ui.core.protocol/AgentCapabilities.<init>|<init>(dev.ynagai.a2ui.core.protocol.AgentCapabilitiesV1){}[0]
+
+    final val v1 // dev.ynagai.a2ui.core.protocol/AgentCapabilities.v1|{}v1[0]
+        final fun <get-v1>(): dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/AgentCapabilities.v1.<get-v1>|<get-v1>(){}[0]
+
+    final fun component1(): dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/AgentCapabilities.component1|component1(){}[0]
+    final fun copy(dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1 = ...): dev.ynagai.a2ui.core.protocol/AgentCapabilities // dev.ynagai.a2ui.core.protocol/AgentCapabilities.copy|copy(dev.ynagai.a2ui.core.protocol.AgentCapabilitiesV1){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/AgentCapabilities.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/AgentCapabilities.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/AgentCapabilities.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/AgentCapabilities> { // dev.ynagai.a2ui.core.protocol/AgentCapabilities.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/AgentCapabilities.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/AgentCapabilities.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/AgentCapabilities.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/AgentCapabilities // dev.ynagai.a2ui.core.protocol/AgentCapabilities.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/AgentCapabilities) // dev.ynagai.a2ui.core.protocol/AgentCapabilities.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.AgentCapabilities){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/AgentCapabilities.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/AgentCapabilities> // dev.ynagai.a2ui.core.protocol/AgentCapabilities.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1 { // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1|null[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>? = ..., kotlin/Boolean? = ...) // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.<init>|<init>(kotlin.collections.List<kotlin.String>?;kotlin.Boolean?){}[0]
+
+    final val acceptsInlineCatalogs // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.acceptsInlineCatalogs|{}acceptsInlineCatalogs[0]
+        final fun <get-acceptsInlineCatalogs>(): kotlin/Boolean? // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.acceptsInlineCatalogs.<get-acceptsInlineCatalogs>|<get-acceptsInlineCatalogs>(){}[0]
+    final val acceptsInlineCatalogsOrDefault // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.acceptsInlineCatalogsOrDefault|{}acceptsInlineCatalogsOrDefault[0]
+        final fun <get-acceptsInlineCatalogsOrDefault>(): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.acceptsInlineCatalogsOrDefault.<get-acceptsInlineCatalogsOrDefault>|<get-acceptsInlineCatalogsOrDefault>(){}[0]
+    final val supportedCatalogIds // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.supportedCatalogIds|{}supportedCatalogIds[0]
+        final fun <get-supportedCatalogIds>(): kotlin.collections/List<kotlin/String>? // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.supportedCatalogIds.<get-supportedCatalogIds>|<get-supportedCatalogIds>(){}[0]
+
+    final fun component1(): kotlin.collections/List<kotlin/String>? // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.component1|component1(){}[0]
+    final fun component2(): kotlin/Boolean? // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.component2|component2(){}[0]
+    final fun copy(kotlin.collections/List<kotlin/String>? = ..., kotlin/Boolean? = ...): dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.copy|copy(kotlin.collections.List<kotlin.String>?;kotlin.Boolean?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1> { // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1) // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.AgentCapabilitiesV1){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.Companion|null[0]
+        final val $childSerializers // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1> // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage : dev.ynagai.a2ui.core.protocol/AgentToRendererMessage { // dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage|null[0]
+    constructor <init>(dev.ynagai.a2ui.core.protocol/FunctionResponse) // dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage.<init>|<init>(dev.ynagai.a2ui.core.protocol.FunctionResponse){}[0]
+
+    final val response // dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage.response|{}response[0]
+        final fun <get-response>(): dev.ynagai.a2ui.core.protocol/FunctionResponse // dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage.response.<get-response>|<get-response>(){}[0]
+
+    final fun component1(): dev.ynagai.a2ui.core.protocol/FunctionResponse // dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage.component1|component1(){}[0]
+    final fun copy(dev.ynagai.a2ui.core.protocol/FunctionResponse = ...): dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage // dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage.copy|copy(dev.ynagai.a2ui.core.protocol.FunctionResponse){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage> // dev.ynagai.a2ui.core.protocol/AgentFunctionResponseMessage.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage : dev.ynagai.a2ui.core.protocol/RendererToAgentMessage { // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage|null[0]
+    constructor <init>(kotlin/String, kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionCall) // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.<init>|<init>(kotlin.String;kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+
+    final val callFunction // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.callFunction|{}callFunction[0]
+        final fun <get-callFunction>(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.callFunction.<get-callFunction>|<get-callFunction>(){}[0]
+    final val functionCallId // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.functionCallId|{}functionCallId[0]
+        final fun <get-functionCallId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.functionCallId.<get-functionCallId>|<get-functionCallId>(){}[0]
+    final val surfaceId // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.surfaceId|{}surfaceId[0]
+        final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.component2|component2(){}[0]
+    final fun component3(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.component3|component3(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., dev.ynagai.a2ui.core.protocol/FunctionCall = ...): dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.copy|copy(kotlin.String;kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage> { // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage) // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.CallAgentFunctionMessage){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage> // dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage : dev.ynagai.a2ui.core.protocol/AgentToRendererMessage { // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage|null[0]
+    constructor <init>(kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionCall) // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.<init>|<init>(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+
+    final val callFunction // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.callFunction|{}callFunction[0]
+        final fun <get-callFunction>(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.callFunction.<get-callFunction>|<get-callFunction>(){}[0]
+    final val functionCallId // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.functionCallId|{}functionCallId[0]
+        final fun <get-functionCallId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.functionCallId.<get-functionCallId>|<get-functionCallId>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.component1|component1(){}[0]
+    final fun component2(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., dev.ynagai.a2ui.core.protocol/FunctionCall = ...): dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.copy|copy(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage> { // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage) // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.CallRendererFunctionMessage){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage> // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/CatalogDefinition { // dev.ynagai.a2ui.core.protocol/CatalogDefinition|null[0]
+    constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/ComponentDefinition> = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionDefinition> = ...) // dev.ynagai.a2ui.core.protocol/CatalogDefinition.<init>|<init>(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.ComponentDefinition>;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.FunctionDefinition>){}[0]
+
+    final val catalogId // dev.ynagai.a2ui.core.protocol/CatalogDefinition.catalogId|{}catalogId[0]
+        final fun <get-catalogId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/CatalogDefinition.catalogId.<get-catalogId>|<get-catalogId>(){}[0]
+    final val components // dev.ynagai.a2ui.core.protocol/CatalogDefinition.components|{}components[0]
+        final fun <get-components>(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/ComponentDefinition> // dev.ynagai.a2ui.core.protocol/CatalogDefinition.components.<get-components>|<get-components>(){}[0]
+    final val description // dev.ynagai.a2ui.core.protocol/CatalogDefinition.description|{}description[0]
+        final fun <get-description>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.description.<get-description>|<get-description>(){}[0]
+    final val effectiveProtocolVersion // dev.ynagai.a2ui.core.protocol/CatalogDefinition.effectiveProtocolVersion|{}effectiveProtocolVersion[0]
+        final fun <get-effectiveProtocolVersion>(): kotlin/String // dev.ynagai.a2ui.core.protocol/CatalogDefinition.effectiveProtocolVersion.<get-effectiveProtocolVersion>|<get-effectiveProtocolVersion>(){}[0]
+    final val functions // dev.ynagai.a2ui.core.protocol/CatalogDefinition.functions|{}functions[0]
+        final fun <get-functions>(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionDefinition> // dev.ynagai.a2ui.core.protocol/CatalogDefinition.functions.<get-functions>|<get-functions>(){}[0]
+    final val instructions // dev.ynagai.a2ui.core.protocol/CatalogDefinition.instructions|{}instructions[0]
+        final fun <get-instructions>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.instructions.<get-instructions>|<get-instructions>(){}[0]
+    final val protocolVersion // dev.ynagai.a2ui.core.protocol/CatalogDefinition.protocolVersion|{}protocolVersion[0]
+        final fun <get-protocolVersion>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.protocolVersion.<get-protocolVersion>|<get-protocolVersion>(){}[0]
+    final val title // dev.ynagai.a2ui.core.protocol/CatalogDefinition.title|{}title[0]
+        final fun <get-title>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.title.<get-title>|<get-title>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/CatalogDefinition.component1|component1(){}[0]
+    final fun component2(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.component2|component2(){}[0]
+    final fun component3(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.component3|component3(){}[0]
+    final fun component4(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.component4|component4(){}[0]
+    final fun component5(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.component5|component5(){}[0]
+    final fun component6(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/ComponentDefinition> // dev.ynagai.a2ui.core.protocol/CatalogDefinition.component6|component6(){}[0]
+    final fun component7(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionDefinition> // dev.ynagai.a2ui.core.protocol/CatalogDefinition.component7|component7(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/ComponentDefinition> = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionDefinition> = ...): dev.ynagai.a2ui.core.protocol/CatalogDefinition // dev.ynagai.a2ui.core.protocol/CatalogDefinition.copy|copy(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.ComponentDefinition>;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.FunctionDefinition>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/CatalogDefinition.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/CatalogDefinition.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/CatalogDefinition.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/CatalogDefinition.Companion|null[0]
+        final const val DEFAULT_PROTOCOL_VERSION // dev.ynagai.a2ui.core.protocol/CatalogDefinition.Companion.DEFAULT_PROTOCOL_VERSION|{}DEFAULT_PROTOCOL_VERSION[0]
+            final fun <get-DEFAULT_PROTOCOL_VERSION>(): kotlin/String // dev.ynagai.a2ui.core.protocol/CatalogDefinition.Companion.DEFAULT_PROTOCOL_VERSION.<get-DEFAULT_PROTOCOL_VERSION>|<get-DEFAULT_PROTOCOL_VERSION>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/CatalogDefinition> // dev.ynagai.a2ui.core.protocol/CatalogDefinition.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/CheckRule { // dev.ynagai.a2ui.core.protocol/CheckRule|null[0]
+    constructor <init>(dev.ynagai.a2ui.core.protocol/BoundValue, kotlin/String? = ...) // dev.ynagai.a2ui.core.protocol/CheckRule.<init>|<init>(dev.ynagai.a2ui.core.protocol.BoundValue;kotlin.String?){}[0]
+
+    final val condition // dev.ynagai.a2ui.core.protocol/CheckRule.condition|{}condition[0]
+        final fun <get-condition>(): dev.ynagai.a2ui.core.protocol/BoundValue // dev.ynagai.a2ui.core.protocol/CheckRule.condition.<get-condition>|<get-condition>(){}[0]
+    final val message // dev.ynagai.a2ui.core.protocol/CheckRule.message|{}message[0]
+        final fun <get-message>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CheckRule.message.<get-message>|<get-message>(){}[0]
+
+    final fun component1(): dev.ynagai.a2ui.core.protocol/BoundValue // dev.ynagai.a2ui.core.protocol/CheckRule.component1|component1(){}[0]
+    final fun component2(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CheckRule.component2|component2(){}[0]
+    final fun copy(dev.ynagai.a2ui.core.protocol/BoundValue = ..., kotlin/String? = ...): dev.ynagai.a2ui.core.protocol/CheckRule // dev.ynagai.a2ui.core.protocol/CheckRule.copy|copy(dev.ynagai.a2ui.core.protocol.BoundValue;kotlin.String?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/CheckRule.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/CheckRule.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/CheckRule.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/CheckRule> { // dev.ynagai.a2ui.core.protocol/CheckRule.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/CheckRule.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/CheckRule.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/CheckRule.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/CheckRule // dev.ynagai.a2ui.core.protocol/CheckRule.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/CheckRule) // dev.ynagai.a2ui.core.protocol/CheckRule.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.CheckRule){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/CheckRule.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/CheckRule> // dev.ynagai.a2ui.core.protocol/CheckRule.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/Checkable { // dev.ynagai.a2ui.core.protocol/Checkable|null[0]
+    constructor <init>(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CheckRule>? = ...) // dev.ynagai.a2ui.core.protocol/Checkable.<init>|<init>(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CheckRule>?){}[0]
+
+    final val checks // dev.ynagai.a2ui.core.protocol/Checkable.checks|{}checks[0]
+        final fun <get-checks>(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CheckRule>? // dev.ynagai.a2ui.core.protocol/Checkable.checks.<get-checks>|<get-checks>(){}[0]
+
+    final fun component1(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CheckRule>? // dev.ynagai.a2ui.core.protocol/Checkable.component1|component1(){}[0]
+    final fun copy(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CheckRule>? = ...): dev.ynagai.a2ui.core.protocol/Checkable // dev.ynagai.a2ui.core.protocol/Checkable.copy|copy(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CheckRule>?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/Checkable.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/Checkable.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/Checkable.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/Checkable> { // dev.ynagai.a2ui.core.protocol/Checkable.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/Checkable.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/Checkable.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/Checkable.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/Checkable // dev.ynagai.a2ui.core.protocol/Checkable.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/Checkable) // dev.ynagai.a2ui.core.protocol/Checkable.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.Checkable){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/Checkable.Companion|null[0]
+        final val $childSerializers // dev.ynagai.a2ui.core.protocol/Checkable.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/Checkable> // dev.ynagai.a2ui.core.protocol/Checkable.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/Component { // dev.ynagai.a2ui.core.protocol/Component|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin/String? = ..., dev.ynagai.a2ui.core.protocol/AccessibilityAttributes? = ..., dev.ynagai.a2ui.core.protocol/Metadata? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...) // dev.ynagai.a2ui.core.protocol/Component.<init>|<init>(kotlin.String;kotlin.String;kotlin.String?;dev.ynagai.a2ui.core.protocol.AccessibilityAttributes?;dev.ynagai.a2ui.core.protocol.Metadata?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
+
+    final val accessibility // dev.ynagai.a2ui.core.protocol/Component.accessibility|{}accessibility[0]
+        final fun <get-accessibility>(): dev.ynagai.a2ui.core.protocol/AccessibilityAttributes? // dev.ynagai.a2ui.core.protocol/Component.accessibility.<get-accessibility>|<get-accessibility>(){}[0]
+    final val catalogId // dev.ynagai.a2ui.core.protocol/Component.catalogId|{}catalogId[0]
+        final fun <get-catalogId>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/Component.catalogId.<get-catalogId>|<get-catalogId>(){}[0]
+    final val component // dev.ynagai.a2ui.core.protocol/Component.component|{}component[0]
+        final fun <get-component>(): kotlin/String // dev.ynagai.a2ui.core.protocol/Component.component.<get-component>|<get-component>(){}[0]
+    final val id // dev.ynagai.a2ui.core.protocol/Component.id|{}id[0]
+        final fun <get-id>(): kotlin/String // dev.ynagai.a2ui.core.protocol/Component.id.<get-id>|<get-id>(){}[0]
+    final val metadata // dev.ynagai.a2ui.core.protocol/Component.metadata|{}metadata[0]
+        final fun <get-metadata>(): dev.ynagai.a2ui.core.protocol/Metadata? // dev.ynagai.a2ui.core.protocol/Component.metadata.<get-metadata>|<get-metadata>(){}[0]
+    final val properties // dev.ynagai.a2ui.core.protocol/Component.properties|{}properties[0]
+        final fun <get-properties>(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/Component.properties.<get-properties>|<get-properties>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/Component.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.ynagai.a2ui.core.protocol/Component.component2|component2(){}[0]
+    final fun component3(): kotlin/String? // dev.ynagai.a2ui.core.protocol/Component.component3|component3(){}[0]
+    final fun component4(): dev.ynagai.a2ui.core.protocol/AccessibilityAttributes? // dev.ynagai.a2ui.core.protocol/Component.component4|component4(){}[0]
+    final fun component5(): dev.ynagai.a2ui.core.protocol/Metadata? // dev.ynagai.a2ui.core.protocol/Component.component5|component5(){}[0]
+    final fun component6(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/Component.component6|component6(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String? = ..., dev.ynagai.a2ui.core.protocol/AccessibilityAttributes? = ..., dev.ynagai.a2ui.core.protocol/Metadata? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...): dev.ynagai.a2ui.core.protocol/Component // dev.ynagai.a2ui.core.protocol/Component.copy|copy(kotlin.String;kotlin.String;kotlin.String?;dev.ynagai.a2ui.core.protocol.AccessibilityAttributes?;dev.ynagai.a2ui.core.protocol.Metadata?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/Component.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/Component.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/Component.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/Component.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/Component> // dev.ynagai.a2ui.core.protocol/Component.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/ComponentDefinition { // dev.ynagai.a2ui.core.protocol/ComponentDefinition|null[0]
+    constructor <init>(kotlinx.serialization.json/JsonObject, kotlin.collections/List<kotlin/String>? = ..., kotlin.collections/List<kotlin/String>? = ..., dev.ynagai.a2ui.core.protocol/Metadata? = ...) // dev.ynagai.a2ui.core.protocol/ComponentDefinition.<init>|<init>(kotlinx.serialization.json.JsonObject;kotlin.collections.List<kotlin.String>?;kotlin.collections.List<kotlin.String>?;dev.ynagai.a2ui.core.protocol.Metadata?){}[0]
+
+    final val allowedChildren // dev.ynagai.a2ui.core.protocol/ComponentDefinition.allowedChildren|{}allowedChildren[0]
+        final fun <get-allowedChildren>(): kotlin.collections/List<kotlin/String>? // dev.ynagai.a2ui.core.protocol/ComponentDefinition.allowedChildren.<get-allowedChildren>|<get-allowedChildren>(){}[0]
+    final val allowedParents // dev.ynagai.a2ui.core.protocol/ComponentDefinition.allowedParents|{}allowedParents[0]
+        final fun <get-allowedParents>(): kotlin.collections/List<kotlin/String>? // dev.ynagai.a2ui.core.protocol/ComponentDefinition.allowedParents.<get-allowedParents>|<get-allowedParents>(){}[0]
+    final val metadata // dev.ynagai.a2ui.core.protocol/ComponentDefinition.metadata|{}metadata[0]
+        final fun <get-metadata>(): dev.ynagai.a2ui.core.protocol/Metadata? // dev.ynagai.a2ui.core.protocol/ComponentDefinition.metadata.<get-metadata>|<get-metadata>(){}[0]
+    final val schema // dev.ynagai.a2ui.core.protocol/ComponentDefinition.schema|{}schema[0]
+        final fun <get-schema>(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.protocol/ComponentDefinition.schema.<get-schema>|<get-schema>(){}[0]
+
+    final fun component1(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.protocol/ComponentDefinition.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<kotlin/String>? // dev.ynagai.a2ui.core.protocol/ComponentDefinition.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<kotlin/String>? // dev.ynagai.a2ui.core.protocol/ComponentDefinition.component3|component3(){}[0]
+    final fun component4(): dev.ynagai.a2ui.core.protocol/Metadata? // dev.ynagai.a2ui.core.protocol/ComponentDefinition.component4|component4(){}[0]
+    final fun copy(kotlinx.serialization.json/JsonObject = ..., kotlin.collections/List<kotlin/String>? = ..., kotlin.collections/List<kotlin/String>? = ..., dev.ynagai.a2ui.core.protocol/Metadata? = ...): dev.ynagai.a2ui.core.protocol/ComponentDefinition // dev.ynagai.a2ui.core.protocol/ComponentDefinition.copy|copy(kotlinx.serialization.json.JsonObject;kotlin.collections.List<kotlin.String>?;kotlin.collections.List<kotlin.String>?;dev.ynagai.a2ui.core.protocol.Metadata?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/ComponentDefinition.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/ComponentDefinition.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/ComponentDefinition.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/ComponentDefinition.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/ComponentDefinition> // dev.ynagai.a2ui.core.protocol/ComponentDefinition.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage : dev.ynagai.a2ui.core.protocol/AgentToRendererMessage { // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage|null[0]
+    constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/Boolean? = ..., kotlin.collections/List<dev.ynagai.a2ui.core.protocol/Component>? = ..., kotlinx.serialization.json/JsonObject? = ..., dev.ynagai.a2ui.core.protocol/SurfaceMetadata? = ...) // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.<init>|<init>(kotlin.String;kotlin.String?;kotlin.Boolean?;kotlin.collections.List<dev.ynagai.a2ui.core.protocol.Component>?;kotlinx.serialization.json.JsonObject?;dev.ynagai.a2ui.core.protocol.SurfaceMetadata?){}[0]
+
+    final val catalogId // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.catalogId|{}catalogId[0]
+        final fun <get-catalogId>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.catalogId.<get-catalogId>|<get-catalogId>(){}[0]
+    final val components // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.components|{}components[0]
+        final fun <get-components>(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/Component>? // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.components.<get-components>|<get-components>(){}[0]
+    final val dataModel // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.dataModel|{}dataModel[0]
+        final fun <get-dataModel>(): kotlinx.serialization.json/JsonObject? // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.dataModel.<get-dataModel>|<get-dataModel>(){}[0]
+    final val metadata // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.metadata|{}metadata[0]
+        final fun <get-metadata>(): dev.ynagai.a2ui.core.protocol/SurfaceMetadata? // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.metadata.<get-metadata>|<get-metadata>(){}[0]
+    final val sendDataModel // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.sendDataModel|{}sendDataModel[0]
+        final fun <get-sendDataModel>(): kotlin/Boolean? // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.sendDataModel.<get-sendDataModel>|<get-sendDataModel>(){}[0]
+    final val surfaceId // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.surfaceId|{}surfaceId[0]
+        final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.component1|component1(){}[0]
+    final fun component2(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.component2|component2(){}[0]
+    final fun component3(): kotlin/Boolean? // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.component3|component3(){}[0]
+    final fun component4(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/Component>? // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.component4|component4(){}[0]
+    final fun component5(): kotlinx.serialization.json/JsonObject? // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.component5|component5(){}[0]
+    final fun component6(): dev.ynagai.a2ui.core.protocol/SurfaceMetadata? // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.component6|component6(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String? = ..., kotlin/Boolean? = ..., kotlin.collections/List<dev.ynagai.a2ui.core.protocol/Component>? = ..., kotlinx.serialization.json/JsonObject? = ..., dev.ynagai.a2ui.core.protocol/SurfaceMetadata? = ...): dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.copy|copy(kotlin.String;kotlin.String?;kotlin.Boolean?;kotlin.collections.List<dev.ynagai.a2ui.core.protocol.Component>?;kotlinx.serialization.json.JsonObject?;dev.ynagai.a2ui.core.protocol.SurfaceMetadata?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage> { // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage) // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.CreateSurfaceMessage){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.Companion|null[0]
+        final val $childSerializers // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage> // dev.ynagai.a2ui.core.protocol/CreateSurfaceMessage.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/DataBinding : dev.ynagai.a2ui.core.protocol/BoundValue { // dev.ynagai.a2ui.core.protocol/DataBinding|null[0]
+    constructor <init>(kotlin/String) // dev.ynagai.a2ui.core.protocol/DataBinding.<init>|<init>(kotlin.String){}[0]
+
+    final val path // dev.ynagai.a2ui.core.protocol/DataBinding.path|{}path[0]
+        final fun <get-path>(): kotlin/String // dev.ynagai.a2ui.core.protocol/DataBinding.path.<get-path>|<get-path>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/DataBinding.component1|component1(){}[0]
+    final fun copy(kotlin/String = ...): dev.ynagai.a2ui.core.protocol/DataBinding // dev.ynagai.a2ui.core.protocol/DataBinding.copy|copy(kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/DataBinding.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/DataBinding.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/DataBinding.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/DataBinding> { // dev.ynagai.a2ui.core.protocol/DataBinding.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/DataBinding.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/DataBinding.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/DataBinding.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/DataBinding // dev.ynagai.a2ui.core.protocol/DataBinding.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/DataBinding) // dev.ynagai.a2ui.core.protocol/DataBinding.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.DataBinding){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/DataBinding.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/DataBinding> // dev.ynagai.a2ui.core.protocol/DataBinding.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage : dev.ynagai.a2ui.core.protocol/AgentToRendererMessage { // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage|null[0]
+    constructor <init>(kotlin/String) // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.<init>|<init>(kotlin.String){}[0]
+
+    final val surfaceId // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.surfaceId|{}surfaceId[0]
+        final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.component1|component1(){}[0]
+    final fun copy(kotlin/String = ...): dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.copy|copy(kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage> { // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage) // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.DeleteSurfaceMessage){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage> // dev.ynagai.a2ui.core.protocol/DeleteSurfaceMessage.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/FunctionCall : dev.ynagai.a2ui.core.protocol/BoundValue { // dev.ynagai.a2ui.core.protocol/FunctionCall|null[0]
+    constructor <init>(kotlin/String, kotlin/String? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? = ...) // dev.ynagai.a2ui.core.protocol/FunctionCall.<init>|<init>(kotlin.String;kotlin.String?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>?){}[0]
+
+    final val args // dev.ynagai.a2ui.core.protocol/FunctionCall.args|{}args[0]
+        final fun <get-args>(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? // dev.ynagai.a2ui.core.protocol/FunctionCall.args.<get-args>|<get-args>(){}[0]
+    final val call // dev.ynagai.a2ui.core.protocol/FunctionCall.call|{}call[0]
+        final fun <get-call>(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionCall.call.<get-call>|<get-call>(){}[0]
+    final val catalogId // dev.ynagai.a2ui.core.protocol/FunctionCall.catalogId|{}catalogId[0]
+        final fun <get-catalogId>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/FunctionCall.catalogId.<get-catalogId>|<get-catalogId>(){}[0]
+    final val isSystemFunction // dev.ynagai.a2ui.core.protocol/FunctionCall.isSystemFunction|{}isSystemFunction[0]
+        final fun <get-isSystemFunction>(): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/FunctionCall.isSystemFunction.<get-isSystemFunction>|<get-isSystemFunction>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionCall.component1|component1(){}[0]
+    final fun component2(): kotlin/String? // dev.ynagai.a2ui.core.protocol/FunctionCall.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? // dev.ynagai.a2ui.core.protocol/FunctionCall.component3|component3(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? = ...): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.protocol/FunctionCall.copy|copy(kotlin.String;kotlin.String?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/FunctionCall.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/FunctionCall.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionCall.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/FunctionCall> { // dev.ynagai.a2ui.core.protocol/FunctionCall.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/FunctionCall.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/FunctionCall.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/FunctionCall.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.protocol/FunctionCall.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/FunctionCall) // dev.ynagai.a2ui.core.protocol/FunctionCall.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/FunctionCall.Companion|null[0]
+        final const val INDEX // dev.ynagai.a2ui.core.protocol/FunctionCall.Companion.INDEX|{}INDEX[0]
+            final fun <get-INDEX>(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionCall.Companion.INDEX.<get-INDEX>|<get-INDEX>(){}[0]
+
+        final val $childSerializers // dev.ynagai.a2ui.core.protocol/FunctionCall.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/FunctionCall> // dev.ynagai.a2ui.core.protocol/FunctionCall.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema { // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema|null[0]
+    constructor <init>(kotlinx.serialization.json/JsonObject) // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.<init>|<init>(kotlinx.serialization.json.JsonObject){}[0]
+
+    final val allOf // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.allOf|{}allOf[0]
+        final fun <get-allOf>(): kotlin.collections/List<kotlinx.serialization.json/JsonObject>? // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.allOf.<get-allOf>|<get-allOf>(){}[0]
+    final val argsSchema // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.argsSchema|{}argsSchema[0]
+        final fun <get-argsSchema>(): kotlinx.serialization.json/JsonObject? // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.argsSchema.<get-argsSchema>|<get-argsSchema>(){}[0]
+    final val callName // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.callName|{}callName[0]
+        final fun <get-callName>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.callName.<get-callName>|<get-callName>(){}[0]
+    final val raw // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.raw|{}raw[0]
+        final fun <get-raw>(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.raw.<get-raw>|<get-raw>(){}[0]
+    final val required // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.required|{}required[0]
+        final fun <get-required>(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.required.<get-required>|<get-required>(){}[0]
+
+    final fun component1(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.component1|component1(){}[0]
+    final fun copy(kotlinx.serialization.json/JsonObject = ...): dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.copy|copy(kotlinx.serialization.json.JsonObject){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema.toString|toString(){}[0]
+}
+
+final class dev.ynagai.a2ui.core.protocol/FunctionDefinition { // dev.ynagai.a2ui.core.protocol/FunctionDefinition|null[0]
+    constructor <init>(dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema, dev.ynagai.a2ui.core.protocol/ReturnType, dev.ynagai.a2ui.core.protocol/AllowedCallers? = ..., kotlin/Boolean? = ...) // dev.ynagai.a2ui.core.protocol/FunctionDefinition.<init>|<init>(dev.ynagai.a2ui.core.protocol.FunctionCallValidationSchema;dev.ynagai.a2ui.core.protocol.ReturnType;dev.ynagai.a2ui.core.protocol.AllowedCallers?;kotlin.Boolean?){}[0]
+
+    final val allowedCallers // dev.ynagai.a2ui.core.protocol/FunctionDefinition.allowedCallers|{}allowedCallers[0]
+        final fun <get-allowedCallers>(): dev.ynagai.a2ui.core.protocol/AllowedCallers? // dev.ynagai.a2ui.core.protocol/FunctionDefinition.allowedCallers.<get-allowedCallers>|<get-allowedCallers>(){}[0]
+    final val effectiveAllowedCallers // dev.ynagai.a2ui.core.protocol/FunctionDefinition.effectiveAllowedCallers|{}effectiveAllowedCallers[0]
+        final fun <get-effectiveAllowedCallers>(): dev.ynagai.a2ui.core.protocol/AllowedCallers // dev.ynagai.a2ui.core.protocol/FunctionDefinition.effectiveAllowedCallers.<get-effectiveAllowedCallers>|<get-effectiveAllowedCallers>(){}[0]
+    final val requiresUserActivation // dev.ynagai.a2ui.core.protocol/FunctionDefinition.requiresUserActivation|{}requiresUserActivation[0]
+        final fun <get-requiresUserActivation>(): kotlin/Boolean? // dev.ynagai.a2ui.core.protocol/FunctionDefinition.requiresUserActivation.<get-requiresUserActivation>|<get-requiresUserActivation>(){}[0]
+    final val returnType // dev.ynagai.a2ui.core.protocol/FunctionDefinition.returnType|{}returnType[0]
+        final fun <get-returnType>(): dev.ynagai.a2ui.core.protocol/ReturnType // dev.ynagai.a2ui.core.protocol/FunctionDefinition.returnType.<get-returnType>|<get-returnType>(){}[0]
+    final val schema // dev.ynagai.a2ui.core.protocol/FunctionDefinition.schema|{}schema[0]
+        final fun <get-schema>(): dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema // dev.ynagai.a2ui.core.protocol/FunctionDefinition.schema.<get-schema>|<get-schema>(){}[0]
+
+    final fun component1(): dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema // dev.ynagai.a2ui.core.protocol/FunctionDefinition.component1|component1(){}[0]
+    final fun component2(): dev.ynagai.a2ui.core.protocol/ReturnType // dev.ynagai.a2ui.core.protocol/FunctionDefinition.component2|component2(){}[0]
+    final fun component3(): dev.ynagai.a2ui.core.protocol/AllowedCallers? // dev.ynagai.a2ui.core.protocol/FunctionDefinition.component3|component3(){}[0]
+    final fun component4(): kotlin/Boolean? // dev.ynagai.a2ui.core.protocol/FunctionDefinition.component4|component4(){}[0]
+    final fun copy(dev.ynagai.a2ui.core.protocol/FunctionCallValidationSchema = ..., dev.ynagai.a2ui.core.protocol/ReturnType = ..., dev.ynagai.a2ui.core.protocol/AllowedCallers? = ..., kotlin/Boolean? = ...): dev.ynagai.a2ui.core.protocol/FunctionDefinition // dev.ynagai.a2ui.core.protocol/FunctionDefinition.copy|copy(dev.ynagai.a2ui.core.protocol.FunctionCallValidationSchema;dev.ynagai.a2ui.core.protocol.ReturnType;dev.ynagai.a2ui.core.protocol.AllowedCallers?;kotlin.Boolean?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/FunctionDefinition.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/FunctionDefinition.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionDefinition.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/FunctionDefinition.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/FunctionDefinition> // dev.ynagai.a2ui.core.protocol/FunctionDefinition.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/FunctionError { // dev.ynagai.a2ui.core.protocol/FunctionError|null[0]
+    constructor <init>(kotlin/String, kotlin/String) // dev.ynagai.a2ui.core.protocol/FunctionError.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+    final val code // dev.ynagai.a2ui.core.protocol/FunctionError.code|{}code[0]
+        final fun <get-code>(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionError.code.<get-code>|<get-code>(){}[0]
+    final val message // dev.ynagai.a2ui.core.protocol/FunctionError.message|{}message[0]
+        final fun <get-message>(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionError.message.<get-message>|<get-message>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionError.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionError.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ...): dev.ynagai.a2ui.core.protocol/FunctionError // dev.ynagai.a2ui.core.protocol/FunctionError.copy|copy(kotlin.String;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/FunctionError.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/FunctionError.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionError.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/FunctionError> { // dev.ynagai.a2ui.core.protocol/FunctionError.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/FunctionError.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/FunctionError.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/FunctionError.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/FunctionError // dev.ynagai.a2ui.core.protocol/FunctionError.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/FunctionError) // dev.ynagai.a2ui.core.protocol/FunctionError.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.FunctionError){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/FunctionError.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/FunctionError> // dev.ynagai.a2ui.core.protocol/FunctionError.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/Metadata { // dev.ynagai.a2ui.core.protocol/Metadata|null[0]
+    constructor <init>(kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? = ...) // dev.ynagai.a2ui.core.protocol/Metadata.<init>|<init>(kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>?){}[0]
+
+    final val extensions // dev.ynagai.a2ui.core.protocol/Metadata.extensions|{}extensions[0]
+        final fun <get-extensions>(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? // dev.ynagai.a2ui.core.protocol/Metadata.extensions.<get-extensions>|<get-extensions>(){}[0]
+
+    final fun component1(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? // dev.ynagai.a2ui.core.protocol/Metadata.component1|component1(){}[0]
+    final fun copy(kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? = ...): dev.ynagai.a2ui.core.protocol/Metadata // dev.ynagai.a2ui.core.protocol/Metadata.copy|copy(kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/Metadata.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/Metadata.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/Metadata.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/Metadata> { // dev.ynagai.a2ui.core.protocol/Metadata.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/Metadata.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/Metadata.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/Metadata.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/Metadata // dev.ynagai.a2ui.core.protocol/Metadata.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/Metadata) // dev.ynagai.a2ui.core.protocol/Metadata.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.Metadata){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/Metadata.Companion|null[0]
+        final val $childSerializers // dev.ynagai.a2ui.core.protocol/Metadata.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/Metadata> // dev.ynagai.a2ui.core.protocol/Metadata.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/RendererCapabilities { // dev.ynagai.a2ui.core.protocol/RendererCapabilities|null[0]
+    constructor <init>(dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1) // dev.ynagai.a2ui.core.protocol/RendererCapabilities.<init>|<init>(dev.ynagai.a2ui.core.protocol.RendererCapabilitiesV1){}[0]
+
+    final val v1 // dev.ynagai.a2ui.core.protocol/RendererCapabilities.v1|{}v1[0]
+        final fun <get-v1>(): dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/RendererCapabilities.v1.<get-v1>|<get-v1>(){}[0]
+
+    final fun component1(): dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/RendererCapabilities.component1|component1(){}[0]
+    final fun copy(dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1 = ...): dev.ynagai.a2ui.core.protocol/RendererCapabilities // dev.ynagai.a2ui.core.protocol/RendererCapabilities.copy|copy(dev.ynagai.a2ui.core.protocol.RendererCapabilitiesV1){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/RendererCapabilities.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/RendererCapabilities.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererCapabilities.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/RendererCapabilities> { // dev.ynagai.a2ui.core.protocol/RendererCapabilities.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/RendererCapabilities.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/RendererCapabilities.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/RendererCapabilities.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/RendererCapabilities // dev.ynagai.a2ui.core.protocol/RendererCapabilities.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/RendererCapabilities) // dev.ynagai.a2ui.core.protocol/RendererCapabilities.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.RendererCapabilities){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/RendererCapabilities.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/RendererCapabilities> // dev.ynagai.a2ui.core.protocol/RendererCapabilities.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1 { // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1|null[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>? = ...) // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>?){}[0]
+
+    final val inlineCatalogs // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.inlineCatalogs|{}inlineCatalogs[0]
+        final fun <get-inlineCatalogs>(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>? // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.inlineCatalogs.<get-inlineCatalogs>|<get-inlineCatalogs>(){}[0]
+    final val supportedCatalogIds // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.supportedCatalogIds|{}supportedCatalogIds[0]
+        final fun <get-supportedCatalogIds>(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.supportedCatalogIds.<get-supportedCatalogIds>|<get-supportedCatalogIds>(){}[0]
+
+    final fun component1(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>? // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.component2|component2(){}[0]
+    final fun copy(kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>? = ...): dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.copy|copy(kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1> { // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1) // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.RendererCapabilitiesV1){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.Companion|null[0]
+        final val $childSerializers // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1> // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/RendererDataModel { // dev.ynagai.a2ui.core.protocol/RendererDataModel|null[0]
+    constructor <init>(kotlin/String = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonObject>) // dev.ynagai.a2ui.core.protocol/RendererDataModel.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonObject>){}[0]
+
+    final val surfaces // dev.ynagai.a2ui.core.protocol/RendererDataModel.surfaces|{}surfaces[0]
+        final fun <get-surfaces>(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonObject> // dev.ynagai.a2ui.core.protocol/RendererDataModel.surfaces.<get-surfaces>|<get-surfaces>(){}[0]
+    final val version // dev.ynagai.a2ui.core.protocol/RendererDataModel.version|{}version[0]
+        final fun <get-version>(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererDataModel.version.<get-version>|<get-version>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererDataModel.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonObject> // dev.ynagai.a2ui.core.protocol/RendererDataModel.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonObject> = ...): dev.ynagai.a2ui.core.protocol/RendererDataModel // dev.ynagai.a2ui.core.protocol/RendererDataModel.copy|copy(kotlin.String;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonObject>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/RendererDataModel.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/RendererDataModel.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererDataModel.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/RendererDataModel> { // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/RendererDataModel // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/RendererDataModel) // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.RendererDataModel){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/RendererDataModel.Companion|null[0]
+        final val $childSerializers // dev.ynagai.a2ui.core.protocol/RendererDataModel.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/RendererDataModel> // dev.ynagai.a2ui.core.protocol/RendererDataModel.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage : dev.ynagai.a2ui.core.protocol/RendererToAgentMessage { // dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage|null[0]
+    constructor <init>(dev.ynagai.a2ui.core.protocol/FunctionResponse) // dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage.<init>|<init>(dev.ynagai.a2ui.core.protocol.FunctionResponse){}[0]
+
+    final val response // dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage.response|{}response[0]
+        final fun <get-response>(): dev.ynagai.a2ui.core.protocol/FunctionResponse // dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage.response.<get-response>|<get-response>(){}[0]
+
+    final fun component1(): dev.ynagai.a2ui.core.protocol/FunctionResponse // dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage.component1|component1(){}[0]
+    final fun copy(dev.ynagai.a2ui.core.protocol/FunctionResponse = ...): dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage // dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage.copy|copy(dev.ynagai.a2ui.core.protocol.FunctionResponse){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage> // dev.ynagai.a2ui.core.protocol/RendererFunctionResponseMessage.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/SurfaceMetadata { // dev.ynagai.a2ui.core.protocol/SurfaceMetadata|null[0]
+    constructor <init>(kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? = ...) // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.<init>|<init>(kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>?){}[0]
+
+    final val extensions // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.extensions|{}extensions[0]
+        final fun <get-extensions>(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.extensions.<get-extensions>|<get-extensions>(){}[0]
+
+    final fun component1(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.component1|component1(){}[0]
+    final fun copy(kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement>? = ...): dev.ynagai.a2ui.core.protocol/SurfaceMetadata // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.copy|copy(kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/SurfaceMetadata> { // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/SurfaceMetadata // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/SurfaceMetadata) // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.SurfaceMetadata){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.Companion|null[0]
+        final val $childSerializers // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/SurfaceMetadata> // dev.ynagai.a2ui.core.protocol/SurfaceMetadata.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage : dev.ynagai.a2ui.core.protocol/AgentToRendererMessage { // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage|null[0]
+    constructor <init>(kotlin/String, kotlin.collections/List<dev.ynagai.a2ui.core.protocol/Component>) // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.<init>|<init>(kotlin.String;kotlin.collections.List<dev.ynagai.a2ui.core.protocol.Component>){}[0]
+
+    final val components // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.components|{}components[0]
+        final fun <get-components>(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/Component> // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.components.<get-components>|<get-components>(){}[0]
+    final val surfaceId // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.surfaceId|{}surfaceId[0]
+        final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/Component> // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin.collections/List<dev.ynagai.a2ui.core.protocol/Component> = ...): dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.copy|copy(kotlin.String;kotlin.collections.List<dev.ynagai.a2ui.core.protocol.Component>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage> { // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage) // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.UpdateComponentsMessage){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.Companion|null[0]
+        final val $childSerializers // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage> // dev.ynagai.a2ui.core.protocol/UpdateComponentsMessage.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage : dev.ynagai.a2ui.core.protocol/AgentToRendererMessage { // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage|null[0]
+    constructor <init>(kotlin/String, kotlin/String? = ..., kotlinx.serialization.json/JsonElement) // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.<init>|<init>(kotlin.String;kotlin.String?;kotlinx.serialization.json.JsonElement){}[0]
+
+    final val path // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.path|{}path[0]
+        final fun <get-path>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.path.<get-path>|<get-path>(){}[0]
+    final val surfaceId // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.surfaceId|{}surfaceId[0]
+        final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+    final val value // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.value|{}value[0]
+        final fun <get-value>(): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.value.<get-value>|<get-value>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.component1|component1(){}[0]
+    final fun component2(): kotlin/String? // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.component2|component2(){}[0]
+    final fun component3(): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.component3|component3(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String? = ..., kotlinx.serialization.json/JsonElement = ...): dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.copy|copy(kotlin.String;kotlin.String?;kotlinx.serialization.json.JsonElement){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage> { // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.$serializer|null[0]
+        final val descriptor // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage) // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.UpdateDataModelMessage){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage> // dev.ynagai.a2ui.core.protocol/UpdateDataModelMessage.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.protocol/ValidationResult { // dev.ynagai.a2ui.core.protocol/ValidationResult|null[0]
+    constructor <init>(kotlin/Boolean, kotlin/String? = ..., kotlin/String? = ..., dev.ynagai.a2ui.core.protocol/Severity? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...) // dev.ynagai.a2ui.core.protocol/ValidationResult.<init>|<init>(kotlin.Boolean;kotlin.String?;kotlin.String?;dev.ynagai.a2ui.core.protocol.Severity?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
+
+    final val additional // dev.ynagai.a2ui.core.protocol/ValidationResult.additional|{}additional[0]
+        final fun <get-additional>(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/ValidationResult.additional.<get-additional>|<get-additional>(){}[0]
+    final val code // dev.ynagai.a2ui.core.protocol/ValidationResult.code|{}code[0]
+        final fun <get-code>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/ValidationResult.code.<get-code>|<get-code>(){}[0]
+    final val message // dev.ynagai.a2ui.core.protocol/ValidationResult.message|{}message[0]
+        final fun <get-message>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/ValidationResult.message.<get-message>|<get-message>(){}[0]
+    final val severity // dev.ynagai.a2ui.core.protocol/ValidationResult.severity|{}severity[0]
+        final fun <get-severity>(): dev.ynagai.a2ui.core.protocol/Severity? // dev.ynagai.a2ui.core.protocol/ValidationResult.severity.<get-severity>|<get-severity>(){}[0]
+    final val valid // dev.ynagai.a2ui.core.protocol/ValidationResult.valid|{}valid[0]
+        final fun <get-valid>(): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/ValidationResult.valid.<get-valid>|<get-valid>(){}[0]
+
+    final fun component1(): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/ValidationResult.component1|component1(){}[0]
+    final fun component2(): kotlin/String? // dev.ynagai.a2ui.core.protocol/ValidationResult.component2|component2(){}[0]
+    final fun component3(): kotlin/String? // dev.ynagai.a2ui.core.protocol/ValidationResult.component3|component3(){}[0]
+    final fun component4(): dev.ynagai.a2ui.core.protocol/Severity? // dev.ynagai.a2ui.core.protocol/ValidationResult.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/ValidationResult.component5|component5(){}[0]
+    final fun copy(kotlin/Boolean = ..., kotlin/String? = ..., kotlin/String? = ..., dev.ynagai.a2ui.core.protocol/Severity? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...): dev.ynagai.a2ui.core.protocol/ValidationResult // dev.ynagai.a2ui.core.protocol/ValidationResult.copy|copy(kotlin.Boolean;kotlin.String?;kotlin.String?;dev.ynagai.a2ui.core.protocol.Severity?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/ValidationResult.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/ValidationResult.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/ValidationResult.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.protocol/ValidationResult.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/ValidationResult> // dev.ynagai.a2ui.core.protocol/ValidationResult.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final object dev.ynagai.a2ui.core.protocol/A2uiJson { // dev.ynagai.a2ui.core.protocol/A2uiJson|null[0]
+    final val lenient // dev.ynagai.a2ui.core.protocol/A2uiJson.lenient|{}lenient[0]
+        final fun <get-lenient>(): kotlinx.serialization.json/Json // dev.ynagai.a2ui.core.protocol/A2uiJson.lenient.<get-lenient>|<get-lenient>(){}[0]
+    final val strict // dev.ynagai.a2ui.core.protocol/A2uiJson.strict|{}strict[0]
+        final fun <get-strict>(): kotlinx.serialization.json/Json // dev.ynagai.a2ui.core.protocol/A2uiJson.strict.<get-strict>|<get-strict>(){}[0]
+}
+
+final object dev.ynagai.a2ui.core.protocol/Surface { // dev.ynagai.a2ui.core.protocol/Surface|null[0]
+    final const val COMPONENT // dev.ynagai.a2ui.core.protocol/Surface.COMPONENT|{}COMPONENT[0]
+        final fun <get-COMPONENT>(): kotlin/String // dev.ynagai.a2ui.core.protocol/Surface.COMPONENT.<get-COMPONENT>|<get-COMPONENT>(){}[0]
+    final const val ROOT_ID // dev.ynagai.a2ui.core.protocol/Surface.ROOT_ID|{}ROOT_ID[0]
+        final fun <get-ROOT_ID>(): kotlin/String // dev.ynagai.a2ui.core.protocol/Surface.ROOT_ID.<get-ROOT_ID>|<get-ROOT_ID>(){}[0]
+}
+
 final object dev.ynagai.a2ui.core/A2ui { // dev.ynagai.a2ui.core/A2ui|null[0]
     final const val PROTOCOL_VERSION // dev.ynagai.a2ui.core/A2ui.PROTOCOL_VERSION|{}PROTOCOL_VERSION[0]
         final fun <get-PROTOCOL_VERSION>(): kotlin/String // dev.ynagai.a2ui.core/A2ui.PROTOCOL_VERSION.<get-PROTOCOL_VERSION>|<get-PROTOCOL_VERSION>(){}[0]

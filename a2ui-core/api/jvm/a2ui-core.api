@@ -3,3 +3,1218 @@ public final class dev/ynagai/a2ui/core/A2ui {
 	public static final field PROTOCOL_VERSION Ljava/lang/String;
 }
 
+public final class dev/ynagai/a2ui/core/protocol/A2uiFormatException : kotlinx/serialization/SerializationException {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class dev/ynagai/a2ui/core/protocol/A2uiJson {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/A2uiJson;
+	public final fun getLenient ()Lkotlinx/serialization/json/Json;
+	public final fun getStrict ()Lkotlinx/serialization/json/Json;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/AccessibilityAttributes {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes$Companion;
+	public fun <init> ()V
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/DynamicString;Ldev/ynagai/a2ui/core/protocol/DynamicString;Ldev/ynagai/a2ui/core/protocol/LiveRegion;Ldev/ynagai/a2ui/core/protocol/DynamicBoolean;)V
+	public synthetic fun <init> (Ldev/ynagai/a2ui/core/protocol/DynamicString;Ldev/ynagai/a2ui/core/protocol/DynamicString;Ldev/ynagai/a2ui/core/protocol/LiveRegion;Ldev/ynagai/a2ui/core/protocol/DynamicBoolean;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/DynamicString;
+	public final fun component2 ()Ldev/ynagai/a2ui/core/protocol/DynamicString;
+	public final fun component3 ()Ldev/ynagai/a2ui/core/protocol/LiveRegion;
+	public final fun component4 ()Ldev/ynagai/a2ui/core/protocol/DynamicBoolean;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/DynamicString;Ldev/ynagai/a2ui/core/protocol/DynamicString;Ldev/ynagai/a2ui/core/protocol/LiveRegion;Ldev/ynagai/a2ui/core/protocol/DynamicBoolean;)Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes;Ldev/ynagai/a2ui/core/protocol/DynamicString;Ldev/ynagai/a2ui/core/protocol/DynamicString;Ldev/ynagai/a2ui/core/protocol/LiveRegion;Ldev/ynagai/a2ui/core/protocol/DynamicBoolean;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDescription ()Ldev/ynagai/a2ui/core/protocol/DynamicString;
+	public final fun getHidden ()Ldev/ynagai/a2ui/core/protocol/DynamicBoolean;
+	public final fun getLabel ()Ldev/ynagai/a2ui/core/protocol/DynamicString;
+	public final fun getLive ()Ldev/ynagai/a2ui/core/protocol/LiveRegion;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/AccessibilityAttributes$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/AccessibilityAttributes$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/Action {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/Action$Companion;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Action$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Action$Event : dev/ynagai/a2ui/core/protocol/Action {
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/ActionEvent;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/ActionEvent;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/ActionEvent;)Ldev/ynagai/a2ui/core/protocol/Action$Event;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/Action$Event;Ldev/ynagai/a2ui/core/protocol/ActionEvent;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/Action$Event;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEvent ()Ldev/ynagai/a2ui/core/protocol/ActionEvent;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Action$Invoke : dev/ynagai/a2ui/core/protocol/Action {
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/FunctionCall;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/FunctionCall;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/FunctionCall;)Ldev/ynagai/a2ui/core/protocol/Action$Invoke;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/Action$Invoke;Ldev/ynagai/a2ui/core/protocol/FunctionCall;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/Action$Invoke;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFunctionCall ()Ldev/ynagai/a2ui/core/protocol/FunctionCall;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ActionEvent {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/ActionEvent$Companion;
+	public fun <init> (Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/DynamicString;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/DynamicString;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ldev/ynagai/a2ui/core/protocol/DynamicString;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/DynamicString;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/ActionEvent;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/ActionEvent;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/DynamicString;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/ActionEvent;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContext ()Ljava/util/Map;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getUserMessage ()Ldev/ynagai/a2ui/core/protocol/DynamicString;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/ActionEvent$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/ActionEvent$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/ActionEvent;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/ActionEvent;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ActionEvent$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ActionMessage : dev/ynagai/a2ui/core/protocol/RendererToAgentMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/ActionMessage$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/json/JsonObject;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/Metadata;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/json/JsonObject;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/Metadata;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Lkotlinx/serialization/json/JsonObject;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()Ldev/ynagai/a2ui/core/protocol/Metadata;
+	public final fun component8 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/json/JsonObject;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/Metadata;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/ActionMessage;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/ActionMessage;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/json/JsonObject;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/Metadata;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/ActionMessage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAdditional ()Ljava/util/Map;
+	public final fun getContext ()Lkotlinx/serialization/json/JsonObject;
+	public final fun getMetadata ()Ldev/ynagai/a2ui/core/protocol/Metadata;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSourceComponentId ()Ljava/lang/String;
+	public final fun getSurfaceId ()Ljava/lang/String;
+	public final fun getTimestamp ()Ljava/lang/String;
+	public final fun getUserMessage ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ActionMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/AgentCapabilities {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/AgentCapabilities$Companion;
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;)Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getV1 ()Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/AgentCapabilities$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/AgentCapabilities$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/AgentCapabilities$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1 {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/util/List;Ljava/lang/Boolean;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/lang/Boolean;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/lang/Boolean;
+	public final fun copy (Ljava/util/List;Ljava/lang/Boolean;)Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;Ljava/util/List;Ljava/lang/Boolean;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAcceptsInlineCatalogs ()Ljava/lang/Boolean;
+	public final fun getAcceptsInlineCatalogsOrDefault ()Z
+	public final fun getSupportedCatalogIds ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/AgentFunctionResponseMessage : dev/ynagai/a2ui/core/protocol/AgentToRendererMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/AgentFunctionResponseMessage$Companion;
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/FunctionResponse;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/FunctionResponse;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/FunctionResponse;)Ldev/ynagai/a2ui/core/protocol/AgentFunctionResponseMessage;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/AgentFunctionResponseMessage;Ldev/ynagai/a2ui/core/protocol/FunctionResponse;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/AgentFunctionResponseMessage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getResponse ()Ldev/ynagai/a2ui/core/protocol/FunctionResponse;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/AgentFunctionResponseMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/AgentToRendererMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/AgentToRendererMessage$Companion;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/AgentToRendererMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/AllowedCallers : java/lang/Enum {
+	public static final field AGENT_ONLY Ldev/ynagai/a2ui/core/protocol/AllowedCallers;
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/AllowedCallers$Companion;
+	public static final field RENDERER_ONLY Ldev/ynagai/a2ui/core/protocol/AllowedCallers;
+	public static final field RENDERER_OR_AGENT Ldev/ynagai/a2ui/core/protocol/AllowedCallers;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/AllowedCallers;
+	public static fun values ()[Ldev/ynagai/a2ui/core/protocol/AllowedCallers;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/AllowedCallers$Companion {
+	public final fun getDEFAULT ()Ldev/ynagai/a2ui/core/protocol/AllowedCallers;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/BoundValue : dev/ynagai/a2ui/core/protocol/DynamicBoolean, dev/ynagai/a2ui/core/protocol/DynamicNumber, dev/ynagai/a2ui/core/protocol/DynamicString, dev/ynagai/a2ui/core/protocol/DynamicStringList, dev/ynagai/a2ui/core/protocol/DynamicValue {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/BoundValue$Companion;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/BoundValue$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/CallAgentFunctionMessage : dev/ynagai/a2ui/core/protocol/RendererToAgentMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/CallAgentFunctionMessage$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionCall;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ldev/ynagai/a2ui/core/protocol/FunctionCall;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionCall;)Ldev/ynagai/a2ui/core/protocol/CallAgentFunctionMessage;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/CallAgentFunctionMessage;Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionCall;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/CallAgentFunctionMessage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCallFunction ()Ldev/ynagai/a2ui/core/protocol/FunctionCall;
+	public final fun getFunctionCallId ()Ljava/lang/String;
+	public final fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/CallAgentFunctionMessage$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/CallAgentFunctionMessage$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/CallAgentFunctionMessage;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/CallAgentFunctionMessage;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/CallAgentFunctionMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/CallRendererFunctionMessage : dev/ynagai/a2ui/core/protocol/AgentToRendererMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/CallRendererFunctionMessage$Companion;
+	public fun <init> (Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionCall;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ldev/ynagai/a2ui/core/protocol/FunctionCall;
+	public final fun copy (Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionCall;)Ldev/ynagai/a2ui/core/protocol/CallRendererFunctionMessage;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/CallRendererFunctionMessage;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionCall;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/CallRendererFunctionMessage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCallFunction ()Ldev/ynagai/a2ui/core/protocol/FunctionCall;
+	public final fun getFunctionCallId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/CallRendererFunctionMessage$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/CallRendererFunctionMessage$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/CallRendererFunctionMessage;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/CallRendererFunctionMessage;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/CallRendererFunctionMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/CatalogDefinition {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/CatalogDefinition$Companion;
+	public static final field DEFAULT_PROTOCOL_VERSION Ljava/lang/String;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/util/Map;
+	public final fun component7 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/CatalogDefinition;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/CatalogDefinition;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/CatalogDefinition;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCatalogId ()Ljava/lang/String;
+	public final fun getComponents ()Ljava/util/Map;
+	public final fun getDescription ()Ljava/lang/String;
+	public final fun getEffectiveProtocolVersion ()Ljava/lang/String;
+	public final fun getFunctions ()Ljava/util/Map;
+	public final fun getInstructions ()Ljava/lang/String;
+	public final fun getProtocolVersion ()Ljava/lang/String;
+	public final fun getTitle ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/CatalogDefinition$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/CheckRule {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/CheckRule$Companion;
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/BoundValue;Ljava/lang/String;)V
+	public synthetic fun <init> (Ldev/ynagai/a2ui/core/protocol/BoundValue;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/BoundValue;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/BoundValue;Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/CheckRule;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/CheckRule;Ldev/ynagai/a2ui/core/protocol/BoundValue;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/CheckRule;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCondition ()Ldev/ynagai/a2ui/core/protocol/BoundValue;
+	public final fun getMessage ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/CheckRule$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/CheckRule$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/CheckRule;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/CheckRule;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/CheckRule$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Checkable {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/Checkable$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Ldev/ynagai/a2ui/core/protocol/Checkable;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/Checkable;Ljava/util/List;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/Checkable;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChecks ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/Checkable$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/Checkable$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/Checkable;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/Checkable;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Checkable$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/ChildList {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/ChildList$Companion;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ChildList$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ChildList$Static : dev/ynagai/a2ui/core/protocol/ChildList {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Ldev/ynagai/a2ui/core/protocol/ChildList$Static;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/ChildList$Static;Ljava/util/List;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/ChildList$Static;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getIds ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ChildList$Template : dev/ynagai/a2ui/core/protocol/ChildList {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/ChildList$Template$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/ChildList$Template;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/ChildList$Template;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/ChildList$Template;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComponentId ()Ljava/lang/String;
+	public final fun getPath ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/ChildList$Template$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/ChildList$Template$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/ChildList$Template;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/ChildList$Template;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ChildList$Template$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Component {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/Component$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes;Ldev/ynagai/a2ui/core/protocol/Metadata;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes;Ldev/ynagai/a2ui/core/protocol/Metadata;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes;
+	public final fun component5 ()Ldev/ynagai/a2ui/core/protocol/Metadata;
+	public final fun component6 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes;Ldev/ynagai/a2ui/core/protocol/Metadata;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/Component;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/Component;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes;Ldev/ynagai/a2ui/core/protocol/Metadata;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/Component;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAccessibility ()Ldev/ynagai/a2ui/core/protocol/AccessibilityAttributes;
+	public final fun getCatalogId ()Ljava/lang/String;
+	public final fun getComponent ()Ljava/lang/String;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getMetadata ()Ldev/ynagai/a2ui/core/protocol/Metadata;
+	public final fun getProperties ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Component$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ComponentDefinition {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/ComponentDefinition$Companion;
+	public fun <init> (Lkotlinx/serialization/json/JsonObject;Ljava/util/List;Ljava/util/List;Ldev/ynagai/a2ui/core/protocol/Metadata;)V
+	public synthetic fun <init> (Lkotlinx/serialization/json/JsonObject;Ljava/util/List;Ljava/util/List;Ldev/ynagai/a2ui/core/protocol/Metadata;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkotlinx/serialization/json/JsonObject;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ldev/ynagai/a2ui/core/protocol/Metadata;
+	public final fun copy (Lkotlinx/serialization/json/JsonObject;Ljava/util/List;Ljava/util/List;Ldev/ynagai/a2ui/core/protocol/Metadata;)Ldev/ynagai/a2ui/core/protocol/ComponentDefinition;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/ComponentDefinition;Lkotlinx/serialization/json/JsonObject;Ljava/util/List;Ljava/util/List;Ldev/ynagai/a2ui/core/protocol/Metadata;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/ComponentDefinition;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAllowedChildren ()Ljava/util/List;
+	public final fun getAllowedParents ()Ljava/util/List;
+	public final fun getMetadata ()Ldev/ynagai/a2ui/core/protocol/Metadata;
+	public final fun getSchema ()Lkotlinx/serialization/json/JsonObject;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ComponentDefinition$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/CreateSurfaceMessage : dev/ynagai/a2ui/core/protocol/AgentToRendererMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/CreateSurfaceMessage$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;Ljava/util/List;Lkotlinx/serialization/json/JsonObject;Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;Ljava/util/List;Lkotlinx/serialization/json/JsonObject;Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/Boolean;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Lkotlinx/serialization/json/JsonObject;
+	public final fun component6 ()Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;Ljava/util/List;Lkotlinx/serialization/json/JsonObject;Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;)Ldev/ynagai/a2ui/core/protocol/CreateSurfaceMessage;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/CreateSurfaceMessage;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Boolean;Ljava/util/List;Lkotlinx/serialization/json/JsonObject;Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/CreateSurfaceMessage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCatalogId ()Ljava/lang/String;
+	public final fun getComponents ()Ljava/util/List;
+	public final fun getDataModel ()Lkotlinx/serialization/json/JsonObject;
+	public final fun getMetadata ()Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;
+	public final fun getSendDataModel ()Ljava/lang/Boolean;
+	public final fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/CreateSurfaceMessage$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/CreateSurfaceMessage$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/CreateSurfaceMessage;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/CreateSurfaceMessage;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/CreateSurfaceMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DataBinding : dev/ynagai/a2ui/core/protocol/BoundValue {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/DataBinding$Companion;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/DataBinding;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/DataBinding;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/DataBinding;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPath ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/DataBinding$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/DataBinding$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/DataBinding;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/DataBinding;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DataBinding$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DeleteSurfaceMessage : dev/ynagai/a2ui/core/protocol/AgentToRendererMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/DeleteSurfaceMessage$Companion;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/DeleteSurfaceMessage;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/DeleteSurfaceMessage;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/DeleteSurfaceMessage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/DeleteSurfaceMessage$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/DeleteSurfaceMessage$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/DeleteSurfaceMessage;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/DeleteSurfaceMessage;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DeleteSurfaceMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/DynamicBoolean {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/DynamicBoolean$Companion;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DynamicBoolean$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DynamicBoolean$Literal : dev/ynagai/a2ui/core/protocol/DynamicBoolean {
+	public fun <init> (Z)V
+	public final fun component1 ()Z
+	public final fun copy (Z)Ldev/ynagai/a2ui/core/protocol/DynamicBoolean$Literal;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/DynamicBoolean$Literal;ZILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/DynamicBoolean$Literal;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/DynamicNumber {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/DynamicNumber$Companion;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DynamicNumber$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DynamicNumber$Literal : dev/ynagai/a2ui/core/protocol/DynamicNumber {
+	public fun <init> (D)V
+	public final fun component1 ()D
+	public final fun copy (D)Ldev/ynagai/a2ui/core/protocol/DynamicNumber$Literal;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/DynamicNumber$Literal;DILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/DynamicNumber$Literal;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/DynamicString {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/DynamicString$Companion;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DynamicString$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DynamicString$Literal : dev/ynagai/a2ui/core/protocol/DynamicString {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/DynamicString$Literal;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/DynamicString$Literal;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/DynamicString$Literal;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/DynamicStringList {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/DynamicStringList$Companion;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DynamicStringList$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DynamicStringList$Literal : dev/ynagai/a2ui/core/protocol/DynamicStringList {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Ldev/ynagai/a2ui/core/protocol/DynamicStringList$Literal;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/DynamicStringList$Literal;Ljava/util/List;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/DynamicStringList$Literal;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/DynamicValue {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/DynamicValue$Companion;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DynamicValue$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/DynamicValue$Literal : dev/ynagai/a2ui/core/protocol/DynamicValue {
+	public fun <init> (Lkotlinx/serialization/json/JsonElement;)V
+	public final fun component1 ()Lkotlinx/serialization/json/JsonElement;
+	public final fun copy (Lkotlinx/serialization/json/JsonElement;)Ldev/ynagai/a2ui/core/protocol/DynamicValue$Literal;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/DynamicValue$Literal;Lkotlinx/serialization/json/JsonElement;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/DynamicValue$Literal;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Lkotlinx/serialization/json/JsonElement;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/FunctionCall : dev/ynagai/a2ui/core/protocol/BoundValue {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/FunctionCall$Companion;
+	public static final field INDEX Ljava/lang/String;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/FunctionCall;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/FunctionCall;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/FunctionCall;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArgs ()Ljava/util/Map;
+	public final fun getCall ()Ljava/lang/String;
+	public final fun getCatalogId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun isSystemFunction ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/FunctionCall$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/FunctionCall$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/FunctionCall;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/FunctionCall;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/FunctionCall$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/FunctionCallValidationSchema {
+	public fun <init> (Lkotlinx/serialization/json/JsonObject;)V
+	public final fun component1 ()Lkotlinx/serialization/json/JsonObject;
+	public final fun copy (Lkotlinx/serialization/json/JsonObject;)Ldev/ynagai/a2ui/core/protocol/FunctionCallValidationSchema;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/FunctionCallValidationSchema;Lkotlinx/serialization/json/JsonObject;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/FunctionCallValidationSchema;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAllOf ()Ljava/util/List;
+	public final fun getArgsSchema ()Lkotlinx/serialization/json/JsonObject;
+	public final fun getCallName ()Ljava/lang/String;
+	public final fun getRaw ()Lkotlinx/serialization/json/JsonObject;
+	public final fun getRequired ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/FunctionDefinition {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/FunctionDefinition$Companion;
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/FunctionCallValidationSchema;Ldev/ynagai/a2ui/core/protocol/ReturnType;Ldev/ynagai/a2ui/core/protocol/AllowedCallers;Ljava/lang/Boolean;)V
+	public synthetic fun <init> (Ldev/ynagai/a2ui/core/protocol/FunctionCallValidationSchema;Ldev/ynagai/a2ui/core/protocol/ReturnType;Ldev/ynagai/a2ui/core/protocol/AllowedCallers;Ljava/lang/Boolean;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/FunctionCallValidationSchema;
+	public final fun component2 ()Ldev/ynagai/a2ui/core/protocol/ReturnType;
+	public final fun component3 ()Ldev/ynagai/a2ui/core/protocol/AllowedCallers;
+	public final fun component4 ()Ljava/lang/Boolean;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/FunctionCallValidationSchema;Ldev/ynagai/a2ui/core/protocol/ReturnType;Ldev/ynagai/a2ui/core/protocol/AllowedCallers;Ljava/lang/Boolean;)Ldev/ynagai/a2ui/core/protocol/FunctionDefinition;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/FunctionDefinition;Ldev/ynagai/a2ui/core/protocol/FunctionCallValidationSchema;Ldev/ynagai/a2ui/core/protocol/ReturnType;Ldev/ynagai/a2ui/core/protocol/AllowedCallers;Ljava/lang/Boolean;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/FunctionDefinition;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAllowedCallers ()Ldev/ynagai/a2ui/core/protocol/AllowedCallers;
+	public final fun getEffectiveAllowedCallers ()Ldev/ynagai/a2ui/core/protocol/AllowedCallers;
+	public final fun getRequiresUserActivation ()Ljava/lang/Boolean;
+	public final fun getReturnType ()Ldev/ynagai/a2ui/core/protocol/ReturnType;
+	public final fun getSchema ()Ldev/ynagai/a2ui/core/protocol/FunctionCallValidationSchema;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/FunctionDefinition$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/FunctionError {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/FunctionError$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/FunctionError;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/FunctionError;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/FunctionError;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCode ()Ljava/lang/String;
+	public final fun getMessage ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/FunctionError$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/FunctionError$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/FunctionError;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/FunctionError;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/FunctionError$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/FunctionResponse {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/FunctionResponse$Companion;
+	public abstract fun getFunctionCallId ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/FunctionResponse$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/FunctionResponse$Failure : dev/ynagai/a2ui/core/protocol/FunctionResponse {
+	public fun <init> (Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionError;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ldev/ynagai/a2ui/core/protocol/FunctionError;
+	public final fun copy (Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionError;)Ldev/ynagai/a2ui/core/protocol/FunctionResponse$Failure;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/FunctionResponse$Failure;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionError;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/FunctionResponse$Failure;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Ldev/ynagai/a2ui/core/protocol/FunctionError;
+	public fun getFunctionCallId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/FunctionResponse$Success : dev/ynagai/a2ui/core/protocol/FunctionResponse {
+	public fun <init> (Ljava/lang/String;Lkotlinx/serialization/json/JsonElement;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lkotlinx/serialization/json/JsonElement;
+	public final fun copy (Ljava/lang/String;Lkotlinx/serialization/json/JsonElement;)Ldev/ynagai/a2ui/core/protocol/FunctionResponse$Success;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/FunctionResponse$Success;Ljava/lang/String;Lkotlinx/serialization/json/JsonElement;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/FunctionResponse$Success;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getFunctionCallId ()Ljava/lang/String;
+	public final fun getValue ()Lkotlinx/serialization/json/JsonElement;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/LiveRegion : java/lang/Enum {
+	public static final field ASSERTIVE Ldev/ynagai/a2ui/core/protocol/LiveRegion;
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/LiveRegion$Companion;
+	public static final field OFF Ldev/ynagai/a2ui/core/protocol/LiveRegion;
+	public static final field POLITE Ldev/ynagai/a2ui/core/protocol/LiveRegion;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/LiveRegion;
+	public static fun values ()[Ldev/ynagai/a2ui/core/protocol/LiveRegion;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/LiveRegion$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Metadata {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/Metadata$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/Map;
+	public final fun copy (Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/Metadata;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/Metadata;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/Metadata;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExtensions ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/Metadata$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/Metadata$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/Metadata;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/Metadata;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Metadata$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererCapabilities {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/RendererCapabilities$Companion;
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;)Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getV1 ()Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/RendererCapabilities$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/RendererCapabilities$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererCapabilities$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1 {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1$Companion;
+	public fun <init> (Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;)Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInlineCatalogs ()Ljava/util/List;
+	public final fun getSupportedCatalogIds ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererDataModel {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/RendererDataModel$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/RendererDataModel;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/RendererDataModel;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/RendererDataModel;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getSurfaces ()Ljava/util/Map;
+	public final fun getVersion ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/RendererDataModel$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/RendererDataModel$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/RendererDataModel;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/RendererDataModel;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererDataModel$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/RendererErrorMessage : dev/ynagai/a2ui/core/protocol/RendererToAgentMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Companion;
+	public abstract fun getCode ()Ljava/lang/String;
+	public abstract fun getMessage ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererErrorMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererErrorMessage$Generic : dev/ynagai/a2ui/core/protocol/RendererErrorMessage {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope;
+	public final fun component4 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Generic;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Generic;Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Generic;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAdditional ()Ljava/util/Map;
+	public fun getCode ()Ljava/lang/String;
+	public fun getMessage ()Ljava/lang/String;
+	public final fun getScope ()Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope {
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope$OnCall : dev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope$OnCall;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope$OnCall;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope$OnCall;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFunctionCallId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope$OnSurface : dev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope$OnSurface;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope$OnSurface;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Scope$OnSurface;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererErrorMessage$Validation : dev/ynagai/a2ui/core/protocol/RendererErrorMessage {
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/ValidationErrorCode;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/ValidationErrorCode;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/ValidationErrorCode;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Validation;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Validation;Ldev/ynagai/a2ui/core/protocol/ValidationErrorCode;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/RendererErrorMessage$Validation;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getCode ()Ljava/lang/String;
+	public fun getMessage ()Ljava/lang/String;
+	public final fun getPath ()Ljava/lang/String;
+	public final fun getSurfaceId ()Ljava/lang/String;
+	public final fun getValidationCode ()Ldev/ynagai/a2ui/core/protocol/ValidationErrorCode;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererFunctionResponseMessage : dev/ynagai/a2ui/core/protocol/RendererToAgentMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/RendererFunctionResponseMessage$Companion;
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/FunctionResponse;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/FunctionResponse;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/FunctionResponse;)Ldev/ynagai/a2ui/core/protocol/RendererFunctionResponseMessage;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/RendererFunctionResponseMessage;Ldev/ynagai/a2ui/core/protocol/FunctionResponse;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/RendererFunctionResponseMessage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getResponse ()Ldev/ynagai/a2ui/core/protocol/FunctionResponse;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererFunctionResponseMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/protocol/RendererToAgentMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/RendererToAgentMessage$Companion;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/RendererToAgentMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ReturnType : java/lang/Enum {
+	public static final field ANY Ldev/ynagai/a2ui/core/protocol/ReturnType;
+	public static final field ARRAY Ldev/ynagai/a2ui/core/protocol/ReturnType;
+	public static final field BOOLEAN Ldev/ynagai/a2ui/core/protocol/ReturnType;
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/ReturnType$Companion;
+	public static final field NUMBER Ldev/ynagai/a2ui/core/protocol/ReturnType;
+	public static final field OBJECT Ldev/ynagai/a2ui/core/protocol/ReturnType;
+	public static final field STRING Ldev/ynagai/a2ui/core/protocol/ReturnType;
+	public static final field VALIDATION_RESULT Ldev/ynagai/a2ui/core/protocol/ReturnType;
+	public static final field VOID Ldev/ynagai/a2ui/core/protocol/ReturnType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/ReturnType;
+	public static fun values ()[Ldev/ynagai/a2ui/core/protocol/ReturnType;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ReturnType$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Severity : java/lang/Enum {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/Severity$Companion;
+	public static final field ERROR Ldev/ynagai/a2ui/core/protocol/Severity;
+	public static final field INFO Ldev/ynagai/a2ui/core/protocol/Severity;
+	public static final field WARNING Ldev/ynagai/a2ui/core/protocol/Severity;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/Severity;
+	public static fun values ()[Ldev/ynagai/a2ui/core/protocol/Severity;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Severity$Companion {
+	public final fun getDEFAULT ()Ldev/ynagai/a2ui/core/protocol/Severity;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/Surface {
+	public static final field COMPONENT Ljava/lang/String;
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/Surface;
+	public static final field ROOT_ID Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/SurfaceMetadata {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/Map;
+	public final fun copy (Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExtensions ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/SurfaceMetadata$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/SurfaceMetadata$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/UpdateComponentsMessage : dev/ynagai/a2ui/core/protocol/AgentToRendererMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/UpdateComponentsMessage$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Ldev/ynagai/a2ui/core/protocol/UpdateComponentsMessage;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/UpdateComponentsMessage;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/UpdateComponentsMessage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComponents ()Ljava/util/List;
+	public final fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/UpdateComponentsMessage$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/UpdateComponentsMessage$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/UpdateComponentsMessage;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/UpdateComponentsMessage;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/UpdateComponentsMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/UpdateDataModelMessage : dev/ynagai/a2ui/core/protocol/AgentToRendererMessage {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/UpdateDataModelMessage$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/json/JsonElement;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/json/JsonElement;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lkotlinx/serialization/json/JsonElement;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/json/JsonElement;)Ldev/ynagai/a2ui/core/protocol/UpdateDataModelMessage;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/UpdateDataModelMessage;Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/json/JsonElement;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/UpdateDataModelMessage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPath ()Ljava/lang/String;
+	public final fun getSurfaceId ()Ljava/lang/String;
+	public final fun getValue ()Lkotlinx/serialization/json/JsonElement;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/ynagai/a2ui/core/protocol/UpdateDataModelMessage$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/UpdateDataModelMessage$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/UpdateDataModelMessage;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/UpdateDataModelMessage;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/UpdateDataModelMessage$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ValidationErrorCode : java/lang/Enum {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/ValidationErrorCode$Companion;
+	public static final field UNALLOWED_CHILD Ldev/ynagai/a2ui/core/protocol/ValidationErrorCode;
+	public static final field UNALLOWED_PARENT Ldev/ynagai/a2ui/core/protocol/ValidationErrorCode;
+	public static final field VALIDATION_FAILED Ldev/ynagai/a2ui/core/protocol/ValidationErrorCode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWireName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/ValidationErrorCode;
+	public static fun values ()[Ldev/ynagai/a2ui/core/protocol/ValidationErrorCode;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ValidationErrorCode$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ValidationResult {
+	public static final field Companion Ldev/ynagai/a2ui/core/protocol/ValidationResult$Companion;
+	public fun <init> (ZLjava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/Severity;Ljava/util/Map;)V
+	public synthetic fun <init> (ZLjava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/Severity;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ldev/ynagai/a2ui/core/protocol/Severity;
+	public final fun component5 ()Ljava/util/Map;
+	public final fun copy (ZLjava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/Severity;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/ValidationResult;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/ValidationResult;ZLjava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/Severity;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/ValidationResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAdditional ()Ljava/util/Map;
+	public final fun getCode ()Ljava/lang/String;
+	public final fun getMessage ()Ljava/lang/String;
+	public final fun getSeverity ()Ldev/ynagai/a2ui/core/protocol/Severity;
+	public final fun getValid ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/protocol/ValidationResult$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+

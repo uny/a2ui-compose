@@ -26,17 +26,6 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
-      # setup-gradle restores the Gradle build cache but not ~/.kotlin, where the Kotlin/JS and
-      # Kotlin/Wasm npm tooling actually lives. Without this the second run onwards resolves
-      # kotlinNpmInstall from the build cache while node_modules is absent on disk, and the
-      # browser tests fail with "Cannot find node module kotlin-web-helpers/...". Keyed on the
-      # committed yarn locks so the two caches move together.
-      - name: Cache Kotlin npm tooling
-        uses: actions/cache@v4
-        with:
-          path: ~/.kotlin
-          key: kotlin-npm-${{ runner.os }}-${{ hashFiles('kotlin-js-store/**/yarn.lock') }}
-
       - name: Build
         run: ./gradlew build --stacktrace
 

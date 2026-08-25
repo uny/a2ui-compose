@@ -1,0 +1,5 @@
+public final class dev/ynagai/a2ui/core/A2ui {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/A2ui;
+	public static final field PROTOCOL_VERSION Ljava/lang/String;
+}
+

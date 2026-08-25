@@ -1,0 +1,12 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, macosArm64, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.ynagai.a2ui:a2ui-core>
+final object dev.ynagai.a2ui.core/A2ui { // dev.ynagai.a2ui.core/A2ui|null[0]
+    final const val PROTOCOL_VERSION // dev.ynagai.a2ui.core/A2ui.PROTOCOL_VERSION|{}PROTOCOL_VERSION[0]
+        final fun <get-PROTOCOL_VERSION>(): kotlin/String // dev.ynagai.a2ui.core/A2ui.PROTOCOL_VERSION.<get-PROTOCOL_VERSION>|<get-PROTOCOL_VERSION>(){}[0]
+}

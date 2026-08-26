@@ -281,9 +281,6 @@ private const val MESSAGE_EXCERPT: Int = 200
 /** How much of an agent-authored function name travels inside an [A2uiFunctionException]. */
 private const val NAME_EXCERPT: Int = 64
 
-/** How much of an agent-authored JSON literal travels inside an [A2uiFunctionException]. */
-private const val LITERAL_EXCERPT: Int = 32
-
 /**
  * One top-level evaluation, holding the step budget that spans it.
  *
@@ -829,18 +826,30 @@ internal class CallArguments(
 /**
  * A short, non-quoting description of [element] for an error message.
  *
- * A string's *type* is reported and its content is not. These messages exist to say that a call
- * was malformed, which the type alone says; the content would be whatever the user typed into the
- * bound field, and the agent chooses both the function and the path — so quoting it turns
+ * The *type* of a value is reported and its content never is. These messages exist to say that a
+ * call was malformed, which the type alone says; the content would be whatever the user typed into
+ * the bound field, and the agent chooses both the function and the path — so quoting it turns
  * `formatNumber(value: /form/cardNumber)` into a way to read the data model out through the
- * renderer's log, 32 characters per request.
+ * renderer's log. This module's exceptions are documented as the material a renderer turns into a
+ * renderer-to-agent `error`, so a value quoted here is a value sent back over the wire.
+ *
+ * **The rule covers numbers and booleans as much as strings.** A card number, an account number
+ * and a national identifier are all JSON numbers as often as they are strings, and the branch that
+ * reaches this is `not(value: /form/x)` or `formatNumber(value: /form/x)` — a type error the agent
+ * can provoke on any bound field. Truncating the literal, which is what this did before, bounds
+ * the size of the leak rather than closing it.
+ *
+ * The values that *are* safe to quote are the ones the catalog types as plain strings rather than
+ * as `Dynamic*` unions, so they cannot have come from the data model — `regex`'s `pattern` is one,
+ * and the messages that name it quote it directly rather than through this function.
  */
 internal fun describe(element: JsonElement): String = when (element) {
     is JsonNull -> "null"
     is JsonObject -> "an object"
     is JsonArray -> "an array"
-    is JsonPrimitive -> if (element.isString) "a string"
-    // Truncated as well: a JSON number keeps its raw literal, so a 50 000-digit `value` would
-    // otherwise put 50 000 characters into the message.
-    else "`${element.content.take(LITERAL_EXCERPT)}`"
+    is JsonPrimitive -> when {
+        element.isString -> "a string"
+        element.booleanOrNull != null -> "a boolean"
+        else -> "a number"
+    }
 }

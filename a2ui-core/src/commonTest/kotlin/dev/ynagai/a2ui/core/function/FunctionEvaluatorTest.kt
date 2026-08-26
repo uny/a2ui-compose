@@ -14,6 +14,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -428,6 +429,27 @@ class FunctionEvaluatorTest {
         val wire = """{"call":"and","args":{"values":[$values]}}"""
         assertFailsWith<A2uiFunctionException> {
             context(limits = EvaluationLimits(maxSteps = 5)).evaluate(call(wire))
+        }
+    }
+
+    @Test
+    fun aTypeErrorMessageDoesNotCarryTheValueItRejected() {
+        // The agent picks both the function and the path, so a type error is something it can
+        // provoke on any bound field. The message must name the type and nothing else — numbers
+        // and booleans included, since an account number is a JSON number as often as a string.
+        val data = """{"form":{"cardNumber":4111111111111111,"note":"hunter2","consent":true}}"""
+        val evaluator = context(data)
+        val calls = listOf(
+            """{"call":"not","args":{"value":{"path":"/form/cardNumber"}}}""",
+            """{"call":"formatNumber","args":{"value":{"path":"/form/note"}}}""",
+            """{"call":"formatDate","args":{"value":{"path":"/form/consent"},"format":"yyyy"}}""",
+        )
+        for (wire in calls) {
+            val message =
+                assertFailsWith<A2uiFunctionException> { evaluator.evaluate(call(wire)) }.message!!
+            assertFalse(message.contains("4111111111111111"), message)
+            assertFalse(message.contains("hunter2"), message)
+            assertFalse(message.contains("true"), message)
         }
     }
 

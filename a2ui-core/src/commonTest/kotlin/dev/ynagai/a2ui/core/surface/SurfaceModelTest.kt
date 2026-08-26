@@ -191,15 +191,20 @@ class SurfaceModelTest {
     }
 
     @Test
-    fun `a deeply nested chain does not overflow the call stack`() {
-        val depth = DEFAULT_WALK_LIMIT - 1
-        val components = buildList {
-            add("""{"id": "root", "component": "Card", "child": "c0"}""")
-            repeat(depth) { i ->
-                val child = if (i == depth - 1) "" else ""","child": "c${i + 1}""""
-                add("""{"id": "c$i", "component": "Card"$child}""")
-            }
-        }
-        assertEquals(depth + 1, surface(*components.toTypedArray()).walk(resolver).size)
+    fun `a chain at the depth bound walks and one past it is stopped`() {
+        fun chain(depth: Int) = surface(
+            *buildList {
+                add("""{"id": "root", "component": "Card", "child": "c0"}""")
+                repeat(depth) { i ->
+                    val child = if (i == depth - 1) "" else ""","child": "c${i + 1}""""
+                    add("""{"id": "c$i", "component": "Card"$child}""")
+                }
+            }.toTypedArray(),
+        )
+
+        // Deep enough to prove the traversal is not recursing on the call stack, which on
+        // Kotlin/Native would give way well before this.
+        assertEquals(DEFAULT_MAX_DEPTH, chain(DEFAULT_MAX_DEPTH - 1).walk(resolver).size)
+        assertFailsWith<A2uiStateException> { chain(DEFAULT_MAX_DEPTH).walk(resolver) }
     }
 }

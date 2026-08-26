@@ -148,6 +148,15 @@ public fun interface ChildResolver {
 public const val DEFAULT_WALK_LIMIT: Int = 10_000
 
 /**
+ * How deeply [walk] will nest before giving up.
+ *
+ * This is a much tighter bound than [DEFAULT_WALK_LIMIT] and is still an order of magnitude past
+ * any real UI. It is separate because depth and breadth cost differently: the cycle check consults
+ * the ancestors of the current node, so a bound on depth is what keeps that check cheap.
+ */
+public const val DEFAULT_MAX_DEPTH: Int = 256
+
+/**
  * Every component instance reachable from [SurfaceModel.root], depth first, each paired with the
  * scope it renders in.
  *
@@ -157,56 +166,64 @@ public const val DEFAULT_WALK_LIMIT: Int = 10_000
  * current path is also skipped, so a cycle in the adjacency list ends the walk instead of hanging
  * it — reporting that cycle is the validator's job, not the renderer's.
  *
- * **A component may be emitted more than once, and that is why [limit] exists.** The adjacency
+ * **A component may be emitted more than once, and that is why the bounds exist.** The adjacency
  * list is a graph, not a tree: two containers may both reference the same child, and each
  * reference is a separate rendering. Deduplicating by id would drop the second one, so the walk
  * follows every path — which means n layers of components that each reference the same two
- * children produce 2^n instances from 2n components. The path guard does not bound that, because
- * none of those paths repeats an id. [limit] does, by raising [A2uiStateException] rather than by
- * truncating: a silently shortened walk is a wrong UI drawn without complaint, which is worse than
- * a surface that refuses to draw.
+ * children produce 2^n instances from 2n components. The cycle guard does not bound that, because
+ * none of those paths repeats an id.
  *
- * The traversal keeps its own stack rather than recursing, so the depth of a surface is bounded by
- * [limit] alone and cannot overflow the call stack — which on Kotlin/Native is small enough to
- * matter well before [limit] is reached.
+ * [limit] and [maxDepth] do, by raising [A2uiStateException] rather than by truncating: a silently
+ * shortened walk is a wrong UI drawn without complaint, which is worse than a surface that refuses
+ * to draw. The traversal also keeps its own stack rather than recursing, so [maxDepth] is what
+ * bounds nesting rather than the call stack — which on Kotlin/Native is small enough to matter
+ * first.
  */
 public fun SurfaceModel.walk(
     resolver: ChildResolver,
     limit: Int = DEFAULT_WALK_LIMIT,
+    maxDepth: Int = DEFAULT_MAX_DEPTH,
 ): List<Pair<Component, EvaluationScope>> {
     val out = mutableListOf<Pair<Component, EvaluationScope>>()
-    val pending = ArrayDeque<Triple<Component, EvaluationScope, Set<ComponentId>>>()
-    root?.let { pending.addLast(Triple(it, EvaluationScope.Root, emptySet())) }
-
-    fun overrun(queued: Int): Boolean = out.size + pending.size + queued > limit
+    val pending = ArrayDeque<Frame>()
+    root?.let { pending.addLast(Frame(it, EvaluationScope.Root, null)) }
 
     while (pending.isNotEmpty()) {
-        val (component, scope, path) = pending.removeLast()
-        out += component to scope
-        val nextPath = path + component.id
+        val frame = pending.removeLast()
+        out += frame.component to frame.scope
+        // Ancestors are shared by reference rather than copied per node: copying the path into a
+        // set at every step is what makes a deep surface quadratic, which `maxDepth` alone would
+        // not fix cheaply enough for the js and wasmJs targets.
+        val ancestors = Ancestor(frame.component.id, frame.ancestors)
+        if (ancestors.depth > maxDepth) {
+            throw A2uiStateException(
+                "surface `$surfaceId` nests components more than $maxDepth deep.",
+                surfaceId,
+            )
+        }
 
-        val children = mutableListOf<Triple<Component, EvaluationScope, Set<ComponentId>>>()
+        val children = mutableListOf<Frame>()
         fun descend(id: ComponentId, childScope: EvaluationScope) {
             val child = components[id] ?: return
-            if (child.id in nextPath) return
-            children += Triple(child, childScope, nextPath)
+            if (ancestors.contains(child.id)) return
+            children += Frame(child, childScope, ancestors)
         }
-        for (reference in resolver.childrenOf(component)) {
+        for (reference in resolver.childrenOf(frame.component)) {
             when (reference) {
-                is ChildReference.Single -> descend(reference.id, scope)
-                is ChildReference.Fixed -> reference.ids.forEach { descend(it, scope) }
+                is ChildReference.Single -> descend(reference.id, frame.scope)
+                is ChildReference.Fixed -> reference.ids.forEach { descend(it, frame.scope) }
                 is ChildReference.Template -> {
-                    val items = read(reference.path, scope) as? JsonArray ?: continue
+                    val items = read(reference.path, frame.scope) as? JsonArray ?: continue
                     // The template component is re-entered once per item: each instance is a
                     // distinct rendering in a distinct scope, so only a reference back up the
                     // *current* path counts as a cycle.
                     items.indices.forEach { index ->
-                        descend(reference.componentId, scope.iterate(reference.path, index))
+                        descend(reference.componentId, frame.scope.iterate(reference.path, index))
                     }
                 }
             }
         }
-        if (overrun(children.size)) {
+        if (out.size + pending.size + children.size > limit) {
             throw A2uiStateException(
                 "surface `$surfaceId` expands to more than $limit component instances.",
                 surfaceId,
@@ -217,6 +234,26 @@ public fun SurfaceModel.walk(
         for (index in children.indices.reversed()) pending.addLast(children[index])
     }
     return out
+}
+
+private class Frame(
+    val component: Component,
+    val scope: EvaluationScope,
+    val ancestors: Ancestor?,
+)
+
+/** One link of the chain of component ids on the path from the root to the current node. */
+private class Ancestor(val id: ComponentId, val parent: Ancestor?) {
+    val depth: Int = (parent?.depth ?: 0) + 1
+
+    fun contains(id: ComponentId): Boolean {
+        var link: Ancestor? = this
+        while (link != null) {
+            if (link.id == id) return true
+            link = link.parent
+        }
+        return false
+    }
 }
 
 /** Reads [ChildList] out of an already-decoded property value. */

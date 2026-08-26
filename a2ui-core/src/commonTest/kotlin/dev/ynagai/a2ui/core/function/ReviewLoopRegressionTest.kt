@@ -285,3 +285,71 @@ class ReviewLoopBoundsTest {
         )
     }
 }
+
+/**
+ * Round 3: progressive rendering. `a2ui_protocol.md:838` requires a renderer to tolerate a data
+ * path that resolves to `undefined` because its `updateDataModel` has not arrived yet.
+ */
+class ProgressiveRenderingTest {
+
+    private fun evaluate(wire: String, data: String = "{}") =
+        context(data).evaluate(call(wire)).toString()
+
+    @Test
+    fun theFormattingFunctionsAnswerWithNullWhenTheirValueHasNotArrived() {
+        assertEquals("null", evaluate("""{"call":"formatNumber","args":{"value":{"path":"/cart/total"}}}"""))
+        assertEquals(
+            "null",
+            evaluate("""{"call":"formatCurrency","args":{"value":{"path":"/x"},"currency":"USD"}}"""),
+        )
+        assertEquals(
+            "null",
+            evaluate("""{"call":"formatDate","args":{"value":{"path":"/x"},"format":"yyyy"}}"""),
+        )
+        assertEquals(
+            "null",
+            evaluate("""{"call":"pluralize","args":{"value":{"path":"/x"},"other":"items"}}"""),
+        )
+        assertEquals("null", evaluate("""{"call":"formatString","args":{"value":{"path":"/x"}}}"""))
+    }
+
+    @Test
+    fun anAbsentValueInterpolatesAsTheEmptyStringLikeABarePath() {
+        // The whole point of answering with null rather than "": inside a template it renders as
+        // "" anyway, so the two spellings of the same absent data now agree.
+        assertEquals("n=", format("n=\${/cart/total}"))
+        assertEquals("n=", format("n=\${formatNumber(value:/cart/total)}"))
+    }
+
+    @Test
+    fun aFormatSelectingArgumentStaysStrict() {
+        // Tolerating these would render an amount whose currency is unknown, or a date with no
+        // pattern — confidently wrong rather than visibly absent.
+        assertFailsWith<A2uiFunctionException> {
+            evaluate("""{"call":"formatCurrency","args":{"value":5,"currency":{"path":"/x"}}}""")
+        }
+        assertFailsWith<A2uiFunctionException> {
+            evaluate("""{"call":"formatDate","args":{"value":0,"format":{"path":"/x"}}}""")
+        }
+    }
+
+    @Test
+    fun aCheckWhoseConditionHasNotArrivedIsNotYetAFailure() {
+        val condition = A2uiJson.strict.decodeFromJsonElement(
+            dev.ynagai.a2ui.core.protocol.DataBinding.serializer(),
+            Json.parseToJsonElement("""{"path":"/checks/card"}"""),
+        )
+        assertEquals(true, context("{}").evaluateCheck(condition).valid)
+        // A result that has arrived is still read as written.
+        assertEquals(
+            false,
+            context("""{"checks":{"card":{"valid":false,"code":"X"}}}""")
+                .evaluateCheck(condition).valid,
+        )
+    }
+
+    @Test
+    fun aValueThatIsPresentIsStillFormatted() {
+        assertEquals(""""1,234.50"""", evaluate("""{"call":"formatNumber","args":{"value":1234.5,"decimals":2}}"""))
+    }
+}

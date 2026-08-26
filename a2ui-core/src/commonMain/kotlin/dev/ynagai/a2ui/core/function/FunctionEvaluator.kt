@@ -209,6 +209,11 @@ public fun EvaluationContext.evaluate(call: FunctionCall): JsonElement =
  */
 public fun EvaluationContext.evaluateCheck(condition: BoundValue): ValidationResult {
     val value = evaluate(condition)
+    // A condition bound to a result the agent has not sent yet is not a failed check — it is a
+    // check that has not run. Reporting it as invalid would put an error on a field during the
+    // initial streaming phase, before the user has touched it, which is the case the protocol's
+    // progressive-rendering note asks a renderer to tolerate.
+    if (value is JsonNull) return ValidationResult(valid = true)
     if (value !is JsonObject) {
         throw A2uiFunctionException(
             "a check condition must evaluate to a ValidationResult object, but produced " +
@@ -362,13 +367,14 @@ internal class Evaluator(val context: EvaluationContext) {
         FunctionNames.LENGTH -> length(args)
         FunctionNames.NUMERIC -> numeric(args)
         FunctionNames.EMAIL -> email(args)
-        // `formatString` charges as it appends, so it is already accounted for; the other four
-        // build their result in one go and are charged on the way out.
-        FunctionNames.FORMAT_STRING -> JsonPrimitive(formatString(args))
-        FunctionNames.FORMAT_NUMBER -> JsonPrimitive(charged(formatNumber(args), name))
-        FunctionNames.FORMAT_CURRENCY -> JsonPrimitive(charged(formatCurrency(args), name))
-        FunctionNames.FORMAT_DATE -> JsonPrimitive(charged(formatDate(args), name))
-        FunctionNames.PLURALIZE -> JsonPrimitive(charged(pluralize(args), name))
+        // These five return `JsonElement` rather than `String`, because each may answer with
+        // `JsonNull` when the value it formats has not arrived. `formatString` charges as it
+        // appends; the other four charge their finished result.
+        FunctionNames.FORMAT_STRING -> formatString(args)
+        FunctionNames.FORMAT_NUMBER -> formatNumber(args)
+        FunctionNames.FORMAT_CURRENCY -> formatCurrency(args)
+        FunctionNames.FORMAT_DATE -> formatDate(args)
+        FunctionNames.PLURALIZE -> pluralize(args)
         FunctionNames.OPEN_URL -> openUrl(args)
         FunctionNames.AND -> JsonPrimitive(all(args, expected = true))
         FunctionNames.OR -> JsonPrimitive(!all(args, expected = false))
@@ -381,10 +387,10 @@ internal class Evaluator(val context: EvaluationContext) {
         )
     }
 
-    /** [result] after charging its length. @see produce */
-    private fun charged(result: String, call: String): String {
+    /** [result] as a JSON string, after charging its length. @see produce */
+    private fun charged(result: String, call: String): JsonPrimitive {
         produce(result.length, call)
-        return result
+        return JsonPrimitive(result)
     }
 
     /** One unit of the step budget, read before the work it pays for. */
@@ -582,22 +588,54 @@ internal class Evaluator(val context: EvaluationContext) {
     }
 
     // ---- formatting functions -------------------------------------------------------------
+    //
+    // All five return [JsonNull] when the value they are asked to format has not arrived yet,
+    // rather than raising. The protocol requires it: "data paths may resolve to `undefined` if the
+    // `updateDataModel` message containing that data has not yet arrived. Renderers should handle
+    // `undefined` values gracefully (e.g., by treating them as empty strings or showing a loading
+    // indicator) to support progressive rendering." Null rather than `""` because it keeps both of
+    // those open — [stringify] already renders it as `""` inside a template, while a renderer
+    // reading the result directly can still tell "no data yet" from "the empty string" and draw a
+    // placeholder. It is also the value a binding already resolves to, and the one `openUrl`
+    // returns for `void`, so it is this evaluator's established word for "nothing".
+    //
+    // The tolerance covers the value being formatted, and stops there. An argument that selects a
+    // *format* — `currency`, `format`, `pluralize`'s category strings — stays strict, because
+    // rendering an amount whose currency has not arrived, or a date with no pattern, produces
+    // something confidently wrong rather than something visibly absent.
 
-    private fun formatString(args: CallArguments): String =
-        interpolate(args.string("value"), args.depth)
+    private fun formatString(args: CallArguments): JsonElement {
+        val value = args.require("value")
+        if (value is JsonNull) return JsonNull
+        return JsonPrimitive(interpolate(args.asString(value, "value"), args.depth))
+    }
 
-    private fun formatNumber(args: CallArguments): String = context.locale.formatNumber(
-        value = args.number("value"),
-        decimals = args.optionalNumber("decimals")?.toInt(),
-        grouping = args.optionalBoolean("grouping") ?: true,
-    )
+    private fun formatNumber(args: CallArguments): JsonElement {
+        val value = args.require("value")
+        if (value is JsonNull) return JsonNull
+        return charged(
+            context.locale.formatNumber(
+                value = args.asNumber(value, "value"),
+                decimals = args.optionalNumber("decimals")?.toInt(),
+                grouping = args.optionalBoolean("grouping") ?: true,
+            ),
+            FunctionNames.FORMAT_NUMBER,
+        )
+    }
 
-    private fun formatCurrency(args: CallArguments): String = context.locale.formatCurrency(
-        value = args.number("value"),
-        currency = args.string("currency"),
-        decimals = args.optionalNumber("decimals")?.toInt(),
-        grouping = args.optionalBoolean("grouping") ?: true,
-    )
+    private fun formatCurrency(args: CallArguments): JsonElement {
+        val value = args.require("value")
+        if (value is JsonNull) return JsonNull
+        return charged(
+            context.locale.formatCurrency(
+                value = args.asNumber(value, "value"),
+                currency = args.string("currency"),
+                decimals = args.optionalNumber("decimals")?.toInt(),
+                grouping = args.optionalBoolean("grouping") ?: true,
+            ),
+            FunctionNames.FORMAT_CURRENCY,
+        )
+    }
 
     /**
      * A date, from either an epoch-millisecond number or an ISO 8601 string.
@@ -607,14 +645,18 @@ internal class Evaluator(val context: EvaluationContext) {
      * which one a given renderer wants, and rejecting one of them would make working payloads
      * renderer-specific.
      */
-    private fun formatDate(args: CallArguments): String {
+    private fun formatDate(args: CallArguments): JsonElement {
         val value = args.require("value")
+        if (value is JsonNull) return JsonNull
         val instant = epochMillisOf(value) ?: throw A2uiFunctionException(
             "`formatDate`: ${describe(value)} is not an epoch-millisecond number or an " +
                 "ISO 8601 date.",
             FunctionNames.FORMAT_DATE,
         )
-        return context.locale.formatDate(instant, args.string("format"))
+        return charged(
+            context.locale.formatDate(instant, args.string("format")),
+            FunctionNames.FORMAT_DATE,
+        )
     }
 
     /**
@@ -623,15 +665,17 @@ internal class Evaluator(val context: EvaluationContext) {
      * The fallback is what the guide specifies, and it is also why `other` is the one required
      * argument: a locale whose rules name a category the agent did not supply still renders.
      */
-    private fun pluralize(args: CallArguments): String {
-        val value = args.number("value")
-        val category = context.locale.pluralCategory(value)
-        return args.optionalString(category.argumentName)
+    private fun pluralize(args: CallArguments): JsonElement {
+        val element = args.require("value")
+        if (element is JsonNull) return JsonNull
+        val category = context.locale.pluralCategory(args.asNumber(element, "value"))
+        val text = args.optionalString(category.argumentName)
             ?: args.optionalString(PluralCategory.OTHER.argumentName)
             ?: throw A2uiFunctionException(
                 "`pluralize` requires an argument `other`.",
                 FunctionNames.PLURALIZE,
             )
+        return charged(text, FunctionNames.PLURALIZE)
     }
 
     // ---- side effects ---------------------------------------------------------------------

@@ -131,13 +131,17 @@ class FormatStringTest {
     }
 
     @Test
-    fun aSingleUnnamedArgumentBindsToValue() {
-        assertEquals("42", format("\${formatNumber(/count)}", """{"count":42}"""))
-    }
-
-    @Test
-    fun moreThanOneUnnamedArgumentIsRefused() {
-        assertFailsWith<A2uiFunctionException> { format("\${formatNumber(1, 2)}") }
+    fun anUnnamedArgumentIsRefused() {
+        // The basic catalog's `formatString` description says arguments "must be named". Accepting
+        // `${formatNumber(/count)}` would render here and fail on a conformant renderer.
+        val one = assertFailsWith<A2uiFunctionException> {
+            format("\${formatNumber(/count)}", """{"count":42}""")
+        }
+        assertTrue(one.message!!.contains("must be named"), one.message!!)
+        val two = assertFailsWith<A2uiFunctionException> { format("\${formatNumber(1, 2)}") }
+        assertTrue(two.message!!.contains("must be named"), two.message!!)
+        // The named form is the one that works.
+        assertEquals("42", format("\${formatNumber(value:/count)}", """{"count":42}"""))
     }
 
     @Test

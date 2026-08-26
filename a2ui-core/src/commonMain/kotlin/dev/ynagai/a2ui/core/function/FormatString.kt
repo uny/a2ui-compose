@@ -198,11 +198,12 @@ private fun callFunction(
 /**
  * The named arguments of a call, each evaluated.
  *
- * A single unnamed argument is accepted and bound to `value`. The protocol says arguments "must be
- * named", but its own example of a nested call — `${upper(${now()})}` — does not name one, and every
- * one-argument function in the basic catalog calls that argument `value`. Accepting the form the
- * specification demonstrates is worth more than holding it to the sentence next to it; more than one
- * unnamed argument has no such reading and is refused.
+ * Every argument must be named. The basic catalog says so of `formatString` in as many words —
+ * "Function arguments must be named" — and the one place the specification appears to show
+ * otherwise, `${upper(${now()})}`, calls a function no catalog defines and is illustrating nesting
+ * rather than argument syntax. Accepting an unnamed argument here would only ever produce payloads
+ * that render on this renderer and fail on a conformant one, which is the divergence this module
+ * spends its effort avoiding; nothing legal is refused by requiring the name.
  */
 private fun parseArguments(
     evaluator: Evaluator,
@@ -233,13 +234,14 @@ private fun parseArguments(
                 FunctionNames.FORMAT_STRING,
             )
         }
-        if (name == null && parts.size > 1) {
+        if (name == null) {
             throw A2uiFunctionException(
-                "formatString: arguments of `$call` must be named.",
+                "formatString: arguments of `${call.take(ERROR_EXCERPT)}` must be named, but " +
+                    "`${text.take(ERROR_EXCERPT)}` is not.",
                 FunctionNames.FORMAT_STRING,
             )
         }
-        val key = name ?: "value"
+        val key = name
         if (out.containsKey(key)) {
             throw A2uiFunctionException(
                 "formatString: `${call.take(ERROR_EXCERPT)}` names the argument `${key.take(ERROR_EXCERPT)}` twice.",

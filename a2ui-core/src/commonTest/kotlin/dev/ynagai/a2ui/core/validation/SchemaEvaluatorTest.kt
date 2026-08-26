@@ -1,0 +1,333 @@
+package dev.ynagai.a2ui.core.validation
+
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+/**
+ * The evaluator against the shapes A2UI v1.0 actually publishes.
+ *
+ * The two documents below are trimmed from `common_types.json` and `catalogs/basic/catalog.json`
+ * with their structure kept exactly: the cross-document cycle
+ * (`FunctionCall` -> `catalog.json#/$defs/anyFunction` -> a function -> its args ->
+ * `DynamicString` -> `FunctionCall`), the `allOf` + `unevaluatedProperties: false` shape every
+ * function definition uses, and the `catalog.json` placeholder filename. Those three are what the
+ * checker's design is answering, so a test on a schema of the author's own invention would not
+ * exercise it.
+ */
+private val COMMON_TYPES = """
+{
+  "${'$'}id": "https://a2ui.org/specification/v1_0/common_types.json",
+  "${'$'}defs": {
+    "DataBinding": {
+      "type": "object",
+      "properties": { "path": { "type": "string" } },
+      "required": ["path"],
+      "additionalProperties": false
+    },
+    "DynamicString": {
+      "oneOf": [
+        { "type": "string" },
+        { "${'$'}ref": "#/${'$'}defs/DataBinding" },
+        { "${'$'}ref": "#/${'$'}defs/FunctionCall" }
+      ]
+    },
+    "FunctionCommon": {
+      "type": "object",
+      "properties": { "catalogId": { "type": "string" } }
+    },
+    "FunctionCall": {
+      "type": "object",
+      "properties": {
+        "call": { "type": "string" },
+        "catalogId": { "type": "string" },
+        "args": { "type": "object" }
+      },
+      "required": ["call"],
+      "oneOf": [{ "${'$'}ref": "catalog.json#/${'$'}defs/anyFunction" }],
+      "unevaluatedProperties": false
+    }
+  }
+}
+""".trimIndent()
+
+private val CATALOG = """
+{
+  "${'$'}id": "https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json",
+  "catalogId": "https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json",
+  "${'$'}defs": {
+    "anyFunction": {
+      "oneOf": [{ "${'$'}ref": "#/functions/regex" }, { "${'$'}ref": "#/functions/openUrl" }]
+    }
+  },
+  "functions": {
+    "regex": {
+      "type": "object",
+      "returnType": "validationResult",
+      "allOf": [
+        { "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/FunctionCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "call": { "const": "regex" },
+            "args": {
+              "type": "object",
+              "properties": {
+                "value": { "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/DynamicString" },
+                "pattern": { "type": "string" }
+              },
+              "required": ["value", "pattern"],
+              "unevaluatedProperties": false
+            }
+          },
+          "required": ["call", "args"]
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "openUrl": {
+      "type": "object",
+      "returnType": "void",
+      "requiresUserActivation": true,
+      "allOf": [
+        { "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/FunctionCommon" },
+        {
+          "type": "object",
+          "properties": {
+            "call": { "const": "openUrl" },
+            "args": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "oneOf": [
+                    { "type": "string", "format": "uri" },
+                    { "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/DataBinding" }
+                  ]
+                }
+              },
+              "required": ["url"],
+              "unevaluatedProperties": false
+            }
+          },
+          "required": ["call", "args"]
+        }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}
+""".trimIndent()
+
+private fun parse(text: String): JsonObject = Json.parseToJsonElement(text) as JsonObject
+
+private fun evaluator(limits: ValidationLimits = ValidationLimits.DEFAULT): SchemaEvaluator =
+    SchemaEvaluator(
+        SchemaRegistry.of(listOf(parse(COMMON_TYPES)), activeCatalog = parse(CATALOG)),
+        limits,
+    )
+
+private val FUNCTION_CALL = SchemaLocation(
+    "https://a2ui.org/specification/v1_0/common_types.json",
+    "/\$defs/FunctionCall",
+)
+
+private fun check(payload: String, limits: ValidationLimits = ValidationLimits.DEFAULT): SchemaValidation {
+    val common = parse(COMMON_TYPES)
+    val schema = common.pointer("/\$defs/FunctionCall")!!
+    return evaluator(limits).validate(schema, FUNCTION_CALL, Json.parseToJsonElement(payload))
+}
+
+class SchemaEvaluatorTest {
+    @Test
+    fun accepts_a_well_formed_call() {
+        val result = check("""{"call": "regex", "args": {"value": "abc", "pattern": "^a"}}""")
+        assertTrue(result.isValid, result.violations.toString())
+        assertEquals(emptySet(), result.unsupportedKeywords)
+    }
+
+    @Test
+    fun rejects_a_call_no_function_in_the_catalog_defines() {
+        assertFalse(check("""{"call": "nope", "args": {}}""").isValid)
+    }
+
+    @Test
+    fun rejects_a_missing_required_argument() {
+        // `function_catalog_validation` #4: regex without a pattern.
+        val result = check("""{"call": "regex", "args": {"value": "abc"}}""")
+        assertFalse(result.isValid)
+    }
+
+    @Test
+    fun rejects_an_argument_of_the_wrong_type() {
+        // #26: a numeric pattern.
+        assertFalse(check("""{"call": "regex", "args": {"value": "a", "pattern": 7}}""").isValid)
+    }
+
+    // --- unevaluatedProperties ------------------------------------------------------------
+
+    @Test
+    fun rejects_an_extra_key_on_the_call() {
+        // `dynamic_value_validation` #8. The property names that make this pass for a conformant
+        // call are contributed by three different subschemas — the enclosing object's own
+        // `properties`, `FunctionCommon` through a `$ref`, and the matching `oneOf` branch's
+        // `allOf` — so a checker that did not carry annotations across all three would either
+        // reject every call or accept this one.
+        val result = check("""{"call": "regex", "args": {"value": "a", "pattern": "^a"}, "extra": "field"}""")
+        assertFalse(result.isValid)
+        assertTrue(result.violations.any { "extra" in it.message }, result.violations.toString())
+    }
+
+    @Test
+    fun accepts_a_key_only_a_referenced_schema_evaluates() {
+        // `catalogId` is named by `FunctionCommon`, reached through `$ref` from inside `allOf`,
+        // inside the `oneOf` branch. It is three applicators away from the
+        // `unevaluatedProperties` that has to know about it.
+        val result = check(
+            """{"call": "regex", "catalogId": "x", "args": {"value": "a", "pattern": "^a"}}""",
+        )
+        assertTrue(result.isValid, result.violations.toString())
+    }
+
+    @Test
+    fun rejects_an_extra_key_nested_inside_args() {
+        val result = check(
+            """{"call": "regex", "args": {"value": "a", "pattern": "^a", "extra": 1}}""",
+        )
+        assertFalse(result.isValid)
+    }
+
+    // --- the catalog.json placeholder -----------------------------------------------------
+
+    @Test
+    fun resolves_the_catalog_placeholder_to_the_active_catalog() {
+        // `catalog.json#/$defs/anyFunction` resolved as a URI names a document that does not
+        // exist — no catalog is published under `.../v1_0/catalog.json`, and the basic catalog's
+        // own `$id` is `.../catalogs/basic/catalog.json`. Reaching a function definition at all
+        // proves the placeholder was bound rather than resolved.
+        assertTrue(check("""{"call": "regex", "args": {"value": "a", "pattern": "^a"}}""").isValid)
+    }
+
+    @Test
+    fun reports_a_reference_it_cannot_resolve() {
+        val registry = SchemaRegistry.of(listOf(parse(COMMON_TYPES)), activeCatalog = null)
+        val schema = parse(COMMON_TYPES).pointer("/\$defs/FunctionCall")!!
+        val result = SchemaEvaluator(registry)
+            .validate(schema, FUNCTION_CALL, Json.parseToJsonElement("""{"call": "regex"}"""))
+        // Not silently valid: an unresolvable reference means nothing checked the call.
+        assertFalse(result.isValid)
+        assertTrue(
+            result.violations.any { "not a schema this renderer holds" in it.message },
+            result.violations.toString(),
+        )
+    }
+
+    // --- format ---------------------------------------------------------------------------
+
+    @Test
+    fun rejects_a_url_that_is_not_a_uri() {
+        // #32. `format` is an annotation by default in 2020-12; treating it as one here would
+        // accept this, because the alternative that catches it is `{"type": "string"}`.
+        val result = check("""{"call": "openUrl", "args": {"url": "not a uri"}}""")
+        assertFalse(result.isValid)
+    }
+
+    @Test
+    fun accepts_a_url_that_is_a_uri() {
+        assertTrue(
+            check("""{"call": "openUrl", "args": {"url": "https://example.com/x"}}""").isValid,
+        )
+    }
+
+    @Test
+    fun accepts_a_binding_where_a_uri_is_allowed() {
+        assertTrue(
+            check("""{"call": "openUrl", "args": {"url": {"path": "/form/url"}}}""").isValid,
+        )
+    }
+
+    @Test
+    fun rejects_a_binding_carrying_an_extra_key() {
+        // `dynamic_value_validation` #7, through `additionalProperties: false`.
+        assertFalse(
+            check("""{"call": "openUrl", "args": {"url": {"path": "/x", "extra": 1}}}""").isValid,
+        )
+    }
+
+    // --- recursion and bounds ---------------------------------------------------------------
+
+    @Test
+    fun follows_a_call_nested_in_an_argument() {
+        val nested = """
+            {"call": "regex", "args": {
+              "value": {"call": "regex", "args": {"value": "a", "pattern": "^a"}},
+              "pattern": "^a"
+            }}
+        """.trimIndent()
+        assertTrue(check(nested).isValid, check(nested).violations.toString())
+    }
+
+    @Test
+    fun stops_on_an_instance_that_nests_past_the_depth_bound() {
+        var payload = """{"call": "regex", "args": {"value": "a", "pattern": "^a"}}"""
+        repeat(40) {
+            payload = """{"call": "regex", "args": {"value": $payload, "pattern": "^a"}}"""
+        }
+        val result = check(payload, ValidationLimits(maxDepth = 16))
+        assertFalse(result.isValid)
+        assertTrue(result.truncated)
+    }
+
+    @Test
+    fun stops_on_a_payload_that_outgrows_the_step_budget() {
+        var payload = """{"call": "regex", "args": {"value": "a", "pattern": "^a"}}"""
+        repeat(20) {
+            payload = """{"call": "regex", "args": {"value": $payload, "pattern": "^a"}}"""
+        }
+        val result = check(payload, ValidationLimits(maxDepth = 512, maxSteps = 200))
+        assertFalse(result.isValid)
+        assertTrue(result.truncated)
+        assertContains(result.violations.first().message, "steps")
+    }
+
+    // --- what the messages may carry ----------------------------------------------------------
+
+    @Test
+    fun never_quotes_a_value_read_from_the_instance() {
+        // A renderer turns these into the `error` it sends the agent, so a quoted value goes back
+        // over the wire. The failing value here is what a card number would be.
+        val result = check("""{"call": "regex", "args": {"value": "a", "pattern": 4111111111111111}}""")
+        assertFalse(result.isValid)
+        assertTrue(
+            result.violations.none { "4111111111111111" in it.message },
+            result.violations.toString(),
+        )
+    }
+
+    @Test
+    fun locates_a_violation_by_json_pointer() {
+        val result = check("""{"call": "regex", "args": {"value": "a", "pattern": 7}}""")
+        assertTrue(
+            result.violations.any { it.location == "/args/pattern" },
+            result.violations.toString(),
+        )
+    }
+
+    // --- coverage of the keyword subset -------------------------------------------------------
+
+    @Test
+    fun reports_a_keyword_it_does_not_apply() {
+        val registry = SchemaRegistry.of(
+            listOf(parse("""{"${'$'}id": "urn:t", "type": "string", "maxLength": 2}""")),
+        )
+        val schema = parse("""{"type": "string", "maxLength": 2}""")
+        val result = SchemaEvaluator(registry)
+            .validate(schema, SchemaLocation("urn:t", ""), Json.parseToJsonElement("\"abcdef\""))
+        // Valid as far as this evaluator went, and it says so rather than implying it checked.
+        assertTrue(result.isValid)
+        assertContains(result.unsupportedKeywords, "maxLength")
+    }
+}

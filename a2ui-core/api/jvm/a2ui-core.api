@@ -1561,3 +1561,98 @@ public final class dev/ynagai/a2ui/core/surface/SurfaceModelKt {
 	public static synthetic fun walk$default (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ldev/ynagai/a2ui/core/surface/ChildResolver;IIILjava/lang/Object;)Ljava/util/List;
 }
 
+public final class dev/ynagai/a2ui/core/validation/SchemaEvaluator {
+	public fun <init> (Ldev/ynagai/a2ui/core/validation/SchemaRegistry;Ldev/ynagai/a2ui/core/validation/ValidationLimits;)V
+	public synthetic fun <init> (Ldev/ynagai/a2ui/core/validation/SchemaRegistry;Ldev/ynagai/a2ui/core/validation/ValidationLimits;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun validate (Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/validation/SchemaLocation;Lkotlinx/serialization/json/JsonElement;)Ldev/ynagai/a2ui/core/validation/SchemaValidation;
+}
+
+public final class dev/ynagai/a2ui/core/validation/SchemaLocation {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Ldev/ynagai/a2ui/core/validation/SchemaLocation;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/validation/SchemaLocation;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/validation/SchemaLocation;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDocumentUri ()Ljava/lang/String;
+	public final fun getPointer ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/validation/SchemaRegistry {
+	public static final field Companion Ldev/ynagai/a2ui/core/validation/SchemaRegistry$Companion;
+	public final fun document (Ljava/lang/String;)Lkotlinx/serialization/json/JsonObject;
+	public final fun resolve (Ljava/lang/String;Ldev/ynagai/a2ui/core/validation/SchemaLocation;)Ldev/ynagai/a2ui/core/validation/SchemaRegistry$Resolved;
+}
+
+public final class dev/ynagai/a2ui/core/validation/SchemaRegistry$Companion {
+	public final fun of (Ljava/util/List;Lkotlinx/serialization/json/JsonObject;)Ldev/ynagai/a2ui/core/validation/SchemaRegistry;
+	public static synthetic fun of$default (Ldev/ynagai/a2ui/core/validation/SchemaRegistry$Companion;Ljava/util/List;Lkotlinx/serialization/json/JsonObject;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/validation/SchemaRegistry;
+}
+
+public final class dev/ynagai/a2ui/core/validation/SchemaRegistry$Resolved {
+	public fun <init> (Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/validation/SchemaLocation;)V
+	public final fun component1 ()Lkotlinx/serialization/json/JsonElement;
+	public final fun component2 ()Ldev/ynagai/a2ui/core/validation/SchemaLocation;
+	public final fun copy (Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/validation/SchemaLocation;)Ldev/ynagai/a2ui/core/validation/SchemaRegistry$Resolved;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/validation/SchemaRegistry$Resolved;Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/validation/SchemaLocation;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/validation/SchemaRegistry$Resolved;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLocation ()Ldev/ynagai/a2ui/core/validation/SchemaLocation;
+	public final fun getSchema ()Lkotlinx/serialization/json/JsonElement;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/validation/SchemaValidation {
+	public fun <init> (Ljava/util/List;Ljava/util/Set;Z)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/Set;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/Set;
+	public final fun component3 ()Z
+	public final fun copy (Ljava/util/List;Ljava/util/Set;Z)Ldev/ynagai/a2ui/core/validation/SchemaValidation;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/validation/SchemaValidation;Ljava/util/List;Ljava/util/Set;ZILjava/lang/Object;)Ldev/ynagai/a2ui/core/validation/SchemaValidation;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTruncated ()Z
+	public final fun getUnsupportedKeywords ()Ljava/util/Set;
+	public final fun getViolations ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun isValid ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/validation/SchemaViolation {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Ldev/ynagai/a2ui/core/validation/SchemaViolation;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/validation/SchemaViolation;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/validation/SchemaViolation;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLocation ()Ljava/lang/String;
+	public final fun getMessage ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/validation/ValidationLimits {
+	public static final field Companion Ldev/ynagai/a2ui/core/validation/ValidationLimits$Companion;
+	public fun <init> ()V
+	public fun <init> (III)V
+	public synthetic fun <init> (IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (III)Ldev/ynagai/a2ui/core/validation/ValidationLimits;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/validation/ValidationLimits;IIIILjava/lang/Object;)Ldev/ynagai/a2ui/core/validation/ValidationLimits;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMaxDepth ()I
+	public final fun getMaxSteps ()I
+	public final fun getMaxViolations ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/validation/ValidationLimits$Companion {
+	public final fun getDEFAULT ()Ldev/ynagai/a2ui/core/validation/ValidationLimits;
+}
+

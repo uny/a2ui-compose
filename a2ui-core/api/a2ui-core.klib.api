@@ -1669,6 +1669,114 @@ final class dev.ynagai.a2ui.core.surface/SurfaceModel { // dev.ynagai.a2ui.core.
     final fun withDataModel(dev.ynagai.a2ui.core.surface/JsonPointer, kotlinx.serialization.json/JsonElement): dev.ynagai.a2ui.core.surface/SurfaceModel // dev.ynagai.a2ui.core.surface/SurfaceModel.withDataModel|withDataModel(dev.ynagai.a2ui.core.surface.JsonPointer;kotlinx.serialization.json.JsonElement){}[0]
 }
 
+final class dev.ynagai.a2ui.core.validation/SchemaEvaluator { // dev.ynagai.a2ui.core.validation/SchemaEvaluator|null[0]
+    constructor <init>(dev.ynagai.a2ui.core.validation/SchemaRegistry, dev.ynagai.a2ui.core.validation/ValidationLimits = ...) // dev.ynagai.a2ui.core.validation/SchemaEvaluator.<init>|<init>(dev.ynagai.a2ui.core.validation.SchemaRegistry;dev.ynagai.a2ui.core.validation.ValidationLimits){}[0]
+
+    final fun validate(kotlinx.serialization.json/JsonElement, dev.ynagai.a2ui.core.validation/SchemaLocation, kotlinx.serialization.json/JsonElement): dev.ynagai.a2ui.core.validation/SchemaValidation // dev.ynagai.a2ui.core.validation/SchemaEvaluator.validate|validate(kotlinx.serialization.json.JsonElement;dev.ynagai.a2ui.core.validation.SchemaLocation;kotlinx.serialization.json.JsonElement){}[0]
+}
+
+final class dev.ynagai.a2ui.core.validation/SchemaLocation { // dev.ynagai.a2ui.core.validation/SchemaLocation|null[0]
+    constructor <init>(kotlin/String, kotlin/String) // dev.ynagai.a2ui.core.validation/SchemaLocation.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+    final val documentUri // dev.ynagai.a2ui.core.validation/SchemaLocation.documentUri|{}documentUri[0]
+        final fun <get-documentUri>(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaLocation.documentUri.<get-documentUri>|<get-documentUri>(){}[0]
+    final val pointer // dev.ynagai.a2ui.core.validation/SchemaLocation.pointer|{}pointer[0]
+        final fun <get-pointer>(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaLocation.pointer.<get-pointer>|<get-pointer>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaLocation.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaLocation.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ...): dev.ynagai.a2ui.core.validation/SchemaLocation // dev.ynagai.a2ui.core.validation/SchemaLocation.copy|copy(kotlin.String;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.validation/SchemaLocation.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.validation/SchemaLocation.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaLocation.toString|toString(){}[0]
+}
+
+final class dev.ynagai.a2ui.core.validation/SchemaRegistry { // dev.ynagai.a2ui.core.validation/SchemaRegistry|null[0]
+    final fun document(kotlin/String): kotlinx.serialization.json/JsonObject? // dev.ynagai.a2ui.core.validation/SchemaRegistry.document|document(kotlin.String){}[0]
+    final fun resolve(kotlin/String, dev.ynagai.a2ui.core.validation/SchemaLocation): dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved? // dev.ynagai.a2ui.core.validation/SchemaRegistry.resolve|resolve(kotlin.String;dev.ynagai.a2ui.core.validation.SchemaLocation){}[0]
+
+    final class Resolved { // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved|null[0]
+        constructor <init>(kotlinx.serialization.json/JsonElement, dev.ynagai.a2ui.core.validation/SchemaLocation) // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved.<init>|<init>(kotlinx.serialization.json.JsonElement;dev.ynagai.a2ui.core.validation.SchemaLocation){}[0]
+
+        final val location // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved.location|{}location[0]
+            final fun <get-location>(): dev.ynagai.a2ui.core.validation/SchemaLocation // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved.location.<get-location>|<get-location>(){}[0]
+        final val schema // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved.schema|{}schema[0]
+            final fun <get-schema>(): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved.schema.<get-schema>|<get-schema>(){}[0]
+
+        final fun component1(): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved.component1|component1(){}[0]
+        final fun component2(): dev.ynagai.a2ui.core.validation/SchemaLocation // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved.component2|component2(){}[0]
+        final fun copy(kotlinx.serialization.json/JsonElement = ..., dev.ynagai.a2ui.core.validation/SchemaLocation = ...): dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved.copy|copy(kotlinx.serialization.json.JsonElement;dev.ynagai.a2ui.core.validation.SchemaLocation){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaRegistry.Resolved.toString|toString(){}[0]
+    }
+
+    final object Companion { // dev.ynagai.a2ui.core.validation/SchemaRegistry.Companion|null[0]
+        final fun of(kotlin.collections/List<kotlinx.serialization.json/JsonObject>, kotlinx.serialization.json/JsonObject? = ...): dev.ynagai.a2ui.core.validation/SchemaRegistry // dev.ynagai.a2ui.core.validation/SchemaRegistry.Companion.of|of(kotlin.collections.List<kotlinx.serialization.json.JsonObject>;kotlinx.serialization.json.JsonObject?){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.validation/SchemaValidation { // dev.ynagai.a2ui.core.validation/SchemaValidation|null[0]
+    constructor <init>(kotlin.collections/List<dev.ynagai.a2ui.core.validation/SchemaViolation>, kotlin.collections/Set<kotlin/String> = ..., kotlin/Boolean = ...) // dev.ynagai.a2ui.core.validation/SchemaValidation.<init>|<init>(kotlin.collections.List<dev.ynagai.a2ui.core.validation.SchemaViolation>;kotlin.collections.Set<kotlin.String>;kotlin.Boolean){}[0]
+
+    final val isValid // dev.ynagai.a2ui.core.validation/SchemaValidation.isValid|{}isValid[0]
+        final fun <get-isValid>(): kotlin/Boolean // dev.ynagai.a2ui.core.validation/SchemaValidation.isValid.<get-isValid>|<get-isValid>(){}[0]
+    final val truncated // dev.ynagai.a2ui.core.validation/SchemaValidation.truncated|{}truncated[0]
+        final fun <get-truncated>(): kotlin/Boolean // dev.ynagai.a2ui.core.validation/SchemaValidation.truncated.<get-truncated>|<get-truncated>(){}[0]
+    final val unsupportedKeywords // dev.ynagai.a2ui.core.validation/SchemaValidation.unsupportedKeywords|{}unsupportedKeywords[0]
+        final fun <get-unsupportedKeywords>(): kotlin.collections/Set<kotlin/String> // dev.ynagai.a2ui.core.validation/SchemaValidation.unsupportedKeywords.<get-unsupportedKeywords>|<get-unsupportedKeywords>(){}[0]
+    final val violations // dev.ynagai.a2ui.core.validation/SchemaValidation.violations|{}violations[0]
+        final fun <get-violations>(): kotlin.collections/List<dev.ynagai.a2ui.core.validation/SchemaViolation> // dev.ynagai.a2ui.core.validation/SchemaValidation.violations.<get-violations>|<get-violations>(){}[0]
+
+    final fun component1(): kotlin.collections/List<dev.ynagai.a2ui.core.validation/SchemaViolation> // dev.ynagai.a2ui.core.validation/SchemaValidation.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/Set<kotlin/String> // dev.ynagai.a2ui.core.validation/SchemaValidation.component2|component2(){}[0]
+    final fun component3(): kotlin/Boolean // dev.ynagai.a2ui.core.validation/SchemaValidation.component3|component3(){}[0]
+    final fun copy(kotlin.collections/List<dev.ynagai.a2ui.core.validation/SchemaViolation> = ..., kotlin.collections/Set<kotlin/String> = ..., kotlin/Boolean = ...): dev.ynagai.a2ui.core.validation/SchemaValidation // dev.ynagai.a2ui.core.validation/SchemaValidation.copy|copy(kotlin.collections.List<dev.ynagai.a2ui.core.validation.SchemaViolation>;kotlin.collections.Set<kotlin.String>;kotlin.Boolean){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.validation/SchemaValidation.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.validation/SchemaValidation.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaValidation.toString|toString(){}[0]
+}
+
+final class dev.ynagai.a2ui.core.validation/SchemaViolation { // dev.ynagai.a2ui.core.validation/SchemaViolation|null[0]
+    constructor <init>(kotlin/String, kotlin/String) // dev.ynagai.a2ui.core.validation/SchemaViolation.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+    final val location // dev.ynagai.a2ui.core.validation/SchemaViolation.location|{}location[0]
+        final fun <get-location>(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaViolation.location.<get-location>|<get-location>(){}[0]
+    final val message // dev.ynagai.a2ui.core.validation/SchemaViolation.message|{}message[0]
+        final fun <get-message>(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaViolation.message.<get-message>|<get-message>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaViolation.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaViolation.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ...): dev.ynagai.a2ui.core.validation/SchemaViolation // dev.ynagai.a2ui.core.validation/SchemaViolation.copy|copy(kotlin.String;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.validation/SchemaViolation.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.validation/SchemaViolation.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.validation/SchemaViolation.toString|toString(){}[0]
+}
+
+final class dev.ynagai.a2ui.core.validation/ValidationLimits { // dev.ynagai.a2ui.core.validation/ValidationLimits|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.ynagai.a2ui.core.validation/ValidationLimits.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+    final val maxDepth // dev.ynagai.a2ui.core.validation/ValidationLimits.maxDepth|{}maxDepth[0]
+        final fun <get-maxDepth>(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.maxDepth.<get-maxDepth>|<get-maxDepth>(){}[0]
+    final val maxSteps // dev.ynagai.a2ui.core.validation/ValidationLimits.maxSteps|{}maxSteps[0]
+        final fun <get-maxSteps>(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.maxSteps.<get-maxSteps>|<get-maxSteps>(){}[0]
+    final val maxViolations // dev.ynagai.a2ui.core.validation/ValidationLimits.maxViolations|{}maxViolations[0]
+        final fun <get-maxViolations>(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.maxViolations.<get-maxViolations>|<get-maxViolations>(){}[0]
+
+    final fun component1(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.component3|component3(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): dev.ynagai.a2ui.core.validation/ValidationLimits // dev.ynagai.a2ui.core.validation/ValidationLimits.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.validation/ValidationLimits.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.validation/ValidationLimits.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.validation/ValidationLimits.Companion|null[0]
+        final val DEFAULT // dev.ynagai.a2ui.core.validation/ValidationLimits.Companion.DEFAULT|{}DEFAULT[0]
+            final fun <get-DEFAULT>(): dev.ynagai.a2ui.core.validation/ValidationLimits // dev.ynagai.a2ui.core.validation/ValidationLimits.Companion.DEFAULT.<get-DEFAULT>|<get-DEFAULT>(){}[0]
+    }
+}
+
 final object dev.ynagai.a2ui.core.function/FallbackLocaleFormatter : dev.ynagai.a2ui.core.function/LocaleFormatter { // dev.ynagai.a2ui.core.function/FallbackLocaleFormatter|null[0]
     final fun formatCurrency(kotlin/Double, kotlin/String, kotlin/Int?, kotlin/Boolean): kotlin/String // dev.ynagai.a2ui.core.function/FallbackLocaleFormatter.formatCurrency|formatCurrency(kotlin.Double;kotlin.String;kotlin.Int?;kotlin.Boolean){}[0]
     final fun formatDate(kotlin/Long, kotlin/String): kotlin/String // dev.ynagai.a2ui.core.function/FallbackLocaleFormatter.formatDate|formatDate(kotlin.Long;kotlin.String){}[0]

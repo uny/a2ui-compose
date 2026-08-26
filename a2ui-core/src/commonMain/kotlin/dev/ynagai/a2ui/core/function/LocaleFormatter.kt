@@ -1,0 +1,171 @@
+package dev.ynagai.a2ui.core.function
+
+import kotlin.math.abs
+import kotlin.math.floor
+
+/**
+ * The locale-sensitive half of the basic catalog, kept as a contract rather than an implementation.
+ *
+ * `formatNumber`, `formatCurrency`, `formatDate` and `pluralize` are specified in terms of "the
+ * platform's native locale formatting" — `Intl.NumberFormat` on the web, `NumberFormatter` on
+ * Apple platforms, `android.icu` on Android. `commonMain` has none of those and Kotlin's standard
+ * library carries no locale data at all, so a faithful implementation is seven `actual`
+ * declarations, not one algorithm.
+ *
+ * The evaluator therefore depends on this interface and never on a platform. [FallbackLocaleFormatter]
+ * keeps the functions answering — well enough to specify and test their argument handling, their
+ * error cases and their composition inside `formatString` — while the platform-native
+ * implementations arrive with the renderer that needs them.
+ *
+ * This is deliberately an interface rather than an `expect` declaration. An `expect` obliges every
+ * target to supply an `actual` before the module compiles at all, which is the work being deferred;
+ * an injected interface defers it while still fixing the shape the implementations must have.
+ */
+public interface LocaleFormatter {
+    /**
+     * [value] as a decimal string.
+     *
+     * [decimals] fixes both the minimum and the maximum number of fraction digits when present;
+     * when absent the formatter chooses. [grouping] asks for the locale's group separators.
+     */
+    public fun formatNumber(value: Double, decimals: Int?, grouping: Boolean): String
+
+    /** [value] as an amount in [currency], an ISO 4217 code. Arguments otherwise as [formatNumber]. */
+    public fun formatCurrency(value: Double, currency: String, decimals: Int?, grouping: Boolean): String
+
+    /**
+     * The instant [epochMillis] rendered with the Unicode TR35 pattern [pattern].
+     *
+     * The instant is UTC. The specification says nothing about which zone a renderer formats in,
+     * and a formatter that reads the device's zone cannot be a pure function of its arguments —
+     * so the zone is left to the implementation to document, and this one does not shift.
+     */
+    public fun formatDate(epochMillis: Long, pattern: String): String
+
+    /** Which CLDR plural category [value] falls into for this formatter's locale. */
+    public fun pluralCategory(value: Double): PluralCategory
+}
+
+/** The CLDR plural categories, which are also the optional argument names of `pluralize`. */
+public enum class PluralCategory(public val argumentName: String) {
+    ZERO("zero"),
+    ONE("one"),
+    TWO("two"),
+    FEW("few"),
+    MANY("many"),
+    OTHER("other"),
+}
+
+/**
+ * A locale-independent [LocaleFormatter]: ASCII separators, English names, English plural rules.
+ *
+ * **This is not a locale implementation and does not claim to be one.** It is what the four
+ * locale-sensitive functions do until the platform-native formatters land, chosen so that their
+ * output is predictable rather than plausible: `1234.5` is `1,234.5` here on every target and in
+ * every environment, which is what makes the evaluator's own behaviour testable.
+ *
+ * Its output is English-shaped rather than root-shaped on purpose. CLDR's root locale has a single
+ * plural category and numeric month names, which would make `pluralize` and `formatDate` produce
+ * output no renderer would ship. Approximating `en-US` at least produces something a developer can
+ * read while recognising it as a placeholder.
+ */
+public object FallbackLocaleFormatter : LocaleFormatter {
+    override fun formatNumber(value: Double, decimals: Int?, grouping: Boolean): String =
+        formatDecimal(value, decimals, grouping)
+
+    /** `USD 1,234.50` — the code and the amount, since no symbol table is available here. */
+    override fun formatCurrency(
+        value: Double,
+        currency: String,
+        decimals: Int?,
+        grouping: Boolean,
+    ): String = currency + " " + formatDecimal(value, decimals ?: CURRENCY_DECIMALS, grouping)
+
+    override fun formatDate(epochMillis: Long, pattern: String): String =
+        formatUtcPattern(epochMillis, pattern)
+
+    /**
+     * The English rule, `n == 1` → [PluralCategory.ONE].
+     *
+     * CLDR's English rule is `i == 1 and v == 0`, which puts `1.0` written with a fraction digit
+     * into `other`. That distinction needs the formatted string rather than the number, which this
+     * signature does not carry, so it is not drawn.
+     */
+    override fun pluralCategory(value: Double): PluralCategory =
+        if (value == 1.0) PluralCategory.ONE else PluralCategory.OTHER
+
+    private const val CURRENCY_DECIMALS: Int = 2
+}
+
+/** Fraction digits beyond which the scaled-integer rounding below stops being exact. */
+private const val MAX_EXACT_DECIMALS: Int = 15
+
+/** The largest magnitude a rounded, scaled [Double] still represents every integer below. */
+private const val EXACT_INTEGER_LIMIT: Double = 9.0e15
+
+private const val GROUP_SIZE: Int = 3
+
+/**
+ * [value] as digits, with [decimals] fraction digits when given and `,` every three integer digits
+ * when [grouping].
+ *
+ * With no [decimals] the shortest representation that round-trips is used rather than a made-up
+ * precision: a formatter with no locale has no basis for choosing 2 over 3, and silently rounding
+ * a value the caller did not ask to round loses information that the caller cannot get back.
+ */
+private fun formatDecimal(value: Double, decimals: Int?, grouping: Boolean): String {
+    if (value.isNaN() || value.isInfinite()) return value.toString()
+    val negative = value < 0.0 || (value == 0.0 && 1.0 / value < 0.0)
+    val magnitude = abs(value)
+
+    val digits = when {
+        decimals == null -> shortestDigits(magnitude)
+        decimals < 0 -> throw A2uiFunctionException("`decimals` must not be negative, but was $decimals.")
+        else -> fixedDigits(magnitude, decimals)
+    } ?: return value.toString() // Out of the exact range; the raw form beats a wrong one.
+
+    val point = digits.indexOf('.')
+    val integerPart = if (point < 0) digits else digits.substring(0, point)
+    val fractionPart = if (point < 0) "" else digits.substring(point)
+    val grouped = if (grouping) group(integerPart) else integerPart
+    return if (negative) "-$grouped$fractionPart" else grouped + fractionPart
+}
+
+/** [magnitude] with exactly [decimals] fraction digits, or null when it cannot be rounded exactly. */
+private fun fixedDigits(magnitude: Double, decimals: Int): String? {
+    if (decimals > MAX_EXACT_DECIMALS) return null
+    var scale = 1.0
+    repeat(decimals) { scale *= 10.0 }
+    val scaled = magnitude * scale
+    // Read before the multiplication is trusted rather than after: past this bound consecutive
+    // doubles are further than 1 apart, so `round` returns a value whose decimal expansion is not
+    // the one the caller wrote, and padding it produces confidently wrong digits.
+    if (!scaled.isFinite() || scaled >= EXACT_INTEGER_LIMIT) return null
+    // `floor(x + 0.5)` rather than `round`, which breaks ties towards the even integer: the
+    // rule ECMA-402 and CLDR specify for number formatting is half-expand, so 0.125 at two
+    // fraction digits is 0.13 and not 0.12. `scaled` is a magnitude, so this is away from zero.
+    val rounded = floor(scaled + 0.5).toLong().toString().padStart(decimals + 1, '0')
+    if (decimals == 0) return rounded
+    return rounded.dropLast(decimals) + "." + rounded.takeLast(decimals)
+}
+
+/** [magnitude] in its shortest round-tripping form, or null when that form is exponential. */
+private fun shortestDigits(magnitude: Double): String? {
+    val text = magnitude.toString()
+    if (text.contains('e') || text.contains('E')) return null
+    return if (text.endsWith(".0")) text.dropLast(2) else text
+}
+
+private fun group(integerPart: String): String {
+    if (integerPart.length <= GROUP_SIZE) return integerPart
+    val out = StringBuilder(integerPart.length + integerPart.length / GROUP_SIZE)
+    val lead = integerPart.length % GROUP_SIZE
+    if (lead != 0) out.append(integerPart, 0, lead)
+    var i = lead
+    while (i < integerPart.length) {
+        if (out.isNotEmpty()) out.append(',')
+        out.append(integerPart, i, i + GROUP_SIZE)
+        i += GROUP_SIZE
+    }
+    return out.toString()
+}

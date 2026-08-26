@@ -6,6 +6,34 @@
 // - Show declarations: true
 
 // Library unique name: <dev.ynagai.a2ui:a2ui-core>
+final enum class dev.ynagai.a2ui.core.function/InvocationContext : kotlin/Enum<dev.ynagai.a2ui.core.function/InvocationContext> { // dev.ynagai.a2ui.core.function/InvocationContext|null[0]
+    enum entry RENDER // dev.ynagai.a2ui.core.function/InvocationContext.RENDER|null[0]
+    enum entry USER_ACTION // dev.ynagai.a2ui.core.function/InvocationContext.USER_ACTION|null[0]
+
+    final val entries // dev.ynagai.a2ui.core.function/InvocationContext.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.ynagai.a2ui.core.function/InvocationContext> // dev.ynagai.a2ui.core.function/InvocationContext.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): dev.ynagai.a2ui.core.function/InvocationContext // dev.ynagai.a2ui.core.function/InvocationContext.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.ynagai.a2ui.core.function/InvocationContext> // dev.ynagai.a2ui.core.function/InvocationContext.values|values#static(){}[0]
+}
+
+final enum class dev.ynagai.a2ui.core.function/PluralCategory : kotlin/Enum<dev.ynagai.a2ui.core.function/PluralCategory> { // dev.ynagai.a2ui.core.function/PluralCategory|null[0]
+    enum entry FEW // dev.ynagai.a2ui.core.function/PluralCategory.FEW|null[0]
+    enum entry MANY // dev.ynagai.a2ui.core.function/PluralCategory.MANY|null[0]
+    enum entry ONE // dev.ynagai.a2ui.core.function/PluralCategory.ONE|null[0]
+    enum entry OTHER // dev.ynagai.a2ui.core.function/PluralCategory.OTHER|null[0]
+    enum entry TWO // dev.ynagai.a2ui.core.function/PluralCategory.TWO|null[0]
+    enum entry ZERO // dev.ynagai.a2ui.core.function/PluralCategory.ZERO|null[0]
+
+    final val argumentName // dev.ynagai.a2ui.core.function/PluralCategory.argumentName|{}argumentName[0]
+        final fun <get-argumentName>(): kotlin/String // dev.ynagai.a2ui.core.function/PluralCategory.argumentName.<get-argumentName>|<get-argumentName>(){}[0]
+    final val entries // dev.ynagai.a2ui.core.function/PluralCategory.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.ynagai.a2ui.core.function/PluralCategory> // dev.ynagai.a2ui.core.function/PluralCategory.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): dev.ynagai.a2ui.core.function/PluralCategory // dev.ynagai.a2ui.core.function/PluralCategory.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.ynagai.a2ui.core.function/PluralCategory> // dev.ynagai.a2ui.core.function/PluralCategory.values|values#static(){}[0]
+}
+
 final enum class dev.ynagai.a2ui.core.protocol/AllowedCallers : kotlin/Enum<dev.ynagai.a2ui.core.protocol/AllowedCallers> { // dev.ynagai.a2ui.core.protocol/AllowedCallers|null[0]
     enum entry AGENT_ONLY // dev.ynagai.a2ui.core.protocol/AllowedCallers.AGENT_ONLY|null[0]
     enum entry RENDERER_ONLY // dev.ynagai.a2ui.core.protocol/AllowedCallers.RENDERER_ONLY|null[0]
@@ -110,6 +138,10 @@ final enum class dev.ynagai.a2ui.core.protocol/ValidationErrorCode : kotlin/Enum
     }
 }
 
+abstract fun interface dev.ynagai.a2ui.core.function/UrlOpener { // dev.ynagai.a2ui.core.function/UrlOpener|null[0]
+    abstract fun open(kotlin/String) // dev.ynagai.a2ui.core.function/UrlOpener.open|open(kotlin.String){}[0]
+}
+
 abstract fun interface dev.ynagai.a2ui.core.surface/ChildResolver { // dev.ynagai.a2ui.core.surface/ChildResolver|null[0]
     abstract fun childrenOf(dev.ynagai.a2ui.core.protocol/Component): kotlin.collections/List<dev.ynagai.a2ui.core.surface/ChildReference> // dev.ynagai.a2ui.core.surface/ChildResolver.childrenOf|childrenOf(dev.ynagai.a2ui.core.protocol.Component){}[0]
 
@@ -117,6 +149,13 @@ abstract fun interface dev.ynagai.a2ui.core.surface/ChildResolver { // dev.ynaga
         final val NONE // dev.ynagai.a2ui.core.surface/ChildResolver.Companion.NONE|{}NONE[0]
             final fun <get-NONE>(): dev.ynagai.a2ui.core.surface/ChildResolver // dev.ynagai.a2ui.core.surface/ChildResolver.Companion.NONE.<get-NONE>|<get-NONE>(){}[0]
     }
+}
+
+abstract interface dev.ynagai.a2ui.core.function/LocaleFormatter { // dev.ynagai.a2ui.core.function/LocaleFormatter|null[0]
+    abstract fun formatCurrency(kotlin/Double, kotlin/String, kotlin/Int?, kotlin/Boolean): kotlin/String // dev.ynagai.a2ui.core.function/LocaleFormatter.formatCurrency|formatCurrency(kotlin.Double;kotlin.String;kotlin.Int?;kotlin.Boolean){}[0]
+    abstract fun formatDate(kotlin/Long, kotlin/String): kotlin/String // dev.ynagai.a2ui.core.function/LocaleFormatter.formatDate|formatDate(kotlin.Long;kotlin.String){}[0]
+    abstract fun formatNumber(kotlin/Double, kotlin/Int?, kotlin/Boolean): kotlin/String // dev.ynagai.a2ui.core.function/LocaleFormatter.formatNumber|formatNumber(kotlin.Double;kotlin.Int?;kotlin.Boolean){}[0]
+    abstract fun pluralCategory(kotlin/Double): dev.ynagai.a2ui.core.function/PluralCategory // dev.ynagai.a2ui.core.function/LocaleFormatter.pluralCategory|pluralCategory(kotlin.Double){}[0]
 }
 
 sealed interface dev.ynagai.a2ui.core.protocol/Action { // dev.ynagai.a2ui.core.protocol/Action|null[0]
@@ -632,6 +671,64 @@ sealed interface dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2u
         final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted.toString|toString(){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.function/A2uiFunctionException : kotlin/RuntimeException { // dev.ynagai.a2ui.core.function/A2uiFunctionException|null[0]
+    constructor <init>(kotlin/String, kotlin/String? = ...) // dev.ynagai.a2ui.core.function/A2uiFunctionException.<init>|<init>(kotlin.String;kotlin.String?){}[0]
+
+    final val call // dev.ynagai.a2ui.core.function/A2uiFunctionException.call|{}call[0]
+        final fun <get-call>(): kotlin/String? // dev.ynagai.a2ui.core.function/A2uiFunctionException.call.<get-call>|<get-call>(){}[0]
+}
+
+final class dev.ynagai.a2ui.core.function/EvaluationContext { // dev.ynagai.a2ui.core.function/EvaluationContext|null[0]
+    constructor <init>(kotlinx.serialization.json/JsonElement, dev.ynagai.a2ui.core.surface/EvaluationScope = ..., dev.ynagai.a2ui.core.function/LocaleFormatter = ..., dev.ynagai.a2ui.core.function/InvocationContext = ..., dev.ynagai.a2ui.core.function/UrlOpener? = ..., dev.ynagai.a2ui.core.function/EvaluationLimits = ..., kotlinx.serialization.json/Json = ...) // dev.ynagai.a2ui.core.function/EvaluationContext.<init>|<init>(kotlinx.serialization.json.JsonElement;dev.ynagai.a2ui.core.surface.EvaluationScope;dev.ynagai.a2ui.core.function.LocaleFormatter;dev.ynagai.a2ui.core.function.InvocationContext;dev.ynagai.a2ui.core.function.UrlOpener?;dev.ynagai.a2ui.core.function.EvaluationLimits;kotlinx.serialization.json.Json){}[0]
+
+    final val dataModel // dev.ynagai.a2ui.core.function/EvaluationContext.dataModel|{}dataModel[0]
+        final fun <get-dataModel>(): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.function/EvaluationContext.dataModel.<get-dataModel>|<get-dataModel>(){}[0]
+    final val invocation // dev.ynagai.a2ui.core.function/EvaluationContext.invocation|{}invocation[0]
+        final fun <get-invocation>(): dev.ynagai.a2ui.core.function/InvocationContext // dev.ynagai.a2ui.core.function/EvaluationContext.invocation.<get-invocation>|<get-invocation>(){}[0]
+    final val json // dev.ynagai.a2ui.core.function/EvaluationContext.json|{}json[0]
+        final fun <get-json>(): kotlinx.serialization.json/Json // dev.ynagai.a2ui.core.function/EvaluationContext.json.<get-json>|<get-json>(){}[0]
+    final val limits // dev.ynagai.a2ui.core.function/EvaluationContext.limits|{}limits[0]
+        final fun <get-limits>(): dev.ynagai.a2ui.core.function/EvaluationLimits // dev.ynagai.a2ui.core.function/EvaluationContext.limits.<get-limits>|<get-limits>(){}[0]
+    final val locale // dev.ynagai.a2ui.core.function/EvaluationContext.locale|{}locale[0]
+        final fun <get-locale>(): dev.ynagai.a2ui.core.function/LocaleFormatter // dev.ynagai.a2ui.core.function/EvaluationContext.locale.<get-locale>|<get-locale>(){}[0]
+    final val scope // dev.ynagai.a2ui.core.function/EvaluationContext.scope|{}scope[0]
+        final fun <get-scope>(): dev.ynagai.a2ui.core.surface/EvaluationScope // dev.ynagai.a2ui.core.function/EvaluationContext.scope.<get-scope>|<get-scope>(){}[0]
+    final val urlOpener // dev.ynagai.a2ui.core.function/EvaluationContext.urlOpener|{}urlOpener[0]
+        final fun <get-urlOpener>(): dev.ynagai.a2ui.core.function/UrlOpener? // dev.ynagai.a2ui.core.function/EvaluationContext.urlOpener.<get-urlOpener>|<get-urlOpener>(){}[0]
+
+    final fun inScope(dev.ynagai.a2ui.core.surface/EvaluationScope): dev.ynagai.a2ui.core.function/EvaluationContext // dev.ynagai.a2ui.core.function/EvaluationContext.inScope|inScope(dev.ynagai.a2ui.core.surface.EvaluationScope){}[0]
+}
+
+final class dev.ynagai.a2ui.core.function/EvaluationLimits { // dev.ynagai.a2ui.core.function/EvaluationLimits|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.ynagai.a2ui.core.function/EvaluationLimits.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+    final val maxDepth // dev.ynagai.a2ui.core.function/EvaluationLimits.maxDepth|{}maxDepth[0]
+        final fun <get-maxDepth>(): kotlin/Int // dev.ynagai.a2ui.core.function/EvaluationLimits.maxDepth.<get-maxDepth>|<get-maxDepth>(){}[0]
+    final val maxPatternLength // dev.ynagai.a2ui.core.function/EvaluationLimits.maxPatternLength|{}maxPatternLength[0]
+        final fun <get-maxPatternLength>(): kotlin/Int // dev.ynagai.a2ui.core.function/EvaluationLimits.maxPatternLength.<get-maxPatternLength>|<get-maxPatternLength>(){}[0]
+    final val maxResultLength // dev.ynagai.a2ui.core.function/EvaluationLimits.maxResultLength|{}maxResultLength[0]
+        final fun <get-maxResultLength>(): kotlin/Int // dev.ynagai.a2ui.core.function/EvaluationLimits.maxResultLength.<get-maxResultLength>|<get-maxResultLength>(){}[0]
+    final val maxSteps // dev.ynagai.a2ui.core.function/EvaluationLimits.maxSteps|{}maxSteps[0]
+        final fun <get-maxSteps>(): kotlin/Int // dev.ynagai.a2ui.core.function/EvaluationLimits.maxSteps.<get-maxSteps>|<get-maxSteps>(){}[0]
+    final val maxSubjectLength // dev.ynagai.a2ui.core.function/EvaluationLimits.maxSubjectLength|{}maxSubjectLength[0]
+        final fun <get-maxSubjectLength>(): kotlin/Int // dev.ynagai.a2ui.core.function/EvaluationLimits.maxSubjectLength.<get-maxSubjectLength>|<get-maxSubjectLength>(){}[0]
+
+    final fun component1(): kotlin/Int // dev.ynagai.a2ui.core.function/EvaluationLimits.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // dev.ynagai.a2ui.core.function/EvaluationLimits.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // dev.ynagai.a2ui.core.function/EvaluationLimits.component3|component3(){}[0]
+    final fun component4(): kotlin/Int // dev.ynagai.a2ui.core.function/EvaluationLimits.component4|component4(){}[0]
+    final fun component5(): kotlin/Int // dev.ynagai.a2ui.core.function/EvaluationLimits.component5|component5(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): dev.ynagai.a2ui.core.function/EvaluationLimits // dev.ynagai.a2ui.core.function/EvaluationLimits.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.function/EvaluationLimits.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.function/EvaluationLimits.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.function/EvaluationLimits.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.function/EvaluationLimits.Companion|null[0]
+        final val DEFAULT // dev.ynagai.a2ui.core.function/EvaluationLimits.Companion.DEFAULT|{}DEFAULT[0]
+            final fun <get-DEFAULT>(): dev.ynagai.a2ui.core.function/EvaluationLimits // dev.ynagai.a2ui.core.function/EvaluationLimits.Companion.DEFAULT.<get-DEFAULT>|<get-DEFAULT>(){}[0]
     }
 }
 
@@ -1572,6 +1669,30 @@ final class dev.ynagai.a2ui.core.surface/SurfaceModel { // dev.ynagai.a2ui.core.
     final fun withDataModel(dev.ynagai.a2ui.core.surface/JsonPointer, kotlinx.serialization.json/JsonElement): dev.ynagai.a2ui.core.surface/SurfaceModel // dev.ynagai.a2ui.core.surface/SurfaceModel.withDataModel|withDataModel(dev.ynagai.a2ui.core.surface.JsonPointer;kotlinx.serialization.json.JsonElement){}[0]
 }
 
+final object dev.ynagai.a2ui.core.function/FallbackLocaleFormatter : dev.ynagai.a2ui.core.function/LocaleFormatter { // dev.ynagai.a2ui.core.function/FallbackLocaleFormatter|null[0]
+    final fun formatCurrency(kotlin/Double, kotlin/String, kotlin/Int?, kotlin/Boolean): kotlin/String // dev.ynagai.a2ui.core.function/FallbackLocaleFormatter.formatCurrency|formatCurrency(kotlin.Double;kotlin.String;kotlin.Int?;kotlin.Boolean){}[0]
+    final fun formatDate(kotlin/Long, kotlin/String): kotlin/String // dev.ynagai.a2ui.core.function/FallbackLocaleFormatter.formatDate|formatDate(kotlin.Long;kotlin.String){}[0]
+    final fun formatNumber(kotlin/Double, kotlin/Int?, kotlin/Boolean): kotlin/String // dev.ynagai.a2ui.core.function/FallbackLocaleFormatter.formatNumber|formatNumber(kotlin.Double;kotlin.Int?;kotlin.Boolean){}[0]
+    final fun pluralCategory(kotlin/Double): dev.ynagai.a2ui.core.function/PluralCategory // dev.ynagai.a2ui.core.function/FallbackLocaleFormatter.pluralCategory|pluralCategory(kotlin.Double){}[0]
+}
+
+final object dev.ynagai.a2ui.core.function/ValidationCode { // dev.ynagai.a2ui.core.function/ValidationCode|null[0]
+    final const val INVALID_EMAIL // dev.ynagai.a2ui.core.function/ValidationCode.INVALID_EMAIL|{}INVALID_EMAIL[0]
+        final fun <get-INVALID_EMAIL>(): kotlin/String // dev.ynagai.a2ui.core.function/ValidationCode.INVALID_EMAIL.<get-INVALID_EMAIL>|<get-INVALID_EMAIL>(){}[0]
+    final const val NOT_A_NUMBER // dev.ynagai.a2ui.core.function/ValidationCode.NOT_A_NUMBER|{}NOT_A_NUMBER[0]
+        final fun <get-NOT_A_NUMBER>(): kotlin/String // dev.ynagai.a2ui.core.function/ValidationCode.NOT_A_NUMBER.<get-NOT_A_NUMBER>|<get-NOT_A_NUMBER>(){}[0]
+    final const val OUT_OF_RANGE // dev.ynagai.a2ui.core.function/ValidationCode.OUT_OF_RANGE|{}OUT_OF_RANGE[0]
+        final fun <get-OUT_OF_RANGE>(): kotlin/String // dev.ynagai.a2ui.core.function/ValidationCode.OUT_OF_RANGE.<get-OUT_OF_RANGE>|<get-OUT_OF_RANGE>(){}[0]
+    final const val PATTERN_MISMATCH // dev.ynagai.a2ui.core.function/ValidationCode.PATTERN_MISMATCH|{}PATTERN_MISMATCH[0]
+        final fun <get-PATTERN_MISMATCH>(): kotlin/String // dev.ynagai.a2ui.core.function/ValidationCode.PATTERN_MISMATCH.<get-PATTERN_MISMATCH>|<get-PATTERN_MISMATCH>(){}[0]
+    final const val REQUIRED // dev.ynagai.a2ui.core.function/ValidationCode.REQUIRED|{}REQUIRED[0]
+        final fun <get-REQUIRED>(): kotlin/String // dev.ynagai.a2ui.core.function/ValidationCode.REQUIRED.<get-REQUIRED>|<get-REQUIRED>(){}[0]
+    final const val TOO_LONG // dev.ynagai.a2ui.core.function/ValidationCode.TOO_LONG|{}TOO_LONG[0]
+        final fun <get-TOO_LONG>(): kotlin/String // dev.ynagai.a2ui.core.function/ValidationCode.TOO_LONG.<get-TOO_LONG>|<get-TOO_LONG>(){}[0]
+    final const val TOO_SHORT // dev.ynagai.a2ui.core.function/ValidationCode.TOO_SHORT|{}TOO_SHORT[0]
+        final fun <get-TOO_SHORT>(): kotlin/String // dev.ynagai.a2ui.core.function/ValidationCode.TOO_SHORT.<get-TOO_SHORT>|<get-TOO_SHORT>(){}[0]
+}
+
 final object dev.ynagai.a2ui.core.protocol/A2uiJson { // dev.ynagai.a2ui.core.protocol/A2uiJson|null[0]
     final val lenient // dev.ynagai.a2ui.core.protocol/A2uiJson.lenient|{}lenient[0]
         final fun <get-lenient>(): kotlinx.serialization.json/Json // dev.ynagai.a2ui.core.protocol/A2uiJson.lenient.<get-lenient>|<get-lenient>(){}[0]
@@ -1596,11 +1717,24 @@ final object dev.ynagai.a2ui.core/A2ui { // dev.ynagai.a2ui.core/A2ui|null[0]
         final fun <get-PROTOCOL_VERSION>(): kotlin/String // dev.ynagai.a2ui.core/A2ui.PROTOCOL_VERSION.<get-PROTOCOL_VERSION>|<get-PROTOCOL_VERSION>(){}[0]
 }
 
+final const val dev.ynagai.a2ui.core.function/DEFAULT_CALL_DEPTH // dev.ynagai.a2ui.core.function/DEFAULT_CALL_DEPTH|{}DEFAULT_CALL_DEPTH[0]
+    final fun <get-DEFAULT_CALL_DEPTH>(): kotlin/Int // dev.ynagai.a2ui.core.function/DEFAULT_CALL_DEPTH.<get-DEFAULT_CALL_DEPTH>|<get-DEFAULT_CALL_DEPTH>(){}[0]
+final const val dev.ynagai.a2ui.core.function/DEFAULT_CALL_STEPS // dev.ynagai.a2ui.core.function/DEFAULT_CALL_STEPS|{}DEFAULT_CALL_STEPS[0]
+    final fun <get-DEFAULT_CALL_STEPS>(): kotlin/Int // dev.ynagai.a2ui.core.function/DEFAULT_CALL_STEPS.<get-DEFAULT_CALL_STEPS>|<get-DEFAULT_CALL_STEPS>(){}[0]
+final const val dev.ynagai.a2ui.core.function/DEFAULT_MAX_PATTERN_LENGTH // dev.ynagai.a2ui.core.function/DEFAULT_MAX_PATTERN_LENGTH|{}DEFAULT_MAX_PATTERN_LENGTH[0]
+    final fun <get-DEFAULT_MAX_PATTERN_LENGTH>(): kotlin/Int // dev.ynagai.a2ui.core.function/DEFAULT_MAX_PATTERN_LENGTH.<get-DEFAULT_MAX_PATTERN_LENGTH>|<get-DEFAULT_MAX_PATTERN_LENGTH>(){}[0]
+final const val dev.ynagai.a2ui.core.function/DEFAULT_MAX_RESULT_LENGTH // dev.ynagai.a2ui.core.function/DEFAULT_MAX_RESULT_LENGTH|{}DEFAULT_MAX_RESULT_LENGTH[0]
+    final fun <get-DEFAULT_MAX_RESULT_LENGTH>(): kotlin/Int // dev.ynagai.a2ui.core.function/DEFAULT_MAX_RESULT_LENGTH.<get-DEFAULT_MAX_RESULT_LENGTH>|<get-DEFAULT_MAX_RESULT_LENGTH>(){}[0]
+final const val dev.ynagai.a2ui.core.function/DEFAULT_MAX_SUBJECT_LENGTH // dev.ynagai.a2ui.core.function/DEFAULT_MAX_SUBJECT_LENGTH|{}DEFAULT_MAX_SUBJECT_LENGTH[0]
+    final fun <get-DEFAULT_MAX_SUBJECT_LENGTH>(): kotlin/Int // dev.ynagai.a2ui.core.function/DEFAULT_MAX_SUBJECT_LENGTH.<get-DEFAULT_MAX_SUBJECT_LENGTH>|<get-DEFAULT_MAX_SUBJECT_LENGTH>(){}[0]
 final const val dev.ynagai.a2ui.core.surface/DEFAULT_MAX_DEPTH // dev.ynagai.a2ui.core.surface/DEFAULT_MAX_DEPTH|{}DEFAULT_MAX_DEPTH[0]
     final fun <get-DEFAULT_MAX_DEPTH>(): kotlin/Int // dev.ynagai.a2ui.core.surface/DEFAULT_MAX_DEPTH.<get-DEFAULT_MAX_DEPTH>|<get-DEFAULT_MAX_DEPTH>(){}[0]
 final const val dev.ynagai.a2ui.core.surface/DEFAULT_WALK_LIMIT // dev.ynagai.a2ui.core.surface/DEFAULT_WALK_LIMIT|{}DEFAULT_WALK_LIMIT[0]
     final fun <get-DEFAULT_WALK_LIMIT>(): kotlin/Int // dev.ynagai.a2ui.core.surface/DEFAULT_WALK_LIMIT.<get-DEFAULT_WALK_LIMIT>|<get-DEFAULT_WALK_LIMIT>(){}[0]
 
+final fun (dev.ynagai.a2ui.core.function/EvaluationContext).dev.ynagai.a2ui.core.function/evaluate(dev.ynagai.a2ui.core.protocol/BoundValue): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.function/evaluate|evaluate@dev.ynagai.a2ui.core.function.EvaluationContext(dev.ynagai.a2ui.core.protocol.BoundValue){}[0]
+final fun (dev.ynagai.a2ui.core.function/EvaluationContext).dev.ynagai.a2ui.core.function/evaluate(dev.ynagai.a2ui.core.protocol/FunctionCall): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.function/evaluate|evaluate@dev.ynagai.a2ui.core.function.EvaluationContext(dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+final fun (dev.ynagai.a2ui.core.function/EvaluationContext).dev.ynagai.a2ui.core.function/evaluateCheck(dev.ynagai.a2ui.core.protocol/BoundValue): dev.ynagai.a2ui.core.protocol/ValidationResult // dev.ynagai.a2ui.core.function/evaluateCheck|evaluateCheck@dev.ynagai.a2ui.core.function.EvaluationContext(dev.ynagai.a2ui.core.protocol.BoundValue){}[0]
 final fun (dev.ynagai.a2ui.core.protocol/ChildList).dev.ynagai.a2ui.core.surface/asReference(kotlin/String): dev.ynagai.a2ui.core.surface/ChildReference // dev.ynagai.a2ui.core.surface/asReference|asReference@dev.ynagai.a2ui.core.protocol.ChildList(kotlin.String){}[0]
 final fun (dev.ynagai.a2ui.core.surface/EvaluationScope).dev.ynagai.a2ui.core.surface/currentIndex(): kotlin/Int? // dev.ynagai.a2ui.core.surface/currentIndex|currentIndex@dev.ynagai.a2ui.core.surface.EvaluationScope(){}[0]
 final fun (dev.ynagai.a2ui.core.surface/EvaluationScope).dev.ynagai.a2ui.core.surface/iterate(dev.ynagai.a2ui.core.surface/JsonPointer, kotlin/Int): dev.ynagai.a2ui.core.surface/EvaluationScope.Collection // dev.ynagai.a2ui.core.surface/iterate|iterate@dev.ynagai.a2ui.core.surface.EvaluationScope(dev.ynagai.a2ui.core.surface.JsonPointer;kotlin.Int){}[0]

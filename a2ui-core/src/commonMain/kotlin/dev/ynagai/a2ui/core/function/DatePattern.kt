@@ -111,6 +111,9 @@ private const val TWO_DIGIT_COUNT: Int = 2
 private const val MILLI_DIGITS: Int = 3
 private const val HOURS_PER_HALF_DAY: Int = 12
 
+/** How much of an agent-authored pattern travels inside an error message. */
+private const val PATTERN_EXCERPT: Int = 64
+
 /**
  * [epochMillis] rendered with the Unicode TR35 pattern [pattern], in UTC and with English names.
  *
@@ -162,7 +165,9 @@ private fun appendQuoted(pattern: String, start: Int, out: StringBuilder): Int {
         out.append(pattern[i])
         i++
     }
-    throw A2uiFunctionException("formatDate: pattern `$pattern` has an unterminated quoted literal.")
+    throw A2uiFunctionException(
+        "formatDate: pattern `${pattern.take(PATTERN_EXCERPT)}` has an unterminated quoted literal.",
+    )
 }
 
 private fun field(letter: Char, count: Int, at: CivilDateTime): String = when (letter) {
@@ -262,8 +267,15 @@ internal fun parseIso8601(text: String): Long? {
 /** `+HH:mm`, `+HHmm` or `+HH` as milliseconds to subtract from the civil reading. */
 private fun parseOffset(text: String): Long? {
     val sign = if (text[0] == '-') -1L else 1L
-    val digits = text.substring(1).filter { it != ':' }
-    if (digits.length != 2 && digits.length != 4) return null
+    val body = text.substring(1)
+    // Those three forms and no others. Stripping every `:` wherever it fell instead read
+    // `+0:000` — which is not an ISO 8601 offset — as `+00:00`, so a malformed timestamp was
+    // accepted as epoch zero rather than rejected.
+    val digits = when {
+        body.length == 2 || body.length == 4 -> body
+        body.length == 5 && body[2] == ':' -> body.substring(0, 2) + body.substring(3)
+        else -> return null
+    }
     if (!digits.all { it.isDigit() }) return null
     val hours = digits.substring(0, 2).toInt()
     val minutes = if (digits.length == 4) digits.substring(2, 4).toInt() else 0

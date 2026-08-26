@@ -85,14 +85,18 @@ public object FallbackLocaleFormatter : LocaleFormatter {
         formatUtcPattern(epochMillis, pattern)
 
     /**
-     * The English rule, `n == 1` → [PluralCategory.ONE].
+     * The English rule, `|n| == 1` → [PluralCategory.ONE].
      *
      * CLDR's English rule is `i == 1 and v == 0`, which puts `1.0` written with a fraction digit
      * into `other`. That distinction needs the formatted string rather than the number, which this
      * signature does not carry, so it is not drawn.
+     *
+     * The magnitude is taken because CLDR defines its operand `n` as "the absolute value of the
+     * source number": `-1` is `one`, so `pluralize(value: -1, one: "item", other: "items")` reads
+     * "-1 item" rather than "-1 items".
      */
     override fun pluralCategory(value: Double): PluralCategory =
-        if (value == 1.0) PluralCategory.ONE else PluralCategory.OTHER
+        if (abs(value) == 1.0) PluralCategory.ONE else PluralCategory.OTHER
 
     private const val CURRENCY_DECIMALS: Int = 2
 }

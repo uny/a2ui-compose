@@ -11,6 +11,7 @@ import dev.ynagai.a2ui.core.surface.EvaluationScope
 import dev.ynagai.a2ui.core.surface.JsonPointer
 import dev.ynagai.a2ui.core.surface.currentIndex
 import dev.ynagai.a2ui.core.surface.resolve
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -222,16 +223,38 @@ internal object FunctionNames {
 }
 
 /**
- * `^[^\s@]+@[^\s@]+\.[^\s@]+$`, the pattern the implementation guide names for `email`.
+ * The characters ECMAScript's `\s` matches, written out.
+ *
+ * `\s` is not the same set on every engine: Java's is the six ASCII control-and-space characters,
+ * while ECMAScript's also covers `U+00A0`, `U+FEFF` and the Unicode `Zs` category. Writing `\s`
+ * in [EMAIL_PATTERN] therefore made `a b@c.de` valid on the JVM and on Native and invalid on
+ * Kotlin/JS and Wasm, from one payload — the agent gets a form the user can submit on the mobile
+ * build of an app and not on its web build. ECMAScript's set is the one chosen because the
+ * implementation guide is written against JavaScript regular expressions, the same reading `regex`
+ * already follows in preferring `containsMatchIn` to `matches`.
+ */
+private const val JS_WHITESPACE: String =
+    "\\t\\n\\u000B\\u000C\\r \\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF"
+
+/**
+ * `^[^\s@]+@[^\s@]+\.[^\s@]+$`, the pattern the implementation guide names for `email`, with `\s`
+ * spelled out as [JS_WHITESPACE] so that it means the same thing on all seven targets.
  *
  * It is not RFC 5322 and is not meant to be. Matching the guide matters more than being right,
  * because an agent that sends an address this rejects and another renderer accepts has produced a
  * form the user cannot submit on one platform only.
  */
-private val EMAIL_PATTERN = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+private val EMAIL_PATTERN =
+    Regex("^[^$JS_WHITESPACE@]+@[^$JS_WHITESPACE@]+\\.[^$JS_WHITESPACE@]+$")
 
 /** The schemes `openUrl` may hand to a [UrlOpener]. */
 private val ALLOWED_URL_SCHEMES = setOf("http", "https")
+
+/** How much of a nested exception's own message travels inside an [A2uiFunctionException]. */
+private const val MESSAGE_EXCERPT: Int = 200
+
+/** How much of an agent-authored function name travels inside an [A2uiFunctionException]. */
+private const val NAME_EXCERPT: Int = 64
 
 /**
  * One top-level evaluation, holding the step budget that spans it.
@@ -241,6 +264,16 @@ private val ALLOWED_URL_SCHEMES = setOf("http", "https")
  */
 internal class Evaluator(val context: EvaluationContext) {
     private var steps: Int = 0
+
+    /**
+     * How many side-effecting functions this evaluation has already run.
+     *
+     * [InvocationContext.USER_ACTION] is set once, by the renderer, for the one gesture the user
+     * made — but `openUrl` re-read it per call, so a single tap authorised as many opens as the
+     * step budget allowed. The specification ties the permission to "an active, physical user
+     * interaction", which is one interaction, not one expression.
+     */
+    private var sideEffects: Int = 0
 
     fun evaluate(value: BoundValue, depth: Int): JsonElement = when (value) {
         is DataBinding -> resolve(value.path)
@@ -286,7 +319,12 @@ internal class Evaluator(val context: EvaluationContext) {
         FunctionNames.AND -> JsonPrimitive(all(args, expected = true))
         FunctionNames.OR -> JsonPrimitive(!all(args, expected = false))
         FunctionNames.NOT -> JsonPrimitive(!args.boolean("value"))
-        else -> throw A2uiFunctionException("no function named `$name` is implemented.", name)
+        // Truncated in both places: the name reaches here straight from the payload, and a
+        // template may name a function of any length — `${<50k letters>()}` parses as a call.
+        else -> throw A2uiFunctionException(
+            "no function named `${name.take(NAME_EXCERPT)}` is implemented.",
+            name.take(NAME_EXCERPT),
+        )
     }
 
     /** One unit of the step budget, read before the work it pays for. */
@@ -314,8 +352,19 @@ internal class Evaluator(val context: EvaluationContext) {
      * binding — see that function for why the distinction is by key presence.
      */
     fun argument(element: JsonElement, depth: Int): JsonElement {
-        val bound = decodeBoundValue(element, context.json, "function argument")
-            ?: return element
+        val bound = try {
+            decodeBoundValue(element, context.json, "function argument")
+        } catch (e: SerializationException) {
+            // `FunctionCall.args` is typed `Map<String, JsonElement>`, so an argument that is
+            // shaped like a binding is not held to that schema until it is evaluated — this is
+            // the first place a malformed one is read. Left unwrapped, the strict decoder's
+            // `SerializationException` escapes as a fourth exception type on a path this
+            // module documents as raising three.
+            throw A2uiFunctionException(
+                "a function argument carries `path` or `call` but is not a valid binding or " +
+                    "call (${e.message?.take(MESSAGE_EXCERPT)}).",
+            )
+        } ?: return element
         return evaluate(bound, depth + 1)
     }
 
@@ -333,11 +382,21 @@ internal class Evaluator(val context: EvaluationContext) {
                 call.call,
             )
         }
+        return index(CallArguments(this, call.call, call.args, preEvaluated = false, depth = depth))
+    }
+
+    /**
+     * `@index` over arguments the caller has already decided how to resolve.
+     *
+     * Split out so that a call from inside a `formatString` template can pass `preEvaluated = true`
+     * like every other function does. Routing it back through the wire-shaped path instead made
+     * `@index` the one function whose arguments were resolved twice — see [CallArguments].
+     */
+    fun index(args: CallArguments): JsonElement {
         val current = context.scope.currentIndex() ?: throw A2uiFunctionException(
             "`${FunctionCall.INDEX}` is only available inside a list template's item scope.",
-            call.call,
+            FunctionCall.INDEX,
         )
-        val args = CallArguments(this, call.call, call.args, preEvaluated = false, depth = depth)
         val offset = args.optionalNumber("offset") ?: 0.0
         return encodeNumber(current + offset)
     }
@@ -415,7 +474,14 @@ internal class Evaluator(val context: EvaluationContext) {
             )
         }
         val element = args.require("value")
-        if (element is JsonNull) return validation(false, ValidationCode.TOO_SHORT)
+        // An absent value has length zero, which fails a `min` and nothing else. A call that
+        // declares only `max` has no lower bound for it to fail, and reporting TOO_SHORT there
+        // would put a "too short" error on a field the agent deliberately left optional — note
+        // that the empty string, one line below, is already treated exactly this way.
+        if (element is JsonNull) {
+            return if (min == null) validation(true, null)
+            else validation(false, ValidationCode.TOO_SHORT)
+        }
         val value = args.asString(element, "value")
         if (min != null && value.length < min) return validation(false, ValidationCode.TOO_SHORT)
         if (max != null && value.length > max) return validation(false, ValidationCode.TOO_LONG)
@@ -518,6 +584,17 @@ internal class Evaluator(val context: EvaluationContext) {
         if (context.invocation != InvocationContext.USER_ACTION) {
             throw A2uiFunctionException(
                 "`openUrl` may only run in response to a user interaction.",
+                FunctionNames.OPEN_URL,
+            )
+        }
+        // One gesture, one open. Without this an expression may call `openUrl` once per step of
+        // the budget — a `formatString` holding thousands of `${openUrl(...)}` costs one step
+        // each, returns `void` so the result-length bound never fires, and turns a single tap
+        // into a popup flood.
+        if (sideEffects++ > 0) {
+            throw A2uiFunctionException(
+                "`openUrl` may run at most once per user interaction, and this expression calls " +
+                    "it more than once.",
                 FunctionNames.OPEN_URL,
             )
         }
@@ -682,11 +759,18 @@ internal class CallArguments(
             )
 }
 
-/** A short, non-quoting description of [element] for an error message. */
+/**
+ * A short, non-quoting description of [element] for an error message.
+ *
+ * A string's *type* is reported and its content is not. These messages exist to say that a call
+ * was malformed, which the type alone says; the content would be whatever the user typed into the
+ * bound field, and the agent chooses both the function and the path — so quoting it turns
+ * `formatNumber(value: /form/cardNumber)` into a way to read the data model out through the
+ * renderer's log, 32 characters per request.
+ */
 internal fun describe(element: JsonElement): String = when (element) {
     is JsonNull -> "null"
     is JsonObject -> "an object"
     is JsonArray -> "an array"
-    is JsonPrimitive -> if (element.isString) "the string `${element.content.take(32)}`"
-    else "`${element.content}`"
+    is JsonPrimitive -> if (element.isString) "a string" else "`${element.content}`"
 }

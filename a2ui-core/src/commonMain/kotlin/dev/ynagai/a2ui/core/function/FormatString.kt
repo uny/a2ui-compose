@@ -39,8 +39,10 @@ internal fun interpolateTemplate(evaluator: Evaluator, template: String, depth: 
             break
         }
         // `\${` is the escape the specification defines, and it is the only one: a backslash
-        // anywhere else is an ordinary character, so `C:\${x}` interpolates and `C:\\${x}` does not
-        // become a literal backslash followed by an interpolation.
+        // anywhere else is an ordinary character. Only the character immediately before the marker
+        // is examined, and the backslash is consumed by the escape, so `C:\${x}` renders the
+        // literal `C:${x}` rather than interpolating, and `C:\\${x}` renders `C:\${x}` — doubling
+        // the backslash does not restore the interpolation.
         val escaped = marker > i && template[marker - 1] == '\\'
         out.appendBounded(template, i, if (escaped) marker - 1 else marker, limits)
         if (escaped) {
@@ -149,7 +151,7 @@ private fun evaluateExpression(evaluator: Evaluator, source: String, depth: Int)
         val name = text.substring(0, open).trim()
         if (!isFunctionName(name)) {
             throw A2uiFunctionException(
-                "formatString: `$name` is not a function name.",
+                "formatString: `${name.take(ERROR_EXCERPT)}` is not a function name.",
                 FunctionNames.FORMAT_STRING,
             )
         }
@@ -169,9 +171,12 @@ private fun evaluateExpression(evaluator: Evaluator, source: String, depth: Int)
 /**
  * Invokes [name] with arguments the parser has already evaluated.
  *
- * `@index` goes back through the ordinary path rather than being special-cased here, because the
- * scope check and the `catalogId` check belong to it wherever it is called from; its only argument
- * is a number, which survives the round trip through the wire-shaped form unchanged.
+ * `@index` is dispatched here like every other function rather than being sent back through the
+ * wire-shaped path. Sending it back looked safe — its only argument is a number — but the argument
+ * is only a number *after* evaluation: `${@index(offset:/o)}` where `/o` holds `{"path":"/n"}`
+ * resolves to that object here and would then be read as a binding and followed a second time,
+ * which is exactly what [CallArguments] documents `preEvaluated` as preventing. There is no
+ * `catalogId` to check on this path, because the template grammar has no way to write one.
  */
 private fun callFunction(
     evaluator: Evaluator,
@@ -179,10 +184,12 @@ private fun callFunction(
     arguments: Map<String, JsonElement>,
     depth: Int,
 ): JsonElement {
-    if (name == FunctionCall.INDEX) {
-        return evaluator.evaluate(FunctionCall(call = name, args = arguments), depth)
-    }
     evaluator.step(name)
+    if (name == FunctionCall.INDEX) {
+        return evaluator.index(
+            CallArguments(evaluator, name, arguments, preEvaluated = true, depth = depth),
+        )
+    }
     return evaluator.invoke(
         name,
         CallArguments(evaluator, name, arguments, preEvaluated = true, depth = depth),
@@ -211,7 +218,7 @@ private fun parseArguments(
         val text = part.trim()
         if (text.isEmpty()) {
             throw A2uiFunctionException(
-                "formatString: `$call` has an empty argument.",
+                "formatString: `${call.take(ERROR_EXCERPT)}` has an empty argument.",
                 FunctionNames.FORMAT_STRING,
             )
         }
@@ -219,7 +226,7 @@ private fun parseArguments(
         val name = if (colon < 0) null else text.substring(0, colon).trim()
         if (colon >= 0 && !isArgumentName(name!!)) {
             throw A2uiFunctionException(
-                "formatString: `$name` is not an argument name in `$call`.",
+                "formatString: `${name.take(ERROR_EXCERPT)}` is not an argument name in `${call.take(ERROR_EXCERPT)}`.",
                 FunctionNames.FORMAT_STRING,
             )
         }
@@ -232,7 +239,7 @@ private fun parseArguments(
         val key = name ?: "value"
         if (out.containsKey(key)) {
             throw A2uiFunctionException(
-                "formatString: `$call` names the argument `$key` twice.",
+                "formatString: `${call.take(ERROR_EXCERPT)}` names the argument `${key.take(ERROR_EXCERPT)}` twice.",
                 FunctionNames.FORMAT_STRING,
             )
         }

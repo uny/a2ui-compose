@@ -1176,3 +1176,281 @@ public final class dev/ynagai/a2ui/core/protocol/ValidationResult$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
+public final class dev/ynagai/a2ui/core/surface/A2uiStateException : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getSurfaceId ()Ljava/lang/String;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/surface/ChildReference {
+	public abstract fun getProperty ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/ChildReference$Fixed : dev/ynagai/a2ui/core/surface/ChildReference {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Ldev/ynagai/a2ui/core/surface/ChildReference$Fixed;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/ChildReference$Fixed;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/ChildReference$Fixed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getIds ()Ljava/util/List;
+	public fun getProperty ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/ChildReference$Single : dev/ynagai/a2ui/core/surface/ChildReference {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/ChildReference$Single;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/ChildReference$Single;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/ChildReference$Single;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId ()Ljava/lang/String;
+	public fun getProperty ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/ChildReference$Template : dev/ynagai/a2ui/core/surface/ChildReference {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/surface/JsonPointer;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/surface/JsonPointer;)Ldev/ynagai/a2ui/core/surface/ChildReference$Template;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/ChildReference$Template;Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/surface/JsonPointer;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/ChildReference$Template;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComponentId ()Ljava/lang/String;
+	public final fun getPath ()Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public fun getProperty ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/surface/ChildResolver {
+	public static final field Companion Ldev/ynagai/a2ui/core/surface/ChildResolver$Companion;
+	public abstract fun childrenOf (Ldev/ynagai/a2ui/core/protocol/Component;)Ljava/util/List;
+}
+
+public final class dev/ynagai/a2ui/core/surface/ChildResolver$Companion {
+	public final fun getNONE ()Ldev/ynagai/a2ui/core/surface/ChildResolver;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/surface/EvaluationScope {
+	public abstract fun getBase ()Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public fun getIndex ()Ljava/lang/Integer;
+}
+
+public final class dev/ynagai/a2ui/core/surface/EvaluationScope$Collection : dev/ynagai/a2ui/core/surface/EvaluationScope {
+	public fun <init> (Ldev/ynagai/a2ui/core/surface/EvaluationScope;Ldev/ynagai/a2ui/core/surface/JsonPointer;I)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/surface/EvaluationScope;
+	public final fun component2 ()Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public final fun component3 ()I
+	public final fun copy (Ldev/ynagai/a2ui/core/surface/EvaluationScope;Ldev/ynagai/a2ui/core/surface/JsonPointer;I)Ldev/ynagai/a2ui/core/surface/EvaluationScope$Collection;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/EvaluationScope$Collection;Ldev/ynagai/a2ui/core/surface/EvaluationScope;Ldev/ynagai/a2ui/core/surface/JsonPointer;IILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/EvaluationScope$Collection;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getBase ()Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public fun getIndex ()Ljava/lang/Integer;
+	public final fun getParent ()Ldev/ynagai/a2ui/core/surface/EvaluationScope;
+	public final fun getPath ()Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/EvaluationScope$DefaultImpls {
+	public static fun getIndex (Ldev/ynagai/a2ui/core/surface/EvaluationScope;)Ljava/lang/Integer;
+}
+
+public final class dev/ynagai/a2ui/core/surface/EvaluationScope$Root : dev/ynagai/a2ui/core/surface/EvaluationScope {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/surface/EvaluationScope$Root;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getBase ()Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public fun getIndex ()Ljava/lang/Integer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/EvaluationScopeKt {
+	public static final fun currentIndex (Ldev/ynagai/a2ui/core/surface/EvaluationScope;)Ljava/lang/Integer;
+	public static final fun iterate (Ldev/ynagai/a2ui/core/surface/EvaluationScope;Ldev/ynagai/a2ui/core/surface/JsonPointer;I)Ldev/ynagai/a2ui/core/surface/EvaluationScope$Collection;
+	public static final fun rebase (Ldev/ynagai/a2ui/core/surface/EvaluationScope;Ldev/ynagai/a2ui/core/surface/JsonPointer;)Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public static final fun resolve (Ldev/ynagai/a2ui/core/surface/EvaluationScope;Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/surface/JsonPointer;)Lkotlinx/serialization/json/JsonElement;
+}
+
+public final class dev/ynagai/a2ui/core/surface/JsonPointer {
+	public static final field APPEND Ljava/lang/String;
+	public static final field Companion Ldev/ynagai/a2ui/core/surface/JsonPointer$Companion;
+	public static final field MAX_TOKENS I
+	public final fun child (Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTokens ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun isAbsolute ()Z
+	public final fun isRoot ()Z
+	public final fun resolve (Ldev/ynagai/a2ui/core/surface/JsonPointer;)Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/JsonPointer$Companion {
+	public final fun getROOT ()Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public final fun of ([Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public final fun parse (Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/JsonPointer;
+}
+
+public final class dev/ynagai/a2ui/core/surface/JsonPointerKt {
+	public static final fun resolve (Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/surface/JsonPointer;)Lkotlinx/serialization/json/JsonElement;
+	public static final fun write (Lkotlinx/serialization/json/JsonObject;Ldev/ynagai/a2ui/core/surface/JsonPointer;Lkotlinx/serialization/json/JsonElement;)Lkotlinx/serialization/json/JsonObject;
+}
+
+public final class dev/ynagai/a2ui/core/surface/MessageProcessor {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/surface/MessageProcessor;
+	public final fun apply (Ldev/ynagai/a2ui/core/surface/RendererState;Ldev/ynagai/a2ui/core/protocol/AgentToRendererMessage;)Ldev/ynagai/a2ui/core/surface/ProcessResult;
+	public final fun applyAll (Ldev/ynagai/a2ui/core/surface/RendererState;Ljava/lang/Iterable;)Ldev/ynagai/a2ui/core/surface/ProcessResult;
+}
+
+public final class dev/ynagai/a2ui/core/surface/ProcessResult {
+	public fun <init> (Ldev/ynagai/a2ui/core/surface/RendererState;Ljava/util/List;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/surface/RendererState;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ldev/ynagai/a2ui/core/surface/RendererState;Ljava/util/List;)Ldev/ynagai/a2ui/core/surface/ProcessResult;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/ProcessResult;Ldev/ynagai/a2ui/core/surface/RendererState;Ljava/util/List;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/ProcessResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEffects ()Ljava/util/List;
+	public final fun getState ()Ldev/ynagai/a2ui/core/surface/RendererState;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/surface/RendererEffect {
+	public fun getSurfaceId ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/RendererEffect$AgentFunctionResponded : dev/ynagai/a2ui/core/surface/RendererEffect {
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/FunctionResponse;)V
+	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/FunctionResponse;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/FunctionResponse;)Ldev/ynagai/a2ui/core/surface/RendererEffect$AgentFunctionResponded;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/RendererEffect$AgentFunctionResponded;Ldev/ynagai/a2ui/core/protocol/FunctionResponse;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/RendererEffect$AgentFunctionResponded;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getResponse ()Ldev/ynagai/a2ui/core/protocol/FunctionResponse;
+	public fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/RendererEffect$ComponentsUpdated : dev/ynagai/a2ui/core/surface/RendererEffect {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Ldev/ynagai/a2ui/core/surface/RendererEffect$ComponentsUpdated;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/RendererEffect$ComponentsUpdated;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/RendererEffect$ComponentsUpdated;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getIds ()Ljava/util/List;
+	public fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/RendererEffect$DataModelUpdated : dev/ynagai/a2ui/core/surface/RendererEffect {
+	public fun <init> (Ljava/lang/String;Ldev/ynagai/a2ui/core/surface/JsonPointer;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public final fun copy (Ljava/lang/String;Ldev/ynagai/a2ui/core/surface/JsonPointer;)Ldev/ynagai/a2ui/core/surface/RendererEffect$DataModelUpdated;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/RendererEffect$DataModelUpdated;Ljava/lang/String;Ldev/ynagai/a2ui/core/surface/JsonPointer;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/RendererEffect$DataModelUpdated;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPath ()Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/RendererEffect$DefaultImpls {
+	public static fun getSurfaceId (Ldev/ynagai/a2ui/core/surface/RendererEffect;)Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/RendererEffect$RendererFunctionRequested : dev/ynagai/a2ui/core/surface/RendererEffect {
+	public fun <init> (Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionCall;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ldev/ynagai/a2ui/core/protocol/FunctionCall;
+	public final fun copy (Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionCall;)Ldev/ynagai/a2ui/core/surface/RendererEffect$RendererFunctionRequested;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/RendererEffect$RendererFunctionRequested;Ljava/lang/String;Ldev/ynagai/a2ui/core/protocol/FunctionCall;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/RendererEffect$RendererFunctionRequested;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCall ()Ldev/ynagai/a2ui/core/protocol/FunctionCall;
+	public final fun getFunctionCallId ()Ljava/lang/String;
+	public fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/RendererEffect$SurfaceCreated : dev/ynagai/a2ui/core/surface/RendererEffect {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/RendererEffect$SurfaceCreated;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/RendererEffect$SurfaceCreated;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/RendererEffect$SurfaceCreated;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/RendererEffect$SurfaceDeleted : dev/ynagai/a2ui/core/surface/RendererEffect {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/RendererEffect$SurfaceDeleted;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/RendererEffect$SurfaceDeleted;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/RendererEffect$SurfaceDeleted;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/RendererState {
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/Map;
+	public final fun copy (Ljava/util/Map;)Ldev/ynagai/a2ui/core/surface/RendererState;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/RendererState;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/RendererState;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getSurfaces ()Ljava/util/Map;
+	public fun hashCode ()I
+	public final fun surface (Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/SurfaceModel;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/SurfaceModel {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;ZLdev/ynagai/a2ui/core/protocol/SurfaceMetadata;Ljava/util/Map;Lkotlinx/serialization/json/JsonObject;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ZLdev/ynagai/a2ui/core/protocol/SurfaceMetadata;Ljava/util/Map;Lkotlinx/serialization/json/JsonObject;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/Component;
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Z
+	public final fun component4 ()Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;
+	public final fun component5 ()Ljava/util/Map;
+	public final fun component6 ()Lkotlinx/serialization/json/JsonObject;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;ZLdev/ynagai/a2ui/core/protocol/SurfaceMetadata;Ljava/util/Map;Lkotlinx/serialization/json/JsonObject;)Ldev/ynagai/a2ui/core/surface/SurfaceModel;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ljava/lang/String;Ljava/lang/String;ZLdev/ynagai/a2ui/core/protocol/SurfaceMetadata;Ljava/util/Map;Lkotlinx/serialization/json/JsonObject;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/SurfaceModel;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCatalogId ()Ljava/lang/String;
+	public final fun getComponents ()Ljava/util/Map;
+	public final fun getDataModel ()Lkotlinx/serialization/json/JsonObject;
+	public final fun getMetadata ()Ldev/ynagai/a2ui/core/protocol/SurfaceMetadata;
+	public final fun getRoot ()Ldev/ynagai/a2ui/core/protocol/Component;
+	public final fun getSendDataModel ()Z
+	public final fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun isRenderable ()Z
+	public final fun read (Ldev/ynagai/a2ui/core/surface/JsonPointer;Ldev/ynagai/a2ui/core/surface/EvaluationScope;)Lkotlinx/serialization/json/JsonElement;
+	public static synthetic fun read$default (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ldev/ynagai/a2ui/core/surface/JsonPointer;Ldev/ynagai/a2ui/core/surface/EvaluationScope;ILjava/lang/Object;)Lkotlinx/serialization/json/JsonElement;
+	public fun toString ()Ljava/lang/String;
+	public final fun withComponents (Ljava/util/List;)Ldev/ynagai/a2ui/core/surface/SurfaceModel;
+	public final fun withDataModel (Ldev/ynagai/a2ui/core/surface/JsonPointer;Lkotlinx/serialization/json/JsonElement;)Ldev/ynagai/a2ui/core/surface/SurfaceModel;
+}
+
+public final class dev/ynagai/a2ui/core/surface/SurfaceModelKt {
+	public static final field DEFAULT_MAX_DEPTH I
+	public static final field DEFAULT_WALK_LIMIT I
+	public static final fun asReference (Ldev/ynagai/a2ui/core/protocol/ChildList;Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/ChildReference;
+	public static final fun walk (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ldev/ynagai/a2ui/core/surface/ChildResolver;II)Ljava/util/List;
+	public static synthetic fun walk$default (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ldev/ynagai/a2ui/core/surface/ChildResolver;IIILjava/lang/Object;)Ljava/util/List;
+}
+

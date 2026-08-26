@@ -110,6 +110,15 @@ final enum class dev.ynagai.a2ui.core.protocol/ValidationErrorCode : kotlin/Enum
     }
 }
 
+abstract fun interface dev.ynagai.a2ui.core.surface/ChildResolver { // dev.ynagai.a2ui.core.surface/ChildResolver|null[0]
+    abstract fun childrenOf(dev.ynagai.a2ui.core.protocol/Component): kotlin.collections/List<dev.ynagai.a2ui.core.surface/ChildReference> // dev.ynagai.a2ui.core.surface/ChildResolver.childrenOf|childrenOf(dev.ynagai.a2ui.core.protocol.Component){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.surface/ChildResolver.Companion|null[0]
+        final val NONE // dev.ynagai.a2ui.core.surface/ChildResolver.Companion.NONE|{}NONE[0]
+            final fun <get-NONE>(): dev.ynagai.a2ui.core.surface/ChildResolver // dev.ynagai.a2ui.core.surface/ChildResolver.Companion.NONE.<get-NONE>|<get-NONE>(){}[0]
+    }
+}
+
 sealed interface dev.ynagai.a2ui.core.protocol/Action { // dev.ynagai.a2ui.core.protocol/Action|null[0]
     final class Event : dev.ynagai.a2ui.core.protocol/Action { // dev.ynagai.a2ui.core.protocol/Action.Event|null[0]
         constructor <init>(dev.ynagai.a2ui.core.protocol/ActionEvent) // dev.ynagai.a2ui.core.protocol/Action.Event.<init>|<init>(dev.ynagai.a2ui.core.protocol.ActionEvent){}[0]
@@ -438,6 +447,191 @@ sealed interface dev.ynagai.a2ui.core.protocol/RendererToAgentMessage { // dev.y
     final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.ynagai.a2ui.core.protocol/RendererToAgentMessage.Companion|null[0]
         final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/RendererToAgentMessage> // dev.ynagai.a2ui.core.protocol/RendererToAgentMessage.Companion.serializer|serializer(){}[0]
         final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.ynagai.a2ui.core.protocol/RendererToAgentMessage.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.surface/ChildReference { // dev.ynagai.a2ui.core.surface/ChildReference|null[0]
+    abstract val property // dev.ynagai.a2ui.core.surface/ChildReference.property|{}property[0]
+        abstract fun <get-property>(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.property.<get-property>|<get-property>(){}[0]
+
+    final class Fixed : dev.ynagai.a2ui.core.surface/ChildReference { // dev.ynagai.a2ui.core.surface/ChildReference.Fixed|null[0]
+        constructor <init>(kotlin/String, kotlin.collections/List<kotlin/String>) // dev.ynagai.a2ui.core.surface/ChildReference.Fixed.<init>|<init>(kotlin.String;kotlin.collections.List<kotlin.String>){}[0]
+
+        final val ids // dev.ynagai.a2ui.core.surface/ChildReference.Fixed.ids|{}ids[0]
+            final fun <get-ids>(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.surface/ChildReference.Fixed.ids.<get-ids>|<get-ids>(){}[0]
+        final val property // dev.ynagai.a2ui.core.surface/ChildReference.Fixed.property|{}property[0]
+            final fun <get-property>(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Fixed.property.<get-property>|<get-property>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Fixed.component1|component1(){}[0]
+        final fun component2(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.surface/ChildReference.Fixed.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin.collections/List<kotlin/String> = ...): dev.ynagai.a2ui.core.surface/ChildReference.Fixed // dev.ynagai.a2ui.core.surface/ChildReference.Fixed.copy|copy(kotlin.String;kotlin.collections.List<kotlin.String>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/ChildReference.Fixed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/ChildReference.Fixed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Fixed.toString|toString(){}[0]
+    }
+
+    final class Single : dev.ynagai.a2ui.core.surface/ChildReference { // dev.ynagai.a2ui.core.surface/ChildReference.Single|null[0]
+        constructor <init>(kotlin/String, kotlin/String) // dev.ynagai.a2ui.core.surface/ChildReference.Single.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+        final val id // dev.ynagai.a2ui.core.surface/ChildReference.Single.id|{}id[0]
+            final fun <get-id>(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Single.id.<get-id>|<get-id>(){}[0]
+        final val property // dev.ynagai.a2ui.core.surface/ChildReference.Single.property|{}property[0]
+            final fun <get-property>(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Single.property.<get-property>|<get-property>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Single.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Single.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ...): dev.ynagai.a2ui.core.surface/ChildReference.Single // dev.ynagai.a2ui.core.surface/ChildReference.Single.copy|copy(kotlin.String;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/ChildReference.Single.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/ChildReference.Single.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Single.toString|toString(){}[0]
+    }
+
+    final class Template : dev.ynagai.a2ui.core.surface/ChildReference { // dev.ynagai.a2ui.core.surface/ChildReference.Template|null[0]
+        constructor <init>(kotlin/String, kotlin/String, dev.ynagai.a2ui.core.surface/JsonPointer) // dev.ynagai.a2ui.core.surface/ChildReference.Template.<init>|<init>(kotlin.String;kotlin.String;dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
+
+        final val componentId // dev.ynagai.a2ui.core.surface/ChildReference.Template.componentId|{}componentId[0]
+            final fun <get-componentId>(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Template.componentId.<get-componentId>|<get-componentId>(){}[0]
+        final val path // dev.ynagai.a2ui.core.surface/ChildReference.Template.path|{}path[0]
+            final fun <get-path>(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/ChildReference.Template.path.<get-path>|<get-path>(){}[0]
+        final val property // dev.ynagai.a2ui.core.surface/ChildReference.Template.property|{}property[0]
+            final fun <get-property>(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Template.property.<get-property>|<get-property>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Template.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Template.component2|component2(){}[0]
+        final fun component3(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/ChildReference.Template.component3|component3(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ..., dev.ynagai.a2ui.core.surface/JsonPointer = ...): dev.ynagai.a2ui.core.surface/ChildReference.Template // dev.ynagai.a2ui.core.surface/ChildReference.Template.copy|copy(kotlin.String;kotlin.String;dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/ChildReference.Template.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/ChildReference.Template.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/ChildReference.Template.toString|toString(){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.surface/EvaluationScope { // dev.ynagai.a2ui.core.surface/EvaluationScope|null[0]
+    abstract val base // dev.ynagai.a2ui.core.surface/EvaluationScope.base|{}base[0]
+        abstract fun <get-base>(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/EvaluationScope.base.<get-base>|<get-base>(){}[0]
+    open val index // dev.ynagai.a2ui.core.surface/EvaluationScope.index|{}index[0]
+        open fun <get-index>(): kotlin/Int? // dev.ynagai.a2ui.core.surface/EvaluationScope.index.<get-index>|<get-index>(){}[0]
+
+    final class Collection : dev.ynagai.a2ui.core.surface/EvaluationScope { // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection|null[0]
+        constructor <init>(dev.ynagai.a2ui.core.surface/EvaluationScope, dev.ynagai.a2ui.core.surface/JsonPointer, kotlin/Int) // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.<init>|<init>(dev.ynagai.a2ui.core.surface.EvaluationScope;dev.ynagai.a2ui.core.surface.JsonPointer;kotlin.Int){}[0]
+
+        final val base // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.base|{}base[0]
+            final fun <get-base>(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.base.<get-base>|<get-base>(){}[0]
+        final val index // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.index|{}index[0]
+            final fun <get-index>(): kotlin/Int // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.index.<get-index>|<get-index>(){}[0]
+        final val parent // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.parent|{}parent[0]
+            final fun <get-parent>(): dev.ynagai.a2ui.core.surface/EvaluationScope // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.parent.<get-parent>|<get-parent>(){}[0]
+        final val path // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.path|{}path[0]
+            final fun <get-path>(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.path.<get-path>|<get-path>(){}[0]
+
+        final fun component1(): dev.ynagai.a2ui.core.surface/EvaluationScope // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.component1|component1(){}[0]
+        final fun component2(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.component2|component2(){}[0]
+        final fun component3(): kotlin/Int // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.component3|component3(){}[0]
+        final fun copy(dev.ynagai.a2ui.core.surface/EvaluationScope = ..., dev.ynagai.a2ui.core.surface/JsonPointer = ..., kotlin/Int = ...): dev.ynagai.a2ui.core.surface/EvaluationScope.Collection // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.copy|copy(dev.ynagai.a2ui.core.surface.EvaluationScope;dev.ynagai.a2ui.core.surface.JsonPointer;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/EvaluationScope.Collection.toString|toString(){}[0]
+    }
+
+    final object Root : dev.ynagai.a2ui.core.surface/EvaluationScope { // dev.ynagai.a2ui.core.surface/EvaluationScope.Root|null[0]
+        final val base // dev.ynagai.a2ui.core.surface/EvaluationScope.Root.base|{}base[0]
+            final fun <get-base>(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/EvaluationScope.Root.base.<get-base>|<get-base>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/EvaluationScope.Root.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/EvaluationScope.Root.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/EvaluationScope.Root.toString|toString(){}[0]
+    }
+}
+
+sealed interface dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2ui.core.surface/RendererEffect|null[0]
+    open val surfaceId // dev.ynagai.a2ui.core.surface/RendererEffect.surfaceId|{}surfaceId[0]
+        open fun <get-surfaceId>(): kotlin/String? // dev.ynagai.a2ui.core.surface/RendererEffect.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+
+    final class AgentFunctionResponded : dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2ui.core.surface/RendererEffect.AgentFunctionResponded|null[0]
+        constructor <init>(dev.ynagai.a2ui.core.protocol/FunctionResponse) // dev.ynagai.a2ui.core.surface/RendererEffect.AgentFunctionResponded.<init>|<init>(dev.ynagai.a2ui.core.protocol.FunctionResponse){}[0]
+
+        final val response // dev.ynagai.a2ui.core.surface/RendererEffect.AgentFunctionResponded.response|{}response[0]
+            final fun <get-response>(): dev.ynagai.a2ui.core.protocol/FunctionResponse // dev.ynagai.a2ui.core.surface/RendererEffect.AgentFunctionResponded.response.<get-response>|<get-response>(){}[0]
+
+        final fun component1(): dev.ynagai.a2ui.core.protocol/FunctionResponse // dev.ynagai.a2ui.core.surface/RendererEffect.AgentFunctionResponded.component1|component1(){}[0]
+        final fun copy(dev.ynagai.a2ui.core.protocol/FunctionResponse = ...): dev.ynagai.a2ui.core.surface/RendererEffect.AgentFunctionResponded // dev.ynagai.a2ui.core.surface/RendererEffect.AgentFunctionResponded.copy|copy(dev.ynagai.a2ui.core.protocol.FunctionResponse){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RendererEffect.AgentFunctionResponded.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RendererEffect.AgentFunctionResponded.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.AgentFunctionResponded.toString|toString(){}[0]
+    }
+
+    final class ComponentsUpdated : dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated|null[0]
+        constructor <init>(kotlin/String, kotlin.collections/List<kotlin/String>) // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated.<init>|<init>(kotlin.String;kotlin.collections.List<kotlin.String>){}[0]
+
+        final val ids // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated.ids|{}ids[0]
+            final fun <get-ids>(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated.ids.<get-ids>|<get-ids>(){}[0]
+        final val surfaceId // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated.surfaceId|{}surfaceId[0]
+            final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated.component1|component1(){}[0]
+        final fun component2(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin.collections/List<kotlin/String> = ...): dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated.copy|copy(kotlin.String;kotlin.collections.List<kotlin.String>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.ComponentsUpdated.toString|toString(){}[0]
+    }
+
+    final class DataModelUpdated : dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated|null[0]
+        constructor <init>(kotlin/String, dev.ynagai.a2ui.core.surface/JsonPointer) // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated.<init>|<init>(kotlin.String;dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
+
+        final val path // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated.path|{}path[0]
+            final fun <get-path>(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated.path.<get-path>|<get-path>(){}[0]
+        final val surfaceId // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated.surfaceId|{}surfaceId[0]
+            final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated.component1|component1(){}[0]
+        final fun component2(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., dev.ynagai.a2ui.core.surface/JsonPointer = ...): dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated.copy|copy(kotlin.String;dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.DataModelUpdated.toString|toString(){}[0]
+    }
+
+    final class RendererFunctionRequested : dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested|null[0]
+        constructor <init>(kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionCall) // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.<init>|<init>(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+
+        final val call // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.call|{}call[0]
+            final fun <get-call>(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.call.<get-call>|<get-call>(){}[0]
+        final val functionCallId // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.functionCallId|{}functionCallId[0]
+            final fun <get-functionCallId>(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.functionCallId.<get-functionCallId>|<get-functionCallId>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.component1|component1(){}[0]
+        final fun component2(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., dev.ynagai.a2ui.core.protocol/FunctionCall = ...): dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.copy|copy(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.toString|toString(){}[0]
+    }
+
+    final class SurfaceCreated : dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceCreated|null[0]
+        constructor <init>(kotlin/String) // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceCreated.<init>|<init>(kotlin.String){}[0]
+
+        final val surfaceId // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceCreated.surfaceId|{}surfaceId[0]
+            final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceCreated.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceCreated.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceCreated // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceCreated.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceCreated.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceCreated.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceCreated.toString|toString(){}[0]
+    }
+
+    final class SurfaceDeleted : dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted|null[0]
+        constructor <init>(kotlin/String) // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted.<init>|<init>(kotlin.String){}[0]
+
+        final val surfaceId // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted.surfaceId|{}surfaceId[0]
+            final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.SurfaceDeleted.toString|toString(){}[0]
     }
 }
 
@@ -1277,6 +1471,107 @@ final class dev.ynagai.a2ui.core.protocol/ValidationResult { // dev.ynagai.a2ui.
     }
 }
 
+final class dev.ynagai.a2ui.core.surface/A2uiStateException : kotlin/RuntimeException { // dev.ynagai.a2ui.core.surface/A2uiStateException|null[0]
+    constructor <init>(kotlin/String, kotlin/String? = ...) // dev.ynagai.a2ui.core.surface/A2uiStateException.<init>|<init>(kotlin.String;kotlin.String?){}[0]
+
+    final val surfaceId // dev.ynagai.a2ui.core.surface/A2uiStateException.surfaceId|{}surfaceId[0]
+        final fun <get-surfaceId>(): kotlin/String? // dev.ynagai.a2ui.core.surface/A2uiStateException.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+}
+
+final class dev.ynagai.a2ui.core.surface/JsonPointer { // dev.ynagai.a2ui.core.surface/JsonPointer|null[0]
+    final val isAbsolute // dev.ynagai.a2ui.core.surface/JsonPointer.isAbsolute|{}isAbsolute[0]
+        final fun <get-isAbsolute>(): kotlin/Boolean // dev.ynagai.a2ui.core.surface/JsonPointer.isAbsolute.<get-isAbsolute>|<get-isAbsolute>(){}[0]
+    final val isRoot // dev.ynagai.a2ui.core.surface/JsonPointer.isRoot|{}isRoot[0]
+        final fun <get-isRoot>(): kotlin/Boolean // dev.ynagai.a2ui.core.surface/JsonPointer.isRoot.<get-isRoot>|<get-isRoot>(){}[0]
+    final val tokens // dev.ynagai.a2ui.core.surface/JsonPointer.tokens|{}tokens[0]
+        final fun <get-tokens>(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.surface/JsonPointer.tokens.<get-tokens>|<get-tokens>(){}[0]
+
+    final fun child(kotlin/String): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/JsonPointer.child|child(kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/JsonPointer.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/JsonPointer.hashCode|hashCode(){}[0]
+    final fun resolve(dev.ynagai.a2ui.core.surface/JsonPointer): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/JsonPointer.resolve|resolve(dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/JsonPointer.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.surface/JsonPointer.Companion|null[0]
+        final const val APPEND // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.APPEND|{}APPEND[0]
+            final fun <get-APPEND>(): kotlin/String // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.APPEND.<get-APPEND>|<get-APPEND>(){}[0]
+        final const val MAX_TOKENS // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.MAX_TOKENS|{}MAX_TOKENS[0]
+            final fun <get-MAX_TOKENS>(): kotlin/Int // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.MAX_TOKENS.<get-MAX_TOKENS>|<get-MAX_TOKENS>(){}[0]
+
+        final val ROOT // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.ROOT|{}ROOT[0]
+            final fun <get-ROOT>(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.ROOT.<get-ROOT>|<get-ROOT>(){}[0]
+
+        final fun of(kotlin/Array<out kotlin/String>...): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.of|of(kotlin.Array<out|kotlin.String>...){}[0]
+        final fun parse(kotlin/String): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.parse|parse(kotlin.String){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.surface/ProcessResult { // dev.ynagai.a2ui.core.surface/ProcessResult|null[0]
+    constructor <init>(dev.ynagai.a2ui.core.surface/RendererState, kotlin.collections/List<dev.ynagai.a2ui.core.surface/RendererEffect>) // dev.ynagai.a2ui.core.surface/ProcessResult.<init>|<init>(dev.ynagai.a2ui.core.surface.RendererState;kotlin.collections.List<dev.ynagai.a2ui.core.surface.RendererEffect>){}[0]
+
+    final val effects // dev.ynagai.a2ui.core.surface/ProcessResult.effects|{}effects[0]
+        final fun <get-effects>(): kotlin.collections/List<dev.ynagai.a2ui.core.surface/RendererEffect> // dev.ynagai.a2ui.core.surface/ProcessResult.effects.<get-effects>|<get-effects>(){}[0]
+    final val state // dev.ynagai.a2ui.core.surface/ProcessResult.state|{}state[0]
+        final fun <get-state>(): dev.ynagai.a2ui.core.surface/RendererState // dev.ynagai.a2ui.core.surface/ProcessResult.state.<get-state>|<get-state>(){}[0]
+
+    final fun component1(): dev.ynagai.a2ui.core.surface/RendererState // dev.ynagai.a2ui.core.surface/ProcessResult.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<dev.ynagai.a2ui.core.surface/RendererEffect> // dev.ynagai.a2ui.core.surface/ProcessResult.component2|component2(){}[0]
+    final fun copy(dev.ynagai.a2ui.core.surface/RendererState = ..., kotlin.collections/List<dev.ynagai.a2ui.core.surface/RendererEffect> = ...): dev.ynagai.a2ui.core.surface/ProcessResult // dev.ynagai.a2ui.core.surface/ProcessResult.copy|copy(dev.ynagai.a2ui.core.surface.RendererState;kotlin.collections.List<dev.ynagai.a2ui.core.surface.RendererEffect>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/ProcessResult.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/ProcessResult.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/ProcessResult.toString|toString(){}[0]
+}
+
+final class dev.ynagai.a2ui.core.surface/RendererState { // dev.ynagai.a2ui.core.surface/RendererState|null[0]
+    constructor <init>(kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.surface/SurfaceModel> = ...) // dev.ynagai.a2ui.core.surface/RendererState.<init>|<init>(kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.surface.SurfaceModel>){}[0]
+
+    final val surfaces // dev.ynagai.a2ui.core.surface/RendererState.surfaces|{}surfaces[0]
+        final fun <get-surfaces>(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.surface/SurfaceModel> // dev.ynagai.a2ui.core.surface/RendererState.surfaces.<get-surfaces>|<get-surfaces>(){}[0]
+
+    final fun component1(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.surface/SurfaceModel> // dev.ynagai.a2ui.core.surface/RendererState.component1|component1(){}[0]
+    final fun copy(kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.surface/SurfaceModel> = ...): dev.ynagai.a2ui.core.surface/RendererState // dev.ynagai.a2ui.core.surface/RendererState.copy|copy(kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.surface.SurfaceModel>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RendererState.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RendererState.hashCode|hashCode(){}[0]
+    final fun surface(kotlin/String): dev.ynagai.a2ui.core.surface/SurfaceModel? // dev.ynagai.a2ui.core.surface/RendererState.surface|surface(kotlin.String){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererState.toString|toString(){}[0]
+}
+
+final class dev.ynagai.a2ui.core.surface/SurfaceModel { // dev.ynagai.a2ui.core.surface/SurfaceModel|null[0]
+    constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/Boolean = ..., dev.ynagai.a2ui.core.protocol/SurfaceMetadata? = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/Component> = ..., kotlinx.serialization.json/JsonObject = ...) // dev.ynagai.a2ui.core.surface/SurfaceModel.<init>|<init>(kotlin.String;kotlin.String?;kotlin.Boolean;dev.ynagai.a2ui.core.protocol.SurfaceMetadata?;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.Component>;kotlinx.serialization.json.JsonObject){}[0]
+
+    final val catalogId // dev.ynagai.a2ui.core.surface/SurfaceModel.catalogId|{}catalogId[0]
+        final fun <get-catalogId>(): kotlin/String? // dev.ynagai.a2ui.core.surface/SurfaceModel.catalogId.<get-catalogId>|<get-catalogId>(){}[0]
+    final val components // dev.ynagai.a2ui.core.surface/SurfaceModel.components|{}components[0]
+        final fun <get-components>(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/Component> // dev.ynagai.a2ui.core.surface/SurfaceModel.components.<get-components>|<get-components>(){}[0]
+    final val dataModel // dev.ynagai.a2ui.core.surface/SurfaceModel.dataModel|{}dataModel[0]
+        final fun <get-dataModel>(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.surface/SurfaceModel.dataModel.<get-dataModel>|<get-dataModel>(){}[0]
+    final val isRenderable // dev.ynagai.a2ui.core.surface/SurfaceModel.isRenderable|{}isRenderable[0]
+        final fun <get-isRenderable>(): kotlin/Boolean // dev.ynagai.a2ui.core.surface/SurfaceModel.isRenderable.<get-isRenderable>|<get-isRenderable>(){}[0]
+    final val metadata // dev.ynagai.a2ui.core.surface/SurfaceModel.metadata|{}metadata[0]
+        final fun <get-metadata>(): dev.ynagai.a2ui.core.protocol/SurfaceMetadata? // dev.ynagai.a2ui.core.surface/SurfaceModel.metadata.<get-metadata>|<get-metadata>(){}[0]
+    final val root // dev.ynagai.a2ui.core.surface/SurfaceModel.root|{}root[0]
+        final fun <get-root>(): dev.ynagai.a2ui.core.protocol/Component? // dev.ynagai.a2ui.core.surface/SurfaceModel.root.<get-root>|<get-root>(){}[0]
+    final val sendDataModel // dev.ynagai.a2ui.core.surface/SurfaceModel.sendDataModel|{}sendDataModel[0]
+        final fun <get-sendDataModel>(): kotlin/Boolean // dev.ynagai.a2ui.core.surface/SurfaceModel.sendDataModel.<get-sendDataModel>|<get-sendDataModel>(){}[0]
+    final val surfaceId // dev.ynagai.a2ui.core.surface/SurfaceModel.surfaceId|{}surfaceId[0]
+        final fun <get-surfaceId>(): kotlin/String // dev.ynagai.a2ui.core.surface/SurfaceModel.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
+
+    final fun component(kotlin/String): dev.ynagai.a2ui.core.protocol/Component? // dev.ynagai.a2ui.core.surface/SurfaceModel.component|component(kotlin.String){}[0]
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.surface/SurfaceModel.component1|component1(){}[0]
+    final fun component2(): kotlin/String? // dev.ynagai.a2ui.core.surface/SurfaceModel.component2|component2(){}[0]
+    final fun component3(): kotlin/Boolean // dev.ynagai.a2ui.core.surface/SurfaceModel.component3|component3(){}[0]
+    final fun component4(): dev.ynagai.a2ui.core.protocol/SurfaceMetadata? // dev.ynagai.a2ui.core.surface/SurfaceModel.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/Component> // dev.ynagai.a2ui.core.surface/SurfaceModel.component5|component5(){}[0]
+    final fun component6(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.surface/SurfaceModel.component6|component6(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String? = ..., kotlin/Boolean = ..., dev.ynagai.a2ui.core.protocol/SurfaceMetadata? = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/Component> = ..., kotlinx.serialization.json/JsonObject = ...): dev.ynagai.a2ui.core.surface/SurfaceModel // dev.ynagai.a2ui.core.surface/SurfaceModel.copy|copy(kotlin.String;kotlin.String?;kotlin.Boolean;dev.ynagai.a2ui.core.protocol.SurfaceMetadata?;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.Component>;kotlinx.serialization.json.JsonObject){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/SurfaceModel.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/SurfaceModel.hashCode|hashCode(){}[0]
+    final fun read(dev.ynagai.a2ui.core.surface/JsonPointer, dev.ynagai.a2ui.core.surface/EvaluationScope = ...): kotlinx.serialization.json/JsonElement? // dev.ynagai.a2ui.core.surface/SurfaceModel.read|read(dev.ynagai.a2ui.core.surface.JsonPointer;dev.ynagai.a2ui.core.surface.EvaluationScope){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/SurfaceModel.toString|toString(){}[0]
+    final fun withComponents(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/Component>): dev.ynagai.a2ui.core.surface/SurfaceModel // dev.ynagai.a2ui.core.surface/SurfaceModel.withComponents|withComponents(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.Component>){}[0]
+    final fun withDataModel(dev.ynagai.a2ui.core.surface/JsonPointer, kotlinx.serialization.json/JsonElement): dev.ynagai.a2ui.core.surface/SurfaceModel // dev.ynagai.a2ui.core.surface/SurfaceModel.withDataModel|withDataModel(dev.ynagai.a2ui.core.surface.JsonPointer;kotlinx.serialization.json.JsonElement){}[0]
+}
+
 final object dev.ynagai.a2ui.core.protocol/A2uiJson { // dev.ynagai.a2ui.core.protocol/A2uiJson|null[0]
     final val lenient // dev.ynagai.a2ui.core.protocol/A2uiJson.lenient|{}lenient[0]
         final fun <get-lenient>(): kotlinx.serialization.json/Json // dev.ynagai.a2ui.core.protocol/A2uiJson.lenient.<get-lenient>|<get-lenient>(){}[0]
@@ -1291,7 +1586,26 @@ final object dev.ynagai.a2ui.core.protocol/Surface { // dev.ynagai.a2ui.core.pro
         final fun <get-ROOT_ID>(): kotlin/String // dev.ynagai.a2ui.core.protocol/Surface.ROOT_ID.<get-ROOT_ID>|<get-ROOT_ID>(){}[0]
 }
 
+final object dev.ynagai.a2ui.core.surface/MessageProcessor { // dev.ynagai.a2ui.core.surface/MessageProcessor|null[0]
+    final fun apply(dev.ynagai.a2ui.core.surface/RendererState, dev.ynagai.a2ui.core.protocol/AgentToRendererMessage): dev.ynagai.a2ui.core.surface/ProcessResult // dev.ynagai.a2ui.core.surface/MessageProcessor.apply|apply(dev.ynagai.a2ui.core.surface.RendererState;dev.ynagai.a2ui.core.protocol.AgentToRendererMessage){}[0]
+    final fun applyAll(dev.ynagai.a2ui.core.surface/RendererState, kotlin.collections/Iterable<dev.ynagai.a2ui.core.protocol/AgentToRendererMessage>): dev.ynagai.a2ui.core.surface/ProcessResult // dev.ynagai.a2ui.core.surface/MessageProcessor.applyAll|applyAll(dev.ynagai.a2ui.core.surface.RendererState;kotlin.collections.Iterable<dev.ynagai.a2ui.core.protocol.AgentToRendererMessage>){}[0]
+}
+
 final object dev.ynagai.a2ui.core/A2ui { // dev.ynagai.a2ui.core/A2ui|null[0]
     final const val PROTOCOL_VERSION // dev.ynagai.a2ui.core/A2ui.PROTOCOL_VERSION|{}PROTOCOL_VERSION[0]
         final fun <get-PROTOCOL_VERSION>(): kotlin/String // dev.ynagai.a2ui.core/A2ui.PROTOCOL_VERSION.<get-PROTOCOL_VERSION>|<get-PROTOCOL_VERSION>(){}[0]
 }
+
+final const val dev.ynagai.a2ui.core.surface/DEFAULT_MAX_DEPTH // dev.ynagai.a2ui.core.surface/DEFAULT_MAX_DEPTH|{}DEFAULT_MAX_DEPTH[0]
+    final fun <get-DEFAULT_MAX_DEPTH>(): kotlin/Int // dev.ynagai.a2ui.core.surface/DEFAULT_MAX_DEPTH.<get-DEFAULT_MAX_DEPTH>|<get-DEFAULT_MAX_DEPTH>(){}[0]
+final const val dev.ynagai.a2ui.core.surface/DEFAULT_WALK_LIMIT // dev.ynagai.a2ui.core.surface/DEFAULT_WALK_LIMIT|{}DEFAULT_WALK_LIMIT[0]
+    final fun <get-DEFAULT_WALK_LIMIT>(): kotlin/Int // dev.ynagai.a2ui.core.surface/DEFAULT_WALK_LIMIT.<get-DEFAULT_WALK_LIMIT>|<get-DEFAULT_WALK_LIMIT>(){}[0]
+
+final fun (dev.ynagai.a2ui.core.protocol/ChildList).dev.ynagai.a2ui.core.surface/asReference(kotlin/String): dev.ynagai.a2ui.core.surface/ChildReference // dev.ynagai.a2ui.core.surface/asReference|asReference@dev.ynagai.a2ui.core.protocol.ChildList(kotlin.String){}[0]
+final fun (dev.ynagai.a2ui.core.surface/EvaluationScope).dev.ynagai.a2ui.core.surface/currentIndex(): kotlin/Int? // dev.ynagai.a2ui.core.surface/currentIndex|currentIndex@dev.ynagai.a2ui.core.surface.EvaluationScope(){}[0]
+final fun (dev.ynagai.a2ui.core.surface/EvaluationScope).dev.ynagai.a2ui.core.surface/iterate(dev.ynagai.a2ui.core.surface/JsonPointer, kotlin/Int): dev.ynagai.a2ui.core.surface/EvaluationScope.Collection // dev.ynagai.a2ui.core.surface/iterate|iterate@dev.ynagai.a2ui.core.surface.EvaluationScope(dev.ynagai.a2ui.core.surface.JsonPointer;kotlin.Int){}[0]
+final fun (dev.ynagai.a2ui.core.surface/EvaluationScope).dev.ynagai.a2ui.core.surface/rebase(dev.ynagai.a2ui.core.surface/JsonPointer): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/rebase|rebase@dev.ynagai.a2ui.core.surface.EvaluationScope(dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
+final fun (dev.ynagai.a2ui.core.surface/EvaluationScope).dev.ynagai.a2ui.core.surface/resolve(kotlinx.serialization.json/JsonElement, dev.ynagai.a2ui.core.surface/JsonPointer): kotlinx.serialization.json/JsonElement? // dev.ynagai.a2ui.core.surface/resolve|resolve@dev.ynagai.a2ui.core.surface.EvaluationScope(kotlinx.serialization.json.JsonElement;dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
+final fun (dev.ynagai.a2ui.core.surface/SurfaceModel).dev.ynagai.a2ui.core.surface/walk(dev.ynagai.a2ui.core.surface/ChildResolver, kotlin/Int = ..., kotlin/Int = ...): kotlin.collections/List<kotlin/Pair<dev.ynagai.a2ui.core.protocol/Component, dev.ynagai.a2ui.core.surface/EvaluationScope>> // dev.ynagai.a2ui.core.surface/walk|walk@dev.ynagai.a2ui.core.surface.SurfaceModel(dev.ynagai.a2ui.core.surface.ChildResolver;kotlin.Int;kotlin.Int){}[0]
+final fun (kotlinx.serialization.json/JsonElement).dev.ynagai.a2ui.core.surface/resolve(dev.ynagai.a2ui.core.surface/JsonPointer): kotlinx.serialization.json/JsonElement? // dev.ynagai.a2ui.core.surface/resolve|resolve@kotlinx.serialization.json.JsonElement(dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
+final fun (kotlinx.serialization.json/JsonObject).dev.ynagai.a2ui.core.surface/write(dev.ynagai.a2ui.core.surface/JsonPointer, kotlinx.serialization.json/JsonElement): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.surface/write|write@kotlinx.serialization.json.JsonObject(dev.ynagai.a2ui.core.surface.JsonPointer;kotlinx.serialization.json.JsonElement){}[0]

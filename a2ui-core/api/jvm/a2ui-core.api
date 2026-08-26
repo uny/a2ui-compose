@@ -3,6 +3,113 @@ public final class dev/ynagai/a2ui/core/A2ui {
 	public static final field PROTOCOL_VERSION Ljava/lang/String;
 }
 
+public final class dev/ynagai/a2ui/core/function/A2uiFunctionException : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getCall ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/function/EvaluationContext {
+	public fun <init> (Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/surface/EvaluationScope;Ldev/ynagai/a2ui/core/function/LocaleFormatter;Ldev/ynagai/a2ui/core/function/InvocationContext;Ldev/ynagai/a2ui/core/function/UrlOpener;Ldev/ynagai/a2ui/core/function/EvaluationLimits;Lkotlinx/serialization/json/Json;)V
+	public synthetic fun <init> (Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/surface/EvaluationScope;Ldev/ynagai/a2ui/core/function/LocaleFormatter;Ldev/ynagai/a2ui/core/function/InvocationContext;Ldev/ynagai/a2ui/core/function/UrlOpener;Ldev/ynagai/a2ui/core/function/EvaluationLimits;Lkotlinx/serialization/json/Json;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getDataModel ()Lkotlinx/serialization/json/JsonElement;
+	public final fun getInvocation ()Ldev/ynagai/a2ui/core/function/InvocationContext;
+	public final fun getJson ()Lkotlinx/serialization/json/Json;
+	public final fun getLimits ()Ldev/ynagai/a2ui/core/function/EvaluationLimits;
+	public final fun getLocale ()Ldev/ynagai/a2ui/core/function/LocaleFormatter;
+	public final fun getScope ()Ldev/ynagai/a2ui/core/surface/EvaluationScope;
+	public final fun getUrlOpener ()Ldev/ynagai/a2ui/core/function/UrlOpener;
+	public final fun inScope (Ldev/ynagai/a2ui/core/surface/EvaluationScope;)Ldev/ynagai/a2ui/core/function/EvaluationContext;
+}
+
+public final class dev/ynagai/a2ui/core/function/EvaluationLimits {
+	public static final field Companion Ldev/ynagai/a2ui/core/function/EvaluationLimits$Companion;
+	public fun <init> ()V
+	public fun <init> (IIIII)V
+	public synthetic fun <init> (IIIIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun component5 ()I
+	public final fun copy (IIIII)Ldev/ynagai/a2ui/core/function/EvaluationLimits;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/function/EvaluationLimits;IIIIIILjava/lang/Object;)Ldev/ynagai/a2ui/core/function/EvaluationLimits;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMaxDepth ()I
+	public final fun getMaxPatternLength ()I
+	public final fun getMaxResultLength ()I
+	public final fun getMaxSteps ()I
+	public final fun getMaxSubjectLength ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/function/EvaluationLimits$Companion {
+	public final fun getDEFAULT ()Ldev/ynagai/a2ui/core/function/EvaluationLimits;
+}
+
+public final class dev/ynagai/a2ui/core/function/FallbackLocaleFormatter : dev/ynagai/a2ui/core/function/LocaleFormatter {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/function/FallbackLocaleFormatter;
+	public fun formatCurrency (DLjava/lang/String;Ljava/lang/Integer;Z)Ljava/lang/String;
+	public fun formatDate (JLjava/lang/String;)Ljava/lang/String;
+	public fun formatNumber (DLjava/lang/Integer;Z)Ljava/lang/String;
+	public fun pluralCategory (D)Ldev/ynagai/a2ui/core/function/PluralCategory;
+}
+
+public final class dev/ynagai/a2ui/core/function/FunctionEvaluatorKt {
+	public static final field DEFAULT_CALL_DEPTH I
+	public static final field DEFAULT_CALL_STEPS I
+	public static final field DEFAULT_MAX_PATTERN_LENGTH I
+	public static final field DEFAULT_MAX_RESULT_LENGTH I
+	public static final field DEFAULT_MAX_SUBJECT_LENGTH I
+	public static final fun evaluate (Ldev/ynagai/a2ui/core/function/EvaluationContext;Ldev/ynagai/a2ui/core/protocol/BoundValue;)Lkotlinx/serialization/json/JsonElement;
+	public static final fun evaluate (Ldev/ynagai/a2ui/core/function/EvaluationContext;Ldev/ynagai/a2ui/core/protocol/FunctionCall;)Lkotlinx/serialization/json/JsonElement;
+	public static final fun evaluateCheck (Ldev/ynagai/a2ui/core/function/EvaluationContext;Ldev/ynagai/a2ui/core/protocol/BoundValue;)Ldev/ynagai/a2ui/core/protocol/ValidationResult;
+}
+
+public final class dev/ynagai/a2ui/core/function/InvocationContext : java/lang/Enum {
+	public static final field RENDER Ldev/ynagai/a2ui/core/function/InvocationContext;
+	public static final field USER_ACTION Ldev/ynagai/a2ui/core/function/InvocationContext;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/ynagai/a2ui/core/function/InvocationContext;
+	public static fun values ()[Ldev/ynagai/a2ui/core/function/InvocationContext;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/function/LocaleFormatter {
+	public abstract fun formatCurrency (DLjava/lang/String;Ljava/lang/Integer;Z)Ljava/lang/String;
+	public abstract fun formatDate (JLjava/lang/String;)Ljava/lang/String;
+	public abstract fun formatNumber (DLjava/lang/Integer;Z)Ljava/lang/String;
+	public abstract fun pluralCategory (D)Ldev/ynagai/a2ui/core/function/PluralCategory;
+}
+
+public final class dev/ynagai/a2ui/core/function/PluralCategory : java/lang/Enum {
+	public static final field FEW Ldev/ynagai/a2ui/core/function/PluralCategory;
+	public static final field MANY Ldev/ynagai/a2ui/core/function/PluralCategory;
+	public static final field ONE Ldev/ynagai/a2ui/core/function/PluralCategory;
+	public static final field OTHER Ldev/ynagai/a2ui/core/function/PluralCategory;
+	public static final field TWO Ldev/ynagai/a2ui/core/function/PluralCategory;
+	public static final field ZERO Ldev/ynagai/a2ui/core/function/PluralCategory;
+	public final fun getArgumentName ()Ljava/lang/String;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/ynagai/a2ui/core/function/PluralCategory;
+	public static fun values ()[Ldev/ynagai/a2ui/core/function/PluralCategory;
+}
+
+public abstract interface class dev/ynagai/a2ui/core/function/UrlOpener {
+	public abstract fun open (Ljava/lang/String;)V
+}
+
+public final class dev/ynagai/a2ui/core/function/ValidationCode {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/function/ValidationCode;
+	public static final field INVALID_EMAIL Ljava/lang/String;
+	public static final field NOT_A_NUMBER Ljava/lang/String;
+	public static final field OUT_OF_RANGE Ljava/lang/String;
+	public static final field PATTERN_MISMATCH Ljava/lang/String;
+	public static final field REQUIRED Ljava/lang/String;
+	public static final field TOO_LONG Ljava/lang/String;
+	public static final field TOO_SHORT Ljava/lang/String;
+}
+
 public final class dev/ynagai/a2ui/core/protocol/A2uiFormatException : kotlinx/serialization/SerializationException {
 	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V

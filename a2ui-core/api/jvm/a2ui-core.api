@@ -1446,7 +1446,9 @@ public final class dev/ynagai/a2ui/core/surface/SurfaceModel {
 }
 
 public final class dev/ynagai/a2ui/core/surface/SurfaceModelKt {
+	public static final field DEFAULT_WALK_LIMIT I
 	public static final fun asReference (Ldev/ynagai/a2ui/core/protocol/ChildList;Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/ChildReference;
-	public static final fun walk (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ldev/ynagai/a2ui/core/surface/ChildResolver;)Ljava/util/List;
+	public static final fun walk (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ldev/ynagai/a2ui/core/surface/ChildResolver;I)Ljava/util/List;
+	public static synthetic fun walk$default (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ldev/ynagai/a2ui/core/surface/ChildResolver;IILjava/lang/Object;)Ljava/util/List;
 }
 

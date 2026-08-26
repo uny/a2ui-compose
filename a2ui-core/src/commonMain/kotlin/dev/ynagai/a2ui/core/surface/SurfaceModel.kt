@@ -139,27 +139,57 @@ public fun interface ChildResolver {
 }
 
 /**
- * Every component reachable from [SurfaceModel.root], depth first, each paired with the scope it
- * renders in.
+ * The number of component instances [walk] will produce before giving up.
+ *
+ * A surface that expands past this is not something a renderer can usefully draw, and the number
+ * is far above any hand-authored UI, so the only payloads it stops are the ones meant to exhaust
+ * the renderer.
+ */
+public const val DEFAULT_WALK_LIMIT: Int = 10_000
+
+/**
+ * Every component instance reachable from [SurfaceModel.root], depth first, each paired with the
+ * scope it renders in.
  *
  * References that name a component the surface has not received are skipped rather than raised:
  * the specification requires renderers to "handle missing references gracefully by rendering
  * placeholders (progressive rendering)". A reference that revisits a component already on the
  * current path is also skipped, so a cycle in the adjacency list ends the walk instead of hanging
  * it — reporting that cycle is the validator's job, not the renderer's.
+ *
+ * **A component may be emitted more than once, and that is why [limit] exists.** The adjacency
+ * list is a graph, not a tree: two containers may both reference the same child, and each
+ * reference is a separate rendering. Deduplicating by id would drop the second one, so the walk
+ * follows every path — which means n layers of components that each reference the same two
+ * children produce 2^n instances from 2n components. The path guard does not bound that, because
+ * none of those paths repeats an id. [limit] does, by raising [A2uiStateException] rather than by
+ * truncating: a silently shortened walk is a wrong UI drawn without complaint, which is worse than
+ * a surface that refuses to draw.
+ *
+ * The traversal keeps its own stack rather than recursing, so the depth of a surface is bounded by
+ * [limit] alone and cannot overflow the call stack — which on Kotlin/Native is small enough to
+ * matter well before [limit] is reached.
  */
 public fun SurfaceModel.walk(
     resolver: ChildResolver,
+    limit: Int = DEFAULT_WALK_LIMIT,
 ): List<Pair<Component, EvaluationScope>> {
     val out = mutableListOf<Pair<Component, EvaluationScope>>()
+    val pending = ArrayDeque<Triple<Component, EvaluationScope, Set<ComponentId>>>()
+    root?.let { pending.addLast(Triple(it, EvaluationScope.Root, emptySet())) }
 
-    fun visit(component: Component, scope: EvaluationScope, path: Set<ComponentId>) {
+    fun overrun(queued: Int): Boolean = out.size + pending.size + queued > limit
+
+    while (pending.isNotEmpty()) {
+        val (component, scope, path) = pending.removeLast()
         out += component to scope
         val nextPath = path + component.id
+
+        val children = mutableListOf<Triple<Component, EvaluationScope, Set<ComponentId>>>()
         fun descend(id: ComponentId, childScope: EvaluationScope) {
             val child = components[id] ?: return
             if (child.id in nextPath) return
-            visit(child, childScope, nextPath)
+            children += Triple(child, childScope, nextPath)
         }
         for (reference in resolver.childrenOf(component)) {
             when (reference) {
@@ -176,9 +206,16 @@ public fun SurfaceModel.walk(
                 }
             }
         }
+        if (overrun(children.size)) {
+            throw A2uiStateException(
+                "surface `$surfaceId` expands to more than $limit component instances.",
+                surfaceId,
+            )
+        }
+        // Reversed, so that popping from the end visits the children in the order the resolver
+        // reported them.
+        for (index in children.indices.reversed()) pending.addLast(children[index])
     }
-
-    root?.let { visit(it, EvaluationScope.Root, emptySet()) }
     return out
 }
 

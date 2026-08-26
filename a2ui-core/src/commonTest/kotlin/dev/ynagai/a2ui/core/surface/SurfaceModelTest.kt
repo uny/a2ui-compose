@@ -8,6 +8,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -154,5 +155,51 @@ class SurfaceModelTest {
     fun `a relative binding outside a template resolves from the root`() {
         val model = surface(data = """{"name": "Alice"}""")
         assertEquals(JsonPrimitive("Alice"), model.read(JsonPointer.parse("name")))
+    }
+
+    @Test
+    fun `a shared child renders once per parent that references it`() {
+        // The adjacency list is a graph: deduplicating by id here would drop the second Text.
+        val model = surface(
+            """{"id": "root", "component": "Column", "children": ["a", "b"]}""",
+            """{"id": "a", "component": "Card", "child": "shared"}""",
+            """{"id": "b", "component": "Card", "child": "shared"}""",
+            """{"id": "shared", "component": "Text", "text": "x"}""",
+        )
+        assertEquals(
+            listOf("root", "a", "shared", "b", "shared"),
+            model.walk(resolver).map { it.first.id },
+        )
+    }
+
+    @Test
+    fun `a diamond graph that expands exponentially is stopped by the limit`() {
+        // Sixteen layers each referencing the same two children is 2^16 instances from 32
+        // components. No path repeats an id, so the cycle guard does not bound this.
+        val layers = 16
+        val components = buildList {
+            add("""{"id": "root", "component": "Column", "children": ["l0a", "l0b"]}""")
+            repeat(layers) { i ->
+                val next = if (i == layers - 1) "[]" else """["l${i + 1}a", "l${i + 1}b"]"""
+                add("""{"id": "l${i}a", "component": "Column", "children": $next}""")
+                add("""{"id": "l${i}b", "component": "Column", "children": $next}""")
+            }
+        }
+        val model = surface(*components.toTypedArray())
+        val failure = assertFailsWith<A2uiStateException> { model.walk(resolver) }
+        assertEquals("s", failure.surfaceId)
+    }
+
+    @Test
+    fun `a deeply nested chain does not overflow the call stack`() {
+        val depth = DEFAULT_WALK_LIMIT - 1
+        val components = buildList {
+            add("""{"id": "root", "component": "Card", "child": "c0"}""")
+            repeat(depth) { i ->
+                val child = if (i == depth - 1) "" else ""","child": "c${i + 1}""""
+                add("""{"id": "c$i", "component": "Card"$child}""")
+            }
+        }
+        assertEquals(depth + 1, surface(*components.toTypedArray()).walk(resolver).size)
     }
 }

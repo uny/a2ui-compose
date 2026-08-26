@@ -674,6 +674,43 @@ sealed interface dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2u
     }
 }
 
+sealed interface dev.ynagai.a2ui.core.validation/CatalogResolution { // dev.ynagai.a2ui.core.validation/CatalogResolution|null[0]
+    final class Found : dev.ynagai.a2ui.core.validation/CatalogResolution { // dev.ynagai.a2ui.core.validation/CatalogResolution.Found|null[0]
+        constructor <init>(kotlin/String, dev.ynagai.a2ui.core.protocol/CatalogDefinition) // dev.ynagai.a2ui.core.validation/CatalogResolution.Found.<init>|<init>(kotlin.String;dev.ynagai.a2ui.core.protocol.CatalogDefinition){}[0]
+
+        final val catalog // dev.ynagai.a2ui.core.validation/CatalogResolution.Found.catalog|{}catalog[0]
+            final fun <get-catalog>(): dev.ynagai.a2ui.core.protocol/CatalogDefinition // dev.ynagai.a2ui.core.validation/CatalogResolution.Found.catalog.<get-catalog>|<get-catalog>(){}[0]
+        final val catalogId // dev.ynagai.a2ui.core.validation/CatalogResolution.Found.catalogId|{}catalogId[0]
+            final fun <get-catalogId>(): kotlin/String // dev.ynagai.a2ui.core.validation/CatalogResolution.Found.catalogId.<get-catalogId>|<get-catalogId>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.validation/CatalogResolution.Found.component1|component1(){}[0]
+        final fun component2(): dev.ynagai.a2ui.core.protocol/CatalogDefinition // dev.ynagai.a2ui.core.validation/CatalogResolution.Found.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., dev.ynagai.a2ui.core.protocol/CatalogDefinition = ...): dev.ynagai.a2ui.core.validation/CatalogResolution.Found // dev.ynagai.a2ui.core.validation/CatalogResolution.Found.copy|copy(kotlin.String;dev.ynagai.a2ui.core.protocol.CatalogDefinition){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.validation/CatalogResolution.Found.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.validation/CatalogResolution.Found.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.validation/CatalogResolution.Found.toString|toString(){}[0]
+    }
+
+    final class Unknown : dev.ynagai.a2ui.core.validation/CatalogResolution { // dev.ynagai.a2ui.core.validation/CatalogResolution.Unknown|null[0]
+        constructor <init>(kotlin/String) // dev.ynagai.a2ui.core.validation/CatalogResolution.Unknown.<init>|<init>(kotlin.String){}[0]
+
+        final val catalogId // dev.ynagai.a2ui.core.validation/CatalogResolution.Unknown.catalogId|{}catalogId[0]
+            final fun <get-catalogId>(): kotlin/String // dev.ynagai.a2ui.core.validation/CatalogResolution.Unknown.catalogId.<get-catalogId>|<get-catalogId>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.core.validation/CatalogResolution.Unknown.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): dev.ynagai.a2ui.core.validation/CatalogResolution.Unknown // dev.ynagai.a2ui.core.validation/CatalogResolution.Unknown.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.validation/CatalogResolution.Unknown.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.validation/CatalogResolution.Unknown.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.validation/CatalogResolution.Unknown.toString|toString(){}[0]
+    }
+
+    final object Unspecified : dev.ynagai.a2ui.core.validation/CatalogResolution { // dev.ynagai.a2ui.core.validation/CatalogResolution.Unspecified|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.validation/CatalogResolution.Unspecified.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.validation/CatalogResolution.Unspecified.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.validation/CatalogResolution.Unspecified.toString|toString(){}[0]
+    }
+}
+
 final class dev.ynagai.a2ui.core.function/A2uiFunctionException : kotlin/RuntimeException { // dev.ynagai.a2ui.core.function/A2uiFunctionException|null[0]
     constructor <init>(kotlin/String, kotlin/String? = ...) // dev.ynagai.a2ui.core.function/A2uiFunctionException.<init>|<init>(kotlin.String;kotlin.String?){}[0]
 
@@ -1669,6 +1706,19 @@ final class dev.ynagai.a2ui.core.surface/SurfaceModel { // dev.ynagai.a2ui.core.
     final fun withDataModel(dev.ynagai.a2ui.core.surface/JsonPointer, kotlinx.serialization.json/JsonElement): dev.ynagai.a2ui.core.surface/SurfaceModel // dev.ynagai.a2ui.core.surface/SurfaceModel.withDataModel|withDataModel(dev.ynagai.a2ui.core.surface.JsonPointer;kotlinx.serialization.json.JsonElement){}[0]
 }
 
+final class dev.ynagai.a2ui.core.validation/CatalogValidator { // dev.ynagai.a2ui.core.validation/CatalogValidator|null[0]
+    final val catalogIds // dev.ynagai.a2ui.core.validation/CatalogValidator.catalogIds|{}catalogIds[0]
+        final fun <get-catalogIds>(): kotlin.collections/Set<kotlin/String> // dev.ynagai.a2ui.core.validation/CatalogValidator.catalogIds.<get-catalogIds>|<get-catalogIds>(){}[0]
+
+    final fun resolve(kotlin/String?, kotlin/String?): dev.ynagai.a2ui.core.validation/CatalogResolution // dev.ynagai.a2ui.core.validation/CatalogValidator.resolve|resolve(kotlin.String?;kotlin.String?){}[0]
+    final fun validate(dev.ynagai.a2ui.core.protocol/Component, kotlin/String? = ...): dev.ynagai.a2ui.core.validation/SchemaValidation // dev.ynagai.a2ui.core.validation/CatalogValidator.validate|validate(dev.ynagai.a2ui.core.protocol.Component;kotlin.String?){}[0]
+    final fun validate(dev.ynagai.a2ui.core.protocol/FunctionCall, kotlin/String? = ...): dev.ynagai.a2ui.core.validation/SchemaValidation // dev.ynagai.a2ui.core.validation/CatalogValidator.validate|validate(dev.ynagai.a2ui.core.protocol.FunctionCall;kotlin.String?){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.validation/CatalogValidator.Companion|null[0]
+        final fun of(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>, dev.ynagai.a2ui.core.validation/ValidationLimits = ...): dev.ynagai.a2ui.core.validation/CatalogValidator // dev.ynagai.a2ui.core.validation/CatalogValidator.Companion.of|of(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>;dev.ynagai.a2ui.core.validation.ValidationLimits){}[0]
+    }
+}
+
 final class dev.ynagai.a2ui.core.validation/SchemaEvaluator { // dev.ynagai.a2ui.core.validation/SchemaEvaluator|null[0]
     constructor <init>(dev.ynagai.a2ui.core.validation/SchemaRegistry, dev.ynagai.a2ui.core.validation/ValidationLimits = ...) // dev.ynagai.a2ui.core.validation/SchemaEvaluator.<init>|<init>(dev.ynagai.a2ui.core.validation.SchemaRegistry;dev.ynagai.a2ui.core.validation.ValidationLimits){}[0]
 
@@ -1818,6 +1868,24 @@ final object dev.ynagai.a2ui.core.protocol/Surface { // dev.ynagai.a2ui.core.pro
 final object dev.ynagai.a2ui.core.surface/MessageProcessor { // dev.ynagai.a2ui.core.surface/MessageProcessor|null[0]
     final fun apply(dev.ynagai.a2ui.core.surface/RendererState, dev.ynagai.a2ui.core.protocol/AgentToRendererMessage): dev.ynagai.a2ui.core.surface/ProcessResult // dev.ynagai.a2ui.core.surface/MessageProcessor.apply|apply(dev.ynagai.a2ui.core.surface.RendererState;dev.ynagai.a2ui.core.protocol.AgentToRendererMessage){}[0]
     final fun applyAll(dev.ynagai.a2ui.core.surface/RendererState, kotlin.collections/Iterable<dev.ynagai.a2ui.core.protocol/AgentToRendererMessage>): dev.ynagai.a2ui.core.surface/ProcessResult // dev.ynagai.a2ui.core.surface/MessageProcessor.applyAll|applyAll(dev.ynagai.a2ui.core.surface.RendererState;kotlin.collections.Iterable<dev.ynagai.a2ui.core.protocol.AgentToRendererMessage>){}[0]
+}
+
+final object dev.ynagai.a2ui.core.validation/ProtocolSchemas { // dev.ynagai.a2ui.core.validation/ProtocolSchemas|null[0]
+    final const val AGENT_TO_RENDERER_URI // dev.ynagai.a2ui.core.validation/ProtocolSchemas.AGENT_TO_RENDERER_URI|{}AGENT_TO_RENDERER_URI[0]
+        final fun <get-AGENT_TO_RENDERER_URI>(): kotlin/String // dev.ynagai.a2ui.core.validation/ProtocolSchemas.AGENT_TO_RENDERER_URI.<get-AGENT_TO_RENDERER_URI>|<get-AGENT_TO_RENDERER_URI>(){}[0]
+    final const val COMMON_TYPES_URI // dev.ynagai.a2ui.core.validation/ProtocolSchemas.COMMON_TYPES_URI|{}COMMON_TYPES_URI[0]
+        final fun <get-COMMON_TYPES_URI>(): kotlin/String // dev.ynagai.a2ui.core.validation/ProtocolSchemas.COMMON_TYPES_URI.<get-COMMON_TYPES_URI>|<get-COMMON_TYPES_URI>(){}[0]
+
+    final val agentToRenderer // dev.ynagai.a2ui.core.validation/ProtocolSchemas.agentToRenderer|{}agentToRenderer[0]
+        final fun <get-agentToRenderer>(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.validation/ProtocolSchemas.agentToRenderer.<get-agentToRenderer>|<get-agentToRenderer>(){}[0]
+    final val commonTypes // dev.ynagai.a2ui.core.validation/ProtocolSchemas.commonTypes|{}commonTypes[0]
+        final fun <get-commonTypes>(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.validation/ProtocolSchemas.commonTypes.<get-commonTypes>|<get-commonTypes>(){}[0]
+    final val component // dev.ynagai.a2ui.core.validation/ProtocolSchemas.component|{}component[0]
+        final fun <get-component>(): dev.ynagai.a2ui.core.validation/SchemaLocation // dev.ynagai.a2ui.core.validation/ProtocolSchemas.component.<get-component>|<get-component>(){}[0]
+    final val documents // dev.ynagai.a2ui.core.validation/ProtocolSchemas.documents|{}documents[0]
+        final fun <get-documents>(): kotlin.collections/List<kotlinx.serialization.json/JsonObject> // dev.ynagai.a2ui.core.validation/ProtocolSchemas.documents.<get-documents>|<get-documents>(){}[0]
+    final val functionCall // dev.ynagai.a2ui.core.validation/ProtocolSchemas.functionCall|{}functionCall[0]
+        final fun <get-functionCall>(): dev.ynagai.a2ui.core.validation/SchemaLocation // dev.ynagai.a2ui.core.validation/ProtocolSchemas.functionCall.<get-functionCall>|<get-functionCall>(){}[0]
 }
 
 final object dev.ynagai.a2ui.core/A2ui { // dev.ynagai.a2ui.core/A2ui|null[0]

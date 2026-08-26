@@ -280,12 +280,43 @@ public class SchemaEvaluator(
                         }
                     }
 
+                    "patternProperties" -> {
+                        val obj = instance as? JsonObject
+                        val subschemas = value as? JsonObject
+                        if (obj != null && subschemas != null) {
+                            for ((pattern, subschema) in subschemas) {
+                                val matches = matcher(pattern)
+                                if (matches == null) {
+                                    unsupported += "patternProperties: $pattern"
+                                    continue
+                                }
+                                for ((name, child) in obj) {
+                                    if (!matches(name)) continue
+                                    (properties ?: mutableSetOf<String>().also { properties = it })
+                                        .add(name)
+                                    absorb(
+                                        evaluate(
+                                            subschema,
+                                            location.child("patternProperties", pattern),
+                                            child,
+                                            at.child(name),
+                                            depth + 1,
+                                            collect,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     "additionalProperties" -> {
                         val obj = instance as? JsonObject
                         if (obj != null) {
                             val named = schema.declaredPropertyNames()
+                            val patterns = schema.declaredPatterns()
                             for ((name, child) in obj) {
                                 if (name in named) continue
+                                if (patterns.any { pattern -> matcher(pattern)?.invoke(name) == true }) continue
                                 (properties ?: mutableSetOf<String>().also { properties = it }).add(name)
                                 absorb(
                                     evaluate(
@@ -566,6 +597,28 @@ private fun JsonArray?.orEmptyStrings(): List<String> =
 private fun JsonObject.declaredPropertyNames(): Set<String> =
     (this["properties"] as? JsonObject)?.keys.orEmpty()
 
+/** The `patternProperties` keys, which `additionalProperties` also applies to the rest of. */
+private fun JsonObject.declaredPatterns(): Set<String> =
+    (this["patternProperties"] as? JsonObject)?.keys.orEmpty()
+
+/**
+ * A test for property names against [pattern], or null when this evaluator cannot apply it.
+ *
+ * v1.0 uses `patternProperties` exactly once, for the UAX #31 rule on extension keys, and that
+ * pattern cannot be handed to [Regex]: `\p{XID_Start}` does not exist on Kotlin/Native or
+ * Kotlin/Wasm and is not reachable from common code on the JVM, so compiling it would throw on two
+ * targets and quietly answer differently on the others. It is recognised by text and answered by
+ * [isUnicodeIdentifier], whose KDoc states plainly where the approximation is wrong.
+ *
+ * Any other pattern returns null rather than being compiled. Compiling an agent-supplied pattern
+ * here would put a backtracking engine on a path that runs once per property of every object in a
+ * payload, and the catalog that supplied it is the same party that supplied the payload.
+ */
+private fun matcher(pattern: String): ((String) -> Boolean)? = when (pattern) {
+    UAX31_IDENTIFIER_PATTERN -> ::isUnicodeIdentifier
+    else -> null
+}
+
 private fun SchemaLocation.child(vararg steps: String): SchemaLocation =
     copy(pointer = steps.fold(pointer) { acc, step -> "$acc/${step.escapePointer()}" })
 
@@ -575,7 +628,7 @@ private fun String.escapePointer(): String = replace("~", "~0").replace("/", "~1
 internal val SUPPORTED_KEYWORDS: Set<String> = setOf(
     "\$ref", "type", "const", "enum", "required", "properties", "additionalProperties", "items",
     "minItems", "minimum", "allOf", "anyOf", "oneOf", "not", "if", "then", "else", "format",
-    "unevaluatedProperties",
+    "patternProperties", "unevaluatedProperties",
 )
 
 /**

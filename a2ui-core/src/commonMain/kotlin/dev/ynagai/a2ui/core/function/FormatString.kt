@@ -29,13 +29,12 @@ import kotlinx.serialization.json.JsonPrimitive
  * it reads changes, so caching the parse would mean caching it against the template string.
  */
 internal fun interpolateTemplate(evaluator: Evaluator, template: String, depth: Int): String {
-    val limits = evaluator.context.limits
     val out = StringBuilder()
     var i = 0
     while (i < template.length) {
         val marker = template.indexOf(OPEN, i)
         if (marker < 0) {
-            out.appendBounded(template, i, template.length, limits)
+            out.appendBounded(evaluator, template, i, template.length)
             break
         }
         // `\${` is the escape the specification defines, and it is the only one: a backslash
@@ -44,9 +43,9 @@ internal fun interpolateTemplate(evaluator: Evaluator, template: String, depth: 
         // literal `C:${x}` rather than interpolating, and `C:\\${x}` renders `C:\${x}` — doubling
         // the backslash does not restore the interpolation.
         val escaped = marker > i && template[marker - 1] == '\\'
-        out.appendBounded(template, i, if (escaped) marker - 1 else marker, limits)
+        out.appendBounded(evaluator, template, i, if (escaped) marker - 1 else marker)
         if (escaped) {
-            out.appendBounded(OPEN, 0, OPEN.length, limits)
+            out.appendBounded(evaluator, OPEN, 0, OPEN.length)
             i = marker + OPEN.length
             continue
         }
@@ -63,7 +62,7 @@ internal fun interpolateTemplate(evaluator: Evaluator, template: String, depth: 
             depth + 1,
         )
         val text = stringify(value)
-        out.appendBounded(text, 0, text.length, limits)
+        out.appendBounded(evaluator, text, 0, text.length)
         i = close + 1
     }
     return out.toString()
@@ -73,25 +72,25 @@ private const val OPEN: String = "\${"
 private const val ERROR_EXCERPT: Int = 64
 
 /**
- * Appends `[from, to)` of [text], having first checked that it fits.
+ * Appends `[from, to)` of [text], having first charged it to the evaluation's result budget.
  *
  * Before, not after. A template that interpolates a megabyte-long binding a thousand times would
  * otherwise allocate the whole result and then report that it was too long, which is the cheapest
  * way for an agent to exhaust a renderer and the case a bound checked afterwards does not close.
+ *
+ * The charge goes to [Evaluator.produce] rather than to this builder's own length, so that the
+ * budget spans the whole evaluation. Measuring each builder separately bounded no total: one call
+ * may carry thousands of arguments, each interpolating its own near-limit string, and all of them
+ * are held at once while the argument map is assembled.
  */
 private fun StringBuilder.appendBounded(
+    evaluator: Evaluator,
     text: CharSequence,
     from: Int,
     to: Int,
-    limits: EvaluationLimits,
 ) {
     if (to <= from) return
-    if (length + (to - from) > limits.maxResultLength) {
-        throw A2uiFunctionException(
-            "formatString: result exceeds ${limits.maxResultLength} characters.",
-            FunctionNames.FORMAT_STRING,
-        )
-    }
+    evaluator.produce(to - from, FunctionNames.FORMAT_STRING)
     append(text, from, to)
 }
 
@@ -215,6 +214,10 @@ private fun parseArguments(
     val parts = splitTop(body, ',')
     val out = LinkedHashMap<String, JsonElement>(parts.size)
     for (part in parts) {
+        // One step per argument. Parsing was the one kind of work the budget did not cover, so an
+        // argument list was bounded only by the payload's own size — and every argument's value is
+        // retained in `out` until the call returns.
+        evaluator.step(call)
         val text = part.trim()
         if (text.isEmpty()) {
             throw A2uiFunctionException(
@@ -321,19 +324,44 @@ private fun indexOfTop(text: String, char: Char): Int {
     return -1
 }
 
-/** [text] split on every [separator] that [indexOfTop] would find. */
+/**
+ * [text] split on every [separator] that [indexOfTop] would find, in one pass.
+ *
+ * One pass, and one substring per part, because the obvious version — find the separator, keep the
+ * tail, repeat — copies the whole remainder on every separator and re-scans it from the start. That
+ * is quadratic in the number of arguments, and nothing bounded that number: the split runs to
+ * completion before the first argument is inspected, so `${f(,,,,…)}` with 500 000 commas spent
+ * about four seconds in here before reporting that argument one was empty.
+ */
 private fun splitTop(text: String, separator: Char): List<String> {
     val out = mutableListOf<String>()
-    var rest = text
-    while (true) {
-        val at = indexOfTop(rest, separator)
-        if (at < 0) {
-            out += rest
-            return out
+    var start = 0
+    var parens = 0
+    var i = 0
+    while (i < text.length) {
+        val c = text[i]
+        when {
+            c == '\'' || c == '"' -> {
+                i = skipQuoted(text, i)
+                continue
+            }
+            c == '$' && i + 1 < text.length && text[i + 1] == '{' -> {
+                val close = matchingClose(text, i)
+                i = if (close < 0) text.length else close + 1
+                continue
+            }
+            // Before the parenthesis counter, for the reason given in [indexOfTop].
+            c == separator && parens == 0 -> {
+                out += text.substring(start, i)
+                start = i + 1
+            }
+            c == '(' -> parens++
+            c == ')' -> parens--
         }
-        out += rest.substring(0, at)
-        rest = rest.substring(at + 1)
+        i++
     }
+    out += text.substring(start)
+    return out
 }
 
 /** The contents of [text] when it is one whole quoted literal, or null when it is not. */

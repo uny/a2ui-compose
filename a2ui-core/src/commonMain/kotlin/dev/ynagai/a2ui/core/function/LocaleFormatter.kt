@@ -125,8 +125,13 @@ private fun formatDecimal(value: Double, decimals: Int?, grouping: Boolean): Str
     val digits = when {
         decimals == null -> shortestDigits(magnitude)
         decimals < 0 -> throw A2uiFunctionException("`decimals` must not be negative, but was $decimals.")
-        // Out of the range that rounds exactly; the raw form beats confidently wrong digits.
-        else -> fixedDigits(magnitude, decimals) ?: return value.toString()
+        // Out of the range that rounds exactly. The requested precision cannot be honoured, but
+        // the value can still be written out: returning `value.toString()` here gave up the
+        // grouping and the sign handling below as well, and put back the exponent form that the
+        // JVM and JavaScript disagree about — `formatCurrency(123456789012345.67, "USD")` read
+        // `USD 1.2345678901234567E14` on one target and a plain digit string on another, which is
+        // the divergence `shortestDigits` exists to remove.
+        else -> fixedDigits(magnitude, decimals) ?: shortestDigits(magnitude)
     }
 
     val point = digits.indexOf('.')

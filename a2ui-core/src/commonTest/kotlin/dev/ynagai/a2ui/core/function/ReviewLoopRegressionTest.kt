@@ -164,3 +164,88 @@ class ReviewLoopRegressionTest {
         assertEquals("C:\\\${x}", format("C:\\\\\${x}", """{"x":9}"""))
     }
 }
+
+/** Round 2: the bounds, and the two formatting defects the bounds work uncovered. */
+class ReviewLoopBoundsTest {
+
+    @Test
+    fun theResultBudgetSpansTheWholeEvaluationNotOneStringAtATime() {
+        // Two sibling arguments, each interpolating a value that fits the budget on its own. Both
+        // are live at once while the argument map is built, so the total is what must be bounded.
+        val half = "x".repeat(600)
+        val data = """{"big":"$half"}"""
+        val template = "\${formatString(value:'ok',a:formatString(value:/big),b:formatString(value:/big))}"
+        val failure = assertFailsWith<A2uiFunctionException> {
+            val wire = buildJsonObject {
+                put("call", JsonPrimitive("formatString"))
+                put("args", buildJsonObject { put("value", JsonPrimitive(template)) })
+            }
+            context(data, limits = EvaluationLimits(maxResultLength = 1_000)).evaluate(
+                A2uiJson.strict.decodeFromJsonElement(FunctionCall.serializer(), wire),
+            )
+        }
+        assertTrue(failure.message!!.contains("maximum result length"), failure.message!!)
+    }
+
+    @Test
+    fun theResultBudgetCoversFormattingFunctionsAndNotOnlyFormatString() {
+        val failure = assertFailsWith<A2uiFunctionException> {
+            context("{}", limits = EvaluationLimits(maxResultLength = 4)).evaluate(
+                call("""{"call":"formatNumber","args":{"value":1000000}}"""),
+            )
+        }
+        assertTrue(failure.message!!.contains("maximum result length"), failure.message!!)
+    }
+
+    @Test
+    fun anArgumentListIsBoundedByTheStepBudget() {
+        val body = (0 until 200).joinToString(",") { "a$it:'x'" }
+        val failure = assertFailsWith<A2uiFunctionException> {
+            val wire = buildJsonObject {
+                put("call", JsonPrimitive("formatString"))
+                put("args", buildJsonObject { put("value", JsonPrimitive("\${formatString($body)}")) })
+            }
+            context("{}", limits = EvaluationLimits(maxSteps = 20)).evaluate(
+                A2uiJson.strict.decodeFromJsonElement(FunctionCall.serializer(), wire),
+            )
+        }
+        assertTrue(failure.message!!.contains("evaluations"), failure.message!!)
+    }
+
+    @Test
+    fun theRegexSubjectBoundStaysUnderTheStackDepthAnOrdinaryPatternNeeds() {
+        // `(a|b)*` is not a pathological pattern; a backtracking engine still recurses once per
+        // character for it, and at the old 64 KiB bound that was a StackOverflowError.
+        val subject = "a".repeat(DEFAULT_MAX_SUBJECT_LENGTH)
+        val result = context("{}").evaluate(
+            call("""{"call":"regex","args":{"pattern":"(a|b)*","value":${JsonPrimitive(subject)}}}"""),
+        )
+        assertEquals("""{"valid":true}""", result.toString())
+        val failure = assertFailsWith<A2uiFunctionException> {
+            context("{}").evaluate(
+                call(
+                    """{"call":"regex","args":{"pattern":"(a|b)*","value":""" +
+                        "${JsonPrimitive("a".repeat(DEFAULT_MAX_SUBJECT_LENGTH + 1))}}}",
+                ),
+            )
+        }
+        assertTrue(failure.message!!.contains("exceeds the maximum"), failure.message!!)
+    }
+
+    @Test
+    fun aMagnitudeTooLargeToRoundIsStillWrittenOutInFull() {
+        // Not `1.2345678901234567E14`, and the same string on every target.
+        assertEquals(
+            """"USD 123,456,789,012,345.67"""",
+            context("{}").evaluate(
+                call("""{"call":"formatCurrency","args":{"value":123456789012345.67,"currency":"USD"}}"""),
+            ).toString(),
+        )
+        assertEquals(
+            """"10,000,000,000,000,000"""",
+            context("{}").evaluate(
+                call("""{"call":"formatNumber","args":{"value":1e16,"decimals":0}}"""),
+            ).toString(),
+        )
+    }
+}

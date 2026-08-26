@@ -63,16 +63,21 @@ public const val DEFAULT_CALL_DEPTH: Int = 32
 public const val DEFAULT_CALL_STEPS: Int = 10_000
 
 /**
- * The longest string an evaluation may build.
+ * How many characters *in total* one evaluation may produce.
  *
- * Checked *before* each piece is appended rather than after, so that a `formatString` interpolating
- * a megabyte-long value a thousand times fails while allocating the first megabyte instead of the
+ * Charged against a running total held by the evaluation, not against each string separately.
+ * Per-string was the same number and a much weaker bound: an expression can hold any number of
+ * sibling arguments, each producing its own string up to the limit and all of them retained at
+ * once while the call is assembled, so a budget of one megabyte admitted thousands of them.
+ *
+ * Charged *before* each piece is built rather than after, so that a `formatString` interpolating a
+ * megabyte-long value a thousand times fails while allocating the first megabyte instead of the
  * thousandth — the same ordering [dev.ynagai.a2ui.core.surface.walk] needs for its instance budget.
  */
 public const val DEFAULT_MAX_RESULT_LENGTH: Int = 1 shl 20
 
 /**
- * The longest `regex` pattern, and the longest subject, the evaluator will hand to [Regex].
+ * The longest `regex` pattern the evaluator will hand to [Regex].
  *
  * Backtracking blow-up is not something this can prevent — `(a+)+$` against a long subject is
  * quadratic or worse on every platform's engine, and no bound on either length makes a hostile
@@ -81,8 +86,22 @@ public const val DEFAULT_MAX_RESULT_LENGTH: Int = 1 shl 20
  */
 public const val DEFAULT_MAX_PATTERN_LENGTH: Int = 1024
 
-/** @see DEFAULT_MAX_PATTERN_LENGTH */
-public const val DEFAULT_MAX_SUBJECT_LENGTH: Int = 64 * 1024
+/**
+ * The longest subject `regex` will match against.
+ *
+ * This is a **stack-depth** bound wearing a length's clothing, which is why it is so much smaller
+ * than a string a renderer might plausibly validate. A backtracking engine recurses roughly once
+ * per input character for a quantified group, so an ordinary pattern — `(a|b)*`, nothing
+ * pathological — raises [StackOverflowError] on a long enough subject. Measured on a JVM at its
+ * default stack size, `(a|b)*` survives 4096 characters and dies at 8192; this bound leaves a
+ * factor of two under the lower figure, because a renderer's UI thread has less stack than a test
+ * runner and Kotlin/Native does not raise [StackOverflowError] at all — it aborts the process.
+ *
+ * A renderer that knows its own stack may raise this through [EvaluationLimits]. Nothing here
+ * catches the overflow: an [Error] is not the kind of failure to resume from, so the bound is
+ * placed where it prevents one instead.
+ */
+public const val DEFAULT_MAX_SUBJECT_LENGTH: Int = 2048
 
 /** The bounds one evaluation runs under. See each default for what it is protecting against. */
 public data class EvaluationLimits(
@@ -275,6 +294,28 @@ internal class Evaluator(val context: EvaluationContext) {
      */
     private var sideEffects: Int = 0
 
+    /** Characters this evaluation has already produced. @see produce */
+    private var produced: Int = 0
+
+    /**
+     * Charges [count] characters against the evaluation's result budget, before they are built.
+     *
+     * Every function that returns a string charges here, not only `formatString`. The bound is a
+     * property of the evaluation rather than of any one string it builds: sibling arguments are
+     * all live at once while a call is assembled, and `formatNumber`, `formatCurrency`,
+     * `formatDate` and `pluralize` were charging nothing at all.
+     */
+    fun produce(count: Int, call: String?) {
+        if (produced + count > context.limits.maxResultLength) {
+            throw A2uiFunctionException(
+                "expression exceeds the maximum result length of " +
+                    "${context.limits.maxResultLength} characters.",
+                call,
+            )
+        }
+        produced += count
+    }
+
     fun evaluate(value: BoundValue, depth: Int): JsonElement = when (value) {
         is DataBinding -> resolve(value.path)
         is FunctionCall -> evaluate(value, depth)
@@ -310,11 +351,13 @@ internal class Evaluator(val context: EvaluationContext) {
         FunctionNames.LENGTH -> length(args)
         FunctionNames.NUMERIC -> numeric(args)
         FunctionNames.EMAIL -> email(args)
+        // `formatString` charges as it appends, so it is already accounted for; the other four
+        // build their result in one go and are charged on the way out.
         FunctionNames.FORMAT_STRING -> JsonPrimitive(formatString(args))
-        FunctionNames.FORMAT_NUMBER -> JsonPrimitive(formatNumber(args))
-        FunctionNames.FORMAT_CURRENCY -> JsonPrimitive(formatCurrency(args))
-        FunctionNames.FORMAT_DATE -> JsonPrimitive(formatDate(args))
-        FunctionNames.PLURALIZE -> JsonPrimitive(pluralize(args))
+        FunctionNames.FORMAT_NUMBER -> JsonPrimitive(charged(formatNumber(args), name))
+        FunctionNames.FORMAT_CURRENCY -> JsonPrimitive(charged(formatCurrency(args), name))
+        FunctionNames.FORMAT_DATE -> JsonPrimitive(charged(formatDate(args), name))
+        FunctionNames.PLURALIZE -> JsonPrimitive(charged(pluralize(args), name))
         FunctionNames.OPEN_URL -> openUrl(args)
         FunctionNames.AND -> JsonPrimitive(all(args, expected = true))
         FunctionNames.OR -> JsonPrimitive(!all(args, expected = false))
@@ -325,6 +368,12 @@ internal class Evaluator(val context: EvaluationContext) {
             "no function named `${name.take(NAME_EXCERPT)}` is implemented.",
             name.take(NAME_EXCERPT),
         )
+    }
+
+    /** [result] after charging its length. @see produce */
+    private fun charged(result: String, call: String): String {
+        produce(result.length, call)
+        return result
     }
 
     /** One unit of the step budget, read before the work it pays for. */

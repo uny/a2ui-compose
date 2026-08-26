@@ -71,13 +71,37 @@ public class JsonPointer private constructor(
          */
         public const val APPEND: String = "-"
 
-        /** Parses [raw], rejecting a malformed escape rather than reading it literally. */
+        /**
+         * The most tokens a pointer may carry.
+         *
+         * [write] recurses once per token and the path arrives from the agent, so without a
+         * bound the agent picks the renderer's recursion depth: a `path` of `/a` repeated ten
+         * thousand times overflows the stack, and a `StackOverflowError` is an [Error] that
+         * nothing in the message loop is written to catch — on Kotlin/Native it aborts the
+         * process outright rather than raising at all. The bound is far past any data model a
+         * UI binds against, and matches [DEFAULT_MAX_DEPTH] so the two nesting limits agree.
+         */
+        public const val MAX_TOKENS: Int = 256
+
+        /**
+         * Parses [raw], rejecting a malformed escape rather than reading it literally and a
+         * pointer with more than [MAX_TOKENS] tokens rather than recursing on it.
+         */
         public fun parse(raw: String): JsonPointer {
             if (raw.isEmpty() || raw == "/") return ROOT
             val absolute = raw.startsWith('/')
             val body = if (absolute) raw.substring(1) else raw
-            val tokens = body.split('/').map { unescape(it, raw) }
-            return JsonPointer(tokens, absolute)
+            val split = body.split('/')
+            if (split.size > MAX_TOKENS) {
+                // Counted before unescaping, so an oversized pointer costs one split rather
+                // than a pass over every token, and truncated in the message so a megabyte of
+                // agent-chosen path does not travel inside the exception.
+                throw A2uiFormatException(
+                    "JSON Pointer `${raw.take(64)}...`: ${split.size} tokens exceeds the " +
+                        "maximum of $MAX_TOKENS.",
+                )
+            }
+            return JsonPointer(split.map { unescape(it, raw) }, absolute)
         }
 
         /** Builds an absolute pointer from already-unescaped [tokens]. */
@@ -151,10 +175,13 @@ public fun JsonElement.resolve(pointer: JsonPointer): JsonElement? {
  * - **Null deletes.** An explicit `null` removes what [pointer] addresses — a member from an
  *   object, an element from an array (shifting the rest down). There is therefore no way for an
  *   `updateDataModel` to *store* a JSON null; the specification spends `null` on the delete verb.
+ *   A delete of something [pointer] does not address changes nothing at all: it neither creates
+ *   the containers on the way to it nor disturbs whatever stands in the path.
  * - **Root.** A [JsonPointer.ROOT] write replaces the whole data model, and a root delete empties
  *   it. The replacement must be an object, because that is what the schema types a data model as.
  *
- * Missing containers are created as objects even when the next token looks like an array index.
+ * Missing containers are created as objects — on a write that *stores* a value; see the delete
+ * rule above — even when the next token looks like an array index.
  * `/items/0` against an absent `items` is genuinely ambiguous, and choosing an object keeps the
  * write reversible: a later write of an actual array at `/items` replaces the object outright,
  * whereas guessing an array would make `{"0": ...}` unrepresentable.
@@ -163,6 +190,14 @@ public fun JsonObject.write(pointer: JsonPointer, value: JsonElement): JsonObjec
     require(pointer.isAbsolute) {
         "A relative pointer has no meaning as a write address; rebase it on its scope first."
     }
+    if (pointer.tokens.size > JsonPointer.MAX_TOKENS) {
+        // `parse` already refuses these, so this only catches a pointer assembled through
+        // `of`/`child`/`resolve`. The recursion below is what makes it worth refusing twice.
+        throw A2uiStateException(
+            "updateDataModel: a write address of ${pointer.tokens.size} tokens exceeds the " +
+                "maximum of ${JsonPointer.MAX_TOKENS}.",
+        )
+    }
     if (pointer.isRoot) {
         if (value is JsonNull) return JsonObject(emptyMap())
         return value as? JsonObject
@@ -170,6 +205,14 @@ public fun JsonObject.write(pointer: JsonPointer, value: JsonElement): JsonObjec
                 "updateDataModel: replacing the whole data model requires an object.",
             )
     }
+    // A delete removes what [pointer] addresses and nothing else, so a delete of something
+    // that is not there is a no-op. Without this the recursion below would materialize the
+    // containers on the way to the absent member — `{}` would gain `{"user":{}}` from a
+    // delete of `/user/name` — replace a scalar standing in the path with an empty object,
+    // and append `{}` to an array addressed through `-`. It also makes an out-of-range array
+    // delete uniformly do nothing, rather than being ignored at `size` and raising a
+    // "would leave a gap" error just past it.
+    if (value is JsonNull && resolve(pointer) == null) return this
     return writeIn(this, pointer.tokens, 0, value, pointer) as JsonObject
 }
 

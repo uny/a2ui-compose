@@ -1280,6 +1280,7 @@ public final class dev/ynagai/a2ui/core/surface/EvaluationScopeKt {
 public final class dev/ynagai/a2ui/core/surface/JsonPointer {
 	public static final field APPEND Ljava/lang/String;
 	public static final field Companion Ldev/ynagai/a2ui/core/surface/JsonPointer$Companion;
+	public static final field MAX_TOKENS I
 	public final fun child (Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/JsonPointer;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getTokens ()Ljava/util/List;

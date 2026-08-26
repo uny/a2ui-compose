@@ -149,6 +149,33 @@ class MessageProcessorTest {
     }
 
     @Test
+    fun `a malformed path is rejected as a state error naming the surface`() {
+        // `JsonPointer.parse` signals this as `A2uiFormatException`, which is a
+        // `SerializationException` and shares no supertype with `A2uiStateException` — a
+        // renderer catching the latter to answer with a surface-scoped `error` would otherwise
+        // not catch a malformed path at all.
+        val failure = assertFailsWith<A2uiStateException> {
+            fold(
+                created,
+                """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "path": "/a~2b", "value": 1}}""",
+            )
+        }
+        assertEquals("s", failure.surfaceId)
+    }
+
+    @Test
+    fun `a path deeper than the maximum is rejected instead of overflowing the stack`() {
+        val deep = "/a".repeat(JsonPointer.MAX_TOKENS + 1)
+        val failure = assertFailsWith<A2uiStateException> {
+            fold(
+                created,
+                """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "path": "$deep", "value": 1}}""",
+            )
+        }
+        assertEquals("s", failure.surfaceId)
+    }
+
+    @Test
     fun `a write failure names the surface it happened on`() {
         val failure = assertFailsWith<A2uiStateException> {
             fold(

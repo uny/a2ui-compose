@@ -1,5 +1,6 @@
 package dev.ynagai.a2ui.core.surface
 
+import dev.ynagai.a2ui.core.protocol.A2uiFormatException
 import dev.ynagai.a2ui.core.protocol.AgentFunctionResponseMessage
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
 import dev.ynagai.a2ui.core.protocol.CallId
@@ -210,7 +211,19 @@ public object MessageProcessor {
         val surface = state.require(message.surfaceId, "updateDataModel")
         // The path arrives from the agent unparsed (see `UpdateDataModelMessage`), so this is
         // where a malformed pointer is first rejected rather than resolved to somewhere else.
-        val pointer = JsonPointer.parse(message.path ?: "")
+        // `parse` reports that as `A2uiFormatException`, which extends `SerializationException`
+        // and so shares no supertype with `A2uiStateException`: a renderer catching the latter
+        // to answer with a surface-scoped `error` would not catch a malformed path at all, and
+        // the exception would leave the message loop instead. Rebound so that every rejection
+        // this function makes is one type carrying the surface it happened on.
+        val pointer = try {
+            JsonPointer.parse(message.path ?: "")
+        } catch (e: A2uiFormatException) {
+            throw A2uiStateException(
+                "updateDataModel: ${e.message ?: "the path is not a JSON Pointer."}",
+                message.surfaceId,
+            )
+        }
         if (!pointer.isAbsolute) {
             throw A2uiStateException(
                 "updateDataModel: `${message.path}` must be an absolute JSON Pointer; the " +

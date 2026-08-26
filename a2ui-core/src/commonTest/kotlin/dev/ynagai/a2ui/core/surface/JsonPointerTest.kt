@@ -158,6 +158,61 @@ class JsonPointerTest {
     }
 
     @Test
+    fun `a pointer deeper than the maximum is rejected rather than recursed on`() {
+        // `write` recurses once per token and the path is the agent's to choose, so an
+        // unbounded pointer lets the agent pick the renderer's stack depth. A StackOverflowError
+        // is an Error, so nothing in the message loop would catch it.
+        val atMax = "/a".repeat(JsonPointer.MAX_TOKENS)
+        assertEquals(JsonPointer.MAX_TOKENS, JsonPointer.parse(atMax).tokens.size)
+        assertFailsWith<A2uiFormatException> {
+            JsonPointer.parse("/a".repeat(JsonPointer.MAX_TOKENS + 1))
+        }
+        // Assembled rather than parsed, so `write` refuses it too.
+        var built = JsonPointer.ROOT
+        repeat(JsonPointer.MAX_TOKENS + 1) { built = built.child("a") }
+        assertFailsWith<A2uiStateException> {
+            JsonObject(emptyMap()).write(built, JsonPrimitive(1))
+        }
+    }
+
+    @Test
+    fun `deleting something that is not there changes nothing`() {
+        // A delete must not materialize the containers on the way to an absent member: a
+        // binding on `/user` would flip from absent-so-placeholder to a present empty object.
+        assertEquals(
+            JsonObject(emptyMap()),
+            JsonObject(emptyMap()).write(JsonPointer.parse("/user/name"), JsonNull),
+        )
+        // Nor may it replace whatever stands in the path.
+        val scalar = model("""{"user": "anonymous"}""")
+        assertEquals(scalar, scalar.write(JsonPointer.parse("/user/name"), JsonNull))
+        // Nor append through the array-append token.
+        val xs = model("""{"xs": [1]}""")
+        assertEquals(xs, xs.write(JsonPointer.parse("/xs/-/a"), JsonNull))
+        // An out-of-range array delete does nothing, at the end and past it alike — the set
+        // path still rejects a gap, but a delete cannot leave one.
+        assertEquals(xs, xs.write(JsonPointer.parse("/xs/1"), JsonNull))
+        assertEquals(xs, xs.write(JsonPointer.parse("/xs/9"), JsonNull))
+        // The delete that does address something still deletes.
+        assertEquals(
+            model("""{"xs": []}"""),
+            xs.write(JsonPointer.parse("/xs/0"), JsonNull),
+        )
+    }
+
+    @Test
+    fun `a nested write into an array element keeps its siblings`() {
+        val data = model("""{"xs": [{"a": 1}, {"a": 2}]}""")
+        assertEquals(
+            """{"xs":[{"a":1,"b":9},{"a":2}]}""",
+            json.encodeToString(
+                JsonObject.serializer(),
+                data.write(JsonPointer.parse("/xs/0/b"), JsonPrimitive(9)),
+            ),
+        )
+    }
+
+    @Test
     fun `a relative pointer has no meaning as a write address`() {
         assertFailsWith<IllegalArgumentException> {
             JsonObject(emptyMap()).write(JsonPointer.parse("name"), JsonPrimitive("x"))

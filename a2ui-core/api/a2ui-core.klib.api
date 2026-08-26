@@ -1495,6 +1495,8 @@ final class dev.ynagai.a2ui.core.surface/JsonPointer { // dev.ynagai.a2ui.core.s
     final object Companion { // dev.ynagai.a2ui.core.surface/JsonPointer.Companion|null[0]
         final const val APPEND // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.APPEND|{}APPEND[0]
             final fun <get-APPEND>(): kotlin/String // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.APPEND.<get-APPEND>|<get-APPEND>(){}[0]
+        final const val MAX_TOKENS // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.MAX_TOKENS|{}MAX_TOKENS[0]
+            final fun <get-MAX_TOKENS>(): kotlin/Int // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.MAX_TOKENS.<get-MAX_TOKENS>|<get-MAX_TOKENS>(){}[0]
 
         final val ROOT // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.ROOT|{}ROOT[0]
             final fun <get-ROOT>(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.ROOT.<get-ROOT>|<get-ROOT>(){}[0]

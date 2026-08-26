@@ -169,16 +169,32 @@ public class CatalogValidator private constructor(
     }
 
     /**
-     * The registry to resolve `$ref`s against with [catalogId] as the active catalog.
+     * The registry to resolve `$ref`s against, one per possible binding of the `catalog.json`
+     * placeholder.
      *
-     * Rebuilt per call rather than cached per catalog because a registry is a map of already
-     * parsed documents — the cost is the map, not the parse, and caching one per catalog would
-     * hold every catalog's registry for the lifetime of the validator.
+     * Built once. A registry is a map over documents that are already parsed, so one costs a
+     * handful of map entries rather than any reparsing — but [validate] is called once per
+     * component, and a surface is a list the agent chooses the length of. Rebuilding per call
+     * would allocate three maps per component to hold references to the same six documents.
      */
-    private fun registryFor(catalogId: String?): SchemaRegistry = SchemaRegistry.of(
-        documents = ProtocolSchemas.documents + documents.values,
-        activeCatalog = catalogId?.let(documents::get),
-    )
+    private val registries: Map<String?, SchemaRegistry> =
+        (documents.keys + null).associateWith { catalogId ->
+            SchemaRegistry.of(
+                documents = ProtocolSchemas.documents + documents.values,
+                activeCatalog = catalogId?.let(documents::get),
+            )
+        }
+
+    /**
+     * The registry with [catalogId] bound to the placeholder.
+     *
+     * A catalog this validator does not hold falls back to the unbound registry rather than to an
+     * arbitrary one: with nothing bound, a reference through `catalog.json` fails to resolve and
+     * is reported as unresolvable, which is the truth. Binding some other catalog would check the
+     * payload against a catalog nobody named.
+     */
+    private fun registryFor(catalogId: String?): SchemaRegistry =
+        registries[catalogId] ?: registries.getValue(null)
 
     private fun refuse(message: String): SchemaValidation =
         SchemaValidation(violations = listOf(SchemaViolation("", message)))
@@ -193,6 +209,11 @@ public class CatalogValidator private constructor(
          * keeping both forms. The encoding is faithful — a decoded definition carries its original
          * object and emits it verbatim — so the document `$ref` resolution sees is the one that
          * arrived.
+         *
+         * **Two catalogs sharing a `catalogId` resolve to the last one given.** A renderer that
+         * mixes its own catalogs with ones an agent inlined should put its own last, or refuse the
+         * duplicate before it gets here: the id is what a payload names, so whichever wins is what
+         * every payload naming it is checked against.
          */
         public fun of(
             catalogs: List<CatalogDefinition>,

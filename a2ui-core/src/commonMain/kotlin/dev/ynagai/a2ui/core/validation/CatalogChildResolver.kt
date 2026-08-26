@@ -4,6 +4,7 @@ import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.CatalogDefinition
 import dev.ynagai.a2ui.core.protocol.Component
 import dev.ynagai.a2ui.core.protocol.ComponentId
+import dev.ynagai.a2ui.core.surface.A2uiStateException
 import dev.ynagai.a2ui.core.surface.ChildReference
 import dev.ynagai.a2ui.core.surface.ChildResolver
 import dev.ynagai.a2ui.core.surface.JsonPointer
@@ -31,6 +32,11 @@ public class CatalogChildResolver private constructor(
     private val surfaceDefault: String?,
     private val limits: ValidationLimits,
 ) : ChildResolver {
+    /**
+     * @throws A2uiStateException when the component's schema or value outgrows [limits], or when
+     *   it carries more than [MAX_REFERENCES] references. The bounds refuse rather than truncate;
+     *   a shortened list is a container drawn with children missing and nothing said about it.
+     */
     override fun childrenOf(component: Component): List<ChildReference> {
         val definition = definitionFor(component) ?: return emptyList()
         val encoded = A2uiJson.strict.encodeToJsonElement(Component.serializer(), component)
@@ -71,8 +77,23 @@ public class CatalogChildResolver private constructor(
             path: Path,
             depth: Int,
         ) {
-            if (depth > limits.maxDepth || ++steps > limits.maxSteps) return
-            if (out.size >= MAX_REFERENCES) return
+            // Raising rather than returning what was found so far, for the reason
+            // [dev.ynagai.a2ui.core.surface.walk] raises: a resolver that quietly stops short
+            // reports a container with fewer children than it has, and the renderer draws that
+            // without complaint. A surface that refuses to draw is the better failure.
+            if (depth > limits.maxDepth) {
+                throw A2uiStateException("a component's schema nests deeper than ${limits.maxDepth}.")
+            }
+            if (++steps > limits.maxSteps) {
+                throw A2uiStateException(
+                    "a component's schema did not settle within ${limits.maxSteps} steps.",
+                )
+            }
+            if (out.size >= MAX_REFERENCES) {
+                throw A2uiStateException(
+                    "a component carries more than $MAX_REFERENCES child references.",
+                )
+            }
             val obj = schema as? JsonObject ?: return
 
             (obj["\$ref"] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content?.let { ref ->
@@ -154,11 +175,12 @@ public class CatalogChildResolver private constructor(
 
     public companion object {
         /**
-         * How many references one component may carry.
+         * How many references one component may carry before [childrenOf] refuses it.
          *
          * A component's own schema bounds this in any real catalog; the number is here because a
          * catalog may be inlined by an agent, and a schema that nests `items` inside `items`
-         * expands over a value the same agent sent.
+         * expands over a value the same agent sent. Reaching it raises
+         * [A2uiStateException] rather than returning the first [MAX_REFERENCES] — see [Walk.run].
          */
         public const val MAX_REFERENCES: Int = 4_096
 

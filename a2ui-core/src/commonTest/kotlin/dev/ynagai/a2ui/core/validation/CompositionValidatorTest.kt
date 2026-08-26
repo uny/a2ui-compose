@@ -196,6 +196,47 @@ class CompositionValidatorTest {
     }
 
     @Test
+    fun reports_one_forbidden_pairing_once_however_many_routes_reach_it() {
+        // The adjacency list is a graph, and `walk` follows every path through it: n layers each
+        // referencing the same two children produce 2^n instances from 2n components. A check that
+        // ran over the expansion would report this one pairing four times and would cost the same
+        // shape on a deeper payload.
+        val found = check(
+            """{"id": "root", "component": "AppLayout", "children": ["m1", "m2"]}""",
+            """{"id": "m1", "component": "Menu", "children": ["l", "l"]}""",
+            """{"id": "m2", "component": "Menu", "children": ["l"]}""",
+            """{"id": "l", "component": "Label"}""",
+        )
+        // Three edges name the pairing: `m1` twice and `m2` once. Each edge is one placement the
+        // catalog forbids, and they are reported once each -- not once per route to the parent.
+        assertEquals(3, found.size, found.toString())
+        assertTrue(found.all { it.code == CompositionViolation.UNALLOWED_CHILD })
+    }
+
+    @Test
+    fun checks_a_component_no_route_reaches_yet() {
+        // It is in the surface and the next `updateComponents` may mount it. Reporting now is what
+        // lets an agent fix the pairing before it is drawn.
+        val found = check(
+            """{"id": "root", "component": "AppLayout", "children": []}""",
+            """{"id": "m", "component": "Menu", "children": ["l"]}""",
+            """{"id": "l", "component": "Label"}""",
+        )
+        assertEquals(CompositionViolation.UNALLOWED_CHILD, found.single().code)
+    }
+
+    @Test
+    fun allows_a_component_under_one_parent_while_reporting_it_under_another() {
+        // A component may have more than one parent, and both verdicts are true at once.
+        val found = check(
+            """{"id": "root", "component": "Menu", "children": ["i", "l"]}""",
+            """{"id": "i", "component": "MenuItem"}""",
+            """{"id": "l", "component": "Label"}""",
+        )
+        assertEquals("Label", found.single().child)
+    }
+
+    @Test
     fun names_the_property_the_reference_was_found_under() {
         val found = check(
             """{"id": "root", "component": "Menu", "children": ["l"]}""",

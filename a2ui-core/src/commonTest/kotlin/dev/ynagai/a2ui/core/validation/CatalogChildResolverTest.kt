@@ -3,9 +3,11 @@ package dev.ynagai.a2ui.core.validation
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.CatalogDefinition
 import dev.ynagai.a2ui.core.protocol.Component
+import dev.ynagai.a2ui.core.surface.A2uiStateException
 import dev.ynagai.a2ui.core.surface.ChildReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 private val CATALOG: CatalogDefinition =
@@ -116,11 +118,42 @@ class CatalogChildResolverTest {
     }
 
     @Test
-    fun stops_before_the_reference_bound() {
+    fun a_long_child_list_is_one_reference_however_long_the_agent_made_it() {
         val ids = (0 until CatalogChildResolver.MAX_REFERENCES + 10).joinToString(",") { "\"c$it\"" }
         val found = children("""{"id": "col", "component": "Column", "children": [$ids]}""")
-        // One `Fixed` holding them all: the bound is on how many references a component yields,
-        // and a single list is one reference however long the agent made it.
+        // The bound counts references, and a list is one of them whatever its length -- so this
+        // is not what the bound is for. `Fixed` carries the ids.
         assertEquals(1, found.size)
+        assertEquals(CatalogChildResolver.MAX_REFERENCES + 10, (found.single() as ChildReference.Fixed).ids.size)
+    }
+
+    @Test
+    fun refuses_a_component_past_the_reference_bound_rather_than_shortening_it() {
+        // `Tabs` yields one reference per tab, so the count is the agent's to choose. Returning
+        // the first few thousand would draw a tab strip with tabs missing and say nothing, which
+        // is the failure `walk` already refuses for the same reason.
+        val tabs = (0 until CatalogChildResolver.MAX_REFERENCES + 50)
+            .joinToString(",") { """{"title": "t$it", "child": "c$it"}""" }
+        assertFailsWith<A2uiStateException> {
+            children("""{"id": "t", "component": "Tabs", "tabs": [$tabs]}""")
+        }
+    }
+
+    @Test
+    fun refuses_a_component_whose_schema_outgrows_the_step_budget() {
+        val tabs = (0 until 200).joinToString(",") { """{"title": "t$it", "child": "c$it"}""" }
+        val tight = CatalogChildResolver.of(
+            listOf(CATALOG),
+            surfaceDefault = CATALOG.catalogId,
+            limits = ValidationLimits(maxSteps = 50),
+        )
+        assertFailsWith<A2uiStateException> {
+            tight.childrenOf(
+                A2uiJson.strict.decodeFromString(
+                    Component.serializer(),
+                    """{"id": "t", "component": "Tabs", "tabs": [$tabs]}""",
+                ),
+            )
+        }
     }
 }

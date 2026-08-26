@@ -8,7 +8,6 @@ import dev.ynagai.a2ui.core.protocol.Surface
 import dev.ynagai.a2ui.core.surface.ChildReference
 import dev.ynagai.a2ui.core.surface.ChildResolver
 import dev.ynagai.a2ui.core.surface.SurfaceModel
-import dev.ynagai.a2ui.core.surface.walk
 
 /**
  * A parent-child pairing a catalog forbids.
@@ -57,6 +56,9 @@ public data class CompositionViolation(
  * The reserved [Surface.COMPONENT] container is the parent of the component at
  * [Surface.ROOT_ID]. That is what makes `"allowedParents": ["Surface"]` mean "only as the top
  * level of a surface", which is the specification's first worked example.
+ *
+ * Note that a component may have more than one parent — the adjacency list is a graph — so a
+ * component can be reported under one parent and allowed under another. Both are true at once.
  */
 public class CompositionValidator(
     catalogs: List<CatalogDefinition>,
@@ -65,30 +67,47 @@ public class CompositionValidator(
     private val byId: Map<String, CatalogDefinition> = catalogs.associateBy { it.catalogId }
 
     /**
-     * Every forbidden pairing in [surface], in the order [resolver] lays the tree out.
+     * Every forbidden pairing in [surface].
      *
-     * A reference to a component the surface has not received yet is skipped rather than reported:
-     * the specification requires a renderer to keep drawing while a surface arrives, so an id that
-     * names nothing is a component still in flight, not a composition error. A component whose
-     * catalog this validator does not hold is skipped for the same reason it is skipped by the
-     * resolver — [CatalogValidator] is what reports that.
+     * This reads the adjacency list rather than the rendered tree, and the difference is not a
+     * shortcut. [dev.ynagai.a2ui.core.surface.walk] follows every path, so it emits a component
+     * once per route that reaches it — n layers each referencing the same two children produce
+     * 2^n instances from 2n components, and a template's subtree is instantiated once per row of
+     * a list the agent sends. Checking there would report one forbidden pairing as many times as
+     * the payload happens to reach it, and would cost the same. Composition is a property of the
+     * edges: a `Menu` may not contain a `Label` once, whoever renders it and however often.
+     *
+     * A component the surface has not received yet is skipped rather than reported: the
+     * specification requires a renderer to keep drawing while a surface arrives, so an id naming
+     * nothing is a component still in flight, not a composition error. A component whose catalog
+     * this validator does not hold is skipped for the same reason the resolver skips it —
+     * [CatalogValidator] is what reports that.
+     *
+     * Components no route reaches are checked too. They are in the surface, the next
+     * `updateComponents` may mount them, and reporting the pairing now is what lets an agent fix
+     * it before it is drawn.
+     *
+     * @throws dev.ynagai.a2ui.core.surface.A2uiStateException if [resolver] refuses a component —
+     *   [CatalogChildResolver] does that rather than return a shortened list of children, and a
+     *   composition verdict over children that were quietly dropped would be worth nothing.
      */
     public fun validate(
         surface: SurfaceModel,
         resolver: ChildResolver,
     ): List<CompositionViolation> {
-        val root = surface.root ?: return emptyList()
         val out = mutableListOf<CompositionViolation>()
-        check(
-            parent = null,
-            parentType = Surface.COMPONENT,
-            child = root,
-            property = Surface.ROOT_ID,
-            into = out,
-        )
-        // The walk is what bounds this: it carries the depth and instance limits, refuses to
-        // revisit a component already on the current path, and raises rather than truncating.
-        for ((component, _) in surface.walk(resolver)) {
+        // The reserved container is the implicit parent of `root`, which is what makes
+        // `"allowedParents": ["Surface"]` mean "only at the top level of a surface".
+        surface.root?.let { root ->
+            check(
+                parent = null,
+                parentType = Surface.COMPONENT,
+                child = root,
+                property = Surface.ROOT_ID,
+                into = out,
+            )
+        }
+        for (component in surface.components.values) {
             for (reference in resolver.childrenOf(component)) {
                 for (id in reference.ids()) {
                     val child = surface.component(id) ?: continue

@@ -167,14 +167,15 @@ public class SchemaEvaluator(
             var items = 0
             var discriminated = false
 
-            fun merge(outcome: Outcome) {
-                if (outcome.violations.isNotEmpty()) {
-                    violations?.let { list ->
-                        outcome.violations.forEach { violation ->
-                            if (list.size < limits.maxViolations) list += violation else truncated = true
-                        }
-                    }
+            /** Keeps one violation, up to the cap, and notes it when the cap turns one away. */
+            fun record(violation: SchemaViolation) {
+                violations?.let { list ->
+                    if (list.size < limits.maxViolations) list += violation else truncated = true
                 }
+            }
+
+            fun merge(outcome: Outcome) {
+                outcome.violations.forEach(::record)
                 if (outcome.evaluatedProperties.isNotEmpty()) {
                     (properties ?: mutableSetOf<String>().also { properties = it })
                         .addAll(outcome.evaluatedProperties)
@@ -183,15 +184,7 @@ public class SchemaEvaluator(
                 if (outcome.discriminated) discriminated = true
             }
 
-            fun fail(message: String) {
-                violations?.let { list ->
-                    if (list.size < limits.maxViolations) {
-                        list += SchemaViolation(at.render(), message)
-                    } else {
-                        truncated = true
-                    }
-                }
-            }
+            fun fail(message: String) = record(SchemaViolation(at.render(), message))
 
             /** Whether anything has failed so far, whether or not violations are being collected. */
             var failed = false
@@ -479,8 +472,12 @@ public class SchemaEvaluator(
                         }
                         if (!matched) {
                             failed = true
+                            // Violations only. The branch being explained is one that *failed*,
+                            // and the properties it happened to reach are not evaluated by any
+                            // schema that held -- carrying them up would be an annotation from a
+                            // subschema that did not apply.
                             explain(branches, "anyOf", location, instance, at, depth, collect)
-                                .forEach(::merge)
+                                .forEach { outcome -> outcome.violations.forEach(::record) }
                         }
                     }
 
@@ -506,7 +503,7 @@ public class SchemaEvaluator(
                             0 -> {
                                 failed = true
                                 explain(branches, "oneOf", location, instance, at, depth, collect)
-                                    .forEach(::merge)
+                                    .forEach { outcome -> outcome.violations.forEach(::record) }
                             }
                             1 -> merge(match!!.withoutViolations())
                             else -> reject(

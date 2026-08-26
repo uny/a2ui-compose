@@ -123,6 +123,14 @@ class CatalogDefinitionTest {
     }
 
     @Test
+    fun `a catalog keeps its schema keywords so its refs stay resolvable`() {
+        val source = """{"${'$'}schema":"https://json-schema.org/draft/2020-12/schema","${'$'}id":"https://x/c.json","${'$'}defs":{"anyComponent":{"type":"object"},"anyFunction":{"type":"object"}},"catalogId":"c"}"""
+        val decoded = json.decodeFromString<CatalogDefinition>(source)
+        assertEquals(setOf("${'$'}schema", "${'$'}id", "${'$'}defs"), decoded.schemaKeywords.keys)
+        assertEquals(source, json.encodeToString(decoded))
+    }
+
+    @Test
     fun `renderer capabilities carry inline catalogs`() {
         val capabilities = json.decodeFromString<RendererCapabilities>(
             """{"v1.0":{"supportedCatalogIds":["a"],"inlineCatalogs":[{"catalogId":"b"}]}}""",
@@ -136,6 +144,22 @@ class CatalogDefinitionTest {
         val capabilities = json.decodeFromString<AgentCapabilities>("""{"v1.0":{"supportedCatalogIds":["a"]}}""")
         assertEquals(false, capabilities.v1.acceptsInlineCatalogsOrDefault)
         assertNull(capabilities.v1.acceptsInlineCatalogs)
+    }
+
+    @Test
+    fun `a card advertising other protocol versions is kept rather than refused`() {
+        val source = """{"v1.0":{"supportedCatalogIds":["a"]},"v0.9":{"supportedCatalogIds":["legacy"]}}"""
+        val capabilities = json.decodeFromString<AgentCapabilities>(source)
+        assertEquals(listOf("a"), capabilities.v1.supportedCatalogIds)
+        assertEquals(setOf("v0.9"), capabilities.otherVersions.keys)
+        assertEquals(source, json.encodeToString(capabilities))
+    }
+
+    @Test
+    fun `a card without a v1_0 entry is refused`() {
+        assertFailsWith<SerializationException> {
+            json.decodeFromString<AgentCapabilities>("""{"v0.9":{"supportedCatalogIds":["legacy"]}}""")
+        }
     }
 
     @Test

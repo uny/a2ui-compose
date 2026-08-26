@@ -167,6 +167,10 @@ public data class ComponentDefinition(
  * A collection of component and function definitions that a surface renders against.
  *
  * [components] and [functions] hold their definitions keyed by type name.
+ *
+ * [schemaKeywords] carries `$schema`, `$id`, and `$defs` through unread. A definition may
+ * reference `#/$defs/...`, so dropping them would leave a re-encoded catalog — an inline one
+ * carried in [RendererCapabilitiesV1.inlineCatalogs], say — with unresolvable references.
  */
 @Serializable(with = CatalogDefinitionSerializer::class)
 public data class CatalogDefinition(
@@ -177,6 +181,7 @@ public data class CatalogDefinition(
     public val instructions: String? = null,
     public val components: Map<String, ComponentDefinition> = emptyMap(),
     public val functions: Map<String, FunctionDefinition> = emptyMap(),
+    public val schemaKeywords: Map<String, JsonElement> = emptyMap(),
 ) {
     /** [protocolVersion] with the schema default applied. */
     public val effectiveProtocolVersion: String
@@ -287,9 +292,10 @@ internal object FunctionDefinitionSerializer : KSerializer<FunctionDefinition> {
 }
 
 internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
-    private val KEYS = setOf(
-        "\$schema", "\$id", "\$defs", "protocolVersion", "title", "description", "catalogId",
-        "instructions", "components", "functions",
+    private val SCHEMA_KEYWORDS = setOf("\$schema", "\$id", "\$defs")
+    private val KEYS = SCHEMA_KEYWORDS + setOf(
+        "protocolVersion", "title", "description", "catalogId", "instructions", "components",
+        "functions",
     )
 
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
@@ -318,6 +324,7 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
             functions = (obj["functions"] as? JsonObject).orEmpty().mapValues { (_, element) ->
                 json.decodeFromJsonElement(FunctionDefinitionSerializer, element)
             },
+            schemaKeywords = obj.filterKeys { it in SCHEMA_KEYWORDS },
         )
     }
 
@@ -325,6 +332,7 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
         val json = encoder as JsonEncoder
         json.encodeJsonElement(
             buildJsonObject {
+                value.schemaKeywords.forEach { (key, element) -> put(key, element) }
                 put("catalogId", JsonPrimitive(value.catalogId))
                 value.protocolVersion?.let { put("protocolVersion", JsonPrimitive(it)) }
                 value.title?.let { put("title", JsonPrimitive(it)) }

@@ -144,25 +144,17 @@ public final class dev/ynagai/a2ui/core/protocol/ActionMessage$Companion {
 
 public final class dev/ynagai/a2ui/core/protocol/AgentCapabilities {
 	public static final field Companion Ldev/ynagai/a2ui/core/protocol/AgentCapabilities$Companion;
-	public fun <init> (Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;)V
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;Ljava/util/Map;)V
+	public synthetic fun <init> (Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;
-	public final fun copy (Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;)Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;
-	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOtherVersions ()Ljava/util/Map;
 	public final fun getV1 ()Ldev/ynagai/a2ui/core/protocol/AgentCapabilitiesV1;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-}
-
-public final synthetic class dev/ynagai/a2ui/core/protocol/AgentCapabilities$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
-	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/AgentCapabilities$$serializer;
-	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
-	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;
-	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
-	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
-	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/AgentCapabilities;)V
-	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
-	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
 }
 
 public final class dev/ynagai/a2ui/core/protocol/AgentCapabilities$Companion {
@@ -312,8 +304,8 @@ public final class dev/ynagai/a2ui/core/protocol/CallRendererFunctionMessage$Com
 public final class dev/ynagai/a2ui/core/protocol/CatalogDefinition {
 	public static final field Companion Ldev/ynagai/a2ui/core/protocol/CatalogDefinition$Companion;
 	public static final field DEFAULT_PROTOCOL_VERSION Ljava/lang/String;
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;
@@ -321,8 +313,9 @@ public final class dev/ynagai/a2ui/core/protocol/CatalogDefinition {
 	public final fun component5 ()Ljava/lang/String;
 	public final fun component6 ()Ljava/util/Map;
 	public final fun component7 ()Ljava/util/Map;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/CatalogDefinition;
-	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/CatalogDefinition;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/CatalogDefinition;
+	public final fun component8 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/CatalogDefinition;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/CatalogDefinition;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/CatalogDefinition;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCatalogId ()Ljava/lang/String;
 	public final fun getComponents ()Ljava/util/Map;
@@ -331,6 +324,7 @@ public final class dev/ynagai/a2ui/core/protocol/CatalogDefinition {
 	public final fun getFunctions ()Ljava/util/Map;
 	public final fun getInstructions ()Ljava/lang/String;
 	public final fun getProtocolVersion ()Ljava/lang/String;
+	public final fun getSchemaKeywords ()Ljava/util/Map;
 	public final fun getTitle ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -866,25 +860,17 @@ public final class dev/ynagai/a2ui/core/protocol/Metadata$Companion {
 
 public final class dev/ynagai/a2ui/core/protocol/RendererCapabilities {
 	public static final field Companion Ldev/ynagai/a2ui/core/protocol/RendererCapabilities$Companion;
-	public fun <init> (Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;)V
+	public fun <init> (Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;Ljava/util/Map;)V
+	public synthetic fun <init> (Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;
-	public final fun copy (Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;)Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;
-	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun copy (Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;Ljava/util/Map;)Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;Ljava/util/Map;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOtherVersions ()Ljava/util/Map;
 	public final fun getV1 ()Ldev/ynagai/a2ui/core/protocol/RendererCapabilitiesV1;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-}
-
-public final synthetic class dev/ynagai/a2ui/core/protocol/RendererCapabilities$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
-	public static final field INSTANCE Ldev/ynagai/a2ui/core/protocol/RendererCapabilities$$serializer;
-	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
-	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;
-	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
-	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
-	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/ynagai/a2ui/core/protocol/RendererCapabilities;)V
-	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
-	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
 }
 
 public final class dev/ynagai/a2ui/core/protocol/RendererCapabilities$Companion {

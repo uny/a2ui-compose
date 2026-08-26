@@ -158,11 +158,13 @@ public data class FunctionDefinition(
  * keywords that constrain where it may sit in the tree.
  *
  * [schema] is the definition object verbatim, [allowedParents] and [allowedChildren] are lifted
- * out of it for the composition check. On the way out [schema] wins for any key it already
- * carries — it is the unparsed original, so re-deriving a key from the typed field could only
- * lose what the model does not name — and the typed fields supply the keys it omits, which is
- * what lets a definition built in Kotlin round trip at all. A null list means "unconstrained", which is not the same
+ * out of it for the composition check. A null list means "unconstrained", which is not the same
  * as an empty one — `"allowedParents": []` is how a component is barred from every parent.
+ *
+ * On the way out [schema] wins for any key it already carries: it is the unparsed original, so
+ * re-deriving a key from the typed field could only lose what the model does not name. The typed
+ * fields supply the keys [schema] omits, which is what lets a definition built in Kotlin round
+ * trip at all.
  */
 @Serializable(with = ComponentDefinitionSerializer::class)
 public data class ComponentDefinition(

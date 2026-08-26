@@ -1669,6 +1669,7 @@ public final class dev/ynagai/a2ui/core/validation/ProtocolSchemas {
 	public static final field AGENT_TO_RENDERER_URI Ljava/lang/String;
 	public static final field COMMON_TYPES_URI Ljava/lang/String;
 	public static final field INSTANCE Ldev/ynagai/a2ui/core/validation/ProtocolSchemas;
+	public static final field META_SCHEMA_URI Ljava/lang/String;
 	public static final field RENDERER_TO_AGENT_URI Ljava/lang/String;
 	public final fun getAgentToRenderer ()Lkotlinx/serialization/json/JsonObject;
 	public final fun getCatalogDefinition ()Lkotlinx/serialization/json/JsonObject;

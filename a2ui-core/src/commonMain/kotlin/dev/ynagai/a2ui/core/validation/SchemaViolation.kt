@@ -64,8 +64,20 @@ public data class ValidationLimits(
      * revisits the same subschema at the same place in the instance; this stops one that descends
      * forever through an instance that keeps nesting. It is a stack-depth bound, and Kotlin/Native
      * aborts the process on overflow rather than raising something catchable.
+     *
+     * **This counts subschema applications, not levels of nesting in the payload**, and the two
+     * are an order of magnitude apart. Reaching an argument one call deeper costs roughly eight
+     * frames — the `$ref` to `FunctionCall`, its `oneOf`, `anyFunction`, that `oneOf`, the
+     * function, its `allOf`, its `properties`, then the argument itself.
+     *
+     * So the number is derived rather than chosen: a renderer will evaluate an expression
+     * [dev.ynagai.a2ui.core.function.DEFAULT_CALL_DEPTH] calls deep, and refusing to *validate*
+     * what the evaluator will happily *run* is the wrong way round. Thirty-two calls at eight
+     * frames each is this. The specification's own suite needs 64 of them
+     * (`checkable_components` #8), so the default leaves a factor of four — measured by a test,
+     * not assumed.
      */
-    public val maxDepth: Int = 64,
+    public val maxDepth: Int = 256,
     /**
      * How many subschema applications one validation may perform in total.
      *

@@ -198,6 +198,17 @@ public class SchemaEvaluator(
             }
 
             for ((keyword, value) in schema) {
+                // Once a speculative branch has failed, nothing left in it can change the answer:
+                // the caller reads only `valid`, and annotations from a schema that did not hold
+                // are discarded anyway. Stopping here is what makes a deeply nested expression
+                // affordable. `and`, `or` and `not` all take arguments that are themselves boolean
+                // expressions, so every alternative the catalog offers at one level re-enters the
+                // whole subtree at the next -- without this, the eighteen-branch `oneOf` over a
+                // catalog's functions costs 3^depth, and the specification's own
+                // `checkable_components` #8 is deep enough to exhaust any budget that would still
+                // be a budget. With it, a branch whose `call` does not match is abandoned at the
+                // `const` instead of descending through arguments it will never accept.
+                if (failed && !collect) break
                 if (keyword in ANNOTATION_KEYWORDS) continue
                 when (keyword) {
                     "\$ref" -> {
@@ -280,6 +291,7 @@ public class SchemaEvaluator(
                         val subschemas = value as? JsonObject
                         if (obj != null && subschemas != null) {
                             for ((name, subschema) in subschemas) {
+                                if (failed && !collect) break
                                 val child = obj[name] ?: continue
                                 (properties ?: mutableSetOf<String>().also { properties = it }).add(name)
                                 absorb(
@@ -331,6 +343,7 @@ public class SchemaEvaluator(
                             val named = schema.declaredPropertyNames()
                             val patterns = schema.declaredPatterns()
                             for ((name, child) in obj) {
+                                if (failed && !collect) break
                                 if (name in named) continue
                                 if (patterns.any { pattern -> matcher(pattern)?.invoke(name) == true }) continue
                                 (properties ?: mutableSetOf<String>().also { properties = it }).add(name)
@@ -352,16 +365,18 @@ public class SchemaEvaluator(
                         val array = instance as? JsonArray
                         if (array != null) {
                             array.forEachIndexed { index, child ->
-                                absorb(
-                                    evaluate(
-                                        value,
-                                        location.child("items"),
-                                        child,
-                                        at.index(index),
-                                        depth + 1,
-                                        collect,
-                                    ),
-                                )
+                                if (!failed || collect) {
+                                    absorb(
+                                        evaluate(
+                                            value,
+                                            location.child("items"),
+                                            child,
+                                            at.index(index),
+                                            depth + 1,
+                                            collect,
+                                        ),
+                                    )
+                                }
                             }
                             if (array.size > items) items = array.size
                         }
@@ -497,16 +512,18 @@ public class SchemaEvaluator(
                     }
 
                     "allOf" -> (value as? JsonArray)?.forEachIndexed { index, branch ->
-                        absorb(
-                            evaluate(
-                                branch,
-                                location.child("allOf", index.toString()),
-                                instance,
-                                at,
-                                depth + 1,
-                                collect,
-                            ),
-                        )
+                        if (!failed || collect) {
+                            absorb(
+                                evaluate(
+                                    branch,
+                                    location.child("allOf", index.toString()),
+                                    instance,
+                                    at,
+                                    depth + 1,
+                                    collect,
+                                ),
+                            )
+                        }
                     }
 
                     "anyOf" -> {

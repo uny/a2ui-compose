@@ -1947,6 +1947,8 @@ final object dev.ynagai.a2ui.core.validation/ProtocolSchemas { // dev.ynagai.a2u
         final fun <get-AGENT_TO_RENDERER_URI>(): kotlin/String // dev.ynagai.a2ui.core.validation/ProtocolSchemas.AGENT_TO_RENDERER_URI.<get-AGENT_TO_RENDERER_URI>|<get-AGENT_TO_RENDERER_URI>(){}[0]
     final const val COMMON_TYPES_URI // dev.ynagai.a2ui.core.validation/ProtocolSchemas.COMMON_TYPES_URI|{}COMMON_TYPES_URI[0]
         final fun <get-COMMON_TYPES_URI>(): kotlin/String // dev.ynagai.a2ui.core.validation/ProtocolSchemas.COMMON_TYPES_URI.<get-COMMON_TYPES_URI>|<get-COMMON_TYPES_URI>(){}[0]
+    final const val META_SCHEMA_URI // dev.ynagai.a2ui.core.validation/ProtocolSchemas.META_SCHEMA_URI|{}META_SCHEMA_URI[0]
+        final fun <get-META_SCHEMA_URI>(): kotlin/String // dev.ynagai.a2ui.core.validation/ProtocolSchemas.META_SCHEMA_URI.<get-META_SCHEMA_URI>|<get-META_SCHEMA_URI>(){}[0]
     final const val RENDERER_TO_AGENT_URI // dev.ynagai.a2ui.core.validation/ProtocolSchemas.RENDERER_TO_AGENT_URI|{}RENDERER_TO_AGENT_URI[0]
         final fun <get-RENDERER_TO_AGENT_URI>(): kotlin/String // dev.ynagai.a2ui.core.validation/ProtocolSchemas.RENDERER_TO_AGENT_URI.<get-RENDERER_TO_AGENT_URI>|<get-RENDERER_TO_AGENT_URI>(){}[0]
 

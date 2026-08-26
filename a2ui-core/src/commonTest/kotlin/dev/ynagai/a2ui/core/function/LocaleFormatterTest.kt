@@ -53,6 +53,22 @@ class LocaleFormatterTest {
     }
 
     @Test
+    fun formatNumberWritesOutMagnitudesThatDoubleToStringWouldExponentiate() {
+        // `Double.toString` reaches for exponential notation at 1e7 on the JVM and Native and at
+        // 1e21 in JavaScript. Neither threshold may show through, or the same payload renders
+        // differently depending on which target the renderer was built for.
+        assertEquals("10,000,000", text("formatNumber", """{"value":1e7}"""))
+        assertEquals("9,999,999", text("formatNumber", """{"value":9999999}"""))
+        assertEquals(
+            "1,000,000,000,000,000,000,000",
+            text("formatNumber", """{"value":1e21}"""),
+        )
+        assertEquals("0.0000001", text("formatNumber", """{"value":1e-7}"""))
+        assertEquals("0.0000123", text("formatNumber", """{"value":1.23e-5}"""))
+        assertEquals("123,450,000", text("formatNumber", """{"value":1.2345e8}"""))
+    }
+
+    @Test
     fun formatNumberGroupsEveryDigitCount() {
         assertEquals("100", text("formatNumber", """{"value":100}"""))
         assertEquals("1,000", text("formatNumber", """{"value":1000}"""))
@@ -132,6 +148,13 @@ class LocaleFormatterTest {
         val noon = midnight + 12 * 60 * 60 * 1000L
         assertEquals("12:00 AM", text("formatDate", """{"value":$midnight,"format":"h:mm a"}"""))
         assertEquals("12:00 PM", text("formatDate", """{"value":$noon,"format":"h:mm a"}"""))
+    }
+
+    @Test
+    fun formatDateReadsTheFractionOfASecondFromItsLeadingDigits() {
+        // 2025-08-26T09:30:00.005Z — `S` is the first digit of `.005`, which is a zero.
+        val wire = """{"value":${REFERENCE + 5},"format":"ss.S|ss.SS|ss.SSS|ss.SSSS"}"""
+        assertEquals("00.0|00.00|00.005|00.0050", text("formatDate", wire))
     }
 
     @Test
@@ -225,6 +248,10 @@ class Iso8601Test {
         assertNull(parseIso8601("2025-08-26T25:00:00Z"))
         assertNull(parseIso8601("2025-08-26T09:30:00+99:00"))
         assertNull(parseIso8601(""))
+        // Truncated where the seconds field begins: too short to hold it, but with the separator
+        // in place, so a guard that checked only the separator would read past the end.
+        assertNull(parseIso8601("2025-08-26T09:30:"))
+        assertNull(parseIso8601("2025-08-26T09:30:0"))
     }
 
     @Test

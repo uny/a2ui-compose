@@ -121,8 +121,9 @@ private fun formatDecimal(value: Double, decimals: Int?, grouping: Boolean): Str
     val digits = when {
         decimals == null -> shortestDigits(magnitude)
         decimals < 0 -> throw A2uiFunctionException("`decimals` must not be negative, but was $decimals.")
-        else -> fixedDigits(magnitude, decimals)
-    } ?: return value.toString() // Out of the exact range; the raw form beats a wrong one.
+        // Out of the range that rounds exactly; the raw form beats confidently wrong digits.
+        else -> fixedDigits(magnitude, decimals) ?: return value.toString()
+    }
 
     val point = digits.indexOf('.')
     val integerPart = if (point < 0) digits else digits.substring(0, point)
@@ -149,11 +150,36 @@ private fun fixedDigits(magnitude: Double, decimals: Int): String? {
     return rounded.dropLast(decimals) + "." + rounded.takeLast(decimals)
 }
 
-/** [magnitude] in its shortest round-tripping form, or null when that form is exponential. */
-private fun shortestDigits(magnitude: Double): String? {
+/**
+ * [magnitude] in its shortest round-tripping form, written out in full.
+ *
+ * `Double.toString` switches to exponential notation, and the two thresholds it switches at are
+ * not the same on every target: the JVM and Native do it from 1e7 upwards, JavaScript not until
+ * 1e21. Passing that form through would make `formatNumber(10000000)` render as `1.0E7` on one
+ * target and `10,000,000` on another, from the same payload — which is the divergence a
+ * locale-independent formatter exists to remove. So the exponent is applied to the digits here.
+ */
+private fun shortestDigits(magnitude: Double): String {
     val text = magnitude.toString()
-    if (text.contains('e') || text.contains('E')) return null
-    return if (text.endsWith(".0")) text.dropLast(2) else text
+    val marker = text.indexOfFirst { it == 'e' || it == 'E' }
+    if (marker < 0) return if (text.endsWith(".0")) text.dropLast(2) else text
+
+    val exponent = text.substring(marker + 1).toIntOrNull() ?: return text
+    val mantissa = text.substring(0, marker)
+    val point = mantissa.indexOf('.')
+    val whole = if (point < 0) mantissa else mantissa.substring(0, point)
+    val fraction = if (point < 0) "" else mantissa.substring(point + 1)
+    val digits = whole + fraction
+    // Where the decimal point lands once the exponent is applied. `magnitude` is never negative,
+    // so there is no sign to carry through.
+    val at = whole.length + exponent
+
+    val expanded = when {
+        at <= 0 -> "0." + "0".repeat(-at) + digits
+        at >= digits.length -> digits + "0".repeat(at - digits.length)
+        else -> digits.substring(0, at) + "." + digits.substring(at)
+    }
+    return if ('.' in expanded) expanded.trimEnd('0').trimEnd('.') else expanded
 }
 
 private fun group(integerPart: String): String {

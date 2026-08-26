@@ -108,13 +108,14 @@ private val DAY_NAMES = listOf(
 private const val ABBREVIATION_LENGTH: Int = 3
 private const val WIDE_COUNT: Int = 4
 private const val TWO_DIGIT_COUNT: Int = 2
+private const val MILLI_DIGITS: Int = 3
 private const val HOURS_PER_HALF_DAY: Int = 12
 
 /**
  * [epochMillis] rendered with the Unicode TR35 pattern [pattern], in UTC and with English names.
  *
  * The subset implemented is the one the catalog's own token reference documents — `y M d E h H m
- * s a` — plus TR35's single-quote literals, where `''` stands for one quote. Any other ASCII
+ * s a` — plus `S` and TR35's single-quote literals, where `''` stands for one quote. Any other ASCII
  * letter raises rather than passing through: TR35 reserves the whole letter range for future
  * fields, so emitting an unrecognised one literally would silently produce a date string with a
  * stray letter in it, and a renderer would have no way to tell that from an intended literal.
@@ -176,7 +177,11 @@ private fun field(letter: Char, count: Int, at: CivilDateTime): String = when (l
     'H' -> pad(at.hour, count)
     'm' -> pad(at.minute, count)
     's' -> pad(at.second, count)
-    'S' -> pad(at.milli, count).take(count)
+    // TR35 reads `S` as the leading digits of the fraction of a second, so the value is padded
+    // to its own three-digit width first and only then truncated: 5 milliseconds is `.005`, whose
+    // first digit is `0`, not `5`.
+    'S' -> at.milli.toString().padStart(MILLI_DIGITS, '0')
+        .let { if (count <= MILLI_DIGITS) it.take(count) else it.padEnd(count, '0') }
     'a' -> if (at.hour < HOURS_PER_HALF_DAY) "AM" else "PM"
     else -> throw A2uiFunctionException(
         "formatDate: `$letter` is not a supported TR35 pattern letter " +
@@ -236,7 +241,11 @@ internal fun parseIso8601(text: String): Long? {
     var second = 0
     var milli = 0
     if (rest.length > TIME_MIN_LENGTH) {
-        if (rest[5] != ':') return null
+        // The length is read before the substring, not only the separator: `09:30:` and `09:30:0`
+        // both put a `:` at index 5 while being too short to hold the field, and `substring(6, 8)`
+        // on them raises `IndexOutOfBoundsException` — which is neither the null this function
+        // documents nor anything the evaluator's caller is written to catch.
+        if (rest.length < SECONDS_LENGTH || rest[5] != ':') return null
         second = rest.substring(6, 8).toIntOrNull()?.takeIf { it in 0..60 } ?: return null
         // A leap second is folded onto :59 rather than rejected; the epoch scale has no room for it.
         if (second == 60) second = 59

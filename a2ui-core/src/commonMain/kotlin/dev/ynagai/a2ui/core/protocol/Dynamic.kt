@@ -99,7 +99,16 @@ public sealed interface DynamicString {
 /** A number, a [DataBinding], or a [FunctionCall]. */
 @Serializable(with = DynamicNumberSerializer::class)
 public sealed interface DynamicNumber {
-    public data class Literal(public val value: Double) : DynamicNumber
+    /** A literal number. Never NaN or infinite — JSON has no way to write either. */
+    public data class Literal(public val value: Double) : DynamicNumber {
+        init {
+            // Mirrors [DynamicValue.Literal]: enforced on the type rather than only in
+            // `encodeNumber`, so a value that cannot be written cannot be built either.
+            if (value.isNaN() || value.isInfinite()) {
+                throw A2uiFormatException("DynamicNumber: `$value` is not a JSON number.")
+            }
+        }
+    }
 }
 
 /** A boolean, a [DataBinding], or a [FunctionCall]. */

@@ -282,6 +282,16 @@ class StrictnessTest {
     }
 
     @Test
+    fun `a non-finite number literal is unconstructible`() {
+        // JSON has no way to write either, so the guard belongs on the type — the same rule
+        // DynamicValue.Literal applies to JsonNull.
+        for (bad in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+            assertFailsWith<A2uiFormatException> { DynamicNumber.Literal(bad) }
+        }
+        assertEquals(1.5, DynamicNumber.Literal(1.5).value)
+    }
+
+    @Test
     fun `a number outside the range JSON can round trip is rejected on the way in`() {
         // Was: 1e999 decoded to Infinity and only failed later, while encoding the renderer's
         // own state; and 2^63 was re-emitted as 9223372036854775807, a different integer.

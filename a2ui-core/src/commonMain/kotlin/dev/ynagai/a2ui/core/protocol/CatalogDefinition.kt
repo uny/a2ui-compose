@@ -140,7 +140,15 @@ public data class FunctionCallValidationSchema(public val raw: JsonObject) {
             ?.mapNotNull { it as? JsonObject }
 }
 
-/** A catalog's definition of one function. */
+/**
+ * A catalog's definition of one function.
+ *
+ * [schema] is the definition object verbatim and the typed fields are lifted out of it. As with
+ * [ComponentDefinition], [schema] wins on the way out for any key it already carries, and the
+ * typed fields supply only the keys it omits — so editing [returnType] with `copy` on a decoded
+ * definition does not change what is emitted, while a definition built in Kotlin still round
+ * trips.
+ */
 @Serializable(with = FunctionDefinitionSerializer::class)
 public data class FunctionDefinition(
     public val schema: FunctionCallValidationSchema,
@@ -384,7 +392,8 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
         val json = encoder as JsonEncoder
         json.encodeJsonElement(
             buildJsonObject {
-                value.schemaKeywords.forEach { (key, element) -> put(key, element) }
+                value.schemaKeywords.carryThrough(KEYS - SCHEMA_KEYWORDS)
+                    .forEach { (key, element) -> put(key, element) }
                 put("catalogId", JsonPrimitive(value.catalogId))
                 value.protocolVersion?.let { put("protocolVersion", JsonPrimitive(it)) }
                 value.title?.let { put("title", JsonPrimitive(it)) }

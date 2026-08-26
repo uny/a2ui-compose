@@ -236,6 +236,22 @@ class StrictnessTest {
     }
 
     @Test
+    fun `a schema keyword bag cannot speak for a modelled catalog key either`() {
+        // The last site left on the old pattern. Only a hand-built value can collide here, since
+        // the decoder filters schemaKeywords down to the three $-keywords.
+        assertEquals(
+            """{"catalogId":"c"}""",
+            json.encodeToString(
+                CatalogDefinition.serializer(),
+                CatalogDefinition(
+                    catalogId = "c",
+                    schemaKeywords = mapOf("protocolVersion" to JsonPrimitive("1.0")),
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun `lenient tolerates an unknown envelope key that strict refuses`() {
         // Was: the envelope counted keys itself and never consulted ignoreUnknownKeys, so the
         // opt-in configuration rejected a trace id just as strict did.

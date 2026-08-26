@@ -575,34 +575,26 @@ final class dev.ynagai.a2ui.core.protocol/AgentCapabilities { // dev.ynagai.a2ui
 }
 
 final class dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1 { // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1|null[0]
-    constructor <init>(kotlin.collections/List<kotlin/String>? = ..., kotlin/Boolean? = ...) // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.<init>|<init>(kotlin.collections.List<kotlin.String>?;kotlin.Boolean?){}[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>? = ..., kotlin/Boolean? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...) // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.<init>|<init>(kotlin.collections.List<kotlin.String>?;kotlin.Boolean?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
 
     final val acceptsInlineCatalogs // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.acceptsInlineCatalogs|{}acceptsInlineCatalogs[0]
         final fun <get-acceptsInlineCatalogs>(): kotlin/Boolean? // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.acceptsInlineCatalogs.<get-acceptsInlineCatalogs>|<get-acceptsInlineCatalogs>(){}[0]
     final val acceptsInlineCatalogsOrDefault // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.acceptsInlineCatalogsOrDefault|{}acceptsInlineCatalogsOrDefault[0]
         final fun <get-acceptsInlineCatalogsOrDefault>(): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.acceptsInlineCatalogsOrDefault.<get-acceptsInlineCatalogsOrDefault>|<get-acceptsInlineCatalogsOrDefault>(){}[0]
+    final val additional // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.additional|{}additional[0]
+        final fun <get-additional>(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.additional.<get-additional>|<get-additional>(){}[0]
     final val supportedCatalogIds // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.supportedCatalogIds|{}supportedCatalogIds[0]
         final fun <get-supportedCatalogIds>(): kotlin.collections/List<kotlin/String>? // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.supportedCatalogIds.<get-supportedCatalogIds>|<get-supportedCatalogIds>(){}[0]
 
     final fun component1(): kotlin.collections/List<kotlin/String>? // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.component1|component1(){}[0]
     final fun component2(): kotlin/Boolean? // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.component2|component2(){}[0]
-    final fun copy(kotlin.collections/List<kotlin/String>? = ..., kotlin/Boolean? = ...): dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.copy|copy(kotlin.collections.List<kotlin.String>?;kotlin.Boolean?){}[0]
+    final fun component3(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.component3|component3(){}[0]
+    final fun copy(kotlin.collections/List<kotlin/String>? = ..., kotlin/Boolean? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...): dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.copy|copy(kotlin.collections.List<kotlin.String>?;kotlin.Boolean?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.toString|toString(){}[0]
 
-    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1> { // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer|null[0]
-        final val descriptor // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer.descriptor|{}descriptor[0]
-            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
-
-        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer.childSerializers|childSerializers(){}[0]
-        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
-        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1) // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.AgentCapabilitiesV1){}[0]
-    }
-
     final object Companion { // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.Companion|null[0]
-        final val $childSerializers // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.Companion.$childSerializers|{}$childSerializers[0]
-
         final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1> // dev.ynagai.a2ui.core.protocol/AgentCapabilitiesV1.Companion.serializer|serializer(){}[0]
     }
 }
@@ -1106,8 +1098,10 @@ final class dev.ynagai.a2ui.core.protocol/RendererCapabilities { // dev.ynagai.a
 }
 
 final class dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1 { // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1|null[0]
-    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>? = ...) // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>?){}[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...) // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
 
+    final val additional // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.additional|{}additional[0]
+        final fun <get-additional>(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.additional.<get-additional>|<get-additional>(){}[0]
     final val inlineCatalogs // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.inlineCatalogs|{}inlineCatalogs[0]
         final fun <get-inlineCatalogs>(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>? // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.inlineCatalogs.<get-inlineCatalogs>|<get-inlineCatalogs>(){}[0]
     final val supportedCatalogIds // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.supportedCatalogIds|{}supportedCatalogIds[0]
@@ -1115,23 +1109,13 @@ final class dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1 { // dev.ynagai
 
     final fun component1(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.component1|component1(){}[0]
     final fun component2(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>? // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.component2|component2(){}[0]
-    final fun copy(kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>? = ...): dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.copy|copy(kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>?){}[0]
+    final fun component3(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.component3|component3(){}[0]
+    final fun copy(kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>? = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...): dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.copy|copy(kotlin.collections.List<kotlin.String>;kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>?;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.toString|toString(){}[0]
 
-    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1> { // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer|null[0]
-        final val descriptor // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer.descriptor|{}descriptor[0]
-            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
-
-        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer.childSerializers|childSerializers(){}[0]
-        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1 // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
-        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1) // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.RendererCapabilitiesV1){}[0]
-    }
-
     final object Companion { // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.Companion|null[0]
-        final val $childSerializers // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.Companion.$childSerializers|{}$childSerializers[0]
-
         final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1> // dev.ynagai.a2ui.core.protocol/RendererCapabilitiesV1.Companion.serializer|serializer(){}[0]
     }
 }

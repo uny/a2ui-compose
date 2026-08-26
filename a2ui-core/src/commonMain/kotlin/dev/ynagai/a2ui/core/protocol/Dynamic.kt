@@ -51,8 +51,15 @@ public data class FunctionCall(
     public val catalogId: String? = null,
     public val args: Map<String, JsonElement>? = null,
 ) : BoundValue {
-    /** True when this call names a system function (`@index`), which no catalog defines. */
-    public val isSystemFunction: Boolean get() = call.startsWith("@")
+    /**
+     * True when this call names a system function, which no catalog defines.
+     *
+     * v1.0 defines exactly one — `@index` — and reserves no `@` namespace around it:
+     * `FunctionCall` is a `oneOf` over a catalog function and `IndexSystemFunction`, whose `call`
+     * is the constant `@index`. So any other `@`-prefixed name is a catalog function that no
+     * catalog defines, and must fail catalog resolution rather than skip it.
+     */
+    public val isSystemFunction: Boolean get() = call == INDEX
 
     public companion object {
         /** The `@index` system function, available only inside a list template's item scope. */

@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
@@ -228,6 +229,34 @@ internal fun JsonObject.optionalObject(key: String, owner: String): JsonObject? 
 internal fun Map<String, JsonElement>.carryThrough(
     modelled: Set<String>,
 ): Map<String, JsonElement> = if (keys.none { it in modelled }) this else filterKeys { it !in modelled }
+
+/**
+ * Reads an optional array-of-strings keyword under [optionalString]'s rule.
+ *
+ * A present key that is not an array of strings is rejected rather than read as absent: for the
+ * composition keywords the difference between "unconstrained" and "constrained to nothing" is
+ * exactly what they carry, so dropping a malformed one would widen the constraint.
+ */
+internal fun JsonObject.optionalStringList(
+    key: String,
+    owner: String,
+    unique: Boolean = false,
+): List<String>? {
+    val value = this[key] ?: return null
+    val array = value as? JsonArray
+        ?: throw A2uiFormatException("$owner: `$key` must be an array of strings.")
+    val items = array.map { item ->
+        (item as? JsonPrimitive)?.takeIf { it.isString }?.content
+            ?: throw A2uiFormatException("$owner: `$key` must be an array of strings.")
+    }
+    if (unique && items.size != items.toSet().size) {
+        throw A2uiFormatException("$owner: `$key` must not repeat a component type name.")
+    }
+    return items
+}
+
+/** Wraps [values] as a JSON array of strings. */
+internal fun stringArray(values: List<String>): JsonArray = JsonArray(values.map(::JsonPrimitive))
 
 /** [optionalString]'s rule for a key the schema marks required. */
 internal fun JsonObject.requiredString(key: String, owner: String): String =

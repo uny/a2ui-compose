@@ -83,7 +83,8 @@ class StrictnessTest {
                     ),
                     returnType = ReturnType.VOID,
                     allowedCallers = AllowedCallers.AGENT_ONLY,
-                    requiresUserActivation = true,
+                    // false, not true: an activation-gated function may only be rendererOnly.
+                    requiresUserActivation = false,
                 ),
             ),
         )
@@ -94,7 +95,7 @@ class StrictnessTest {
         val f = decoded.functions.getValue("f")
         assertEquals(ReturnType.VOID, f.returnType)
         assertEquals(AllowedCallers.AGENT_ONLY, f.allowedCallers)
-        assertEquals(true, f.requiresUserActivation)
+        assertEquals(false, f.requiresUserActivation)
     }
 
     @Test

@@ -26,11 +26,20 @@ public data class AgentCapabilities(
     public val otherVersions: Map<String, JsonElement> = emptyMap(),
 )
 
-/** The v1.0 half of [AgentCapabilities]. */
-@Serializable
+/**
+ * The v1.0 half of [AgentCapabilities].
+ *
+ * [additional] carries keys outside the modelled ones. Unlike most of the v1.0 schemas, the
+ * capability objects are *open* — `agent_capabilities.json` sets no `additionalProperties: false`
+ * on this object — so rejecting an unrecognised key here would refuse a payload the specification
+ * permits. Note also that `supportedCatalogIds` is optional on this side and required on
+ * [RendererCapabilitiesV1]; that asymmetry is the schema's.
+ */
+@Serializable(with = AgentCapabilitiesV1Serializer::class)
 public data class AgentCapabilitiesV1(
     public val supportedCatalogIds: List<String>? = null,
     public val acceptsInlineCatalogs: Boolean? = null,
+    public val additional: Map<String, JsonElement> = emptyMap(),
 ) {
     /** [acceptsInlineCatalogs] with the schema default applied. */
     public val acceptsInlineCatalogsOrDefault: Boolean get() = acceptsInlineCatalogs ?: false
@@ -53,10 +62,11 @@ public data class RendererCapabilities(
  * [inlineCatalogs] should only be sent to an agent that advertised
  * [AgentCapabilitiesV1.acceptsInlineCatalogs].
  */
-@Serializable
+@Serializable(with = RendererCapabilitiesV1Serializer::class)
 public data class RendererCapabilitiesV1(
     public val supportedCatalogIds: List<String>,
     public val inlineCatalogs: List<CatalogDefinition>? = null,
+    public val additional: Map<String, JsonElement> = emptyMap(),
 )
 
 /**
@@ -114,6 +124,87 @@ internal abstract class VersionKeyedSerializer<T : Any, V : Any>(
                 put(A2ui.PROTOCOL_VERSION, json.json.encodeToJsonElement(version, v1Of(value)))
                 otherVersionsOf(value).carryThrough(setOf(A2ui.PROTOCOL_VERSION))
                     .forEach { (key, element) -> put(key, element) }
+            },
+        )
+    }
+}
+
+internal object AgentCapabilitiesV1Serializer : KSerializer<AgentCapabilitiesV1> {
+    private val MODELLED = setOf("supportedCatalogIds", "acceptsInlineCatalogs")
+
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    override val descriptor: SerialDescriptor = SerialDescriptor(
+        "dev.ynagai.a2ui.core.protocol.AgentCapabilitiesV1",
+        JsonElement.serializer().descriptor,
+    )
+
+    override fun deserialize(decoder: Decoder): AgentCapabilitiesV1 {
+        val obj = decoder.jsonObjectOrFail("agent capabilities")
+        return AgentCapabilitiesV1(
+            supportedCatalogIds = obj.optionalStringList("supportedCatalogIds", "agent capabilities"),
+            acceptsInlineCatalogs = obj.optionalBoolean("acceptsInlineCatalogs", "agent capabilities"),
+            additional = obj.filterKeys { it !in MODELLED },
+        )
+    }
+
+    override fun serialize(encoder: Encoder, value: AgentCapabilitiesV1) {
+        (encoder as JsonEncoder).encodeJsonElement(
+            buildJsonObject {
+                value.supportedCatalogIds?.let { put("supportedCatalogIds", stringArray(it)) }
+                value.acceptsInlineCatalogs?.let { put("acceptsInlineCatalogs", JsonPrimitive(it)) }
+                value.additional.carryThrough(MODELLED).forEach { (key, element) ->
+                    put(key, element)
+                }
+            },
+        )
+    }
+}
+
+internal object RendererCapabilitiesV1Serializer : KSerializer<RendererCapabilitiesV1> {
+    private val MODELLED = setOf("supportedCatalogIds", "inlineCatalogs")
+
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    override val descriptor: SerialDescriptor = SerialDescriptor(
+        "dev.ynagai.a2ui.core.protocol.RendererCapabilitiesV1",
+        JsonElement.serializer().descriptor,
+    )
+
+    override fun deserialize(decoder: Decoder): RendererCapabilitiesV1 {
+        val json = (decoder as JsonDecoder).json
+        val obj = decoder.jsonObjectOrFail("renderer capabilities")
+        val catalogs = obj["inlineCatalogs"]?.let {
+            val array = it as? kotlinx.serialization.json.JsonArray
+                ?: throw A2uiFormatException("renderer capabilities: `inlineCatalogs` must be an array.")
+            array.map { element ->
+                json.decodeFromJsonElement(CatalogDefinitionSerializer, element)
+            }
+        }
+        return RendererCapabilitiesV1(
+            supportedCatalogIds = obj.optionalStringList("supportedCatalogIds", "renderer capabilities")
+                ?: throw A2uiFormatException("renderer capabilities: `supportedCatalogIds` is required."),
+            inlineCatalogs = catalogs,
+            additional = obj.filterKeys { it !in MODELLED },
+        )
+    }
+
+    override fun serialize(encoder: Encoder, value: RendererCapabilitiesV1) {
+        val json = encoder as JsonEncoder
+        json.encodeJsonElement(
+            buildJsonObject {
+                put("supportedCatalogIds", stringArray(value.supportedCatalogIds))
+                value.inlineCatalogs?.let { catalogs ->
+                    put(
+                        "inlineCatalogs",
+                        kotlinx.serialization.json.JsonArray(
+                            catalogs.map {
+                                json.json.encodeToJsonElement(CatalogDefinitionSerializer, it)
+                            },
+                        ),
+                    )
+                }
+                value.additional.carryThrough(MODELLED).forEach { (key, element) ->
+                    put(key, element)
+                }
             },
         )
     }

@@ -277,8 +277,8 @@ internal object ComponentDefinitionSerializer : KSerializer<ComponentDefinition>
         val obj = decoder.jsonObjectOrFail("ComponentDefinition")
         return ComponentDefinition(
             schema = obj,
-            allowedParents = obj.stringList("allowedParents", "ComponentDefinition"),
-            allowedChildren = obj.stringList("allowedChildren", "ComponentDefinition"),
+            allowedParents = obj.optionalStringList("allowedParents", "ComponentDefinition", unique = true),
+            allowedChildren = obj.optionalStringList("allowedChildren", "ComponentDefinition", unique = true),
             metadata = obj["metadata"]?.let {
                 json.decodeFromJsonElement(Metadata.serializer(), it)
             },
@@ -324,11 +324,23 @@ internal object FunctionDefinitionSerializer : KSerializer<FunctionDefinition> {
             AllowedCallers.byWireName[it]
                 ?: throw A2uiFormatException("FunctionDefinition: `$it` is not an allowedCallers value.")
         }
+        val activation = obj.optionalBoolean("requiresUserActivation", "FunctionDefinition")
+        // The schema's `if`/`then` binds a function that requires user activation to
+        // `rendererOnly`. Its `if` omits `"required": ["requiresUserActivation"]`, so read
+        // literally it fires vacuously for every definition that omits the key and would make
+        // `agentOnly` unusable — plainly not the intent, and refusing those would reject
+        // catalogs every other implementation accepts. Applied only when the key is present.
+        if (activation == true && callers != null && callers != AllowedCallers.RENDERER_ONLY) {
+            throw A2uiFormatException(
+                "FunctionDefinition: a function with `requiresUserActivation` may only be " +
+                    "`rendererOnly`, not `${callers.wireName}`.",
+            )
+        }
         return FunctionDefinition(
             schema = FunctionCallValidationSchema(obj),
             returnType = returnType,
             allowedCallers = callers,
-            requiresUserActivation = obj.optionalBoolean("requiresUserActivation", "FunctionDefinition"),
+            requiresUserActivation = activation,
         )
     }
 
@@ -370,13 +382,33 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
         val obj = decoder.jsonObjectOrFail("CatalogDefinition")
         obj.rejectUnknownKeys(KEYS, "CatalogDefinition", decoder)
         val catalogId = obj.requiredString("catalogId", "CatalogDefinition")
+        val protocolVersion = obj.optionalString("protocolVersion", "CatalogDefinition")
+            ?.also {
+                if (!PROTOCOL_VERSION_PATTERN.matches(it)) {
+                    throw A2uiFormatException(
+                        "CatalogDefinition: `$it` is not a protocol version; the schema's pattern " +
+                            "takes an unprefixed `major.minor[.patch]` (note that a catalog says " +
+                            "`1.0` where an envelope says `v1.0`).",
+                    )
+                }
+            }
         return CatalogDefinition(
             catalogId = catalogId,
-            protocolVersion = obj.optionalString("protocolVersion", "CatalogDefinition"),
+            protocolVersion = protocolVersion,
             title = obj.optionalString("title", "CatalogDefinition"),
             description = obj.optionalString("description", "CatalogDefinition"),
             instructions = obj.optionalString("instructions", "CatalogDefinition"),
             components = obj.optionalObject("components", "CatalogDefinition").orEmpty()
+                .onEach { (name, _) ->
+                    // `components.propertyNames` forbids the reserved container outright: a
+                    // catalog may not redefine the surface's implicit root.
+                    if (name == Surface.COMPONENT) {
+                        throw A2uiFormatException(
+                            "CatalogDefinition: `${Surface.COMPONENT}` is reserved and cannot be " +
+                                "defined by a catalog.",
+                        )
+                    }
+                }
                 .mapValues { (_, element) ->
                     json.decodeFromJsonElement(ComponentDefinitionSerializer, element)
                 },
@@ -438,22 +470,12 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
 
 private fun JsonObject?.orEmpty(): Map<String, JsonElement> = this ?: emptyMap()
 
-private fun stringArray(values: List<String>): kotlinx.serialization.json.JsonArray =
-    kotlinx.serialization.json.JsonArray(values.map(::JsonPrimitive))
 
-/**
- * Reads an optional array-of-strings keyword.
- *
- * A key that is present but not an array of strings is rejected rather than read as absent: the
- * difference between "unconstrained" and "constrained to nothing" is exactly what these keywords
- * carry, so quietly dropping a malformed one would widen the constraint instead of failing.
- */
-private fun JsonObject.stringList(key: String, owner: String): List<String>? {
-    val value = this[key] ?: return null
-    val array = value as? kotlinx.serialization.json.JsonArray
-        ?: throw A2uiFormatException("$owner: `$key` must be an array of component type names.")
-    return array.map { item ->
-        (item as? JsonPrimitive)?.takeIf { it.isString }?.content
-            ?: throw A2uiFormatException("$owner: `$key` must be an array of component type names.")
-    }
-}
+
+/** The `protocolVersion` pattern from `catalog_definition.json` — semver, and never `v`-prefixed. */
+private val PROTOCOL_VERSION_PATTERN = Regex(
+    """^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:\.(0|[1-9][0-9]*))?""" +
+        """(?:-((?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)""" +
+        """(?:\.(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?""" +
+        """(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$""",
+)

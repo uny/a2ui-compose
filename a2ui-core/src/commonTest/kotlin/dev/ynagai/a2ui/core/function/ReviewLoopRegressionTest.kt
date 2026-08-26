@@ -1,5 +1,6 @@
 package dev.ynagai.a2ui.core.function
 
+import dev.ynagai.a2ui.core.protocol.A2uiFormatException
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.FunctionCall
 import kotlinx.serialization.json.Json
@@ -88,6 +89,18 @@ class ReviewLoopRegressionTest {
     }
 
     @Test
+    fun theDeliberateFormatFailureIsStillAFormatFailure() {
+        // `A2uiFormatException` extends `SerializationException`, so wrapping the latter must not
+        // swallow the former: an object carrying both `path` and `call` is a malformed payload,
+        // which a renderer classifies by catching `A2uiFormatException`.
+        assertFailsWith<A2uiFormatException> {
+            context("{}").evaluate(
+                call("""{"call":"required","args":{"value":{"path":"/x","call":"required"}}}"""),
+            )
+        }
+    }
+
+    @Test
     fun lengthWithOnlyAMaximumDoesNotCallAnAbsentValueTooShort() {
         // An optional field capped at 200 characters must not report TOO_SHORT before the user
         // types — the empty string it becomes a moment later already passes.
@@ -95,6 +108,19 @@ class ReviewLoopRegressionTest {
             call("""{"call":"length","args":{"value":{"path":"/form/notes"},"max":200}}"""),
         )
         assertEquals("""{"valid":true}""", absent.toString())
+        // An explicit `min: 0` must agree with the empty string, which passes it.
+        assertEquals(
+            """{"valid":true}""",
+            context("{}").evaluate(
+                call("""{"call":"length","args":{"value":{"path":"/x"},"min":0,"max":200}}"""),
+            ).toString(),
+        )
+        assertEquals(
+            """{"valid":true}""",
+            context("{}").evaluate(
+                call("""{"call":"length","args":{"value":"","min":0,"max":200}}"""),
+            ).toString(),
+        )
         // A declared minimum still fails, and still says why.
         val withMin = context("{}").evaluate(
             call("""{"call":"length","args":{"value":{"path":"/form/name"},"min":1}}"""),
@@ -136,6 +162,16 @@ class ReviewLoopRegressionTest {
         val huge = "A".repeat(50_000)
         val failure = assertFailsWith<A2uiFunctionException> { format("\${${huge}1()}") }
         assertTrue(failure.message!!.length < 1_000, "message was ${failure.message!!.length} chars")
+        // A JSON number keeps its raw literal, so the non-string branch of `describe` needs the
+        // same treatment as the string branch.
+        val digits = "9".repeat(50_000)
+        val fromLiteral = assertFailsWith<A2uiFunctionException> {
+            context("{}").evaluate(call("""{"call":"not","args":{"value":$digits}}"""))
+        }
+        assertTrue(
+            fromLiteral.message!!.length < 1_000,
+            "message was ${fromLiteral.message!!.length} chars",
+        )
     }
 
     @Test

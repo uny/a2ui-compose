@@ -1,5 +1,6 @@
 package dev.ynagai.a2ui.core.function
 
+import dev.ynagai.a2ui.core.protocol.A2uiFormatException
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.BoundValue
 import dev.ynagai.a2ui.core.protocol.DataBinding
@@ -69,6 +70,11 @@ public const val DEFAULT_CALL_STEPS: Int = 10_000
  * Per-string was the same number and a much weaker bound: an expression can hold any number of
  * sibling arguments, each producing its own string up to the limit and all of them retained at
  * once while the call is assembled, so a budget of one megabyte admitted thousands of them.
+ *
+ * It counts characters *built*, not characters returned, so a string that passes through N nested
+ * calls is charged N times — it was genuinely allocated N times, and both buffers of each level
+ * are live at once. That makes this a bound on what an expression costs rather than on how long
+ * its answer is, which is the quantity worth bounding when the expression comes from an agent.
  *
  * Charged *before* each piece is built rather than after, so that a `formatString` interpolating a
  * megabyte-long value a thousand times fails while allocating the first megabyte instead of the
@@ -275,6 +281,9 @@ private const val MESSAGE_EXCERPT: Int = 200
 /** How much of an agent-authored function name travels inside an [A2uiFunctionException]. */
 private const val NAME_EXCERPT: Int = 64
 
+/** How much of an agent-authored JSON literal travels inside an [A2uiFunctionException]. */
+private const val LITERAL_EXCERPT: Int = 32
+
 /**
  * One top-level evaluation, holding the step budget that spans it.
  *
@@ -287,10 +296,12 @@ internal class Evaluator(val context: EvaluationContext) {
     /**
      * How many side-effecting functions this evaluation has already run.
      *
-     * [InvocationContext.USER_ACTION] is set once, by the renderer, for the one gesture the user
-     * made — but `openUrl` re-read it per call, so a single tap authorised as many opens as the
-     * step budget allowed. The specification ties the permission to "an active, physical user
-     * interaction", which is one interaction, not one expression.
+     * `openUrl` re-read [InvocationContext] per call, so one gesture authorised as many opens as
+     * the step budget allowed. This bounds it to one — but note the scope honestly: an [Evaluator]
+     * is built per top-level evaluation, so what is enforced here is one open per *expression*.
+     * The specification ties the permission to "an active, physical user interaction", and a
+     * renderer that evaluates several bound values for a single gesture still owes the rest of
+     * that rule; this module has no way to see where one gesture ends.
      */
     private var sideEffects: Int = 0
 
@@ -403,6 +414,13 @@ internal class Evaluator(val context: EvaluationContext) {
     fun argument(element: JsonElement, depth: Int): JsonElement {
         val bound = try {
             decodeBoundValue(element, context.json, "function argument")
+        } catch (e: A2uiFormatException) {
+            // Let through before the catch below, because `A2uiFormatException` *is* a
+            // `SerializationException`. Catching the supertype alone relabelled the one failure
+            // this module raises deliberately for a malformed payload — an object carrying both
+            // `path` and `call` — as a call failure, and a renderer that classifies malformed
+            // payloads by catching `A2uiFormatException` stopped seeing it.
+            throw e
         } catch (e: SerializationException) {
             // `FunctionCall.args` is typed `Map<String, JsonElement>`, so an argument that is
             // shaped like a binding is not held to that schema until it is evaluated — this is
@@ -523,15 +541,12 @@ internal class Evaluator(val context: EvaluationContext) {
             )
         }
         val element = args.require("value")
-        // An absent value has length zero, which fails a `min` and nothing else. A call that
-        // declares only `max` has no lower bound for it to fail, and reporting TOO_SHORT there
-        // would put a "too short" error on a field the agent deliberately left optional — note
-        // that the empty string, one line below, is already treated exactly this way.
-        if (element is JsonNull) {
-            return if (min == null) validation(true, null)
-            else validation(false, ValidationCode.TOO_SHORT)
-        }
-        val value = args.asString(element, "value")
+        // An absent value is length zero and is measured as such, rather than being failed on
+        // sight. It is the same length as the empty string the field holds a moment later, so
+        // measuring the two differently made `length` disagree with itself: it reported
+        // TOO_SHORT for an absent value against `min: 0`, and against a call declaring only
+        // `max`, in both of which the empty string passes.
+        val value = if (element is JsonNull) "" else args.asString(element, "value")
         if (min != null && value.length < min) return validation(false, ValidationCode.TOO_SHORT)
         if (max != null && value.length > max) return validation(false, ValidationCode.TOO_LONG)
         return validation(true, null)
@@ -642,8 +657,8 @@ internal class Evaluator(val context: EvaluationContext) {
         // into a popup flood.
         if (sideEffects++ > 0) {
             throw A2uiFunctionException(
-                "`openUrl` may run at most once per user interaction, and this expression calls " +
-                    "it more than once.",
+                "`openUrl` may run at most once per expression, and this one calls it more " +
+                    "than once.",
                 FunctionNames.OPEN_URL,
             )
         }
@@ -821,5 +836,8 @@ internal fun describe(element: JsonElement): String = when (element) {
     is JsonNull -> "null"
     is JsonObject -> "an object"
     is JsonArray -> "an array"
-    is JsonPrimitive -> if (element.isString) "a string" else "`${element.content}`"
+    is JsonPrimitive -> if (element.isString) "a string"
+    // Truncated as well: a JSON number keeps its raw literal, so a 50 000-digit `value` would
+    // otherwise put 50 000 characters into the message.
+    else "`${element.content.take(LITERAL_EXCERPT)}`"
 }

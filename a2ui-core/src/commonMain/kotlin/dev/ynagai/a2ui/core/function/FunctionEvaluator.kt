@@ -317,7 +317,10 @@ internal class Evaluator(val context: EvaluationContext) {
      * `formatDate` and `pluralize` were charging nothing at all.
      */
     fun produce(count: Int, call: String?) {
-        if (produced + count > context.limits.maxResultLength) {
+        // Written as a subtraction rather than as `produced + count > limit`, which can overflow:
+        // `count` is an arbitrary string's length and `produced` is only ever below the limit, so
+        // the remaining budget is always a safe non-negative number to compare against.
+        if (count > context.limits.maxResultLength - produced) {
             throw A2uiFunctionException(
                 "expression exceeds the maximum result length of " +
                     "${context.limits.maxResultLength} characters.",

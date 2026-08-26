@@ -111,7 +111,7 @@ class SchemaConformanceTest {
     }
 
     @Test
-    fun `the capability objects are open, so an unmodelled key is carried not refused`() {
+    fun `an unmodelled key on the open capability objects is carried not refused`() {
         // agent_capabilities.json / renderer_capabilities.json set no additionalProperties:false
         // on their v1.0 object. This is the one place the model was stricter than the schema.
         val agentSource = """{"v1.0":{"supportedCatalogIds":["a"],"futureFlag":true}}"""

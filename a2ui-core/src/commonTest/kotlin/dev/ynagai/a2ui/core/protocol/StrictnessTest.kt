@@ -192,6 +192,50 @@ class StrictnessTest {
     }
 
     @Test
+    fun `a carry-through key cannot speak for a modelled field that is absent`() {
+        // The collision is only masked by a later `put` when the modelled value is non-null, so
+        // the null case is the one that leaks: `severity = null` means "the payload did not say",
+        // which a consumer reads as Severity.DEFAULT. Emitting the bag's `severity` turned that
+        // into WARNING on the next decode.
+        val encoded = json.encodeToString(
+            ValidationResult.serializer(),
+            ValidationResult(
+                valid = true,
+                severity = null,
+                additional = mapOf("severity" to JsonPrimitive("warning")),
+            ),
+        )
+        assertEquals("""{"valid":true}""", encoded)
+        assertEquals(null, json.decodeFromString<ValidationResult>(encoded).severity)
+    }
+
+    @Test
+    fun `a decoded payload re-encodes to the bytes it came from`() {
+        // Filtering the carry-through bag rather than reordering it is what preserves this; one
+        // site reordered instead and moved `detail` in front of `valid`.
+        for (case in listOf(
+            """{"valid":true,"detail":"x"}""",
+            """{"valid":false,"code":"E","message":"m","severity":"warning","vendor":1}""",
+        )) {
+            assertEquals(case, json.encodeToString(json.decodeFromString<ValidationResult>(case)))
+        }
+    }
+
+    @Test
+    fun `a verbatim definition keyword survives re-encoding under lenient`() {
+        // The typed `metadata` re-encode is lossy where the raw definition is not: under lenient,
+        // Metadata drops the keys it does not model, so overwriting the raw value with it lost
+        // them. The raw schema now wins for any key it already carries.
+        val source = """{"catalogId":"c","components":{"T":{"metadata":{"vendor":1}}}}"""
+        assertEquals(
+            source,
+            A2uiJson.lenient.encodeToString(
+                A2uiJson.lenient.decodeFromString<CatalogDefinition>(source),
+            ),
+        )
+    }
+
+    @Test
     fun `lenient tolerates an unknown envelope key that strict refuses`() {
         // Was: the envelope counted keys itself and never consulted ignoreUnknownKeys, so the
         // opt-in configuration rejected a trace id just as strict did.

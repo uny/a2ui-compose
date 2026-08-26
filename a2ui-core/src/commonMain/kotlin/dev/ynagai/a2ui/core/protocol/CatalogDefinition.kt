@@ -158,7 +158,10 @@ public data class FunctionDefinition(
  * keywords that constrain where it may sit in the tree.
  *
  * [schema] is the definition object verbatim, [allowedParents] and [allowedChildren] are lifted
- * out of it for the composition check. A null list means "unconstrained", which is not the same
+ * out of it for the composition check. On the way out [schema] wins for any key it already
+ * carries — it is the unparsed original, so re-deriving a key from the typed field could only
+ * lose what the model does not name — and the typed fields supply the keys it omits, which is
+ * what lets a definition built in Kotlin round trip at all. A null list means "unconstrained", which is not the same
  * as an empty one — `"allowedParents": []` is how a component is barred from every parent.
  */
 @Serializable(with = ComponentDefinitionSerializer::class)
@@ -240,11 +243,13 @@ internal object ValidationResultSerializer : KSerializer<ValidationResult> {
     override fun serialize(encoder: Encoder, value: ValidationResult) {
         (encoder as JsonEncoder).encodeJsonElement(
             buildJsonObject {
-                value.additional.forEach { (key, element) -> put(key, element) }
                 put("valid", JsonPrimitive(value.valid))
                 value.code?.let { put("code", JsonPrimitive(it)) }
                 value.message?.let { put("message", JsonPrimitive(it)) }
                 value.severity?.let { put("severity", JsonPrimitive(it.wireName)) }
+                value.additional.carryThrough(MODELLED).forEach { (key, element) ->
+                    put(key, element)
+                }
             },
         )
     }
@@ -275,10 +280,16 @@ internal object ComponentDefinitionSerializer : KSerializer<ComponentDefinition>
         json.encodeJsonElement(
             buildJsonObject {
                 value.schema.forEach { (key, element) -> put(key, element) }
-                value.allowedParents?.let { put("allowedParents", stringArray(it)) }
-                value.allowedChildren?.let { put("allowedChildren", stringArray(it)) }
-                value.metadata?.let {
-                    put("metadata", json.json.encodeToJsonElement(Metadata.serializer(), it))
+                if ("allowedParents" !in value.schema) {
+                    value.allowedParents?.let { put("allowedParents", stringArray(it)) }
+                }
+                if ("allowedChildren" !in value.schema) {
+                    value.allowedChildren?.let { put("allowedChildren", stringArray(it)) }
+                }
+                if ("metadata" !in value.schema) {
+                    value.metadata?.let {
+                        put("metadata", json.json.encodeToJsonElement(Metadata.serializer(), it))
+                    }
                 }
             },
         )
@@ -315,10 +326,16 @@ internal object FunctionDefinitionSerializer : KSerializer<FunctionDefinition> {
         (encoder as JsonEncoder).encodeJsonElement(
             buildJsonObject {
                 value.schema.raw.forEach { (key, element) -> put(key, element) }
-                put("returnType", JsonPrimitive(value.returnType.wireName))
-                value.allowedCallers?.let { put("allowedCallers", JsonPrimitive(it.wireName)) }
-                value.requiresUserActivation?.let {
-                    put("requiresUserActivation", JsonPrimitive(it))
+                if ("returnType" !in value.schema.raw) {
+                    put("returnType", JsonPrimitive(value.returnType.wireName))
+                }
+                if ("allowedCallers" !in value.schema.raw) {
+                    value.allowedCallers?.let { put("allowedCallers", JsonPrimitive(it.wireName)) }
+                }
+                if ("requiresUserActivation" !in value.schema.raw) {
+                    value.requiresUserActivation?.let {
+                        put("requiresUserActivation", JsonPrimitive(it))
+                    }
                 }
             },
         )

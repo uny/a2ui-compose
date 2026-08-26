@@ -141,11 +141,17 @@ public fun interface ChildResolver {
 /**
  * The number of component instances [walk] will produce before giving up.
  *
- * A surface that expands past this is not something a renderer can usefully draw, and the number
- * is far above any hand-authored UI, so the only payloads it stops are the ones meant to exhaust
- * the renderer.
+ * This count is **not** a property of the authored UI. A [ChildList.Template] instantiates its
+ * subtree once per item of an array the *agent* sends, so a surface of a dozen components expands
+ * to whatever the data model happens to say: a table of 900 rows over 13 components is already
+ * 11,701 instances. So the number is set well above what a bound on hand-authored component count
+ * would justify, because that reasoning does not apply to the half of the expansion that data
+ * drives.
+ *
+ * It remains a bound, and [walk] still raises rather than truncating. A renderer that must show
+ * lists longer than this wants virtualization rather than a larger number here.
  */
-public const val DEFAULT_WALK_LIMIT: Int = 10_000
+public const val DEFAULT_WALK_LIMIT: Int = 100_000
 
 /**
  * How deeply [walk] will nest before giving up.
@@ -206,6 +212,17 @@ public fun SurfaceModel.walk(
         fun descend(id: ComponentId, childScope: EvaluationScope) {
             val child = components[id] ?: return
             if (ancestors.contains(child.id)) return
+            // Consulted before the frame is built, not after the reference is fully expanded.
+            // A `Template` bound to an agent-sent array of a million items would otherwise
+            // allocate a million frames — each holding a scope whose pointer is built eagerly —
+            // before the budget was read at all, which is both the cheapest way to exhaust the
+            // renderer and the one a bound checked afterwards does not close.
+            if (out.size + pending.size + children.size >= limit) {
+                throw A2uiStateException(
+                    "surface `$surfaceId` expands to more than $limit component instances.",
+                    surfaceId,
+                )
+            }
             children += Frame(child, childScope, ancestors)
         }
         for (reference in resolver.childrenOf(frame.component)) {
@@ -222,12 +239,6 @@ public fun SurfaceModel.walk(
                     }
                 }
             }
-        }
-        if (out.size + pending.size + children.size > limit) {
-            throw A2uiStateException(
-                "surface `$surfaceId` expands to more than $limit component instances.",
-                surfaceId,
-            )
         }
         // Reversed, so that popping from the end visits the children in the order the resolver
         // reported them.

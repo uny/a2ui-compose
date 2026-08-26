@@ -191,6 +191,54 @@ class SurfaceModelTest {
     }
 
     @Test
+    fun `a template stops at the limit instead of expanding the whole array first`() {
+        // The budget is consulted before each frame is built, so a template bound to a large
+        // agent-sent array cannot allocate one frame per item before the bound is read.
+        val items = (0 until 5_000).joinToString(",") { "{}" }
+        val model = surface(
+            """{"id": "root", "component": "List", "children": {"componentId": "row", "path": "/xs"}}""",
+            """{"id": "row", "component": "Text", "text": "x"}""",
+            data = """{"xs": [$items]}""",
+        )
+        val failure = assertFailsWith<A2uiStateException> { model.walk(resolver, limit = 10) }
+        assertEquals("s", failure.surfaceId)
+        // And the bound is exact, not approximate: a template of exactly `limit` instances
+        // walks, one more does not.
+        val small = surface(
+            """{"id": "root", "component": "List", "children": {"componentId": "row", "path": "/xs"}}""",
+            """{"id": "row", "component": "Text", "text": "x"}""",
+            data = """{"xs": [{}, {}, {}]}""",
+        )
+        assertEquals(4, small.walk(resolver, limit = 4).size)
+        assertFailsWith<A2uiStateException> { small.walk(resolver, limit = 3) }
+    }
+
+    @Test
+    fun `a surface whose root has not arrived walks to nothing`() {
+        // The common case between `createSurface` and the arrival of `root`.
+        assertEquals(emptyList(), surface(data = """{"xs": [{}]}""").walk(resolver))
+    }
+
+    @Test
+    fun `a nested template reads its array relative to the enclosing item`() {
+        val model = surface(
+            """{"id": "root", "component": "List", "children": {"componentId": "row", "path": "/rows"}}""",
+            """{"id": "row", "component": "List", "children": {"componentId": "cell", "path": "cells"}}""",
+            """{"id": "cell", "component": "Text", "text": {"path": "v"}}""",
+            data = """{"rows": [{"cells": [{"v": "a"}, {"v": "b"}]}, {"cells": [{"v": "c"}]}]}""",
+        )
+        val walked = model.walk(resolver)
+        assertEquals(listOf("root", "row", "cell", "cell", "row", "cell"), walked.map { it.first.id })
+        // If the inner template resolved `cells` from the root scope instead of the item, these
+        // would all read the same array — or nothing at all.
+        assertEquals(
+            listOf("a", "b", "c"),
+            walked.filter { it.first.id == "cell" }
+                .map { (_, scope) -> (model.read(JsonPointer.parse("v"), scope) as JsonPrimitive).content },
+        )
+    }
+
+    @Test
     fun `a chain at the depth bound walks and one past it is stopped`() {
         fun chain(depth: Int) = surface(
             *buildList {

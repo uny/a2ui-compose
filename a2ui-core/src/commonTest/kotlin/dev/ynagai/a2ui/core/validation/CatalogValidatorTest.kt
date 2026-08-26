@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -38,6 +39,21 @@ private fun checkCall(json: String): SchemaValidation = VALIDATOR.validate(call(
 
 private fun checkComponent(json: String): SchemaValidation =
     VALIDATOR.validate(component(json), BASIC_ID)
+
+private fun parseObject(source: String): JsonObject = Json.parseToJsonElement(source) as JsonObject
+
+/** A schema exercising the keywords only `catalog_definition.json` reaches. */
+private val KEYWORD_PROBE_SCHEMA = """
+{
+  "${'$'}id": "urn:probe",
+  "type": "object",
+  "properties": {
+    "tags": {"type": "array", "uniqueItems": true, "contains": {"type": "string"}},
+    "names": {"type": "object", "propertyNames": {"not": {"const": "Surface"}}},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+${'$'}"}
+  }
+}
+"""
 
 class CatalogValidatorTest {
     // --- catalog resolution order -------------------------------------------------------------
@@ -311,27 +327,71 @@ class CatalogValidatorTest {
     // --- coverage --------------------------------------------------------------------------------
 
     @Test
-    fun the_basic_catalog_uses_no_keyword_this_evaluator_skips() {
-        // The one assertion that keeps the subset honest. If the specification adds a keyword, or
-        // this evaluator loses one, a green conformance run would otherwise still mean nothing --
-        // an unapplied keyword shows up as acceptance, not as failure.
+    fun nothing_this_library_ships_uses_a_keyword_the_evaluator_skips() {
+        // The one assertion that keeps the subset honest, over every document that ships: the four
+        // protocol schemas, the published basic catalog, and the specification's own testing
+        // catalog. If the specification adds a keyword, or this evaluator loses one, a green
+        // conformance run would otherwise still mean nothing -- an unapplied keyword shows up as
+        // acceptance, not as failure.
         val seen = mutableSetOf<String>()
         fun walk(node: JsonElement, inNames: Boolean) {
             when (node) {
                 is JsonObject -> node.forEach { (key, value) ->
                     if (!inNames) seen += key
-                    walk(value, key == "properties" || key == "\$defs" || key == "patternProperties")
+                    walk(
+                        value,
+                        key == "properties" || key == "\$defs" || key == "patternProperties" ||
+                            key == "dependentSchemas",
+                    )
                 }
                 is kotlinx.serialization.json.JsonArray -> node.forEach { walk(it, false) }
                 else -> Unit
             }
         }
-        for (source in listOf(CatalogFixtures.BASIC)) {
+        for (document in ProtocolSchemas.documents) walk(document, inNames = false)
+        for (source in listOf(CatalogFixtures.BASIC, CatalogFixtures.TESTING)) {
             walk(Json.parseToJsonElement(source), inNames = false)
         }
-        val unhandled = seen.filter { it.startsWith("\$") || it in JSON_SCHEMA_KEYWORDS }
-            .filterNot { it in SUPPORTED_KEYWORDS || it in setOf("\$schema", "\$id", "\$defs") }
+        val unhandled = seen.filter { it in JSON_SCHEMA_KEYWORDS }
+            .filterNot { it in SUPPORTED_KEYWORDS }
         assertEquals(emptyList(), unhandled)
+    }
+
+    @Test
+    fun applies_the_keywords_only_the_protocol_schemas_use() {
+        // `uniqueItems`, `contains`, `propertyNames` and `pattern` appear in
+        // `catalog_definition.json` and nowhere in a catalog, so they have no coverage from the
+        // cases above -- and an unexercised keyword in a partial validator reads as acceptance.
+        val registry = SchemaRegistry.of(listOf(parseObject(KEYWORD_PROBE_SCHEMA)))
+        val evaluator = SchemaEvaluator(registry)
+        val at = SchemaLocation("urn:probe", "")
+        fun verdict(payload: String): Boolean = evaluator
+            .validate(parseObject(KEYWORD_PROBE_SCHEMA), at, Json.parseToJsonElement(payload))
+            .isValid
+
+        assertTrue(verdict("""{"tags": ["a", "b"], "names": {"ok": 1}, "version": "1.0.0"}"""))
+        assertFalse(verdict("""{"tags": ["a", "a"], "names": {}, "version": "1.0.0"}"""), "uniqueItems")
+        assertFalse(verdict("""{"tags": [], "names": {}, "version": "1.0.0"}"""), "contains")
+        assertFalse(
+            verdict("""{"tags": ["a"], "names": {"Surface": 1}, "version": "1.0.0"}"""),
+            "propertyNames",
+        )
+        assertFalse(verdict("""{"tags": ["a"], "names": {}, "version": "v1.0"}"""), "pattern")
+    }
+
+    @Test
+    fun reports_a_pattern_it_will_not_compile_rather_than_judging_it() {
+        // A catalog may be inlined by an agent, and a pattern is the one place a schema hands work
+        // to a backtracking engine. One that will not compile is not evidence about the payload.
+        val schema = """{"type": "string", "pattern": "("}"""
+        val registry = SchemaRegistry.of(listOf(parseObject("""{"${'$'}id": "urn:p"}""")))
+        val result = SchemaEvaluator(registry).validate(
+            parseObject(schema),
+            SchemaLocation("urn:p", ""),
+            Json.parseToJsonElement("\"anything\""),
+        )
+        assertTrue(result.isValid)
+        assertContains(result.unsupportedKeywords, "pattern")
     }
 }
 

@@ -351,6 +351,83 @@ public class SchemaEvaluator(
                         }
                     }
 
+                    "uniqueItems" -> {
+                        val array = instance as? JsonArray
+                        if (array != null && (value as? JsonPrimitive)?.booleanOrNull == true) {
+                            // Compared as elements, which is JSON Schema's equality: `1` and `1.0`
+                            // are the same number, and two objects are equal whatever order their
+                            // keys arrived in. `JsonPrimitive` keeps the text, so `1` and `1.0`
+                            // compare unequal here -- accepted, because refusing a duplicate the
+                            // agent did not write is worse than missing one it spelled twice.
+                            if (array.toSet().size != array.size) {
+                                reject("the entries must be distinct, and two are not.")
+                            }
+                        }
+                    }
+
+                    "contains" -> {
+                        val array = instance as? JsonArray
+                        if (array != null) {
+                            val matched = array.withIndex().any { (index, element) ->
+                                evaluate(
+                                    value,
+                                    location.child("contains"),
+                                    element,
+                                    at.index(index),
+                                    depth + 1,
+                                    collect = false,
+                                ).valid
+                            }
+                            if (!matched) reject("no entry is one the catalog allows here.")
+                        }
+                    }
+
+                    "propertyNames" -> {
+                        val obj = instance as? JsonObject
+                        if (obj != null) {
+                            for (name in obj.keys) {
+                                val outcome = evaluate(
+                                    value,
+                                    location.child("propertyNames"),
+                                    JsonPrimitive(name),
+                                    at.child(name),
+                                    depth + 1,
+                                    collect = false,
+                                )
+                                // The name itself, not the value under it -- so the message names
+                                // the key and quotes nothing from the instance's data.
+                                if (!outcome.valid) reject("`$name` is not a name allowed here.")
+                            }
+                        }
+                    }
+
+                    "minProperties", "maxProperties" -> {
+                        val obj = instance as? JsonObject
+                        val bound = (value as? JsonPrimitive)?.longOrNull
+                        if (obj != null && bound != null) {
+                            val tooFew = keyword == "minProperties" && obj.size < bound
+                            val tooMany = keyword == "maxProperties" && obj.size > bound
+                            if (tooFew || tooMany) {
+                                reject(
+                                    if (tooFew) "at least $bound properties are required, but there are ${obj.size}."
+                                    else "at most $bound properties are allowed, but there are ${obj.size}.",
+                                )
+                            }
+                        }
+                    }
+
+                    "pattern" -> {
+                        val text = (instance as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content
+                        val source = (value as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content
+                        if (text != null && source != null) {
+                            when (matchesPattern(source, text, limits)) {
+                                FormatVerdict.VALID -> Unit
+                                FormatVerdict.INVALID -> reject("does not have the form the catalog requires.")
+                                FormatVerdict.UNKNOWN -> unsupported += "pattern"
+                            }
+                        }
+                    }
+
                     "minItems" -> {
                         val array = instance as? JsonArray
                         val minimum = (value as? JsonPrimitive)?.longOrNull
@@ -627,7 +704,8 @@ private fun String.escapePointer(): String = replace("~", "~0").replace("/", "~1
 /** The keywords [SchemaEvaluator] applies. Anything else is reported rather than silently skipped. */
 internal val SUPPORTED_KEYWORDS: Set<String> = setOf(
     "\$ref", "type", "const", "enum", "required", "properties", "additionalProperties", "items",
-    "minItems", "minimum", "allOf", "anyOf", "oneOf", "not", "if", "then", "else", "format",
+    "minItems", "minimum", "maxProperties", "minProperties", "uniqueItems", "contains",
+    "propertyNames", "pattern", "allOf", "anyOf", "oneOf", "not", "if", "then", "else", "format",
     "patternProperties", "unevaluatedProperties",
 )
 

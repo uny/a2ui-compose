@@ -19,6 +19,9 @@ its own payload is validated against.
 |:--|:--|:--|
 | `v1_0/common_types.json` | [`a2ui-project/a2ui`](https://github.com/a2ui-project/a2ui) `specification/v1_0/json/common_types.json` | `b571daf8` |
 | `v1_0/agent_to_renderer.json` | [`a2ui-project/a2ui`](https://github.com/a2ui-project/a2ui) `specification/v1_0/json/agent_to_renderer.json` | `b571daf8` |
+| `v1_0/renderer_to_agent.json` | [`a2ui-project/a2ui`](https://github.com/a2ui-project/a2ui) `specification/v1_0/json/renderer_to_agent.json` | `b571daf8` |
+| `v1_0/catalog_definition.json` | [`a2ui-project/a2ui`](https://github.com/a2ui-project/a2ui) `specification/v1_0/json/catalog_definition.json` | `b571daf8` |
+| `v1_0/catalogs/testing.json` | [`a2ui-project/a2ui`](https://github.com/a2ui-project/a2ui) `specification/v1_0/test/testing_catalog.json` | `b571daf8` |
 | `v1_0/catalogs/basic.json` | [`a2ui-project/a2ui`](https://github.com/a2ui-project/a2ui) `specification/v1_0/catalogs/basic/catalog.json` | `b571daf8` |
 
 Licensed under the Apache License 2.0. See the repository's `NOTICE`.

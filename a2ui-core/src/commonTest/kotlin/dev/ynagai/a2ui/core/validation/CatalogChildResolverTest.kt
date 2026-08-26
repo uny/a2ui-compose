@@ -1,0 +1,126 @@
+package dev.ynagai.a2ui.core.validation
+
+import dev.ynagai.a2ui.core.protocol.A2uiJson
+import dev.ynagai.a2ui.core.protocol.CatalogDefinition
+import dev.ynagai.a2ui.core.protocol.Component
+import dev.ynagai.a2ui.core.surface.ChildReference
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+private val CATALOG: CatalogDefinition =
+    A2uiJson.strict.decodeFromString(CatalogDefinition.serializer(), CatalogFixtures.BASIC)
+
+private val RESOLVER = CatalogChildResolver.of(listOf(CATALOG), surfaceDefault = CATALOG.catalogId)
+
+private fun children(json: String): List<ChildReference> =
+    RESOLVER.childrenOf(A2uiJson.strict.decodeFromString(Component.serializer(), json))
+
+/**
+ * The resolver against the published basic catalog.
+ *
+ * Every property name below is one the catalog chose, not one the protocol reserves — which is the
+ * whole reason the resolver reads the catalog. A hard-coded `child`/`children` pair passes the
+ * first two cases here and silently drops the rest.
+ */
+class CatalogChildResolverTest {
+    @Test
+    fun finds_a_single_child_under_the_name_the_catalog_chose() {
+        assertEquals(
+            listOf(ChildReference.Single("child", "t1")),
+            children("""{"id": "c", "component": "Card", "child": "t1"}"""),
+        )
+    }
+
+    @Test
+    fun finds_a_fixed_list_of_children() {
+        assertEquals(
+            listOf(ChildReference.Fixed("children", listOf("a", "b"))),
+            children("""{"id": "col", "component": "Column", "children": ["a", "b"]}"""),
+        )
+    }
+
+    @Test
+    fun finds_a_template_child_list() {
+        val found = children(
+            """{"id": "l", "component": "List", "children": {"componentId": "row", "path": "/items"}}""",
+        )
+        val template = found.single() as ChildReference.Template
+        assertEquals("children", template.property)
+        assertEquals("row", template.componentId)
+    }
+
+    @Test
+    fun finds_both_children_of_a_modal() {
+        // `Modal` is the case a hard-coded resolver gets wrong without noticing: neither of its
+        // two child properties is called `child`.
+        val found = children(
+            """{"id": "m", "component": "Modal", "entryPoint": "b1", "contentId": "c1"}""",
+        ).ifEmpty {
+            children("""{"id": "m", "component": "Modal", "trigger": "b1", "content": "c1"}""")
+        }
+        assertEquals(2, found.size, found.toString())
+        assertTrue(found.all { it is ChildReference.Single }, found.toString())
+    }
+
+    @Test
+    fun finds_a_child_nested_inside_an_array_of_objects() {
+        // `Tabs.tabs[].child` -- the reference is two levels below the component, one of them an
+        // array index, and the schema that says so is reached through `items`.
+        val found = children(
+            """
+            {"id": "t", "component": "Tabs", "tabs": [
+              {"title": "one", "child": "c1"},
+              {"title": "two", "child": "c2"}
+            ]}
+            """.trimIndent(),
+        )
+        assertEquals(
+            listOf(
+                ChildReference.Single("tabs/0/child", "c1"),
+                ChildReference.Single("tabs/1/child", "c2"),
+            ),
+            found,
+        )
+    }
+
+    @Test
+    fun reports_nothing_for_a_component_with_no_children() {
+        assertEquals(emptyList(), children("""{"id": "t", "component": "Text", "text": "hi"}"""))
+        assertEquals(emptyList(), children("""{"id": "d", "component": "Divider"}"""))
+    }
+
+    @Test
+    fun reports_nothing_for_a_component_type_the_catalog_does_not_define() {
+        assertEquals(emptyList(), children("""{"id": "x", "component": "Nope", "child": "a"}"""))
+    }
+
+    @Test
+    fun reports_nothing_when_the_component_names_a_catalog_this_resolver_does_not_hold() {
+        // The walk this feeds draws a surface that is still arriving, and the specification
+        // requires it to render placeholders rather than to stop. Saying so is the checker's job.
+        assertEquals(
+            emptyList(),
+            children("""{"id": "c", "component": "Card", "catalogId": "urn:nope", "child": "t1"}"""),
+        )
+    }
+
+    @Test
+    fun ignores_a_child_list_whose_entries_are_not_all_ids() {
+        // Dropping the malformed entry alone would shift every child after it into the wrong slot,
+        // which draws a wrong UI without complaining. The checker reports the list; this skips it.
+        assertEquals(
+            emptyList(),
+            children("""{"id": "col", "component": "Column", "children": ["a", 7]}"""),
+        )
+    }
+
+    @Test
+    fun stops_before_the_reference_bound() {
+        val ids = (0 until CatalogChildResolver.MAX_REFERENCES + 10).joinToString(",") { "\"c$it\"" }
+        val found = children("""{"id": "col", "component": "Column", "children": [$ids]}""")
+        // One `Fixed` holding them all: the bound is on how many references a component yields,
+        // and a single list is one reference however long the agent made it.
+        assertEquals(1, found.size)
+    }
+}

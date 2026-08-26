@@ -24,14 +24,27 @@ public object ProtocolSchemas {
     public const val AGENT_TO_RENDERER_URI: String =
         "https://a2ui.org/specification/v1_0/agent_to_renderer.json"
 
+    /** The URI `renderer_to_agent.json` publishes as its `$id`. */
+    public const val RENDERER_TO_AGENT_URI: String =
+        "https://a2ui.org/specification/v1_0/renderer_to_agent.json"
+
     /** `common_types.json`. */
     public val commonTypes: JsonObject by lazy { parse(ProtocolSchemaSources.COMMON_TYPES) }
 
     /** `agent_to_renderer.json`. */
     public val agentToRenderer: JsonObject by lazy { parse(ProtocolSchemaSources.AGENT_TO_RENDERER) }
 
-    /** Both documents, in the shape [SchemaRegistry.of] takes. */
-    public val documents: List<JsonObject> get() = listOf(commonTypes, agentToRenderer)
+    /** `renderer_to_agent.json`. */
+    public val rendererToAgent: JsonObject by lazy { parse(ProtocolSchemaSources.RENDERER_TO_AGENT) }
+
+    /** `catalog_definition.json`, which describes a catalog rather than a message. */
+    public val catalogDefinition: JsonObject by lazy {
+        parse(ProtocolSchemaSources.CATALOG_DEFINITION)
+    }
+
+    /** Every document, in the shape [SchemaRegistry.of] takes. */
+    public val documents: List<JsonObject>
+        get() = listOf(commonTypes, agentToRenderer, rendererToAgent, catalogDefinition)
 
     /** Where a `FunctionCall` is checked from: `common_types.json#/$defs/FunctionCall`. */
     public val functionCall: SchemaLocation =
@@ -48,5 +61,28 @@ public object ProtocolSchemas {
     public val component: SchemaLocation =
         SchemaLocation(AGENT_TO_RENDERER_URI, "/\$defs/Component")
 
+    /**
+     * Where a whole message is checked from.
+     *
+     * Each document's root is a `oneOf` over the message types that travel in that direction, so
+     * validating against the root is what tells a `createSurface` from an `updateComponents`
+     * without the caller having to. It also reaches constraints no single component or call
+     * carries -- that a `createSurface` may not send an empty `components` array, say, which is
+     * `minItems` on the list rather than anything about the components in it.
+     */
+    public fun message(direction: MessageDirection): SchemaLocation = when (direction) {
+        MessageDirection.AGENT_TO_RENDERER -> SchemaLocation(AGENT_TO_RENDERER_URI, "")
+        MessageDirection.RENDERER_TO_AGENT -> SchemaLocation(RENDERER_TO_AGENT_URI, "")
+    }
+
     private fun parse(source: String): JsonObject = Json.parseToJsonElement(source) as JsonObject
+}
+
+/** Which way a message travels, which is what decides the schema it is checked against. */
+public enum class MessageDirection {
+    /** A message the agent sent, checked against `agent_to_renderer.json`. */
+    AGENT_TO_RENDERER,
+
+    /** A message the renderer sends, checked against `renderer_to_agent.json`. */
+    RENDERER_TO_AGENT,
 }

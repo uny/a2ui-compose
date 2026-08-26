@@ -138,6 +138,17 @@ final enum class dev.ynagai.a2ui.core.protocol/ValidationErrorCode : kotlin/Enum
     }
 }
 
+final enum class dev.ynagai.a2ui.core.validation/MessageDirection : kotlin/Enum<dev.ynagai.a2ui.core.validation/MessageDirection> { // dev.ynagai.a2ui.core.validation/MessageDirection|null[0]
+    enum entry AGENT_TO_RENDERER // dev.ynagai.a2ui.core.validation/MessageDirection.AGENT_TO_RENDERER|null[0]
+    enum entry RENDERER_TO_AGENT // dev.ynagai.a2ui.core.validation/MessageDirection.RENDERER_TO_AGENT|null[0]
+
+    final val entries // dev.ynagai.a2ui.core.validation/MessageDirection.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.ynagai.a2ui.core.validation/MessageDirection> // dev.ynagai.a2ui.core.validation/MessageDirection.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): dev.ynagai.a2ui.core.validation/MessageDirection // dev.ynagai.a2ui.core.validation/MessageDirection.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.ynagai.a2ui.core.validation/MessageDirection> // dev.ynagai.a2ui.core.validation/MessageDirection.values|values#static(){}[0]
+}
+
 abstract fun interface dev.ynagai.a2ui.core.function/UrlOpener { // dev.ynagai.a2ui.core.function/UrlOpener|null[0]
     abstract fun open(kotlin/String) // dev.ynagai.a2ui.core.function/UrlOpener.open|open(kotlin.String){}[0]
 }
@@ -1706,6 +1717,17 @@ final class dev.ynagai.a2ui.core.surface/SurfaceModel { // dev.ynagai.a2ui.core.
     final fun withDataModel(dev.ynagai.a2ui.core.surface/JsonPointer, kotlinx.serialization.json/JsonElement): dev.ynagai.a2ui.core.surface/SurfaceModel // dev.ynagai.a2ui.core.surface/SurfaceModel.withDataModel|withDataModel(dev.ynagai.a2ui.core.surface.JsonPointer;kotlinx.serialization.json.JsonElement){}[0]
 }
 
+final class dev.ynagai.a2ui.core.validation/CatalogChildResolver : dev.ynagai.a2ui.core.surface/ChildResolver { // dev.ynagai.a2ui.core.validation/CatalogChildResolver|null[0]
+    final fun childrenOf(dev.ynagai.a2ui.core.protocol/Component): kotlin.collections/List<dev.ynagai.a2ui.core.surface/ChildReference> // dev.ynagai.a2ui.core.validation/CatalogChildResolver.childrenOf|childrenOf(dev.ynagai.a2ui.core.protocol.Component){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.validation/CatalogChildResolver.Companion|null[0]
+        final const val MAX_REFERENCES // dev.ynagai.a2ui.core.validation/CatalogChildResolver.Companion.MAX_REFERENCES|{}MAX_REFERENCES[0]
+            final fun <get-MAX_REFERENCES>(): kotlin/Int // dev.ynagai.a2ui.core.validation/CatalogChildResolver.Companion.MAX_REFERENCES.<get-MAX_REFERENCES>|<get-MAX_REFERENCES>(){}[0]
+
+        final fun of(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>, kotlin/String? = ..., dev.ynagai.a2ui.core.validation/ValidationLimits = ...): dev.ynagai.a2ui.core.validation/CatalogChildResolver // dev.ynagai.a2ui.core.validation/CatalogChildResolver.Companion.of|of(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>;kotlin.String?;dev.ynagai.a2ui.core.validation.ValidationLimits){}[0]
+    }
+}
+
 final class dev.ynagai.a2ui.core.validation/CatalogValidator { // dev.ynagai.a2ui.core.validation/CatalogValidator|null[0]
     final val catalogIds // dev.ynagai.a2ui.core.validation/CatalogValidator.catalogIds|{}catalogIds[0]
         final fun <get-catalogIds>(): kotlin.collections/Set<kotlin/String> // dev.ynagai.a2ui.core.validation/CatalogValidator.catalogIds.<get-catalogIds>|<get-catalogIds>(){}[0]
@@ -1713,9 +1735,53 @@ final class dev.ynagai.a2ui.core.validation/CatalogValidator { // dev.ynagai.a2u
     final fun resolve(kotlin/String?, kotlin/String?): dev.ynagai.a2ui.core.validation/CatalogResolution // dev.ynagai.a2ui.core.validation/CatalogValidator.resolve|resolve(kotlin.String?;kotlin.String?){}[0]
     final fun validate(dev.ynagai.a2ui.core.protocol/Component, kotlin/String? = ...): dev.ynagai.a2ui.core.validation/SchemaValidation // dev.ynagai.a2ui.core.validation/CatalogValidator.validate|validate(dev.ynagai.a2ui.core.protocol.Component;kotlin.String?){}[0]
     final fun validate(dev.ynagai.a2ui.core.protocol/FunctionCall, kotlin/String? = ...): dev.ynagai.a2ui.core.validation/SchemaValidation // dev.ynagai.a2ui.core.validation/CatalogValidator.validate|validate(dev.ynagai.a2ui.core.protocol.FunctionCall;kotlin.String?){}[0]
+    final fun validateMessage(kotlinx.serialization.json/JsonElement, dev.ynagai.a2ui.core.validation/MessageDirection = ..., kotlin/String? = ...): dev.ynagai.a2ui.core.validation/SchemaValidation // dev.ynagai.a2ui.core.validation/CatalogValidator.validateMessage|validateMessage(kotlinx.serialization.json.JsonElement;dev.ynagai.a2ui.core.validation.MessageDirection;kotlin.String?){}[0]
 
     final object Companion { // dev.ynagai.a2ui.core.validation/CatalogValidator.Companion|null[0]
         final fun of(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>, dev.ynagai.a2ui.core.validation/ValidationLimits = ...): dev.ynagai.a2ui.core.validation/CatalogValidator // dev.ynagai.a2ui.core.validation/CatalogValidator.Companion.of|of(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>;dev.ynagai.a2ui.core.validation.ValidationLimits){}[0]
+    }
+}
+
+final class dev.ynagai.a2ui.core.validation/CompositionValidator { // dev.ynagai.a2ui.core.validation/CompositionValidator|null[0]
+    constructor <init>(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>, kotlin/String? = ...) // dev.ynagai.a2ui.core.validation/CompositionValidator.<init>|<init>(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>;kotlin.String?){}[0]
+
+    final fun validate(dev.ynagai.a2ui.core.surface/SurfaceModel, dev.ynagai.a2ui.core.surface/ChildResolver): kotlin.collections/List<dev.ynagai.a2ui.core.validation/CompositionViolation> // dev.ynagai.a2ui.core.validation/CompositionValidator.validate|validate(dev.ynagai.a2ui.core.surface.SurfaceModel;dev.ynagai.a2ui.core.surface.ChildResolver){}[0]
+}
+
+final class dev.ynagai.a2ui.core.validation/CompositionViolation { // dev.ynagai.a2ui.core.validation/CompositionViolation|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin/String?, kotlin/String, kotlin/String, kotlin/String) // dev.ynagai.a2ui.core.validation/CompositionViolation.<init>|<init>(kotlin.String;kotlin.String;kotlin.String?;kotlin.String;kotlin.String;kotlin.String){}[0]
+
+    final val child // dev.ynagai.a2ui.core.validation/CompositionViolation.child|{}child[0]
+        final fun <get-child>(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.child.<get-child>|<get-child>(){}[0]
+    final val childId // dev.ynagai.a2ui.core.validation/CompositionViolation.childId|{}childId[0]
+        final fun <get-childId>(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.childId.<get-childId>|<get-childId>(){}[0]
+    final val code // dev.ynagai.a2ui.core.validation/CompositionViolation.code|{}code[0]
+        final fun <get-code>(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.code.<get-code>|<get-code>(){}[0]
+    final val message // dev.ynagai.a2ui.core.validation/CompositionViolation.message|{}message[0]
+        final fun <get-message>(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.message.<get-message>|<get-message>(){}[0]
+    final val parent // dev.ynagai.a2ui.core.validation/CompositionViolation.parent|{}parent[0]
+        final fun <get-parent>(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.parent.<get-parent>|<get-parent>(){}[0]
+    final val parentId // dev.ynagai.a2ui.core.validation/CompositionViolation.parentId|{}parentId[0]
+        final fun <get-parentId>(): kotlin/String? // dev.ynagai.a2ui.core.validation/CompositionViolation.parentId.<get-parentId>|<get-parentId>(){}[0]
+    final val property // dev.ynagai.a2ui.core.validation/CompositionViolation.property|{}property[0]
+        final fun <get-property>(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.property.<get-property>|<get-property>(){}[0]
+
+    final fun component1(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.component2|component2(){}[0]
+    final fun component3(): kotlin/String? // dev.ynagai.a2ui.core.validation/CompositionViolation.component3|component3(){}[0]
+    final fun component4(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.component4|component4(){}[0]
+    final fun component5(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.component5|component5(){}[0]
+    final fun component6(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.component6|component6(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String? = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...): dev.ynagai.a2ui.core.validation/CompositionViolation // dev.ynagai.a2ui.core.validation/CompositionViolation.copy|copy(kotlin.String;kotlin.String;kotlin.String?;kotlin.String;kotlin.String;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.validation/CompositionViolation.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.validation/CompositionViolation.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.validation/CompositionViolation.Companion|null[0]
+        final const val UNALLOWED_CHILD // dev.ynagai.a2ui.core.validation/CompositionViolation.Companion.UNALLOWED_CHILD|{}UNALLOWED_CHILD[0]
+            final fun <get-UNALLOWED_CHILD>(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.Companion.UNALLOWED_CHILD.<get-UNALLOWED_CHILD>|<get-UNALLOWED_CHILD>(){}[0]
+        final const val UNALLOWED_PARENT // dev.ynagai.a2ui.core.validation/CompositionViolation.Companion.UNALLOWED_PARENT|{}UNALLOWED_PARENT[0]
+            final fun <get-UNALLOWED_PARENT>(): kotlin/String // dev.ynagai.a2ui.core.validation/CompositionViolation.Companion.UNALLOWED_PARENT.<get-UNALLOWED_PARENT>|<get-UNALLOWED_PARENT>(){}[0]
     }
 }
 
@@ -1804,19 +1870,25 @@ final class dev.ynagai.a2ui.core.validation/SchemaViolation { // dev.ynagai.a2ui
 }
 
 final class dev.ynagai.a2ui.core.validation/ValidationLimits { // dev.ynagai.a2ui.core.validation/ValidationLimits|null[0]
-    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.ynagai.a2ui.core.validation/ValidationLimits.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.ynagai.a2ui.core.validation/ValidationLimits.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
 
     final val maxDepth // dev.ynagai.a2ui.core.validation/ValidationLimits.maxDepth|{}maxDepth[0]
         final fun <get-maxDepth>(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.maxDepth.<get-maxDepth>|<get-maxDepth>(){}[0]
+    final val maxPatternLength // dev.ynagai.a2ui.core.validation/ValidationLimits.maxPatternLength|{}maxPatternLength[0]
+        final fun <get-maxPatternLength>(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.maxPatternLength.<get-maxPatternLength>|<get-maxPatternLength>(){}[0]
     final val maxSteps // dev.ynagai.a2ui.core.validation/ValidationLimits.maxSteps|{}maxSteps[0]
         final fun <get-maxSteps>(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.maxSteps.<get-maxSteps>|<get-maxSteps>(){}[0]
+    final val maxSubjectLength // dev.ynagai.a2ui.core.validation/ValidationLimits.maxSubjectLength|{}maxSubjectLength[0]
+        final fun <get-maxSubjectLength>(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.maxSubjectLength.<get-maxSubjectLength>|<get-maxSubjectLength>(){}[0]
     final val maxViolations // dev.ynagai.a2ui.core.validation/ValidationLimits.maxViolations|{}maxViolations[0]
         final fun <get-maxViolations>(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.maxViolations.<get-maxViolations>|<get-maxViolations>(){}[0]
 
     final fun component1(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.component1|component1(){}[0]
     final fun component2(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.component2|component2(){}[0]
     final fun component3(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.component3|component3(){}[0]
-    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): dev.ynagai.a2ui.core.validation/ValidationLimits // dev.ynagai.a2ui.core.validation/ValidationLimits.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun component4(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.component4|component4(){}[0]
+    final fun component5(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.component5|component5(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): dev.ynagai.a2ui.core.validation/ValidationLimits // dev.ynagai.a2ui.core.validation/ValidationLimits.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.validation/ValidationLimits.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.validation/ValidationLimits.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.ynagai.a2ui.core.validation/ValidationLimits.toString|toString(){}[0]
@@ -1875,9 +1947,13 @@ final object dev.ynagai.a2ui.core.validation/ProtocolSchemas { // dev.ynagai.a2u
         final fun <get-AGENT_TO_RENDERER_URI>(): kotlin/String // dev.ynagai.a2ui.core.validation/ProtocolSchemas.AGENT_TO_RENDERER_URI.<get-AGENT_TO_RENDERER_URI>|<get-AGENT_TO_RENDERER_URI>(){}[0]
     final const val COMMON_TYPES_URI // dev.ynagai.a2ui.core.validation/ProtocolSchemas.COMMON_TYPES_URI|{}COMMON_TYPES_URI[0]
         final fun <get-COMMON_TYPES_URI>(): kotlin/String // dev.ynagai.a2ui.core.validation/ProtocolSchemas.COMMON_TYPES_URI.<get-COMMON_TYPES_URI>|<get-COMMON_TYPES_URI>(){}[0]
+    final const val RENDERER_TO_AGENT_URI // dev.ynagai.a2ui.core.validation/ProtocolSchemas.RENDERER_TO_AGENT_URI|{}RENDERER_TO_AGENT_URI[0]
+        final fun <get-RENDERER_TO_AGENT_URI>(): kotlin/String // dev.ynagai.a2ui.core.validation/ProtocolSchemas.RENDERER_TO_AGENT_URI.<get-RENDERER_TO_AGENT_URI>|<get-RENDERER_TO_AGENT_URI>(){}[0]
 
     final val agentToRenderer // dev.ynagai.a2ui.core.validation/ProtocolSchemas.agentToRenderer|{}agentToRenderer[0]
         final fun <get-agentToRenderer>(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.validation/ProtocolSchemas.agentToRenderer.<get-agentToRenderer>|<get-agentToRenderer>(){}[0]
+    final val catalogDefinition // dev.ynagai.a2ui.core.validation/ProtocolSchemas.catalogDefinition|{}catalogDefinition[0]
+        final fun <get-catalogDefinition>(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.validation/ProtocolSchemas.catalogDefinition.<get-catalogDefinition>|<get-catalogDefinition>(){}[0]
     final val commonTypes // dev.ynagai.a2ui.core.validation/ProtocolSchemas.commonTypes|{}commonTypes[0]
         final fun <get-commonTypes>(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.validation/ProtocolSchemas.commonTypes.<get-commonTypes>|<get-commonTypes>(){}[0]
     final val component // dev.ynagai.a2ui.core.validation/ProtocolSchemas.component|{}component[0]
@@ -1886,6 +1962,10 @@ final object dev.ynagai.a2ui.core.validation/ProtocolSchemas { // dev.ynagai.a2u
         final fun <get-documents>(): kotlin.collections/List<kotlinx.serialization.json/JsonObject> // dev.ynagai.a2ui.core.validation/ProtocolSchemas.documents.<get-documents>|<get-documents>(){}[0]
     final val functionCall // dev.ynagai.a2ui.core.validation/ProtocolSchemas.functionCall|{}functionCall[0]
         final fun <get-functionCall>(): dev.ynagai.a2ui.core.validation/SchemaLocation // dev.ynagai.a2ui.core.validation/ProtocolSchemas.functionCall.<get-functionCall>|<get-functionCall>(){}[0]
+    final val rendererToAgent // dev.ynagai.a2ui.core.validation/ProtocolSchemas.rendererToAgent|{}rendererToAgent[0]
+        final fun <get-rendererToAgent>(): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.validation/ProtocolSchemas.rendererToAgent.<get-rendererToAgent>|<get-rendererToAgent>(){}[0]
+
+    final fun message(dev.ynagai.a2ui.core.validation/MessageDirection): dev.ynagai.a2ui.core.validation/SchemaLocation // dev.ynagai.a2ui.core.validation/ProtocolSchemas.message|message(dev.ynagai.a2ui.core.validation.MessageDirection){}[0]
 }
 
 final object dev.ynagai.a2ui.core/A2ui { // dev.ynagai.a2ui.core/A2ui|null[0]

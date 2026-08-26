@@ -77,6 +77,21 @@ public data class ValidationLimits(
     public val maxSteps: Int = 100_000,
     /** How many violations one validation reports before it stops describing them. */
     public val maxViolations: Int = 32,
+    /**
+     * The longest `pattern` this will hand to [Regex].
+     *
+     * Mirrors the function evaluator's bound of the same name and exists for the same reason: a
+     * pattern that arrives with an inlined catalog is agent-controlled.
+     */
+    public val maxPatternLength: Int = 1_024,
+    /**
+     * The longest string a `pattern` will be matched against.
+     *
+     * A stack-depth bound rather than a length one. A backtracking engine recurses roughly once
+     * per character of a quantified group, and Kotlin/Native aborts the process on overflow
+     * instead of raising.
+     */
+    public val maxSubjectLength: Int = 2_048,
 ) {
     public companion object {
         /** The bounds used when a caller does not choose. */
@@ -232,4 +247,39 @@ internal fun JsonElement.describeLiteral(): String = when (this) {
     is JsonPrimitive -> if (isString) "`$content`" else content
     is JsonArray -> "an array of ${size} entries"
     is JsonObject -> "an object"
+}
+
+/**
+ * Whether [text] matches [source], under the same bounds the function evaluator's `regex` runs
+ * with, or [FormatVerdict.UNKNOWN] when it cannot be judged.
+ *
+ * A pattern reaches this from a catalog, and once a catalog may be inlined in a capabilities
+ * message that means it reaches this from an agent. Backtracking blow-up is not something a bound
+ * prevents — `(a+)+$` is quadratic or worse on every platform's engine — so what these do is cap
+ * how bad it gets. The subject bound is a stack-depth bound wearing a length's clothing: an
+ * ordinary quantified group recurses once per character, and Kotlin/Native answers an overflow by
+ * aborting the process rather than by raising something a `catch` can see.
+ *
+ * A pattern that will not compile is [FormatVerdict.UNKNOWN] rather than a failure, because a
+ * catalog this evaluator cannot read is not evidence about the payload. The failure is caught as
+ * [Throwable]: Kotlin/JS lets the engine's own `SyntaxError` through where every other target
+ * raises [IllegalArgumentException].
+ *
+ * **The verdict is not identical across targets.** `\s` covers six ASCII characters on the JVM and
+ * on Native and the whole Unicode space separator category on JS, and a handful of other escapes
+ * differ the same way. A catalog whose pattern uses one will accept a payload on Android and
+ * refuse it on the web. Nothing here can fix that — it is a property of the engines — so it is
+ * written down instead.
+ */
+internal fun matchesPattern(source: String, text: String, limits: ValidationLimits): FormatVerdict {
+    if (source.length > limits.maxPatternLength) return FormatVerdict.UNKNOWN
+    if (text.length > limits.maxSubjectLength) return FormatVerdict.UNKNOWN
+    val regex = try {
+        Regex(source)
+    } catch (failure: Throwable) {
+        return FormatVerdict.UNKNOWN
+    }
+    // `containsMatchIn`, not `matches`: JSON Schema's `pattern` is a search, and every pattern in
+    // v1.0 anchors itself.
+    return if (regex.containsMatchIn(text)) FormatVerdict.VALID else FormatVerdict.INVALID
 }

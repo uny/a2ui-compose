@@ -70,6 +70,8 @@ val generateProtocolSchemas = embedSchemas(
     documents = mapOf(
         "COMMON_TYPES" to "v1_0/common_types.json",
         "AGENT_TO_RENDERER" to "v1_0/agent_to_renderer.json",
+        "RENDERER_TO_AGENT" to "v1_0/renderer_to_agent.json",
+        "CATALOG_DEFINITION" to "v1_0/catalog_definition.json",
     ),
 )
 
@@ -85,7 +87,10 @@ val generateCatalogFixtures = embedSchemas(
     taskName = "generateCatalogFixtures",
     packageName = "dev.ynagai.a2ui.core.validation",
     objectName = "CatalogFixtures",
-    documents = mapOf("BASIC" to "v1_0/catalogs/basic.json"),
+    documents = mapOf(
+        "BASIC" to "v1_0/catalogs/basic.json",
+        "TESTING" to "v1_0/catalogs/testing.json",
+    ),
 )
 
 kotlin {

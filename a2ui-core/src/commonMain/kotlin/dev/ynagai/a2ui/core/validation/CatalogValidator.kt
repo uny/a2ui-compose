@@ -128,6 +128,34 @@ public class CatalogValidator private constructor(
         }
     }
 
+    /**
+     * Whether a whole message, still in its wire form, matches the schema for its direction.
+     *
+     * This is the entry the conformance harness uses, and it reaches what the per-element checks
+     * cannot: an envelope key no message defines, a `createSurface` whose `components` array is
+     * empty, a `callRendererFunction` that omits the `catalogId` its own definition requires. Each
+     * of those is a constraint on the message, not on anything inside it.
+     *
+     * [catalogId] binds the `catalog.json` placeholder for the whole message. It is passed rather
+     * than read from the payload because a message may carry a `catalogId` per component, while
+     * the placeholder resolves once — the specification's own harness binds it per test suite for
+     * exactly this reason. For a live surface, pass the id the surface was created with; the
+     * per-element checks are what apply a component's own override.
+     *
+     * Takes the raw element rather than a decoded message on purpose. A decoded one has already
+     * been through the model's own strict parse, which refuses much of what this is meant to
+     * report on — a payload that fails to decode never reaches a checker at all.
+     */
+    public fun validateMessage(
+        message: JsonElement,
+        direction: MessageDirection = MessageDirection.AGENT_TO_RENDERER,
+        catalogId: String? = null,
+    ): SchemaValidation = evaluate(
+        registry = registryFor(catalogId),
+        location = ProtocolSchemas.message(direction),
+        instance = message,
+    )
+
     private fun evaluate(
         registry: SchemaRegistry,
         location: SchemaLocation,

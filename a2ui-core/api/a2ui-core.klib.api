@@ -723,6 +723,8 @@ final class dev.ynagai.a2ui.core.protocol/CatalogDefinition { // dev.ynagai.a2ui
     final object Companion { // dev.ynagai.a2ui.core.protocol/CatalogDefinition.Companion|null[0]
         final const val DEFAULT_PROTOCOL_VERSION // dev.ynagai.a2ui.core.protocol/CatalogDefinition.Companion.DEFAULT_PROTOCOL_VERSION|{}DEFAULT_PROTOCOL_VERSION[0]
             final fun <get-DEFAULT_PROTOCOL_VERSION>(): kotlin/String // dev.ynagai.a2ui.core.protocol/CatalogDefinition.Companion.DEFAULT_PROTOCOL_VERSION.<get-DEFAULT_PROTOCOL_VERSION>|<get-DEFAULT_PROTOCOL_VERSION>(){}[0]
+        final const val PROTOCOL_VERSION // dev.ynagai.a2ui.core.protocol/CatalogDefinition.Companion.PROTOCOL_VERSION|{}PROTOCOL_VERSION[0]
+            final fun <get-PROTOCOL_VERSION>(): kotlin/String // dev.ynagai.a2ui.core.protocol/CatalogDefinition.Companion.PROTOCOL_VERSION.<get-PROTOCOL_VERSION>|<get-PROTOCOL_VERSION>(){}[0]
 
         final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/CatalogDefinition> // dev.ynagai.a2ui.core.protocol/CatalogDefinition.Companion.serializer|serializer(){}[0]
     }
@@ -1149,18 +1151,7 @@ final class dev.ynagai.a2ui.core.protocol/RendererDataModel { // dev.ynagai.a2ui
     final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/RendererDataModel.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/RendererDataModel.toString|toString(){}[0]
 
-    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.ynagai.a2ui.core.protocol/RendererDataModel> { // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer|null[0]
-        final val descriptor // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer.descriptor|{}descriptor[0]
-            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
-
-        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer.childSerializers|childSerializers(){}[0]
-        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.ynagai.a2ui.core.protocol/RendererDataModel // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
-        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.ynagai.a2ui.core.protocol/RendererDataModel) // dev.ynagai.a2ui.core.protocol/RendererDataModel.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.ynagai.a2ui.core.protocol.RendererDataModel){}[0]
-    }
-
     final object Companion { // dev.ynagai.a2ui.core.protocol/RendererDataModel.Companion|null[0]
-        final val $childSerializers // dev.ynagai.a2ui.core.protocol/RendererDataModel.Companion.$childSerializers|{}$childSerializers[0]
-
         final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/RendererDataModel> // dev.ynagai.a2ui.core.protocol/RendererDataModel.Companion.serializer|serializer(){}[0]
     }
 }

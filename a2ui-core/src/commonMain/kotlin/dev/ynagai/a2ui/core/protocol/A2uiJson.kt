@@ -8,6 +8,11 @@ import kotlinx.serialization.json.Json
  *
  * This is a [SerializationException], so a caller that already catches serialization failures
  * catches these too.
+ *
+ * Note that catching [SerializationException] is not sufficient on its own for untrusted input:
+ * neither this library nor `kotlinx.serialization` bounds nesting depth, so a deeply nested
+ * payload fails with a [StackOverflowError] — an `Error`, not an exception. Bound the size and
+ * nesting of a payload at the transport before handing it to [A2uiJson].
  */
 public class A2uiFormatException(
     message: String,

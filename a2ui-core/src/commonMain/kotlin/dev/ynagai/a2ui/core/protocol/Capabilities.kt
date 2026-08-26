@@ -10,6 +10,7 @@ import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
 /**
@@ -63,11 +64,20 @@ public data class RendererCapabilitiesV1(
  *
  * Sent when a surface was created with `sendDataModel`.
  */
-@Serializable
+@Serializable(with = RendererDataModelSerializer::class)
 public data class RendererDataModel(
     public val version: String = A2ui.PROTOCOL_VERSION,
     public val surfaces: Map<String, JsonObject>,
-)
+) {
+    init {
+        if (version != A2ui.PROTOCOL_VERSION) {
+            throw A2uiFormatException(
+                "renderer data model: unsupported protocol version `$version`; this library " +
+                    "implements ${A2ui.PROTOCOL_VERSION} only.",
+            )
+        }
+    }
+}
 
 // --- serializers ---------------------------------------------------------------------------
 
@@ -102,7 +112,49 @@ internal abstract class VersionKeyedSerializer<T : Any, V : Any>(
         json.encodeJsonElement(
             buildJsonObject {
                 put(A2ui.PROTOCOL_VERSION, json.json.encodeToJsonElement(version, v1Of(value)))
-                otherVersionsOf(value).forEach { (key, element) -> put(key, element) }
+                otherVersionsOf(value).carryThrough(setOf(A2ui.PROTOCOL_VERSION))
+                    .forEach { (key, element) -> put(key, element) }
+            },
+        )
+    }
+}
+
+/**
+ * Reads [RendererDataModel], rejecting a payload that declares another protocol version.
+ *
+ * The generated serializer would substitute the default for an absent `version` and accept any
+ * string for a present one, which is the opposite of what every message envelope does.
+ */
+internal object RendererDataModelSerializer : KSerializer<RendererDataModel> {
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    override val descriptor: SerialDescriptor = SerialDescriptor(
+        "dev.ynagai.a2ui.core.protocol.RendererDataModel",
+        JsonElement.serializer().descriptor,
+    )
+
+    override fun deserialize(decoder: Decoder): RendererDataModel {
+        val json = (decoder as JsonDecoder).json
+        val obj = decoder.jsonObjectOrFail("renderer data model")
+        obj.rejectUnknownKeys(setOf("version", "surfaces"), "renderer data model", decoder)
+        val version = obj.requiredString("version", "renderer data model")
+        val surfaces = obj.optionalObject("surfaces", "renderer data model")
+            ?: throw A2uiFormatException("renderer data model: `surfaces` is required.")
+        return RendererDataModel(
+            version = version,
+            surfaces = surfaces.mapValues { (key, element) ->
+                element as? JsonObject
+                    ?: throw A2uiFormatException(
+                        "renderer data model: surface `$key` must be an object.",
+                    )
+            },
+        )
+    }
+
+    override fun serialize(encoder: Encoder, value: RendererDataModel) {
+        (encoder as JsonEncoder).encodeJsonElement(
+            buildJsonObject {
+                put("version", JsonPrimitive(value.version))
+                put("surfaces", JsonObject(value.surfaces))
             },
         )
     }

@@ -1,6 +1,7 @@
 package dev.ynagai.a2ui.core.protocol
 
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
@@ -59,8 +60,13 @@ public data class RendererFunctionResponseMessage(
 /** The three reserved codes that select the structured error shape. */
 @Serializable
 public enum class ValidationErrorCode(public val wireName: String) {
+    @SerialName("VALIDATION_FAILED")
     VALIDATION_FAILED("VALIDATION_FAILED"),
+
+    @SerialName("UNALLOWED_PARENT")
     UNALLOWED_PARENT("UNALLOWED_PARENT"),
+
+    @SerialName("UNALLOWED_CHILD")
     UNALLOWED_CHILD("UNALLOWED_CHILD"),
     ;
 
@@ -141,17 +147,14 @@ internal object ActionMessageSerializer : KSerializer<ActionMessage> {
     override fun deserialize(decoder: Decoder): ActionMessage {
         val json = (decoder as JsonDecoder).json
         val obj = decoder.jsonObjectOrFail("action")
-        fun required(key: String): String =
-            (obj[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
-                ?: throw A2uiFormatException("action: `$key` is required and must be a string.")
         return ActionMessage(
-            name = required("name"),
-            surfaceId = required("surfaceId"),
-            sourceComponentId = required("sourceComponentId"),
-            timestamp = required("timestamp"),
-            context = obj["context"] as? JsonObject
+            name = obj.requiredString("name", "action"),
+            surfaceId = obj.requiredString("surfaceId", "action"),
+            sourceComponentId = obj.requiredString("sourceComponentId", "action"),
+            timestamp = obj.requiredString("timestamp", "action"),
+            context = obj.optionalObject("context", "action")
                 ?: throw A2uiFormatException("action: `context` is required and must be an object."),
-            userMessage = (obj["userMessage"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+            userMessage = obj.optionalString("userMessage", "action"),
             metadata = obj["metadata"]?.let {
                 json.decodeFromJsonElement(Metadata.serializer(), it)
             },
@@ -172,7 +175,9 @@ internal object ActionMessageSerializer : KSerializer<ActionMessage> {
                 value.metadata?.let {
                     put("metadata", json.json.encodeToJsonElement(Metadata.serializer(), it))
                 }
-                value.additional.forEach { (key, element) -> put(key, element) }
+                value.additional.carryThrough(MODELLED).forEach { (key, element) ->
+                    put(key, element)
+                }
             },
         )
     }
@@ -203,27 +208,30 @@ internal object RendererErrorMessageSerializer : KSerializer<RendererErrorMessag
 
     override fun deserialize(decoder: Decoder): RendererErrorMessage {
         val obj = decoder.jsonObjectOrFail("error")
-        val code = (obj["code"] as? JsonPrimitive)?.takeIf { it.isString }?.content
-            ?: throw A2uiFormatException("error: `code` is required and must be a string.")
-        val message = (obj["message"] as? JsonPrimitive)?.takeIf { it.isString }?.content
-            ?: throw A2uiFormatException("error: `message` is required and must be a string.")
+        val code = obj.requiredString("code", "error")
+        val message = obj.requiredString("message", "error")
         val reserved = ValidationErrorCode.byWireName[code]
         if (reserved != null) {
             obj.rejectUnknownKeys(VALIDATION_KEYS, "error", decoder)
-            val surfaceId = (obj["surfaceId"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            val surfaceId = obj.optionalString("surfaceId", "error")
                 ?: throw A2uiFormatException("error: `$code` requires `surfaceId`.")
-            val path = (obj["path"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            val path = obj.optionalString("path", "error")
                 ?: throw A2uiFormatException("error: `$code` requires `path`.")
             return RendererErrorMessage.Validation(reserved, surfaceId, path, message)
         }
-        val surfaceId = (obj["surfaceId"] as? JsonPrimitive)?.takeIf { it.isString }?.content
-        val callId = (obj["functionCallId"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        // Exclusivity is decided by which keys are PRESENT, not by which of them happened to
+        // parse as a string. Reading a wrong-typed `surfaceId` as absent would let a payload
+        // carrying both keys through the `oneOf` and then drop the offending one on re-encode.
         val scope = when {
-            surfaceId != null && callId != null -> throw A2uiFormatException(
+            "surfaceId" in obj && "functionCallId" in obj -> throw A2uiFormatException(
                 "error: `surfaceId` and `functionCallId` are mutually exclusive.",
             )
-            surfaceId != null -> RendererErrorMessage.Scope.OnSurface(surfaceId)
-            callId != null -> RendererErrorMessage.Scope.OnCall(callId)
+            "surfaceId" in obj -> RendererErrorMessage.Scope.OnSurface(
+                obj.requiredString("surfaceId", "error"),
+            )
+            "functionCallId" in obj -> RendererErrorMessage.Scope.OnCall(
+                obj.requiredString("functionCallId", "error"),
+            )
             else -> throw A2uiFormatException(
                 "error: requires either `surfaceId` or `functionCallId`.",
             )
@@ -255,7 +263,9 @@ internal object RendererErrorMessageSerializer : KSerializer<RendererErrorMessag
                             is RendererErrorMessage.Scope.OnCall ->
                                 put("functionCallId", JsonPrimitive(scope.functionCallId))
                         }
-                        value.additional.forEach { (key, element) -> put(key, element) }
+                        value.additional.carryThrough(GENERIC_MODELLED).forEach { (key, element) ->
+                            put(key, element)
+                        }
                     }
                 }
             },

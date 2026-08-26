@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 
 /** The identifier of a component, unique within its surface. */
@@ -30,7 +31,13 @@ public typealias Child = ComponentId
  */
 public typealias Extensions = Map<String, JsonElement>
 
-/** The reserved canonical container component that every surface is implicitly rooted in. */
+/**
+ * The reserved canonical container component that every surface is implicitly rooted in.
+ *
+ * Neither name below is enforced while decoding — a payload may name a `Surface` component or
+ * omit `root`, and this model will read it. Refusing those is the validator's job, the same way
+ * [Extensions] key rules are.
+ */
 public object Surface {
     /** The component type name, which a catalog may not define and a message may not create. */
     public const val COMPONENT: String = "Surface"
@@ -177,6 +184,55 @@ internal fun JsonObject.rejectUnknownKeys(allowed: Set<String>, owner: String, d
         throw A2uiFormatException("$owner: unexpected ${unknown.joinToString()}.")
     }
 }
+
+/**
+ * Reads an optional string, rejecting a value of the wrong JSON type rather than reading it as
+ * absent.
+ *
+ * A key the model names is a key the model is responsible for. Reading `"protocolVersion": 1.0`
+ * as absent applies a default the payload never asked for, and — because a modelled key is also
+ * filtered out of the carry-through bag its object may have — drops the offending value on the
+ * way back out, so the malformed input is neither honoured, preserved, nor reported. The
+ * malformed-value case is already rejected everywhere (an unknown `allowedCallers` string
+ * throws); this keeps the malformed-*type* case from being the weaker one.
+ */
+internal fun JsonObject.optionalString(key: String, owner: String): String? {
+    val value = this[key] ?: return null
+    return (value as? JsonPrimitive)?.takeIf { it.isString }?.content
+        ?: throw A2uiFormatException("$owner: `$key` must be a string.")
+}
+
+/** [optionalString]'s rule for a boolean-valued key. */
+internal fun JsonObject.optionalBoolean(key: String, owner: String): Boolean? {
+    val value = this[key] ?: return null
+    return (value as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull
+        ?: throw A2uiFormatException("$owner: `$key` must be a boolean.")
+}
+
+/** [optionalString]'s rule for a key whose value must be a nested object. */
+internal fun JsonObject.optionalObject(key: String, owner: String): JsonObject? {
+    val value = this[key] ?: return null
+    return value as? JsonObject
+        ?: throw A2uiFormatException("$owner: `$key` must be an object.")
+}
+
+/**
+ * Drops the keys [modelled] owns from a carry-through bag before it is written out.
+ *
+ * The bags exist to preserve what the model does not name. A bag entry that collides with a
+ * modelled key is therefore not something to preserve — writing it would let, say, a catalog
+ * property named `id` decide a component's identity. Filtering rather than reordering keeps the
+ * modelled keys in their original positions, which is what makes a decoded payload re-encode to
+ * the bytes it came from.
+ */
+internal fun Map<String, JsonElement>.carryThrough(
+    modelled: Set<String>,
+): Map<String, JsonElement> = if (keys.none { it in modelled }) this else filterKeys { it !in modelled }
+
+/** [optionalString]'s rule for a key the schema marks required. */
+internal fun JsonObject.requiredString(key: String, owner: String): String =
+    optionalString(key, owner)
+        ?: throw A2uiFormatException("$owner: `$key` is required and must be a string.")
 
 internal object BoundValueSerializer : KSerializer<BoundValue> {
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)

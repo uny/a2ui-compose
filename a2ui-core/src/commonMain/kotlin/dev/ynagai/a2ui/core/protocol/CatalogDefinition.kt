@@ -122,7 +122,13 @@ public data class FunctionCallValidationSchema(public val raw: JsonObject) {
     public val argsSchema: JsonObject?
         get() = (raw["properties"] as? JsonObject)?.get("args") as? JsonObject
 
-    /** The keys the call object must carry. Always contains `call`. */
+    /**
+     * The keys the call object must carry, or empty when the definition omits `required`.
+     *
+     * A conformant v1.0 definition lists `call`, but an `allOf`-shaped one carries its `required`
+     * inside a branch — so a caller must treat an empty list as "this definition does not say",
+     * not as "nothing is required".
+     */
     public val required: List<String>
         get() = (raw["required"] as? kotlinx.serialization.json.JsonArray)
             ?.mapNotNull { (it as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content }
@@ -190,6 +196,16 @@ public data class CatalogDefinition(
     public companion object {
         /** The version a catalog that omits `protocolVersion` is read as declaring. */
         public const val DEFAULT_PROTOCOL_VERSION: String = "0.9"
+
+        /**
+         * The value [protocolVersion] carries on a v1.0 catalog.
+         *
+         * Note the spelling: a catalog says `"1.0"`, while the message envelope and the
+         * capabilities key say `"v1.0"` ([dev.ynagai.a2ui.core.A2ui.PROTOCOL_VERSION]). They are
+         * not interchangeable, so comparing [effectiveProtocolVersion] against the envelope
+         * constant is always false — compare against this one.
+         */
+        public const val PROTOCOL_VERSION: String = "1.0"
     }
 }
 
@@ -208,14 +224,14 @@ internal object ValidationResultSerializer : KSerializer<ValidationResult> {
         val obj = decoder.jsonObjectOrFail("ValidationResult")
         val valid = (obj["valid"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull
             ?: throw A2uiFormatException("ValidationResult: `valid` is required and must be a boolean.")
-        val severity = (obj["severity"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.let { name ->
+        val severity = obj.optionalString("severity", "ValidationResult")?.let { name ->
             Severity.entries.firstOrNull { it.wireName == name }
                 ?: throw A2uiFormatException("ValidationResult: `$name` is not a severity.")
         }
         return ValidationResult(
             valid = valid,
-            code = (obj["code"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
-            message = (obj["message"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+            code = obj.optionalString("code", "ValidationResult"),
+            message = obj.optionalString("message", "ValidationResult"),
             severity = severity,
             additional = obj.filterKeys { it !in MODELLED },
         )
@@ -224,11 +240,11 @@ internal object ValidationResultSerializer : KSerializer<ValidationResult> {
     override fun serialize(encoder: Encoder, value: ValidationResult) {
         (encoder as JsonEncoder).encodeJsonElement(
             buildJsonObject {
+                value.additional.forEach { (key, element) -> put(key, element) }
                 put("valid", JsonPrimitive(value.valid))
                 value.code?.let { put("code", JsonPrimitive(it)) }
                 value.message?.let { put("message", JsonPrimitive(it)) }
                 value.severity?.let { put("severity", JsonPrimitive(it.wireName)) }
-                value.additional.forEach { (key, element) -> put(key, element) }
             },
         )
     }
@@ -255,7 +271,17 @@ internal object ComponentDefinitionSerializer : KSerializer<ComponentDefinition>
     }
 
     override fun serialize(encoder: Encoder, value: ComponentDefinition) {
-        (encoder as JsonEncoder).encodeJsonElement(value.schema)
+        val json = encoder as JsonEncoder
+        json.encodeJsonElement(
+            buildJsonObject {
+                value.schema.forEach { (key, element) -> put(key, element) }
+                value.allowedParents?.let { put("allowedParents", stringArray(it)) }
+                value.allowedChildren?.let { put("allowedChildren", stringArray(it)) }
+                value.metadata?.let {
+                    put("metadata", json.json.encodeToJsonElement(Metadata.serializer(), it))
+                }
+            },
+        )
     }
 }
 
@@ -268,11 +294,11 @@ internal object FunctionDefinitionSerializer : KSerializer<FunctionDefinition> {
 
     override fun deserialize(decoder: Decoder): FunctionDefinition {
         val obj = decoder.jsonObjectOrFail("FunctionDefinition")
-        val returnTypeName = (obj["returnType"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        val returnTypeName = obj.optionalString("returnType", "FunctionDefinition")
             ?: throw A2uiFormatException("FunctionDefinition: `returnType` is required.")
         val returnType = ReturnType.byWireName[returnTypeName]
             ?: throw A2uiFormatException("FunctionDefinition: `$returnTypeName` is not a return type.")
-        val callersName = (obj["allowedCallers"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        val callersName = obj.optionalString("allowedCallers", "FunctionDefinition")
         val callers = callersName?.let {
             AllowedCallers.byWireName[it]
                 ?: throw A2uiFormatException("FunctionDefinition: `$it` is not an allowedCallers value.")
@@ -281,13 +307,21 @@ internal object FunctionDefinitionSerializer : KSerializer<FunctionDefinition> {
             schema = FunctionCallValidationSchema(obj),
             returnType = returnType,
             allowedCallers = callers,
-            requiresUserActivation = (obj["requiresUserActivation"] as? JsonPrimitive)
-                ?.takeIf { !it.isString }?.booleanOrNull,
+            requiresUserActivation = obj.optionalBoolean("requiresUserActivation", "FunctionDefinition"),
         )
     }
 
     override fun serialize(encoder: Encoder, value: FunctionDefinition) {
-        (encoder as JsonEncoder).encodeJsonElement(value.schema.raw)
+        (encoder as JsonEncoder).encodeJsonElement(
+            buildJsonObject {
+                value.schema.raw.forEach { (key, element) -> put(key, element) }
+                put("returnType", JsonPrimitive(value.returnType.wireName))
+                value.allowedCallers?.let { put("allowedCallers", JsonPrimitive(it.wireName)) }
+                value.requiresUserActivation?.let {
+                    put("requiresUserActivation", JsonPrimitive(it))
+                }
+            },
+        )
     }
 }
 
@@ -308,22 +342,21 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
         val json = (decoder as JsonDecoder).json
         val obj = decoder.jsonObjectOrFail("CatalogDefinition")
         obj.rejectUnknownKeys(KEYS, "CatalogDefinition", decoder)
-        val catalogId = (obj["catalogId"] as? JsonPrimitive)?.takeIf { it.isString }?.content
-            ?: throw A2uiFormatException("CatalogDefinition: `catalogId` is required.")
-        fun optionalString(key: String): String? =
-            (obj[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        val catalogId = obj.requiredString("catalogId", "CatalogDefinition")
         return CatalogDefinition(
             catalogId = catalogId,
-            protocolVersion = optionalString("protocolVersion"),
-            title = optionalString("title"),
-            description = optionalString("description"),
-            instructions = optionalString("instructions"),
-            components = (obj["components"] as? JsonObject).orEmpty().mapValues { (_, element) ->
-                json.decodeFromJsonElement(ComponentDefinitionSerializer, element)
-            },
-            functions = (obj["functions"] as? JsonObject).orEmpty().mapValues { (_, element) ->
-                json.decodeFromJsonElement(FunctionDefinitionSerializer, element)
-            },
+            protocolVersion = obj.optionalString("protocolVersion", "CatalogDefinition"),
+            title = obj.optionalString("title", "CatalogDefinition"),
+            description = obj.optionalString("description", "CatalogDefinition"),
+            instructions = obj.optionalString("instructions", "CatalogDefinition"),
+            components = obj.optionalObject("components", "CatalogDefinition").orEmpty()
+                .mapValues { (_, element) ->
+                    json.decodeFromJsonElement(ComponentDefinitionSerializer, element)
+                },
+            functions = obj.optionalObject("functions", "CatalogDefinition").orEmpty()
+                .mapValues { (_, element) ->
+                    json.decodeFromJsonElement(FunctionDefinitionSerializer, element)
+                },
             schemaKeywords = obj.filterKeys { it in SCHEMA_KEYWORDS },
         )
     }
@@ -342,7 +375,15 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
                     put(
                         "components",
                         buildJsonObject {
-                            value.components.forEach { (name, definition) -> put(name, definition.schema) }
+                            value.components.forEach { (name, definition) ->
+                                put(
+                                    name,
+                                    json.json.encodeToJsonElement(
+                                        ComponentDefinitionSerializer,
+                                        definition,
+                                    ),
+                                )
+                            }
                         },
                     )
                 }
@@ -350,7 +391,15 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
                     put(
                         "functions",
                         buildJsonObject {
-                            value.functions.forEach { (name, definition) -> put(name, definition.schema.raw) }
+                            value.functions.forEach { (name, definition) ->
+                                put(
+                                    name,
+                                    json.json.encodeToJsonElement(
+                                        FunctionDefinitionSerializer,
+                                        definition,
+                                    ),
+                                )
+                            }
                         },
                     )
                 }
@@ -360,6 +409,9 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
 }
 
 private fun JsonObject?.orEmpty(): Map<String, JsonElement> = this ?: emptyMap()
+
+private fun stringArray(values: List<String>): kotlinx.serialization.json.JsonArray =
+    kotlinx.serialization.json.JsonArray(values.map(::JsonPrimitive))
 
 /**
  * Reads an optional array-of-strings keyword.

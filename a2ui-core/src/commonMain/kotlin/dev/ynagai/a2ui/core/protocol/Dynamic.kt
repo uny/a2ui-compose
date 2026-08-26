@@ -70,7 +70,17 @@ public data class FunctionCall(
 @Serializable(with = DynamicValueSerializer::class)
 public sealed interface DynamicValue {
     /** A literal JSON value. Never [JsonNull] — the union does not admit null. */
-    public data class Literal(public val value: JsonElement) : DynamicValue
+    public data class Literal(public val value: JsonElement) : DynamicValue {
+        init {
+            // Enforced here rather than only while decoding: the encoder would otherwise emit a
+            // bare `null` that this same serializer refuses to read back.
+            if (value is JsonNull) {
+                throw A2uiFormatException(
+                    "DynamicValue: null is not one of the permitted value types.",
+                )
+            }
+        }
+    }
 }
 
 /** A string, a [DataBinding], or a [FunctionCall]. */
@@ -136,9 +146,19 @@ internal fun encodeBoundValue(value: BoundValue, json: Json): JsonElement = when
  * round-tripped payload differ textually from its input for no reason.
  */
 internal fun encodeNumber(value: Double): JsonPrimitive {
+    if (value.isNaN() || value.isInfinite()) {
+        throw A2uiFormatException("DynamicNumber: `$value` is not a JSON number.")
+    }
+    // `toLong()` saturates, and Long.MAX_VALUE.toDouble() == 2^63 exactly, so the round-trip
+    // guard below would otherwise pass for 2^63 and emit 9223372036854775807 — a different
+    // integer from the one that came in. Only take the integer path inside Long's real range.
+    if (value < -LONG_RANGE || value >= LONG_RANGE) return JsonPrimitive(value)
     val asLong = value.toLong()
     return if (asLong.toDouble() == value) JsonPrimitive(asLong) else JsonPrimitive(value)
 }
+
+/** 2^63 as a [Double]: the first magnitude `Double.toLong()` can no longer represent. */
+private const val LONG_RANGE: Double = 9223372036854775808.0
 
 private fun Decoder.asJson(): JsonElement {
     val jsonDecoder = this as? kotlinx.serialization.json.JsonDecoder
@@ -221,6 +241,14 @@ internal object DynamicNumberSerializer : KSerializer<DynamicNumber> {
             ?: throw A2uiFormatException(
                 "DynamicNumber: expected a number, a DataBinding, or a FunctionCall.",
             )
+        if (number.isNaN() || number.isInfinite()) {
+            // `"1e999"` parses to Double.POSITIVE_INFINITY rather than failing. Accepting it here
+            // would defer the failure to encode time, where it surfaces while serialising the
+            // renderer's own state long after the payload was taken.
+            throw A2uiFormatException(
+                "DynamicNumber: `${primitive.content}` is out of range for a JSON number.",
+            )
+        }
         return DynamicNumber.Literal(number)
     }
 

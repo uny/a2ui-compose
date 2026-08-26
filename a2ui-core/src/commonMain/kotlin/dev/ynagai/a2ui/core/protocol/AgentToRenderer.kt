@@ -76,8 +76,11 @@ public data class UpdateComponentsMessage(
 /**
  * Writes [value] into a live surface's data model.
  *
- * [path] is a JSON Pointer; omitting it, or passing `/`, addresses the whole data model. A
- * [value] of [kotlinx.serialization.json.JsonNull] deletes what [path] addresses, which is why
+ * [path] is a JSON Pointer; omitting it, or passing `/`, addresses the whole data model. It is
+ * carried verbatim and is NOT checked for pointer syntax here — it arrives from the agent and is
+ * the write address into the data model, so validate it before resolving it.
+ *
+ * A [value] of [kotlinx.serialization.json.JsonNull] deletes what [path] addresses, which is why
  * this is a non-null [JsonElement] — an absent `value` is malformed, an explicit null is a delete.
  */
 @Serializable
@@ -149,14 +152,12 @@ internal object ComponentSerializer : KSerializer<Component> {
     override fun deserialize(decoder: Decoder): Component {
         val json = (decoder as JsonDecoder).json
         val obj = decoder.jsonObjectOrFail("Component")
-        val id = (obj["id"] as? JsonPrimitive)?.takeIf { it.isString }?.content
-            ?: throw A2uiFormatException("Component: `id` is required and must be a string.")
-        val type = (obj["component"] as? JsonPrimitive)?.takeIf { it.isString }?.content
-            ?: throw A2uiFormatException("Component: `component` is required and must be a string.")
+        val id = obj.requiredString("id", "Component")
+        val type = obj.requiredString("component", "Component")
         return Component(
             id = id,
             component = type,
-            catalogId = (obj["catalogId"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+            catalogId = obj.optionalString("catalogId", "Component"),
             accessibility = obj["accessibility"]?.let {
                 json.decodeFromJsonElement(AccessibilityAttributes.serializer(), it)
             },
@@ -180,7 +181,9 @@ internal object ComponentSerializer : KSerializer<Component> {
                 value.metadata?.let {
                     put("metadata", json.json.encodeToJsonElement(Metadata.serializer(), it))
                 }
-                value.properties.forEach { (key, element) -> put(key, element) }
+                value.properties.carryThrough(ENVELOPE).forEach { (key, element) ->
+                    put(key, element)
+                }
             },
         )
     }
@@ -230,7 +233,7 @@ internal abstract class EnvelopeSerializer<T : Any>(private val what: String) : 
     override fun deserialize(decoder: Decoder): T {
         val json = (decoder as JsonDecoder).json
         val obj = decoder.jsonObjectOrFail(what)
-        val version = (obj["version"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        val version = obj.optionalString("version", what)
             ?: throw A2uiFormatException("$what: `version` is required.")
         if (version != A2ui.PROTOCOL_VERSION) {
             throw A2uiFormatException(
@@ -238,7 +241,11 @@ internal abstract class EnvelopeSerializer<T : Any>(private val what: String) : 
                     "${A2ui.PROTOCOL_VERSION} only.",
             )
         }
-        val present = obj.keys.filter { it != "version" }
+        val lenient = json.configuration.ignoreUnknownKeys
+        val candidates = obj.keys.filter { it != "version" }
+        // Under `lenient` an unmodelled envelope key is exactly what the caller opted in to
+        // tolerate, so narrow to the keys this envelope knows before demanding there be one.
+        val present = if (lenient) candidates.filter { it in variants } else candidates
         if (present.size != 1) {
             throw A2uiFormatException(
                 if (present.isEmpty()) {

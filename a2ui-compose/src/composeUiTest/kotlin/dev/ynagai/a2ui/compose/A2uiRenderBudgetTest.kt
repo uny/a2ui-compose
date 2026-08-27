@@ -78,16 +78,25 @@ class A2uiRenderBudgetTest {
         // The product a per-container cap would miss: 20 rows of 20 cells is 400 instances from
         // two templates, and each container on its own is asking for a reasonable 20.
         val reasons = mutableListOf<A2uiPlaceholderReason>()
+        val drawn = mutableSetOf<Pair<String, EvaluationScope>>()
         val renderer = rendererFor(NESTED_TEMPLATE, items = 20, limits = RenderLimits(maxInstances = 20))
         setContent {
-            A2uiSurface(renderer, SURFACE, TestRegistry, placeholder = recording(reasons))
+            A2uiSurface(renderer, SURFACE, counting(drawn), placeholder = recording(reasons))
         }
         // The root divides what it has among its rows; each row is then left with a budget of one,
-        // which pays for the row and nothing under it. Reaching this assertion at all is the
-        // result -- 400 instances is not a hang, but 20 nested levels of it would be.
+        // which pays for the row and nothing under it.
         assertTrue(
             reasons.any { it is A2uiPlaceholderReason.TooManyChildren },
             "the descent should report where it stopped: $reasons",
+        )
+        // And the count is the assertion, not the placeholder. The root alone emits a marker here,
+        // so `any { TooManyChildren }` holds however the budget is divided -- it would still hold
+        // if `share` were the whole remainder and these two templates composed the 400 instances
+        // they ask for. What has to be measured is what was actually drawn: every component
+        // instance and every entry standing in for the ones that were not, against the bound.
+        assertTrue(
+            drawn.size + reasons.size <= 20,
+            "20 instances were budgeted; ${drawn.size} components and ${reasons.size} placeholders were drawn",
         )
     }
 
@@ -177,6 +186,23 @@ class A2uiRenderBudgetTest {
 
     private fun recording(into: MutableList<A2uiPlaceholderReason>) =
         A2uiPlaceholder { reason, _ -> into += reason }
+
+    /**
+     * [TestRegistry], with every component instance it draws recorded.
+     *
+     * Keyed by id *and* scope, because a template's instances share an id and differ only by the
+     * item they render -- which is the half of the expansion the budget exists to bound -- and
+     * because a set keyed that way counts instances rather than recompositions.
+     */
+    private fun counting(into: MutableSet<Pair<String, EvaluationScope>>) = ComponentRegistry(
+        TestRegistry.types.associateWith { type ->
+            val delegate = TestRegistry[type]!!
+            ComponentRenderer { scope, modifier ->
+                into += scope.component.id to scope.evaluationScope
+                delegate.Render(scope, modifier)
+            }
+        },
+    )
 
     /** `root -> {a0, b0} -> ... -> {a[n], b[n]}`: 2n + 1 components, 2^n instances. */
     private fun fanOut(layers: Int): String = buildList {

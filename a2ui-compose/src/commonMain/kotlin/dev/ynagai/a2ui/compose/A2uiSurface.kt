@@ -5,8 +5,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
@@ -183,7 +183,15 @@ public fun A2uiComponent(
     // cheap; what it takes with it is not -- the `derivedStateOf` caches in `rememberString` and
     // its siblings are keyed on the scope, so they would all be discarded, and the recomposition
     // granularity this design exists to buy would quietly stop working.
-    val latest = rememberUpdatedState(onMessage)
+    // Keyed exactly as the scope is, and deliberately not `rememberUpdatedState`, which is keyless.
+    // A keyless cell outlives the scope that captured it: this call position renders surface `a`,
+    // a renderer keeps hold of that scope, the position is then re-keyed to surface `b`, and the
+    // one cell now holds `b`'s callback -- so a dispatch through the retained `a` scope builds a
+    // message stamped with `a` and hands it to the host's handler for `b`. Sharing the keys means
+    // a rebuilt scope gets a rebuilt cell, and a retained scope keeps reaching the callback that
+    // belonged to it.
+    val latest = remember(renderer, surfaceId, component, evaluationScope) { mutableStateOf(onMessage) }
+    latest.value = onMessage
     val scope = remember(renderer, surfaceId, component, evaluationScope) {
         A2uiComponentScope(renderer, surfaceId, component, evaluationScope) { latest.value(it) }
     }

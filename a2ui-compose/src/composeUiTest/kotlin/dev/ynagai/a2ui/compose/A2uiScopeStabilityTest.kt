@@ -8,6 +8,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.Action
+import dev.ynagai.a2ui.core.protocol.ActionMessage
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
 import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
 import kotlin.test.Test
@@ -39,13 +40,20 @@ import kotlin.test.assertTrue
  *   both counters to 4 across the three ticks below, not just `root`.
  * - Not keying on `onMessage` means the scope now holds an indirection rather than the caller's
  *   lambda, so *reaching the newest callback* becomes a property that can break on its own. Drop
- *   the `rememberUpdatedState` and capture `onMessage` directly and the tree is just as stable --
- *   and every tap for the rest of the surface's life runs the first composition's closure.
+ *   the indirection and capture `onMessage` directly and the tree is just as stable -- and every
+ *   tap for the rest of the surface's life runs the first composition's closure.
  *
- * **Mutation-checked.** Restoring `onMessage` as a `remember` key fails
- * [a_new_onMessage_lambda_does_not_rebuild_the_component_scopes]; capturing `onMessage` instead of
- * reading it through `rememberUpdatedState` fails [a_dispatch_reaches_the_newest_onMessage]; and
- * re-providing `LocalA2uiRegistry` per recomposition fails the first test's `bodyRuns` assertion.
+ * **Mutation-checked**, and each mutation fails exactly one of these:
+ *
+ * - `onMessage` restored as a `remember` key on the scope --
+ *   [a_new_onMessage_lambda_does_not_rebuild_the_component_scopes]
+ * - the indirection dropped, `onMessage` captured into the scope directly --
+ *   [a_dispatch_reaches_the_newest_onMessage]
+ * - the callback cell made keyless, i.e. a plain `rememberUpdatedState` --
+ *   [a_retained_scope_does_not_dispatch_into_the_next_surfaces_callback]
+ *
+ * and re-providing `LocalA2uiRegistry` per recomposition fails the first test's `bodyRuns`
+ * assertion.
  *
  * One mutation that does *not* discriminate, recorded so it is not attempted again as a check:
  * making [RenderChild] forward `{ m -> onMessage(m) }` instead of `onMessage`. It looks like it
@@ -99,17 +107,22 @@ class A2uiScopeStabilityTest {
                 "was discarded",
         )
         // The payoff, and a property the scope counts above cannot see. Keeping the scope keeps
-        // the *caches*; every level also skipping is a second property, and it fails on its own --
-        // anything the host hands down that changes identity per recomposition re-runs the whole
-        // subtree while the scopes, and so the assertion above, stay perfectly stable. Measured:
-        // passing a freshly built `ComponentRegistry` into `A2uiSurface` (a *static* composition
-        // local, so re-providing it invalidates everything below) turns this into {root=4, leaf=4}
-        // across the three ticks above.
+        // the *caches*; the host's change not cascading past the component it was handed to is a
+        // second property, and it fails on its own -- anything handed down that changes identity
+        // per recomposition re-runs the whole subtree while the scopes, and so the assertion
+        // above, stay perfectly stable. Measured: passing a freshly built `ComponentRegistry` into
+        // `A2uiSurface` (a *static* composition local, so re-providing it invalidates everything
+        // below) takes `leaf` to 4 across the three ticks above.
+        //
+        // `leaf`, not `root`. The root's `onMessage` argument genuinely is a new instance each
+        // time, so whether its renderer body is then skipped is the Compose compiler's call and it
+        // is not the same call on every target: `root` stays 1 on jvm and is 4 on macosArm64.
+        // What must hold everywhere is that it stops there.
         assertEquals(
-            mapOf("root" to 1, "leaf" to 1),
-            bodyRuns,
-            "a component recomposed although nothing it reads changed: something handed down " +
-                "from the host changes identity on every recomposition",
+            1,
+            bodyRuns["leaf"],
+            "the host's new lambda cascaded past the component it was handed to and re-ran the " +
+                "subtree below it, although nothing down there reads anything that changed",
         )
     }
 
@@ -132,15 +145,56 @@ class A2uiScopeStabilityTest {
 
         repeat(3) { runOnIdle { tick++ } }
         waitForIdle()
-        // From the *leaf*, so this exercises the whole chain: the leaf's indirection forwards to
-        // the root's, which reads the host's newest lambda. A break at any link sends the wrong
-        // `current`.
+        // From the leaf rather than the root, so the forwarding chain is at least composed. Note
+        // what this does *not* pin down: a level that captured its incoming callback instead of
+        // holding its own indirection would still be holding the root's wrapper, which reads the
+        // newest host lambda, so the value below would be unchanged. Only the root's indirection
+        // is load-bearing for freshness; the per-level ones are what make each level *skippable*,
+        // and that is `bodyRuns`' job above, not this assertion's.
         runOnIdle { assertNotNull(leaf, "the leaf never composed").dispatch(EVENT) }
         assertEquals(
             listOf(3),
             sink,
             "the tap ran an outdated `onMessage`: the scope holds an indirection now, so the " +
                 "callback has to be read at dispatch rather than captured when it was built",
+        )
+    }
+
+    @Test
+    fun a_retained_scope_does_not_dispatch_into_the_next_surfaces_callback() = runComposeUiTest {
+        val delivered = mutableListOf<String>()
+        var shown by mutableStateOf("a")
+        var seen: A2uiComponentScope? = null
+        val registry = ComponentRegistry(
+            mapOf("Text" to ComponentRenderer { scope, _ -> seen = scope }),
+        )
+
+        setContent {
+            val id = shown
+            A2uiSurface(
+                renderer = twoSurfaces,
+                surfaceId = id,
+                registry = registry,
+                // Tagged with the surface this callback was handed over for.
+                onMessage = { m -> delivered += "$id<-${(m as ActionMessage).surfaceId}" },
+            )
+        }
+        waitForIdle()
+        val scopeForA = assertNotNull(seen, "surface a never composed")
+        runOnIdle { shown = "b" }
+        waitForIdle()
+
+        // The scope for `a` is still reachable -- a renderer that hands its scope to a gesture
+        // handler, a coroutine, or anything else outliving the composition keeps one exactly like
+        // this. The message it builds is stamped with `a`, so it has to reach the callback the
+        // host gave for `a`.
+        runOnIdle { scopeForA.dispatch(EVENT) }
+        assertEquals(
+            listOf("a<-a"),
+            delivered,
+            "a message stamped with surface `a` was handed to the host's callback for `b`: the " +
+                "cell holding the callback outlived the scope that reads it, so re-keying this " +
+                "call position to another surface redirected a scope that still belongs to `a`",
         )
     }
 
@@ -162,17 +216,22 @@ class A2uiScopeStabilityTest {
     ) = ComponentRegistry(
         mapOf(
             "Text" to ComponentRenderer { scope, _ ->
-                bodyRuns.merge(scope.component.id, 1, Int::plus)
-                remember(scope) { builds.merge(scope.component.id, 1, Int::plus) }
+                bodyRuns.count(scope.component.id)
+                remember(scope) { builds.count(scope.component.id) }
                 onLeaf(scope)
             },
             "Column" to ComponentRenderer { scope, _ ->
-                bodyRuns.merge(scope.component.id, 1, Int::plus)
-                remember(scope) { builds.merge(scope.component.id, 1, Int::plus) }
+                bodyRuns.count(scope.component.id)
+                remember(scope) { builds.count(scope.component.id) }
                 scope.rememberAllChildren().forEach { child -> scope.RenderChild(child) }
             },
         ),
     )
+
+    /** `merge` is `java.util.Map`'s; this source set also compiles for native, wasm and js. */
+    private fun MutableMap<String, Int>.count(id: String) {
+        this[id] = (this[id] ?: 0) + 1
+    }
 
     private val sink = mutableListOf<Int>()
 
@@ -188,6 +247,26 @@ class A2uiScopeStabilityTest {
                         {"id":"leaf","component":"Text","text":"hello"}
                     ]}}""",
                 ).map { text ->
+                    A2uiJson.strict.decodeFromString(
+                        AgentToRendererMessage.serializer(),
+                        text.replace("CATALOG_ID", BasicCatalog.id),
+                    )
+                },
+            )
+        }
+
+    /** Two renderable surfaces at once, for the retained-scope test above. */
+    private val twoSurfaces: A2uiRenderer =
+        A2uiRenderer(clock = { "2026-08-27T00:00:00Z" }).also {
+            it.applyAll(
+                listOf("a", "b").flatMap { id ->
+                    listOf(
+                        """{"version":"v1.0","createSurface":{"surfaceId":"$id","catalogId":"CATALOG_ID"}}""",
+                        """{"version":"v1.0","updateComponents":{"surfaceId":"$id","components":[
+                            {"id":"root","component":"Text","text":"$id"}
+                        ]}}""",
+                    )
+                }.map { text ->
                     A2uiJson.strict.decodeFromString(
                         AgentToRendererMessage.serializer(),
                         text.replace("CATALOG_ID", BasicCatalog.id),

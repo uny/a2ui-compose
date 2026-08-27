@@ -2,6 +2,7 @@ package dev.ynagai.a2ui.core.validation
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -314,6 +315,51 @@ class SchemaEvaluatorTest {
             result.violations.any { it.location.startsWith("/args") },
             "no violation names a place in the payload: ${result.violations}",
         )
+    }
+
+    @Test
+    fun carries_a_schema_that_nests_to_the_default_depth_bound() {
+        // `maxDepth` is a *stack*-depth bound -- Kotlin/Native answers an overflow by aborting the
+        // process rather than by raising something a `catch` can see -- so a bound the stack
+        // cannot actually carry is not a bound, it is a crash with a number attached. Nothing else
+        // here reaches that far: the conformance suite tops out around a quarter of it. This runs
+        // on every target the library ships to, which is the only way the question gets asked of
+        // the engines that answer it differently.
+        var schema = """{"type": "string"}"""
+        repeat(ValidationLimits.DEFAULT.maxDepth - 2) { schema = """{"allOf": [$schema]}""" }
+        val registry = SchemaRegistry.of(listOf(parse("""{"${'$'}id": "urn:t"}""")))
+        val result = SchemaEvaluator(registry)
+            .validate(parse(schema), SchemaLocation("urn:t", ""), Json.parseToJsonElement("\"a\""))
+        assertTrue(result.isValid, result.violations.toString())
+        assertFalse(result.truncated)
+    }
+
+    @Test
+    fun the_meta_schema_stand_in_asks_that_a_schema_be_a_schema() {
+        // `catalog_definition.json` refers to the JSON Schema meta-schema in four places to say
+        // "this member must itself be a schema". The stand-in registered for it asserts only what
+        // a schema *is* -- an object or a boolean -- and one that asserted nothing at all would be
+        // indistinguishable from it on every case the specification ships, because none of them
+        // gets this wrong. This is the difference between the two.
+        val uri = (ProtocolSchemas.catalogDefinition["\$id"] as JsonPrimitive).content
+        fun check(anyComponent: String): SchemaValidation = SchemaEvaluator(
+            SchemaRegistry.of(ProtocolSchemas.documents),
+        ).validate(
+            ProtocolSchemas.catalogDefinition,
+            SchemaLocation(uri, ""),
+            parse(
+                """
+                {"catalogId": "urn:t", "${'$'}defs": {
+                  "anyComponent": $anyComponent,
+                  "anyFunction": {"type": "object"}
+                }}
+                """.trimIndent(),
+            ),
+        )
+        assertTrue(check("""{"type": "object"}""").isValid, check("""{"type": "object"}""").violations.toString())
+        assertTrue(check("true").isValid, "a boolean is a schema")
+        assertFalse(check("\"Box\"").isValid, "a string is not a schema")
+        assertFalse(check("7").isValid, "a number is not a schema")
     }
 
     // --- what the messages may carry ----------------------------------------------------------

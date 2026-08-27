@@ -116,7 +116,14 @@ internal val CONFORMANCE_CASES: List<ConformanceCase> = ConformanceSources.ALL.e
                 index = index,
                 description = case.string("description") ?: "#$index",
                 // A case that omits `valid` is asserting acceptance, as `run_tests.py` reads it.
-                expectedValid = (case["valid"] as? JsonPrimitive)?.booleanOrNull ?: true,
+                // One that carries a `valid` this cannot read is a different thing and must not
+                // land on the same answer: `"valid": "false"` would otherwise assert that a
+                // payload the specification says to refuse is accepted, and the size guard would
+                // still count it, so the suite would report full coverage of the opposite claim.
+                expectedValid = case["valid"]?.let { declared ->
+                    (declared as? JsonPrimitive)?.booleanOrNull
+                        ?: error("$file #$index declares a `valid` that is not a boolean.")
+                } ?: true,
                 data = case["data"] ?: error("$file #$index carries no `data`."),
                 suite = suite,
             )

@@ -91,7 +91,9 @@ class ConformanceCostTest {
     @Test
     fun records_the_depth_the_deepest_case_needs() {
         val needed = smallest { depth ->
-            CONFORMANCE_CASES.none { verdict(it, ValidationLimits(maxDepth = depth)).truncated }
+            val limits = ValidationLimits(maxDepth = depth)
+            val validator = validatorAt(limits)
+            CONFORMANCE_CASES.none { verdict(it, limits, validator).truncated }
         }
         // Schema depth, not instance depth. One level of nested function call costs roughly eight
         // frames -- `$ref` to `FunctionCall`, its `oneOf`, `anyFunction`, its `oneOf`, the
@@ -108,7 +110,9 @@ class ConformanceCostTest {
     @Test
     fun records_the_step_budget_the_suite_needs() {
         val needed = smallest(from = 1_000, factor = 2) { steps ->
-            CONFORMANCE_CASES.none { verdict(it, ValidationLimits(maxSteps = steps)).truncated }
+            val limits = ValidationLimits(maxSteps = steps)
+            val validator = validatorAt(limits)
+            CONFORMANCE_CASES.none { verdict(it, limits, validator).truncated }
         }
         assertTrue(needed <= ValidationLimits.DEFAULT.maxSteps, "the suite needs $needed")
     }

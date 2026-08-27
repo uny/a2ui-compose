@@ -123,11 +123,17 @@ internal val CONFORMANCE_CASES: List<ConformanceCase> = ConformanceSources.ALL.e
         }
     }
 
-/** This implementation's verdict on [case], under [limits]. */
+/**
+ * This implementation's verdict on [case], under [limits].
+ *
+ * [validator] is a parameter so that a caller running the whole suite at one set of limits builds
+ * one -- as a default it would be rebuilt per case, and the cost tests run the suite a dozen times
+ * over.
+ */
 internal fun verdict(
     case: ConformanceCase,
     limits: ValidationLimits = ValidationLimits.DEFAULT,
-    validator: CatalogValidator = if (limits == ValidationLimits.DEFAULT) VALIDATOR else validatorAt(limits),
+    validator: CatalogValidator = VALIDATOR,
 ): SchemaValidation = when (case.suite.target) {
     SchemaTarget.AgentToRenderer -> validator.validateMessage(
         message = case.data,

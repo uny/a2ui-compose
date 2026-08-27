@@ -201,8 +201,12 @@ class CatalogValidatorTest {
     }
 
     @Test
-    fun rejects_an_extra_key_on_the_call_itself() {
-        // `dynamic_value_validation` #8.
+    fun accepts_a_call_that_names_its_catalog_explicitly() {
+        // Named for what it asserts. The extra-key case this used to claim -- but did not carry a
+        // key for, and asserted acceptance of -- cannot be expressed here at all: `FunctionCall`
+        // models `call`, `catalogId` and `args` and nothing else, so a key outside those never
+        // survives decoding to reach this entry point. It is checked through `validateMessage`,
+        // which takes the wire form, in `rejects_an_extra_key_on_a_call_in_a_message`.
         val result = VALIDATOR.validate(
             call("""{"call": "email", "args": {"value": "a@b.c"}}""").copy(catalogId = BASIC_ID),
         )
@@ -379,17 +383,23 @@ class CatalogValidatorTest {
         // conformance run would otherwise still mean nothing -- an unapplied keyword shows up as
         // acceptance, not as failure.
         val seen = mutableSetOf<String>()
+        // The keywords whose *values* are keyed by property name rather than by keyword. Their
+        // keys are names and must not be collected; the subschema under each name is a schema
+        // again, so the walk resumes there. Deciding that from the name rather than from the
+        // keyword above it -- as this did -- makes a property literally called `properties` open a
+        // second name-space, and `catalog_definition.json` has two of those.
+        val nameSpaces = setOf("properties", "\$defs", "patternProperties", "dependentSchemas")
         fun walk(node: JsonElement, inNames: Boolean) {
             when (node) {
                 is JsonObject -> node.forEach { (key, value) ->
-                    if (!inNames) seen += key
-                    walk(
-                        value,
-                        key == "properties" || key == "\$defs" || key == "patternProperties" ||
-                            key == "dependentSchemas",
-                    )
+                    if (inNames) {
+                        walk(value, inNames = false)
+                    } else {
+                        seen += key
+                        walk(value, inNames = key in nameSpaces)
+                    }
                 }
-                is kotlinx.serialization.json.JsonArray -> node.forEach { walk(it, false) }
+                is kotlinx.serialization.json.JsonArray -> node.forEach { walk(it, inNames = false) }
                 else -> Unit
             }
         }

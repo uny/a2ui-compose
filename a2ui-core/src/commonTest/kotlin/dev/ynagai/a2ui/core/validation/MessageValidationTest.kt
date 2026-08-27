@@ -141,13 +141,36 @@ class MessageValidationTest {
     fun checks_a_renderer_to_agent_message_against_the_other_document() {
         val result = check(
             """
-            {"version": "v1.0", "userAction": {
-              "surfaceId": "s", "componentId": "b", "action": {"name": "go"}
+            {"version": "v1.0", "action": {
+              "name": "go", "surfaceId": "s", "sourceComponentId": "b",
+              "timestamp": "2026-08-27T09:00:00Z", "context": {}
             }}
             """.trimIndent(),
             direction = MessageDirection.RENDERER_TO_AGENT,
         )
+        // The verdict, not just the keyword coverage. Without this the whole
+        // `renderer_to_agent.json` root could reject every message a renderer sends and the test
+        // would still pass -- and it is the only test that reaches that document, so
+        // `minProperties`/`maxProperties` have no other live coverage either.
+        assertTrue(result.isValid, result.violations.toString())
         assertEquals(emptySet(), result.unsupportedKeywords)
+    }
+
+    @Test
+    fun rejects_an_extra_key_on_a_call_in_a_message() {
+        // `dynamic_value_validation` #8. `FunctionCall` closes itself with
+        // `unevaluatedProperties: false`, and this is the only path that can carry a key the model
+        // does not have: the typed `FunctionCall` drops anything outside `call`/`catalogId`/`args`
+        // before a checker ever sees it.
+        val result = check(
+            """
+            {"version": "v1.0", "updateComponents": {"surfaceId": "s", "components": [
+              {"id": "t", "component": "Text",
+               "text": {"call": "formatString", "args": {"template": "hi"}, "junk": 1}}
+            ]}}
+            """.trimIndent(),
+        )
+        assertFalse(result.isValid, "an extra key on a call was accepted")
     }
 
     @Test

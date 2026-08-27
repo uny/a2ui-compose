@@ -1,5 +1,6 @@
 package dev.ynagai.a2ui.gallery
 
+import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.CreateSurfaceMessage
 import dev.ynagai.a2ui.core.protocol.UpdateComponentsMessage
 import dev.ynagai.a2ui.core.protocol.UpdateDataModelMessage
@@ -7,6 +8,7 @@ import dev.ynagai.a2ui.core.validation.CatalogValidator
 import dev.ynagai.a2ui.core.validation.MessageDirection
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -41,10 +43,31 @@ class ExampleCorpusTest {
         // pass silently and render as a blank Gallery page.
         val empty = EXAMPLES.filter { it.decoded.isEmpty() }.map { it.file }
         assertTrue(empty.isEmpty(), "examples carry no messages: $empty")
-        assertTrue(
-            EXAMPLES.all { it.decoded.size == it.raw.size },
-            "an example decoded to a different number of messages than it carries",
-        )
+        // The message total, not `decoded.size == raw.size` -- `decoded` is `raw.map { }`, so that
+        // comparison holds for every possible corpus and asserts nothing. This one is against the
+        // specification's count, so re-vendoring a revision that drops or adds a message says so.
+        assertEquals(MESSAGES_EXPECTED, EXAMPLES.sumOf { it.decoded.size }, "vendored message count changed")
+        // The title the Gallery lists an example under. Without this, `Example.name`'s fallback to
+        // the bare filename covers a `name` that never parsed, and the list renders
+        // `00_simple-text` where the specification says `Simple Text`.
+        val unnamed = EXAMPLES.filter { it.name == it.file.removeSuffix(".json") || it.name.isBlank() }
+        assertTrue(unnamed.isEmpty(), "examples fell back to their filename for a name: ${unnamed.map { it.file }}")
+        val undescribed = EXAMPLES.filter { it.description.isBlank() }.map { it.file }
+        assertTrue(undescribed.isEmpty(), "examples fell back to an empty description: $undescribed")
+    }
+
+    @Test
+    fun every_example_asks_for_the_catalog_this_suite_checks_it_against() {
+        // `catalogId` is `"type": "string"` in the schema, so an example naming a catalog nobody
+        // holds is a valid message. This suite binds the basic catalog explicitly rather than
+        // reading each example's own id, so without this assertion it would keep reporting
+        // "validates against the basic catalog" for a corpus that had stopped asking for it --
+        // and the failure would surface as an unresolvable catalog in the renderer instead.
+        val foreign = EXAMPLES.flatMap { example ->
+            example.decoded.filterIsInstance<CreateSurfaceMessage>()
+                .map { example.file to it.catalogId }
+        }.filter { (_, catalogId) -> catalogId != BASIC_CATALOG.catalogId }
+        assertTrue(foreign.isEmpty(), "examples name a catalog this suite does not check against: $foreign")
     }
 
     @Test
@@ -56,15 +79,54 @@ class ExampleCorpusTest {
                     direction = MessageDirection.AGENT_TO_RENDERER,
                     catalogId = BASIC_CATALOG_ID,
                 )
-                if (validation.isValid) {
-                    null
-                } else {
-                    "${example.file} #$index: " +
-                        validation.violations.joinToString { "${it.location} ${it.message}" }
+                when {
+                    // `isValid` reads `violations` alone. A keyword the evaluator does not apply,
+                    // or a run that hit its budget, both arrive as acceptance -- so checking only
+                    // `isValid` would report "the catalog accepts all 126" for messages part of
+                    // which was never checked. `a2ui-core`'s conformance suite guards the same two
+                    // fields for the same reason; the corpus needs it just as much.
+                    validation.unsupportedKeywords.isNotEmpty() ->
+                        "${example.file} #$index: checked against a schema this evaluator only " +
+                            "partly applies: ${validation.unsupportedKeywords}"
+                    validation.truncated ->
+                        "${example.file} #$index: validation stopped at its bounds, so the verdict " +
+                            "is about the budget rather than the payload"
+                    validation.isValid -> null
+                    else ->
+                        "${example.file} #$index: " +
+                            validation.violations.joinToString { "${it.location} ${it.message}" }
                 }
             }
         }
         assertTrue(failures.isEmpty(), "examples the basic catalog refuses:\n" + failures.joinToString("\n"))
+    }
+
+    @Test
+    fun the_basic_catalog_refuses_a_component_it_does_not_define() {
+        // The negative control for the test above, which is otherwise satisfied maximally by a
+        // validator that returns valid for everything -- so on its own it certifies that 126
+        // messages were passed to something, not that anything was checked.
+        //
+        // A pair rather than a single rejection, differing in the component name and nothing else.
+        // A lone `assertFalse` passes for any reason the message is bad, including a missing
+        // required property, so it would still hold if the catalog's component list were never
+        // consulted. Anchoring it against the accepted twin is what makes the name the variable.
+        fun message(component: String) = A2uiJson.strict.parseToJsonElement(
+            """{"version":"v1.0","updateComponents":{"surfaceId":"s","components":""" +
+                """[{"id":"root","component":"$component","text":"hello"}]}}""",
+        )
+
+        fun verdict(component: String) = VALIDATOR.validateMessage(
+            message = message(component),
+            direction = MessageDirection.AGENT_TO_RENDERER,
+            catalogId = BASIC_CATALOG_ID,
+        )
+
+        assertTrue(verdict("Text").isValid, "the basic catalog refused a component it does define")
+        assertFalse(
+            verdict("NoSuchComponent").isValid,
+            "the basic catalog accepted a component it does not define",
+        )
     }
 
     @Test
@@ -86,14 +148,15 @@ class ExampleCorpusTest {
 
     private companion object {
         const val EXAMPLES_EXPECTED = 43
+        const val MESSAGES_EXPECTED = 126
         const val BASIC_CATALOG_ID = "https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json"
 
         /**
          * Built once for the whole class, not per test.
          *
          * `kotlin.test` constructs a new instance of the test class for every test method, so a
-         * `private val` here would build the schema registry over a fifty-kilobyte catalog four
-         * times. On a JVM that is invisible; in a browser on a CI runner it was most of a mocha
+         * `private val` here would build the schema registry over a fifty-kilobyte catalog once per
+         * test method. On a JVM that is invisible; in a browser on a CI runner it was most of a mocha
          * timeout, and a timeout is what karma reports as a bare `Error`.
          */
         val VALIDATOR = CatalogValidator.of(listOf(BASIC_CATALOG))

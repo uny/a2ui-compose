@@ -142,6 +142,12 @@ public class CatalogValidator private constructor(
      * exactly this reason. For a live surface, pass the id the surface was created with; the
      * per-element checks are what apply a component's own override.
      *
+     * It has no default. Passing null is meaningful -- it says "check this against nothing but
+     * the protocol", which is what a `userAction` or an `error` needs -- but it is not a sensible
+     * thing to *fall into*: with the placeholder unbound, every message carrying a component or a
+     * call fails on an unresolvable `$ref` and is reported invalid for a reason that is about the
+     * renderer rather than the payload. A caller must say which it means.
+     *
      * Takes the raw element rather than a decoded message on purpose. A decoded one has already
      * been through the model's own strict parse, which refuses much of what this is meant to
      * report on — a payload that fails to decode never reaches a checker at all.
@@ -149,7 +155,7 @@ public class CatalogValidator private constructor(
     public fun validateMessage(
         message: JsonElement,
         direction: MessageDirection = MessageDirection.AGENT_TO_RENDERER,
-        catalogId: String? = null,
+        catalogId: String?,
     ): SchemaValidation = evaluate(
         registry = registryFor(catalogId),
         location = ProtocolSchemas.message(direction),

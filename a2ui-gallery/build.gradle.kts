@@ -28,6 +28,10 @@ val generateGalleryCatalog = embedSpecDocuments(
 )
 
 kotlin {
+    // As in `a2ui-core`. The sources already write every modifier by hand; without this, the next
+    // declaration added without one joins the module's API silently.
+    explicitApi()
+
     jvm()
 
     iosArm64()

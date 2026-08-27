@@ -12,7 +12,7 @@ import kotlinx.serialization.json.contentOrNull
 /**
  * One of the specification's example files.
  *
- * [messages] is kept in both forms on purpose. The Gallery's stepper feeds [decoded] to the
+ * The messages are kept in both forms on purpose. The Gallery's stepper feeds [decoded] to the
  * `MessageProcessor` one at a time, while its JSON pane shows [raw] -- and the raw element is also
  * what the validator takes, since it checks the payload the agent sent rather than what this
  * implementation's decoder made of it.
@@ -55,8 +55,14 @@ public val EXAMPLES: List<Example> = ExampleSources.ALL.entries
     // JVM-only.
     .sortedBy { it.key }
     .map { (file, source) ->
-        val document = A2uiJson.strict.parseToJsonElement(source) as JsonObject
-        val raw = (document["messages"] as JsonArray).toList()
+        // Both failures name the file. Unchecked casts here would report neither it nor the key,
+        // and because this is a top-level initializer the first one to throw takes the whole file
+        // down: on JVM every later touch -- `BASIC_CATALOG` included -- then raises
+        // `NoClassDefFoundError`, which no longer carries the original cause at all.
+        val document = A2uiJson.strict.parseToJsonElement(source) as? JsonObject
+            ?: error("$file: an example is a JSON object; this one is not.")
+        val raw = (document["messages"] as? JsonArray)?.toList()
+            ?: error("$file: an example carries a `messages` array; this one does not.")
         Example(
             file = file,
             name = document.text("name") ?: file.removeSuffix(".json"),

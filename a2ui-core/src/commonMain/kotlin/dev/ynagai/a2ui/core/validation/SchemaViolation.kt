@@ -64,8 +64,20 @@ public data class ValidationLimits(
      * revisits the same subschema at the same place in the instance; this stops one that descends
      * forever through an instance that keeps nesting. It is a stack-depth bound, and Kotlin/Native
      * aborts the process on overflow rather than raising something catchable.
+     *
+     * **This counts subschema applications, not levels of nesting in the payload**, and the two
+     * are an order of magnitude apart. Reaching an argument one call deeper costs roughly eight
+     * frames — the `$ref` to `FunctionCall`, its `oneOf`, `anyFunction`, that `oneOf`, the
+     * function, its `allOf`, its `properties`, then the argument itself.
+     *
+     * So the number is derived rather than chosen: a renderer will evaluate an expression
+     * [dev.ynagai.a2ui.core.function.DEFAULT_CALL_DEPTH] calls deep, and refusing to *validate*
+     * what the evaluator will happily *run* is the wrong way round. Thirty-two calls at eight
+     * frames each is this. The specification's own suite needs 64 of them
+     * (`checkable_components` #8), so the default leaves a factor of four — measured by a test,
+     * not assumed.
      */
-    public val maxDepth: Int = 64,
+    public val maxDepth: Int = 256,
     /**
      * How many subschema applications one validation may perform in total.
      *
@@ -263,6 +275,30 @@ internal fun JsonElement.matchesType(expected: JsonElement): Boolean = when (exp
     is JsonArray -> expected.any { matchesType(it) }
     is JsonPrimitive -> matchesTypeName(expected.content)
     else -> true
+}
+
+/** The seven names JSON Schema 2020-12 gives `type`. */
+private val TYPE_NAMES: Set<String> =
+    setOf("object", "array", "null", "string", "boolean", "number", "integer")
+
+/**
+ * The `type` names in [this] that [matchesType] cannot read, and so answers `true` for.
+ *
+ * A `type` this does not recognise is not a value that fails to match — it is a constraint that
+ * was never applied, and the two look the same from the outside. The caller reports these rather
+ * than letting a catalog written `{"type": 7}` accept every value silently; see
+ * [SchemaValidation.unsupportedKeywords].
+ *
+ * The test is exactly the one [matchesType] applies, so that what is reported and what is enforced
+ * cannot disagree. Bare `null` is the case that makes the difference visible: JSON Schema spells
+ * the name as a string, but [matchesType] reads `JsonNull`'s content and refuses a string for it,
+ * so it is *applied* — and reporting it as unapplied would tell a renderer a constraint went
+ * unchecked on the very message that constraint just refused.
+ */
+internal fun JsonElement.unreadableTypeNames(): List<String> = when (this) {
+    is JsonArray -> flatMap { it.unreadableTypeNames() }
+    is JsonPrimitive -> if (content in TYPE_NAMES) emptyList() else listOf(content)
+    is JsonObject -> listOf("an object")
 }
 
 private fun JsonElement.matchesTypeName(name: String): Boolean = when (name) {

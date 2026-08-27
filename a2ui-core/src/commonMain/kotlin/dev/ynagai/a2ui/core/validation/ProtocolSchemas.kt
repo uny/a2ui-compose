@@ -28,6 +28,9 @@ public object ProtocolSchemas {
     public const val RENDERER_TO_AGENT_URI: String =
         "https://a2ui.org/specification/v1_0/renderer_to_agent.json"
 
+    /** The URI of the JSON Schema 2020-12 meta-schema. See [metaSchemaStandIn]. */
+    public const val META_SCHEMA_URI: String = "https://json-schema.org/draft/2020-12/schema"
+
     /** `common_types.json`. */
     public val commonTypes: JsonObject by lazy { parse(ProtocolSchemaSources.COMMON_TYPES) }
 
@@ -42,9 +45,36 @@ public object ProtocolSchemas {
         parse(ProtocolSchemaSources.CATALOG_DEFINITION)
     }
 
+    /**
+     * A stand-in for the JSON Schema 2020-12 meta-schema, which `catalog_definition.json` refers
+     * to in four places to say "this member must itself be a schema".
+     *
+     * **It is not the meta-schema and does not claim to be.** The real one is defined through
+     * `$vocabulary` and `$dynamicRef`, neither of which this evaluator implements, and applying it
+     * would mean implementing the whole of JSON Schema's self-description to check a catalog's
+     * `anyComponent`. What this asserts is what a JSON Schema *is*: an object or a boolean. A
+     * catalog whose `anyComponent` is a string or a number is refused here; one whose `type` is
+     * `7` is not, and fails later when something is actually validated against it.
+     *
+     * The alternative is worse in both directions. Leaving the reference unresolvable refuses
+     * every conformant catalog — `composition_constraints` #0 and #1 are valid catalogs and say
+     * so. Treating it as vacuously true accepts a `anyComponent` that is not a schema at all.
+     */
+    private val metaSchemaStandIn: JsonObject by lazy {
+        parse(
+            """{"${'$'}id": "$META_SCHEMA_URI", "type": ["object", "boolean"]}""",
+        )
+    }
+
     /** Every document, in the shape [SchemaRegistry.of] takes. */
     public val documents: List<JsonObject>
-        get() = listOf(commonTypes, agentToRenderer, rendererToAgent, catalogDefinition)
+        get() = listOf(
+            commonTypes,
+            agentToRenderer,
+            rendererToAgent,
+            catalogDefinition,
+            metaSchemaStandIn,
+        )
 
     /**
      * The `$id`s of the documents this library ships, which is what makes a schema trusted.

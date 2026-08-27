@@ -18,6 +18,7 @@ import dev.ynagai.a2ui.core.surface.RendererEffect
 import dev.ynagai.a2ui.core.surface.RendererState
 import dev.ynagai.a2ui.core.surface.SurfaceModel
 import dev.ynagai.a2ui.core.validation.CatalogChildResolver
+import dev.ynagai.a2ui.core.surface.RenderLimits
 import dev.ynagai.a2ui.core.validation.ValidationLimits
 import kotlinx.serialization.json.JsonElement
 
@@ -70,6 +71,7 @@ public class A2uiRenderer(
     public val clock: A2uiClock = A2uiClock.System,
     public val evaluationLimits: EvaluationLimits = EvaluationLimits.DEFAULT,
     public val validationLimits: ValidationLimits = ValidationLimits.DEFAULT,
+    public val renderLimits: RenderLimits = RenderLimits.DEFAULT,
     initialState: RendererState = RendererState(),
 ) {
     /** Every surface this renderer holds. Reading it in a composable subscribes to changes. */

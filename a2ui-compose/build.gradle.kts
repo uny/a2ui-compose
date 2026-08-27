@@ -82,22 +82,10 @@ kotlin {
          */
         val composeUiTest by creating { dependsOn(commonTest.get()) }
 
-        /**
-         * The one UI test that has to reach [MAX_RENDER_DEPTH], which wasmJs cannot afford.
-         *
-         * Composing 256 nested containers costs about 0.1s on the JVM and is not measurable on
-         * either native target; in a browser the same test does not finish inside mocha's budget
-         * and times out at 60s. That is a fact about the bound rather than about the test -- a
-         * surface nesting 256 deep is one this renderer accepts and the web would hang on -- so it
-         * is recorded as its own source set rather than hidden behind a runtime skip, and the bound
-         * itself is left as a question for review.
-         */
-        val composeDeepTest by creating { dependsOn(composeUiTest) }
-
-        jvmTest.get().dependsOn(composeDeepTest)
-        macosArm64Test.get().dependsOn(composeDeepTest)
-        iosArm64Test.get().dependsOn(composeDeepTest)
-        iosSimulatorArm64Test.get().dependsOn(composeDeepTest)
+        jvmTest.get().dependsOn(composeUiTest)
+        macosArm64Test.get().dependsOn(composeUiTest)
+        iosArm64Test.get().dependsOn(composeUiTest)
+        iosSimulatorArm64Test.get().dependsOn(composeUiTest)
         wasmJsTest.get().dependsOn(composeUiTest)
 
         commonMain {

@@ -24,6 +24,22 @@ abstract fun interface dev.ynagai.a2ui.compose/ComponentRenderer { // dev.ynagai
 }
 
 sealed interface dev.ynagai.a2ui.compose/A2uiPlaceholderReason { // dev.ynagai.a2ui.compose/A2uiPlaceholderReason|null[0]
+    final class BudgetExceeded : dev.ynagai.a2ui.compose/A2uiPlaceholderReason { // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded|null[0]
+        constructor <init>(kotlin/String, kotlin/Int) // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded.<init>|<init>(kotlin.String;kotlin.Int){}[0]
+
+        final val componentId // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded.componentId|{}componentId[0]
+            final fun <get-componentId>(): kotlin/String // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded.componentId.<get-componentId>|<get-componentId>(){}[0]
+        final val limit // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded.limit|{}limit[0]
+            final fun <get-limit>(): kotlin/Int // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded.limit.<get-limit>|<get-limit>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/Int = ...): dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded.copy|copy(kotlin.String;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.BudgetExceeded.toString|toString(){}[0]
+    }
+
     final class Cycle : dev.ynagai.a2ui.compose/A2uiPlaceholderReason { // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.Cycle|null[0]
         constructor <init>(kotlin/String) // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.Cycle.<init>|<init>(kotlin.String){}[0]
 
@@ -61,6 +77,22 @@ sealed interface dev.ynagai.a2ui.compose/A2uiPlaceholderReason { // dev.ynagai.a
         final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooDeep.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooDeep.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooDeep.toString|toString(){}[0]
+    }
+
+    final class TooManyChildren : dev.ynagai.a2ui.compose/A2uiPlaceholderReason { // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren|null[0]
+        constructor <init>(kotlin/String, kotlin/Int) // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren.<init>|<init>(kotlin.String;kotlin.Int){}[0]
+
+        final val componentId // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren.componentId|{}componentId[0]
+            final fun <get-componentId>(): kotlin/String // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren.componentId.<get-componentId>|<get-componentId>(){}[0]
+        final val dropped // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren.dropped|{}dropped[0]
+            final fun <get-dropped>(): kotlin/Int // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren.dropped.<get-dropped>|<get-dropped>(){}[0]
+
+        final fun component1(): kotlin/String // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/Int = ...): dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren.copy|copy(kotlin.String;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.TooManyChildren.toString|toString(){}[0]
     }
 
     final class UnknownType : dev.ynagai.a2ui.compose/A2uiPlaceholderReason { // dev.ynagai.a2ui.compose/A2uiPlaceholderReason.UnknownType|null[0]
@@ -126,7 +158,7 @@ final class dev.ynagai.a2ui.compose/A2uiComponentScope { // dev.ynagai.a2ui.comp
 }
 
 final class dev.ynagai.a2ui.compose/A2uiRenderer { // dev.ynagai.a2ui.compose/A2uiRenderer|null[0]
-    constructor <init>(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition> = ..., dev.ynagai.a2ui.core.function/LocaleFormatter = ..., dev.ynagai.a2ui.core.function/UrlOpener = ..., dev.ynagai.a2ui.compose/A2uiClock = ..., dev.ynagai.a2ui.core.function/EvaluationLimits = ..., dev.ynagai.a2ui.core.validation/ValidationLimits = ..., dev.ynagai.a2ui.core.surface/RendererState = ...) // dev.ynagai.a2ui.compose/A2uiRenderer.<init>|<init>(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>;dev.ynagai.a2ui.core.function.LocaleFormatter;dev.ynagai.a2ui.core.function.UrlOpener;dev.ynagai.a2ui.compose.A2uiClock;dev.ynagai.a2ui.core.function.EvaluationLimits;dev.ynagai.a2ui.core.validation.ValidationLimits;dev.ynagai.a2ui.core.surface.RendererState){}[0]
+    constructor <init>(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition> = ..., dev.ynagai.a2ui.core.function/LocaleFormatter = ..., dev.ynagai.a2ui.core.function/UrlOpener = ..., dev.ynagai.a2ui.compose/A2uiClock = ..., dev.ynagai.a2ui.core.function/EvaluationLimits = ..., dev.ynagai.a2ui.core.validation/ValidationLimits = ..., dev.ynagai.a2ui.core.surface/RenderLimits = ..., dev.ynagai.a2ui.core.surface/RendererState = ...) // dev.ynagai.a2ui.compose/A2uiRenderer.<init>|<init>(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>;dev.ynagai.a2ui.core.function.LocaleFormatter;dev.ynagai.a2ui.core.function.UrlOpener;dev.ynagai.a2ui.compose.A2uiClock;dev.ynagai.a2ui.core.function.EvaluationLimits;dev.ynagai.a2ui.core.validation.ValidationLimits;dev.ynagai.a2ui.core.surface.RenderLimits;dev.ynagai.a2ui.core.surface.RendererState){}[0]
 
     final val catalogs // dev.ynagai.a2ui.compose/A2uiRenderer.catalogs|{}catalogs[0]
         final fun <get-catalogs>(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition> // dev.ynagai.a2ui.compose/A2uiRenderer.catalogs.<get-catalogs>|<get-catalogs>(){}[0]
@@ -136,6 +168,8 @@ final class dev.ynagai.a2ui.compose/A2uiRenderer { // dev.ynagai.a2ui.compose/A2
         final fun <get-evaluationLimits>(): dev.ynagai.a2ui.core.function/EvaluationLimits // dev.ynagai.a2ui.compose/A2uiRenderer.evaluationLimits.<get-evaluationLimits>|<get-evaluationLimits>(){}[0]
     final val locale // dev.ynagai.a2ui.compose/A2uiRenderer.locale|{}locale[0]
         final fun <get-locale>(): dev.ynagai.a2ui.core.function/LocaleFormatter // dev.ynagai.a2ui.compose/A2uiRenderer.locale.<get-locale>|<get-locale>(){}[0]
+    final val renderLimits // dev.ynagai.a2ui.compose/A2uiRenderer.renderLimits|{}renderLimits[0]
+        final fun <get-renderLimits>(): dev.ynagai.a2ui.core.surface/RenderLimits // dev.ynagai.a2ui.compose/A2uiRenderer.renderLimits.<get-renderLimits>|<get-renderLimits>(){}[0]
     final val urlOpener // dev.ynagai.a2ui.compose/A2uiRenderer.urlOpener|{}urlOpener[0]
         final fun <get-urlOpener>(): dev.ynagai.a2ui.core.function/UrlOpener // dev.ynagai.a2ui.compose/A2uiRenderer.urlOpener.<get-urlOpener>|<get-urlOpener>(){}[0]
     final val validationLimits // dev.ynagai.a2ui.compose/A2uiRenderer.validationLimits|{}validationLimits[0]
@@ -173,8 +207,6 @@ final object dev.ynagai.a2ui.compose/BasicCatalog { // dev.ynagai.a2ui.compose/B
         final fun <get-source>(): kotlin/String // dev.ynagai.a2ui.compose/BasicCatalog.source.<get-source>|<get-source>(){}[0]
 }
 
-final const val dev.ynagai.a2ui.compose/MAX_RENDER_DEPTH // dev.ynagai.a2ui.compose/MAX_RENDER_DEPTH|{}MAX_RENDER_DEPTH[0]
-    final fun <get-MAX_RENDER_DEPTH>(): kotlin/Int // dev.ynagai.a2ui.compose/MAX_RENDER_DEPTH.<get-MAX_RENDER_DEPTH>|<get-MAX_RENDER_DEPTH>(){}[0]
 final const val dev.ynagai.a2ui.compose/ROOT_COMPONENT_ID // dev.ynagai.a2ui.compose/ROOT_COMPONENT_ID|{}ROOT_COMPONENT_ID[0]
     final fun <get-ROOT_COMPONENT_ID>(): kotlin/String // dev.ynagai.a2ui.compose/ROOT_COMPONENT_ID.<get-ROOT_COMPONENT_ID>|<get-ROOT_COMPONENT_ID>(){}[0]
 
@@ -186,9 +218,11 @@ final val dev.ynagai.a2ui.compose/NoPlaceholder // dev.ynagai.a2ui.compose/NoPla
     final fun <get-NoPlaceholder>(): dev.ynagai.a2ui.compose/A2uiPlaceholder // dev.ynagai.a2ui.compose/NoPlaceholder.<get-NoPlaceholder>|<get-NoPlaceholder>(){}[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiChild$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiChild$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiChild$stableprop[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiComponentScope$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiComponentScope$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiComponentScope$stableprop[0]
+final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_BudgetExceeded$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_BudgetExceeded$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiPlaceholderReason_BudgetExceeded$stableprop[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_Cycle$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_Cycle$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiPlaceholderReason_Cycle$stableprop[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_MissingComponent$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_MissingComponent$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiPlaceholderReason_MissingComponent$stableprop[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooDeep$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooDeep$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooDeep$stableprop[0]
+final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRenderer$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRenderer$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiRenderer$stableprop[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_BasicCatalog$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_BasicCatalog$stableprop|#static{}dev_ynagai_a2ui_compose_BasicCatalog$stableprop[0]
@@ -201,13 +235,15 @@ final fun (dev.ynagai.a2ui.compose/A2uiComponentScope).dev.ynagai.a2ui.compose/r
 final fun (dev.ynagai.a2ui.compose/A2uiComponentScope).dev.ynagai.a2ui.compose/rememberNumber(kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): kotlin/Double? // dev.ynagai.a2ui.compose/rememberNumber|rememberNumber@dev.ynagai.a2ui.compose.A2uiComponentScope(kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun (dev.ynagai.a2ui.compose/A2uiComponentScope).dev.ynagai.a2ui.compose/rememberString(kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): kotlin/String? // dev.ynagai.a2ui.compose/rememberString|rememberString@dev.ynagai.a2ui.compose.A2uiComponentScope(kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun (dev.ynagai.a2ui.compose/A2uiComponentScope).dev.ynagai.a2ui.compose/rememberStringList(kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): kotlin.collections/List<kotlin/String>? // dev.ynagai.a2ui.compose/rememberStringList|rememberStringList@dev.ynagai.a2ui.compose.A2uiComponentScope(kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-final fun dev.ynagai.a2ui.compose/A2uiComponent(dev.ynagai.a2ui.compose/A2uiRenderer, kotlin/String, kotlin/String, dev.ynagai.a2ui.core.surface/EvaluationScope, androidx.compose.ui/Modifier?, kotlin/Function1<dev.ynagai.a2ui.core.protocol/RendererToAgentMessage, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.ynagai.a2ui.compose/A2uiComponent|A2uiComponent(dev.ynagai.a2ui.compose.A2uiRenderer;kotlin.String;kotlin.String;dev.ynagai.a2ui.core.surface.EvaluationScope;androidx.compose.ui.Modifier?;kotlin.Function1<dev.ynagai.a2ui.core.protocol.RendererToAgentMessage,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun dev.ynagai.a2ui.compose/A2uiComponent(dev.ynagai.a2ui.compose/A2uiRenderer, kotlin/String, kotlin/String, dev.ynagai.a2ui.core.surface/EvaluationScope, androidx.compose.ui/Modifier?, kotlin/Int, kotlin/Function1<dev.ynagai.a2ui.core.protocol/RendererToAgentMessage, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.ynagai.a2ui.compose/A2uiComponent|A2uiComponent(dev.ynagai.a2ui.compose.A2uiRenderer;kotlin.String;kotlin.String;dev.ynagai.a2ui.core.surface.EvaluationScope;androidx.compose.ui.Modifier?;kotlin.Int;kotlin.Function1<dev.ynagai.a2ui.core.protocol.RendererToAgentMessage,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.ynagai.a2ui.compose/A2uiSurface(dev.ynagai.a2ui.compose/A2uiRenderer, kotlin/String, dev.ynagai.a2ui.compose/ComponentRegistry, androidx.compose.ui/Modifier?, dev.ynagai.a2ui.compose/A2uiPlaceholder?, kotlin/Function1<dev.ynagai.a2ui.core.protocol/RendererToAgentMessage, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.ynagai.a2ui.compose/A2uiSurface|A2uiSurface(dev.ynagai.a2ui.compose.A2uiRenderer;kotlin.String;dev.ynagai.a2ui.compose.ComponentRegistry;androidx.compose.ui.Modifier?;dev.ynagai.a2ui.compose.A2uiPlaceholder?;kotlin.Function1<dev.ynagai.a2ui.core.protocol.RendererToAgentMessage,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiChild$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiChild$stableprop_getter|dev_ynagai_a2ui_compose_A2uiChild$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiComponentScope$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiComponentScope$stableprop_getter|dev_ynagai_a2ui_compose_A2uiComponentScope$stableprop_getter(){}[0]
+final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_BudgetExceeded$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_BudgetExceeded$stableprop_getter|dev_ynagai_a2ui_compose_A2uiPlaceholderReason_BudgetExceeded$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_Cycle$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_Cycle$stableprop_getter|dev_ynagai_a2ui_compose_A2uiPlaceholderReason_Cycle$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_MissingComponent$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_MissingComponent$stableprop_getter|dev_ynagai_a2ui_compose_A2uiPlaceholderReason_MissingComponent$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooDeep$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooDeep$stableprop_getter|dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooDeep$stableprop_getter(){}[0]
+final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop_getter|dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop_getter|dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRenderer$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRenderer$stableprop_getter|dev_ynagai_a2ui_compose_A2uiRenderer$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_BasicCatalog$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_BasicCatalog$stableprop_getter|dev_ynagai_a2ui_compose_BasicCatalog$stableprop_getter(){}[0]

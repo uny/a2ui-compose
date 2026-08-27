@@ -593,6 +593,34 @@ sealed interface dev.ynagai.a2ui.core.surface/EvaluationScope { // dev.ynagai.a2
     }
 }
 
+sealed interface dev.ynagai.a2ui.core.surface/RenderCost { // dev.ynagai.a2ui.core.surface/RenderCost|null[0]
+    final class Exceeds : dev.ynagai.a2ui.core.surface/RenderCost { // dev.ynagai.a2ui.core.surface/RenderCost.Exceeds|null[0]
+        constructor <init>(kotlin/Int) // dev.ynagai.a2ui.core.surface/RenderCost.Exceeds.<init>|<init>(kotlin.Int){}[0]
+
+        final val limit // dev.ynagai.a2ui.core.surface/RenderCost.Exceeds.limit|{}limit[0]
+            final fun <get-limit>(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderCost.Exceeds.limit.<get-limit>|<get-limit>(){}[0]
+
+        final fun component1(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderCost.Exceeds.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): dev.ynagai.a2ui.core.surface/RenderCost.Exceeds // dev.ynagai.a2ui.core.surface/RenderCost.Exceeds.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RenderCost.Exceeds.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderCost.Exceeds.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RenderCost.Exceeds.toString|toString(){}[0]
+    }
+
+    final class Fits : dev.ynagai.a2ui.core.surface/RenderCost { // dev.ynagai.a2ui.core.surface/RenderCost.Fits|null[0]
+        constructor <init>(kotlin/Int) // dev.ynagai.a2ui.core.surface/RenderCost.Fits.<init>|<init>(kotlin.Int){}[0]
+
+        final val instances // dev.ynagai.a2ui.core.surface/RenderCost.Fits.instances|{}instances[0]
+            final fun <get-instances>(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderCost.Fits.instances.<get-instances>|<get-instances>(){}[0]
+
+        final fun component1(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderCost.Fits.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): dev.ynagai.a2ui.core.surface/RenderCost.Fits // dev.ynagai.a2ui.core.surface/RenderCost.Fits.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RenderCost.Fits.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderCost.Fits.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RenderCost.Fits.toString|toString(){}[0]
+    }
+}
+
 sealed interface dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2ui.core.surface/RendererEffect|null[0]
     open val surfaceId // dev.ynagai.a2ui.core.surface/RendererEffect.surfaceId|{}surfaceId[0]
         open fun <get-surfaceId>(): kotlin/String? // dev.ynagai.a2ui.core.surface/RendererEffect.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
@@ -1667,6 +1695,30 @@ final class dev.ynagai.a2ui.core.surface/ProcessResult { // dev.ynagai.a2ui.core
     final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/ProcessResult.toString|toString(){}[0]
 }
 
+final class dev.ynagai.a2ui.core.surface/RenderLimits { // dev.ynagai.a2ui.core.surface/RenderLimits|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.ynagai.a2ui.core.surface/RenderLimits.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+    final val maxDepth // dev.ynagai.a2ui.core.surface/RenderLimits.maxDepth|{}maxDepth[0]
+        final fun <get-maxDepth>(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderLimits.maxDepth.<get-maxDepth>|<get-maxDepth>(){}[0]
+    final val maxInstances // dev.ynagai.a2ui.core.surface/RenderLimits.maxInstances|{}maxInstances[0]
+        final fun <get-maxInstances>(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderLimits.maxInstances.<get-maxInstances>|<get-maxInstances>(){}[0]
+    final val templateFanout // dev.ynagai.a2ui.core.surface/RenderLimits.templateFanout|{}templateFanout[0]
+        final fun <get-templateFanout>(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderLimits.templateFanout.<get-templateFanout>|<get-templateFanout>(){}[0]
+
+    final fun component1(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderLimits.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderLimits.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderLimits.component3|component3(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): dev.ynagai.a2ui.core.surface/RenderLimits // dev.ynagai.a2ui.core.surface/RenderLimits.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RenderLimits.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderLimits.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RenderLimits.toString|toString(){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.core.surface/RenderLimits.Companion|null[0]
+        final val DEFAULT // dev.ynagai.a2ui.core.surface/RenderLimits.Companion.DEFAULT|{}DEFAULT[0]
+            final fun <get-DEFAULT>(): dev.ynagai.a2ui.core.surface/RenderLimits // dev.ynagai.a2ui.core.surface/RenderLimits.Companion.DEFAULT.<get-DEFAULT>|<get-DEFAULT>(){}[0]
+    }
+}
+
 final class dev.ynagai.a2ui.core.surface/RendererState { // dev.ynagai.a2ui.core.surface/RendererState|null[0]
     constructor <init>(kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.surface/SurfaceModel> = ...) // dev.ynagai.a2ui.core.surface/RendererState.<init>|<init>(kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.surface.SurfaceModel>){}[0]
 
@@ -1998,6 +2050,7 @@ final fun (dev.ynagai.a2ui.core.surface/EvaluationScope).dev.ynagai.a2ui.core.su
 final fun (dev.ynagai.a2ui.core.surface/EvaluationScope).dev.ynagai.a2ui.core.surface/iterate(dev.ynagai.a2ui.core.surface/JsonPointer, kotlin/Int): dev.ynagai.a2ui.core.surface/EvaluationScope.Collection // dev.ynagai.a2ui.core.surface/iterate|iterate@dev.ynagai.a2ui.core.surface.EvaluationScope(dev.ynagai.a2ui.core.surface.JsonPointer;kotlin.Int){}[0]
 final fun (dev.ynagai.a2ui.core.surface/EvaluationScope).dev.ynagai.a2ui.core.surface/rebase(dev.ynagai.a2ui.core.surface/JsonPointer): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/rebase|rebase@dev.ynagai.a2ui.core.surface.EvaluationScope(dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
 final fun (dev.ynagai.a2ui.core.surface/EvaluationScope).dev.ynagai.a2ui.core.surface/resolve(kotlinx.serialization.json/JsonElement, dev.ynagai.a2ui.core.surface/JsonPointer): kotlinx.serialization.json/JsonElement? // dev.ynagai.a2ui.core.surface/resolve|resolve@dev.ynagai.a2ui.core.surface.EvaluationScope(kotlinx.serialization.json.JsonElement;dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
+final fun (dev.ynagai.a2ui.core.surface/SurfaceModel).dev.ynagai.a2ui.core.surface/renderCost(dev.ynagai.a2ui.core.surface/ChildResolver, dev.ynagai.a2ui.core.surface/RenderLimits = ..., kotlin/String = ...): dev.ynagai.a2ui.core.surface/RenderCost // dev.ynagai.a2ui.core.surface/renderCost|renderCost@dev.ynagai.a2ui.core.surface.SurfaceModel(dev.ynagai.a2ui.core.surface.ChildResolver;dev.ynagai.a2ui.core.surface.RenderLimits;kotlin.String){}[0]
 final fun (dev.ynagai.a2ui.core.surface/SurfaceModel).dev.ynagai.a2ui.core.surface/walk(dev.ynagai.a2ui.core.surface/ChildResolver, kotlin/Int = ..., kotlin/Int = ...): kotlin.collections/List<kotlin/Pair<dev.ynagai.a2ui.core.protocol/Component, dev.ynagai.a2ui.core.surface/EvaluationScope>> // dev.ynagai.a2ui.core.surface/walk|walk@dev.ynagai.a2ui.core.surface.SurfaceModel(dev.ynagai.a2ui.core.surface.ChildResolver;kotlin.Int;kotlin.Int){}[0]
 final fun (kotlinx.serialization.json/JsonElement).dev.ynagai.a2ui.core.surface/resolve(dev.ynagai.a2ui.core.surface/JsonPointer): kotlinx.serialization.json/JsonElement? // dev.ynagai.a2ui.core.surface/resolve|resolve@kotlinx.serialization.json.JsonElement(dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
 final fun (kotlinx.serialization.json/JsonObject).dev.ynagai.a2ui.core.surface/write(dev.ynagai.a2ui.core.surface/JsonPointer, kotlinx.serialization.json/JsonElement): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.surface/write|write@kotlinx.serialization.json.JsonObject(dev.ynagai.a2ui.core.surface.JsonPointer;kotlinx.serialization.json.JsonElement){}[0]

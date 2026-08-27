@@ -5,18 +5,17 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
+import dev.ynagai.a2ui.core.surface.RenderLimits
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * The depth bound, on the targets that can afford to reach it.
+ * The depth bound.
  *
- * Every other target but wasmJs: composing [MAX_RENDER_DEPTH] nested containers costs ~0.1s on the
- * JVM and is not measurable on the two native targets, but does not finish inside mocha's budget in
- * a browser -- the same test times out there at 60s. That is a fact about the bound rather than
- * about the test: a surface nesting 256 deep is one this renderer accepts, and on the web it would
- * hang the tab rather than draw. Recorded as its own source set so the exclusion is something the
- * build states, not something a runtime skip hides.
+ * This ran on every target but wasmJs while the bound was core's 256, which a browser cannot
+ * compose inside mocha's budget -- the fact that sent [RenderLimits.maxDepth] to be measured and
+ * set separately. At 24 the browser reaches it like everything else, so the source set that
+ * recorded the exclusion is gone and the bound is now checked where it matters most.
  */
 @OptIn(ExperimentalTestApi::class)
 class A2uiDepthBoundTest {
@@ -25,18 +24,18 @@ class A2uiDepthBoundTest {
         // Without a test, deleting the guard -- or raising the bound to something that never trips
         // -- left every other test green, because the deepest other fixture nests three levels.
         val reasons = mutableListOf<A2uiPlaceholderReason>()
-        val renderer = rendererFor(deepChain(MAX_RENDER_DEPTH + 8))
+        val renderer = rendererFor(deepChain(MAX_DEPTH + 8))
         val placeholder = A2uiPlaceholder { reason, _ -> reasons += reason }
         setContent { A2uiSurface(renderer, SURFACE, TestRegistry, placeholder = placeholder) }
         assertTrue(
             reasons.any { it is A2uiPlaceholderReason.TooDeep },
-            "a chain past MAX_RENDER_DEPTH should stop as TooDeep: ${reasons.take(4)}",
+            "a chain past the depth bound should stop as TooDeep: ${reasons.take(4)}",
         )
         // And it stops *at* the bound rather than somewhere past it.
         assertTrue(
             reasons.filterIsInstance<A2uiPlaceholderReason.TooDeep>()
-                .any { it.componentId == "c$MAX_RENDER_DEPTH" },
-            "the bound should trip on the component at depth MAX_RENDER_DEPTH",
+                .any { it.componentId == "c$MAX_DEPTH" },
+            "the bound should trip on the component at the depth bound",
         )
     }
 
@@ -65,6 +64,8 @@ class A2uiDepthBoundTest {
 
     private companion object {
         const val SURFACE = "s"
+
+        val MAX_DEPTH = RenderLimits.DEFAULT.maxDepth
 
         /** Containers only: this suite is about how far down the descent goes, not what it draws. */
         val TestRegistry = ComponentRegistry(

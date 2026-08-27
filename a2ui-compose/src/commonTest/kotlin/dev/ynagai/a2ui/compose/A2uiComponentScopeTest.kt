@@ -225,6 +225,25 @@ class A2uiComponentScopeTest {
     }
 
     @Test
+    fun a_budget_below_one_buys_no_children_however_far_below_it_is() {
+        // `budget` is a public parameter of `A2uiComponent`, so every Int reaches this. The
+        // subtraction that leaves room for the children has to be clamped before it happens:
+        // `Int.MIN_VALUE - 1` wraps to `Int.MAX_VALUE`, and coercing after the wrap reads the one
+        // input furthest below the bound as room for everything.
+        for (budget in listOf(Int.MIN_VALUE, -1, 0, 1)) {
+            val scope = A2uiComponentScope(
+                renderer = renderer(),
+                surfaceId = SURFACE,
+                component = renderer().state.surfaces.getValue(SURFACE).components.getValue("list"),
+                evaluationScope = EvaluationScope.Root,
+                budget = budget,
+                onMessage = {},
+            )
+            assertEquals(emptyList(), scope.allChildren(), "budget $budget bought children")
+        }
+    }
+
+    @Test
     fun one_gesture_cannot_open_more_than_the_evaluator_allows() {
         // An event's context is read, not performed. Evaluated with user-action authority each
         // field got its own evaluator and so its own "one open per expression" budget, and this

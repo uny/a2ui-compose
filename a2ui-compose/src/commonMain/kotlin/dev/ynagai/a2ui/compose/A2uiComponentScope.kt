@@ -186,8 +186,11 @@ public data class A2uiComponentScope internal constructor(
         if (references.isEmpty()) return emptyList()
         val wanted = references.map { it.size(surface) }
         val total = wanted.sumOf { it.toLong() }
-        // One instance for this component, and what is left goes to the children.
-        val room = (budget - 1).coerceAtLeast(0)
+        // One instance for this component, and what is left goes to the children. Clamped before
+        // the subtraction rather than after it: `budget` arrives from a public parameter, and
+        // `Int.MIN_VALUE - 1` wraps to `Int.MAX_VALUE`, which coercing afterwards would read as
+        // room for everything -- the one input that turns the bound into its opposite.
+        val room = if (budget <= 1) 0 else budget - 1
         // The entries reporting what was cut are themselves instances, and a bound that did not
         // pay for them would be a bound that overspends by however many references a component
         // carries. Reserved before the rest is divided; when even the reserve does not fit, some

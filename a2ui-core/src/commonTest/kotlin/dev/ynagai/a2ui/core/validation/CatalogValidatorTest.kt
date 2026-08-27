@@ -7,6 +7,7 @@ import dev.ynagai.a2ui.core.protocol.FunctionCall
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -322,6 +323,50 @@ class CatalogValidatorTest {
                 "metadata": {"extensions": {"ok_key": 1}}}""",
         )
         assertEquals(emptySet(), result.unsupportedKeywords)
+    }
+
+    // --- a catalog may not choose what it is checked against ---------------------------------
+
+    @Test
+    fun a_catalog_cannot_shadow_a_document_the_specification_publishes() {
+        // `$id` is a free string on a catalog -- `catalog_definition.json` requires only
+        // `catalogId` -- and a catalog may arrive inlined in an agent's capabilities message. A
+        // catalog that claims `agent_to_renderer.json` and defines `Component` as `true` would
+        // otherwise become the schema every component is checked against, which is the whole of
+        // the check.
+        val hostile = BASIC.copy(
+            catalogId = "urn:agent:inlined",
+            schemaKeywords = BASIC.schemaKeywords + mapOf(
+                "\$id" to JsonPrimitive(ProtocolSchemas.AGENT_TO_RENDERER_URI),
+                "\$defs" to parseObject("""{"Component": true}"""),
+            ),
+        )
+        val result = CatalogValidator.of(listOf(BASIC, hostile)).validate(
+            component("""{"id": "c", "component": "Text", "nope": true}"""),
+            surfaceDefault = BASIC_ID,
+        )
+        assertFalse(result.isValid, "the inlined catalog replaced `agent_to_renderer.json`")
+    }
+
+    @Test
+    fun a_catalog_cannot_take_the_placeholder_from_the_catalog_in_play() {
+        // The placeholder is a filename, not a URI. A catalog registering itself under the URI it
+        // resolves to would otherwise answer `catalog.json#/$defs/anyComponent` for a surface that
+        // named a different catalog entirely.
+        val hostile = BASIC.copy(
+            catalogId = "urn:agent:inlined",
+            schemaKeywords = BASIC.schemaKeywords + mapOf(
+                "\$id" to JsonPrimitive("https://a2ui.org/specification/v1_0/catalog.json"),
+                "\$defs" to parseObject(
+                    """{"anyComponent": {"type": "object", "additionalProperties": true}}""",
+                ),
+            ),
+        )
+        val result = CatalogValidator.of(listOf(BASIC, hostile)).validate(
+            component("""{"id": "c", "component": "Text", "nope": true}"""),
+            surfaceDefault = BASIC_ID,
+        )
+        assertFalse(result.isValid, "the inlined catalog took the placeholder binding")
     }
 
     // --- coverage --------------------------------------------------------------------------------

@@ -81,6 +81,11 @@ public class SchemaRegistry private constructor(
     }
 
     private fun resolveDocumentUri(uriPart: String, baseUri: String): String {
+        // The placeholder written bare is answered before the map is consulted. It is a filename
+        // rather than a URI, so a document that registered itself under the URI it would resolve to
+        // -- which an inlined catalog may do, `$id` being a free string on a catalog -- must not be
+        // able to take the binding away from the catalog that is actually in play.
+        if (uriPart == CATALOG_PLACEHOLDER && activeCatalogUri != null) return activeCatalogUri
         val absolute = if (uriPart.contains("://")) uriPart else joinRelative(uriPart, baseUri)
         if (absolute in documents) return absolute
         // The placeholder: a reference to `catalog.json` that no registered document claims means
@@ -123,9 +128,16 @@ public class SchemaRegistry private constructor(
             documents: List<JsonObject>,
             activeCatalog: JsonObject? = null,
         ): SchemaRegistry {
-            val all = (documents + listOfNotNull(activeCatalog)).associateBy { it.declaredId() }
-                .filterKeys { it != null }
-                .mapKeys { (key, _) -> key!! }
+            // The FIRST document to claim a URI keeps it. `$id` is a free string on a catalog --
+            // `catalog_definition.json` requires only `catalogId` -- and a catalog may arrive
+            // inlined in an agent's capabilities message, so a document claiming a URI an earlier
+            // one already published is choosing what a payload is checked against rather than
+            // registering itself. Callers pass the specification's own documents first.
+            val all = mutableMapOf<String, JsonObject>()
+            for (document in documents + listOfNotNull(activeCatalog)) {
+                val id = document.declaredId() ?: continue
+                if (id !in all) all[id] = document
+            }
             return SchemaRegistry(all, activeCatalog?.declaredId())
         }
 

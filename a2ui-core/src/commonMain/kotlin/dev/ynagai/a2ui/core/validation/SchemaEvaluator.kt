@@ -197,6 +197,17 @@ public class SchemaEvaluator(
                 merge(outcome)
             }
 
+            // Read off the schema before the loop rather than as the loop meets them. A branch
+            // that fails early is abandoned below, so a keyword sitting behind the failure would
+            // never be seen -- and which keyword fails first depends on the payload, so the same
+            // catalog would report a gap for one message and none for the next. What this answers
+            // is whether the *schema* was fully applied, which is a property of the catalog.
+            for (keyword in schema.keys) {
+                if (keyword !in ANNOTATION_KEYWORDS && keyword !in SUPPORTED_KEYWORDS) {
+                    unsupported += keyword
+                }
+            }
+
             for ((keyword, value) in schema) {
                 // Once a speculative branch has failed, nothing left in it can change the answer:
                 // the caller reads only `valid`, and annotations from a schema that did not hold
@@ -642,7 +653,9 @@ public class SchemaEvaluator(
                     // cannot run inside this loop.
                     "unevaluatedProperties" -> Unit
 
-                    else -> unsupported += keyword
+                    // Already reported, before this loop: an unapplied keyword is a fact about the
+                    // schema, and reading it off here would make it a fact about the payload.
+                    else -> Unit
                 }
             }
 

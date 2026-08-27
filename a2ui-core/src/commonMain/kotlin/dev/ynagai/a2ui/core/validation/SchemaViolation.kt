@@ -277,6 +277,29 @@ internal fun JsonElement.matchesType(expected: JsonElement): Boolean = when (exp
     else -> true
 }
 
+/** The seven names JSON Schema 2020-12 gives `type`. */
+private val TYPE_NAMES: Set<String> =
+    setOf("object", "array", "null", "string", "boolean", "number", "integer")
+
+/**
+ * The `type` names in [this] that [matchesType] cannot read, and so answers `true` for.
+ *
+ * A `type` this does not recognise is not a value that fails to match — it is a constraint that
+ * was never applied, and the two look the same from the outside. The caller reports these rather
+ * than letting a catalog written `{"type": 7}` accept every value silently; see
+ * [SchemaValidation.unsupportedKeywords]. `null` counts as unreadable even though `"null"` is a
+ * type name, because JSON Schema spells the name as a *string*.
+ */
+internal fun JsonElement.unreadableTypeNames(): List<String> = when (this) {
+    is JsonArray -> flatMap { it.unreadableTypeNames() }
+    is JsonPrimitive -> when {
+        !isString -> listOf(content)
+        content in TYPE_NAMES -> emptyList()
+        else -> listOf(content)
+    }
+    is JsonObject -> listOf("an object")
+}
+
 private fun JsonElement.matchesTypeName(name: String): Boolean = when (name) {
     "object" -> this is JsonObject
     "array" -> this is JsonArray

@@ -105,6 +105,39 @@ class A2uiRenderBudgetTest {
     }
 
     @Test
+    fun a_surface_drawn_inside_another_surface_passes_the_gate_too() = runComposeUiTest {
+        // The gate opens on a null render path, and a surface composed from inside a component
+        // renderer inherits the enclosing one's. Nothing resets it at the boundary, so this entry
+        // used to skip the estimate entirely -- and the outer path already holding `root` made
+        // this surface's own root look like a cycle. Both are the same missing reset.
+        val reasons = mutableListOf<A2uiPlaceholderReason>()
+        val outer = rendererFor("""[{"id":"$ROOT_COMPONENT_ID","component":"Column","children":["a"]},
+            {"id":"a","component":"Text","text":"x"}]""")
+        val inner = rendererFor(fanOut(20))
+        val nesting = ComponentRegistry(
+            mapOf(
+                "Column" to StackingRenderer,
+                // Stands in for a host component whose renderer embeds another surface.
+                "Text" to ComponentRenderer { _, _ ->
+                    A2uiSurface(inner, SURFACE, TestRegistry, placeholder = recording(reasons))
+                },
+            ),
+        )
+        setContent { A2uiSurface(outer, SURFACE, nesting) }
+        // Refused as a whole, exactly as it is at the top level -- not drawn, and not mistaken
+        // for a cycle against the outer surface's ids.
+        assertEquals(
+            listOf<A2uiPlaceholderReason>(
+                A2uiPlaceholderReason.BudgetExceeded(
+                    ROOT_COMPONENT_ID,
+                    RenderLimits.DEFAULT.maxInstances,
+                ),
+            ),
+            reasons,
+        )
+    }
+
+    @Test
     fun a_component_the_resolver_refuses_does_not_take_the_composition_with_it() =
         runComposeUiTest {
             // The estimate resolves children to count them, and `childrenOf` raises on payloads the

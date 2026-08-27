@@ -159,6 +159,13 @@ public fun A2uiSurface(
     CompositionLocalProvider(
         LocalA2uiRegistry provides registry,
         LocalA2uiPlaceholder provides placeholder,
+        // A surface starts its own path. Component ids are scoped to the surface that defined
+        // them, so a path carried in from an enclosing surface is a path of somebody else's ids:
+        // it makes this surface's `root` look like a cycle against the outer one's, and it leaves
+        // [A2uiComponent]'s budget gate -- which opens on a null path -- shut. A host drawing a
+        // second surface from inside a component renderer would then compose the one payload the
+        // gate exists to refuse.
+        LocalRenderPath provides null,
     ) {
         A2uiComponent(
             renderer = renderer,

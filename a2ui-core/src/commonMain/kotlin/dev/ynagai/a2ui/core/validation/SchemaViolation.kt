@@ -149,10 +149,66 @@ internal enum class FormatVerdict { VALID, INVALID, UNKNOWN }
  */
 internal fun checkFormat(name: String, value: String): FormatVerdict = when (name) {
     "uri" -> if (isUri(value)) FormatVerdict.VALID else FormatVerdict.INVALID
-    "date" -> if (DATE.matches(value)) FormatVerdict.VALID else FormatVerdict.INVALID
-    "time" -> if (TIME.matches(value)) FormatVerdict.VALID else FormatVerdict.INVALID
-    "date-time" -> if (DATE_TIME.matches(value)) FormatVerdict.VALID else FormatVerdict.INVALID
+    "date" -> if (isDate(value)) FormatVerdict.VALID else FormatVerdict.INVALID
+    "time" -> if (isTime(value)) FormatVerdict.VALID else FormatVerdict.INVALID
+    "date-time" -> if (isDateTime(value)) FormatVerdict.VALID else FormatVerdict.INVALID
     else -> FormatVerdict.UNKNOWN
+}
+
+/**
+ * RFC 3339 `full-date`, which is what JSON Schema's `date` means.
+ *
+ * The shape alone is not the rule: `2024-02-31` and `2024-13-01` match `\d{4}-\d{2}-\d{2}` and
+ * are not dates. `DateTimeInput.min` in the published basic catalog asserts this format, and a
+ * renderer hands what passes to a platform date parser.
+ */
+private fun isDate(value: String): Boolean {
+    if (!DATE.matches(value)) return false
+    val year = value.substring(0, 4).toInt()
+    val month = value.substring(5, 7).toInt()
+    val day = value.substring(8, 10).toInt()
+    if (month !in 1..12 || day < 1) return false
+    return day <= daysInMonth(year, month)
+}
+
+private fun daysInMonth(year: Int, month: Int): Int = when (month) {
+    1, 3, 5, 7, 8, 10, 12 -> 31
+    4, 6, 9, 11 -> 30
+    else -> if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) 29 else 28
+}
+
+/**
+ * RFC 3339 `full-time`, which requires the offset JSON Schema's `time` inherits.
+ *
+ * A time with no offset does not name an instant, so accepting one hands the renderer a value it
+ * cannot place. `23:59:60` is allowed: RFC 3339 permits the leap second.
+ */
+private fun isTime(value: String): Boolean {
+    if (!TIME.matches(value)) return false
+    return hasTimeOfDay(value.substring(0, 8)) && hasOffset(value.substring(8))
+}
+
+private fun isDateTime(value: String): Boolean {
+    if (!DATE_TIME.matches(value)) return false
+    return isDate(value.substring(0, 10)) &&
+        hasTimeOfDay(value.substring(11, 19)) &&
+        hasOffset(value.substring(19))
+}
+
+private fun hasTimeOfDay(text: String): Boolean {
+    val hour = text.substring(0, 2).toInt()
+    val minute = text.substring(3, 5).toInt()
+    val second = text.substring(6, 8).toInt()
+    return hour <= 23 && minute <= 59 && second <= 60
+}
+
+private fun hasOffset(tail: String): Boolean {
+    val offset = tail.dropWhile { it != 'Z' && it != 'z' && it != '+' && it != '-' }
+    if (offset.isEmpty()) return false
+    if (offset[0] == 'Z' || offset[0] == 'z') return offset.length == 1
+    val hour = offset.substring(1, 3).toInt()
+    val minute = offset.substring(4, 6).toInt()
+    return hour <= 23 && minute <= 59
 }
 
 /**
@@ -166,6 +222,10 @@ private fun isUri(value: String): Boolean {
     val colon = value.indexOf(':')
     if (colon <= 0) return false
     if (!value[0].isAsciiLetter()) return false
+    // Whatever the rest is allowed to be, it is not this: RFC 3986 excludes the space and the
+    // control characters outright, and `openUrl` in the basic catalog leans on this format to
+    // refuse what it will not open.
+    if (value.any { it == ' ' || it.code < 0x20 || it.code == 0x7F }) return false
     // Written out rather than using a character class, because `\w` and friends cover different
     // characters on JS than they do on the JVM and Native, and the same payload must not be a URI
     // on Android and not one on the web.
@@ -179,7 +239,7 @@ private fun isUri(value: String): Boolean {
 private fun Char.isAsciiLetter(): Boolean = this in 'a'..'z' || this in 'A'..'Z'
 
 private val DATE = Regex("""^\d{4}-\d{2}-\d{2}$""")
-private val TIME = Regex("""^\d{2}:\d{2}:\d{2}(\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})?$""")
+private val TIME = Regex("""^\d{2}:\d{2}:\d{2}(\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$""")
 private val DATE_TIME = Regex(
     """^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$""",
 )

@@ -435,4 +435,34 @@ class SchemaEvaluatorTest {
         assertTrue(result.truncated, "the scan was not charged")
     }
 
+    @Test
+    fun the_asserted_formats_check_more_than_the_shape() {
+        // `DateTimeInput.min`/`max` in the published basic catalog assert these, and a renderer
+        // hands whatever passes to a platform parser. `format` is an assertion here, not an
+        // annotation, so the shape alone is not the rule.
+        val valid = listOf(
+            "date" to "2024-02-29",
+            "date" to "2023-12-31",
+            "time" to "23:59:60Z",
+            "time" to "10:00:00+09:00",
+            "date-time" to "2026-08-27T09:00:00Z",
+            "uri" to "https://example.com/a%20b",
+        )
+        for ((name, text) in valid) {
+            assertEquals(FormatVerdict.VALID, checkFormat(name, text), "$name: $text")
+        }
+        val invalid = listOf(
+            "date" to "2023-02-29",
+            "date" to "2024-13-01",
+            "date" to "2024-04-31",
+            "time" to "10:00:00",
+            "time" to "24:00:00Z",
+            "date-time" to "2024-02-31T00:00:00Z",
+            "uri" to "https://exa mple.com",
+        )
+        for ((name, text) in invalid) {
+            assertEquals(FormatVerdict.INVALID, checkFormat(name, text), "$name: $text")
+        }
+    }
+
 }

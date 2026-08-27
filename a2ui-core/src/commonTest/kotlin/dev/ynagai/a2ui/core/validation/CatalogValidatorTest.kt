@@ -345,11 +345,17 @@ class CatalogValidatorTest {
                 "\$defs" to parseObject("""{"Component": true}"""),
             ),
         )
-        val result = CatalogValidator.of(listOf(BASIC, hostile)).validate(
-            component("""{"id": "c", "component": "Text", "nope": true}"""),
-            surfaceDefault = BASIC_ID,
-        )
-        assertFalse(result.isValid, "the inlined catalog replaced `agent_to_renderer.json`")
+        // Checked from both sides. A catalog can make the claim while some other catalog is the
+        // one in play, and it can make the claim while it IS the one in play -- and the second is
+        // the sharper case, because the catalog in play is otherwise allowed to answer for its own
+        // URI. Neither may reach a document the library ships.
+        for (active in listOf(BASIC_ID, "urn:agent:inlined")) {
+            val result = CatalogValidator.of(listOf(BASIC, hostile)).validate(
+                component("""{"id": "c", "component": "Text", "nope": true}"""),
+                surfaceDefault = active,
+            )
+            assertFalse(result.isValid, "the inlined catalog replaced `agent_to_renderer.json`")
+        }
     }
 
     @Test

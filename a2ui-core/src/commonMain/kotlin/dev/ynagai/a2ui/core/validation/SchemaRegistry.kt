@@ -55,13 +55,27 @@ public class SchemaRegistry private constructor(
     /**
      * The document [uri] publishes, or null when nothing registered it.
      *
-     * The catalog in play answers for its own URI whatever else claimed it. `$id` is a free string
-     * on a catalog, so two catalogs may publish the same one, and the map can only keep one of
-     * them -- but the placeholder resolves through this, and it must reach the catalog the caller
-     * named rather than whichever namesake happened to register.
+     * Two rules, and the order between them is the point.
+     *
+     * A document this library ships is never displaceable, by anyone -- not by another catalog and
+     * not by the catalog in play. `$id` is a free string on a catalog, so a catalog declaring the
+     * `$id` of `agent_to_renderer.json` is making a claim it has no right to; honouring it would
+     * hand an agent the definition of `Component`, which is the whole of the check.
+     *
+     * Below that, the catalog in play answers for its own URI whatever else claimed it. Two
+     * catalogs may publish the same `$id` and the map can only keep one, but the placeholder
+     * resolves through here and must reach the catalog the caller *named* rather than whichever
+     * namesake happened to register first.
+     *
+     * A catalog that claims a library URI therefore reaches neither branch as itself: the
+     * placeholder binds to that URI, the library document answers, and the pointer into it fails
+     * to resolve. That is reported as an unresolvable reference, which is the truth.
      */
-    public fun document(uri: String): JsonObject? =
-        if (uri == activeCatalogUri) activeCatalog ?: documents[uri] else documents[uri]
+    public fun document(uri: String): JsonObject? = when {
+        uri in ProtocolSchemas.libraryUris -> documents[uri]
+        uri == activeCatalogUri -> activeCatalog ?: documents[uri]
+        else -> documents[uri]
+    }
 
     /**
      * The subschema [reference] names, read relative to [base].

@@ -9,13 +9,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
+import dev.ynagai.a2ui.core.protocol.Surface
+import dev.ynagai.a2ui.core.surface.DEFAULT_MAX_DEPTH
 import dev.ynagai.a2ui.core.surface.EvaluationScope
 
-/** How deep the tree may nest before rendering stops. Matches the core walk's own bound. */
-public const val MAX_RENDER_DEPTH: Int = 256
+/**
+ * How deep the tree may nest before rendering stops.
+ *
+ * Core's own depth bound rather than a second copy of the number: [A2uiComponent]'s guard and
+ * [dev.ynagai.a2ui.core.surface.walk]'s have to agree, and two `const val`s holding 256 agree only
+ * until someone changes one of them.
+ *
+ * **Depth is not the only bound core carries, and it is not the one that stops the worst payload.**
+ * `walk` also refuses past [dev.ynagai.a2ui.core.surface.DEFAULT_WALK_LIMIT] *instances*, because
+ * the adjacency list is a graph: n layers of components that each name the same two children
+ * expand to 2^n instances from 2n components, and neither the depth guard nor the cycle guard
+ * bounds that -- no path repeats an id and none of them is deep. This composition has no instance
+ * budget, so that bound does not exist on the path that actually draws. See the review note on
+ * this PR; closing it needs a budget carried down the descent, which is more than a constant.
+ */
+public const val MAX_RENDER_DEPTH: Int = DEFAULT_MAX_DEPTH
 
-/** The id the specification reserves for a surface's root component. */
-public const val ROOT_COMPONENT_ID: String = "root"
+/**
+ * The id the specification reserves for a surface's root component.
+ *
+ * Core's constant rather than a second literal: [dev.ynagai.a2ui.core.surface.SurfaceModel.isRenderable]
+ * decides a surface is drawable by looking for [Surface.ROOT_ID], and this is where the drawing
+ * starts. If the two ever named different ids, every surface would pass `isRenderable` and then
+ * render as a `MissingComponent` placeholder -- a blank screen, with nothing reporting why.
+ */
+public const val ROOT_COMPONENT_ID: String = Surface.ROOT_ID
 
 /**
  * What a component that cannot be drawn leaves behind.

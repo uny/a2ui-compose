@@ -56,9 +56,9 @@ class A2uiSurfaceTest {
         // `a -> b -> a`. Without the guard this recurses until the composition dies, which is why
         // this test is written as "it finishes at all" rather than as an assertion about depth.
         val reasons = mutableListOf<A2uiPlaceholderReason>()
-        setContent {
-            A2uiSurface(rendererFor(CYCLIC), SURFACE, TestRegistry, placeholder = recording(reasons))
-        }
+        val renderer = rendererFor(CYCLIC)
+        val placeholder = recording(reasons)
+        setContent { A2uiSurface(renderer, SURFACE, TestRegistry, placeholder = placeholder) }
         onNodeWithText("a").assertIsDisplayed()
         onNodeWithText("b").assertIsDisplayed()
         assertTrue(
@@ -73,9 +73,9 @@ class A2uiSurfaceTest {
             // Progressive rendering: the specification requires a renderer to draw what it has and
             // keep going, because the agent is allowed to name a component before sending it.
             val reasons = mutableListOf<A2uiPlaceholderReason>()
-            setContent {
-                A2uiSurface(rendererFor(DANGLING), SURFACE, TestRegistry, placeholder = recording(reasons))
-            }
+            val renderer = rendererFor(DANGLING)
+            val placeholder = recording(reasons)
+            setContent { A2uiSurface(renderer, SURFACE, TestRegistry, placeholder = placeholder) }
             onNodeWithText("present").assertIsDisplayed()
             assertEquals(
                 listOf(A2uiPlaceholderReason.MissingComponent("absent")),
@@ -86,9 +86,9 @@ class A2uiSurfaceTest {
     @Test
     fun a_component_type_the_registry_does_not_know_is_reported_as_one() = runComposeUiTest {
         val reasons = mutableListOf<A2uiPlaceholderReason>()
-        setContent {
-            A2uiSurface(rendererFor(UNKNOWN), SURFACE, ComponentRegistry.Empty, placeholder = recording(reasons))
-        }
+        val renderer = rendererFor(UNKNOWN)
+        val placeholder = recording(reasons)
+        setContent { A2uiSurface(renderer, SURFACE, ComponentRegistry.Empty, placeholder = placeholder) }
         assertEquals(
             listOf(A2uiPlaceholderReason.UnknownType("root", "Text")),
             reasons.filterIsInstance<A2uiPlaceholderReason.UnknownType>(),
@@ -155,6 +155,22 @@ class A2uiSurfaceTest {
         }
 
         /**
+         * The same descent with no layout node around it.
+         *
+         * For the depth test only. That fixture is a chain of 264 containers, and with
+         * [StackingRenderer] almost all of its cost is 264 nested `Column`s being measured and laid
+         * out -- which is not what the depth guard does. In a browser it overran mocha's budget
+         * outright, where the guard itself is a list membership test per level.
+         *
+         * The component type stays `Column`, because the child resolver reads the *catalog* to find
+         * children: a type the basic catalog does not define would resolve none at all, the chain
+         * would end at its first link, and the test would pass for the wrong reason.
+         */
+        val BareRenderer = ComponentRenderer { scope, _ ->
+            scope.rememberAllChildren().forEach { child -> scope.RenderChild(child) }
+        }
+
+        /**
          * Just enough of a catalog to exercise the adapter: a `Text` that draws its resolved
          * string and two containers that stack their children.
          *
@@ -166,6 +182,10 @@ class A2uiSurfaceTest {
          * source order, so referring to it from above would read null here and fail with no
          * mention of ordering.
          */
+        /** [TestRegistry] with the containers stripped of their layout. See [BareRenderer]. */
+        val DeepRegistry: ComponentRegistry
+            get() = TestRegistry.with(mapOf("Column" to BareRenderer, "List" to BareRenderer))
+
         val TestRegistry = ComponentRegistry(
             mapOf(
                 "Text" to ComponentRenderer { scope, modifier ->

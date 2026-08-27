@@ -22,6 +22,7 @@ import dev.ynagai.a2ui.core.surface.EvaluationScope
 import dev.ynagai.a2ui.core.surface.JsonPointer
 import dev.ynagai.a2ui.core.surface.SurfaceModel
 import dev.ynagai.a2ui.core.surface.iterate
+import dev.ynagai.a2ui.core.surface.rebase
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -43,6 +44,7 @@ import kotlinx.serialization.json.doubleOrNull
  * A data class so that `remember` keys built from it compare by value; without that, every
  * recomposition would rebuild the derived states below.
  */
+@ConsistentCopyVisibility
 @Stable
 public data class A2uiComponentScope internal constructor(
     public val renderer: A2uiRenderer,
@@ -115,10 +117,14 @@ public data class A2uiComponentScope internal constructor(
         }
     }
 
-    /** Property [name] as a number. */
-    public fun number(name: String): Double? = value(name)?.let {
-        (it as? JsonPrimitive)?.doubleOrNull ?: it.contentOrNullSafe()?.toDoubleOrNull()
-    }
+    /**
+     * Property [name] as a number.
+     *
+     * `doubleOrNull` reads the primitive's text, so a data model holding `"42"` where the catalog
+     * types a number still resolves -- the leniency the specification asks for when the agent's
+     * payload and its catalog disagree about a scalar's type.
+     */
+    public fun number(name: String): Double? = (value(name) as? JsonPrimitive)?.doubleOrNull
 
     /** Property [name] as a boolean. */
     public fun boolean(name: String): Boolean? = value(name)?.let {
@@ -166,9 +172,12 @@ public data class A2uiComponentScope internal constructor(
     /**
      * Runs [action], which is what a `Button` does when tapped.
      *
-     * [InvocationContext.USER_ACTION] rather than `RENDER`: `openUrl` is required to refuse an
-     * invocation that no user gesture caused, and that distinction is carried by this parameter
-     * rather than inferred.
+     * The gesture's authority stops at the call the gesture makes. An [Action.Invoke]'s
+     * `functionCall` runs with [InvocationContext.USER_ACTION], because `openUrl` is required to
+     * refuse an invocation that no user gesture caused and that distinction is carried by this
+     * parameter rather than inferred. An [Action.Event]'s `context` and `userMessage` do not: they
+     * are bindings read to describe the event, which is the "dynamic data binding evaluation" the
+     * specification puts on the far side of that line.
      */
     public fun dispatch(action: Action) {
         when (action) {
@@ -179,8 +188,14 @@ public data class A2uiComponentScope internal constructor(
 
             is Action.Event -> {
                 val event = action.event
+                // RENDER, not USER_ACTION. These are values being *read* to describe the event, and
+                // the specification puts "dynamic data binding evaluation" on the side of the line
+                // `openUrl` must refuse. Evaluating them with user-action authority also handed
+                // each field its own evaluator, and so its own "one open per expression" budget:
+                // an event with three `openUrl` calls in its context opened three windows from one
+                // tap, which is the popup flood that budget exists to stop.
                 val resolved = event.context.orEmpty().mapValues { (_, bound) ->
-                    val context = context(InvocationContext.USER_ACTION)
+                    val context = context(InvocationContext.RENDER)
                     when {
                         context == null -> JsonNull
                         bound is DynamicValue.Literal -> bound.value
@@ -204,9 +219,10 @@ public data class A2uiComponentScope internal constructor(
         }
     }
 
+    /** A bound `userMessage`, read the same way and for the same reason as an event's context. */
     private fun resolveDynamicString(value: DynamicString): String? = when (value) {
         is DynamicString.Literal -> value.value
-        is BoundValue -> context(InvocationContext.USER_ACTION)
+        is BoundValue -> context(InvocationContext.RENDER)
             ?.let { runCatching { it.evaluate(value) }.getOrNull() }
             ?.asText()
 
@@ -215,7 +231,7 @@ public data class A2uiComponentScope internal constructor(
 
     /** Writes [value] at [pointer], resolved against this scope -- two-way binding's write half. */
     public fun write(pointer: JsonPointer, value: JsonElement) {
-        renderer.write(surfaceId, evaluationScope.rebasedFrom(pointer), value)
+        renderer.write(surfaceId, evaluationScope.rebase(pointer), value)
     }
 
     /**
@@ -231,11 +247,12 @@ public data class A2uiComponentScope internal constructor(
         }.getOrNull()
         val path = (decoded as? DataBinding)?.path ?: return null
         val pointer = runCatching { JsonPointer.parse(path) }.getOrNull() ?: return null
-        return evaluationScope.rebasedFrom(pointer)
+        return evaluationScope.rebase(pointer)
     }
 }
 
 /** A child to draw: which component, and the scope its bound paths resolve against. */
+@ConsistentCopyVisibility
 @Stable
 public data class A2uiChild internal constructor(
     public val componentId: String,
@@ -291,19 +308,9 @@ public fun A2uiComponentScope.rememberAllChildren(): List<A2uiChild> {
     return value
 }
 
-/**
- * [pointer] made absolute against this scope.
- *
- * A relative pointer inside a template instance means "within the item being rendered". An absolute
- * one means what it says, wherever it appears.
- */
-internal fun EvaluationScope.rebasedFrom(pointer: JsonPointer): JsonPointer =
-    if (pointer.isAbsolute) pointer else base.resolve(pointer)
-
 /** A JSON value as the text a widget would show, without quoting a string that already is one. */
 internal fun JsonElement.asText(): String? = when (this) {
     is JsonPrimitive -> if (this is JsonNull) null else contentOrNull
     else -> null
 }
 
-private fun JsonElement.contentOrNullSafe(): String? = (this as? JsonPrimitive)?.contentOrNull

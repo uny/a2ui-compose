@@ -25,7 +25,14 @@ public fun interface ComponentRenderer {
  * when they become one.
  */
 @Immutable
-public class ComponentRegistry(private val renderers: Map<String, ComponentRenderer>) {
+public class ComponentRegistry(renderers: Map<String, ComponentRenderer>) {
+    // Copied rather than retained. `Map` is a read-only view, not an immutable type, so a caller
+    // may hand over a `MutableMap` and keep mutating it. `@Immutable` promises Compose the
+    // opposite, and `LocalA2uiRegistry` is a *static* composition local, so a mutation would
+    // change lookups with nothing invalidated -- a subtree left drawing a stale renderer, or a
+    // placeholder for a type the registry now knows, and no error either way.
+    private val renderers: Map<String, ComponentRenderer> = renderers.toMap()
+
     public operator fun get(component: String): ComponentRenderer? = renderers[component]
 
     /** The component types this registry can draw. */

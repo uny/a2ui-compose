@@ -10,6 +10,7 @@ import dev.ynagai.a2ui.core.function.LocaleFormatter
 import dev.ynagai.a2ui.core.function.UrlOpener
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
 import dev.ynagai.a2ui.core.protocol.CatalogDefinition
+import dev.ynagai.a2ui.core.surface.A2uiStateException
 import dev.ynagai.a2ui.core.surface.ChildResolver
 import dev.ynagai.a2ui.core.surface.JsonPointer
 import dev.ynagai.a2ui.core.surface.MessageProcessor
@@ -102,7 +103,22 @@ public class A2uiRenderer(
      */
     public fun write(surfaceId: String, pointer: JsonPointer, value: JsonElement) {
         val surface = state.surfaces[surfaceId] ?: return
-        state = state.copy(surfaces = state.surfaces + (surfaceId to surface.withDataModel(pointer, value)))
+        // [pointer] is the agent's, not the host's: it arrives as a component's `path` and reaches
+        // here through [A2uiComponentScope.binding]. `JsonObject.write` refuses some of those --
+        // an array index past the end, a root write of a non-object -- by raising, and this is
+        // called from an input callback, so an uncaught raise turns one malformed `path` into a
+        // crash on the first keystroke. Left unwritten instead, which is what every other
+        // agent-driven path in this library does with a payload it cannot honour.
+        //
+        // `A2uiStateException` only: the `require` that a write address be absolute is a caller
+        // error rather than an agent one, and swallowing it would hide a bug in a host's own
+        // pointer arithmetic.
+        val updated = try {
+            surface.withDataModel(pointer, value)
+        } catch (_: A2uiStateException) {
+            return
+        }
+        state = state.copy(surfaces = state.surfaces + (surfaceId to updated))
     }
 
     /**
@@ -110,16 +126,18 @@ public class A2uiRenderer(
      *
      * There is deliberately no fallback to a resolver that reads `child` and `children`: those
      * names are the basic catalog's, and a renderer that assumed them would silently drop
-     * `Modal.trigger`, `Modal.content` and the child inside each `Tabs.tabs` entry. A surface whose
-     * catalog is absent gets [ChildResolver.NONE], so its components render childless -- visibly
-     * wrong, rather than wrong in a way that looks deliberate.
+     * `Modal.trigger`, `Modal.content` and the child inside each `Tabs.tabs` entry.
+     *
+     * Built even when [SurfaceModel.catalogId] names nothing this renderer holds -- including when
+     * it names nothing at all, which `createSurface` permits. A component may carry its own
+     * `catalogId`, and [CatalogChildResolver] already resolves that override against every catalog
+     * passed here; short-circuiting on the surface default would drop the children of a component
+     * that named a catalog this renderer does have. The degradation the previous
+     * [ChildResolver.NONE] provided is not lost: a component whose catalog is genuinely absent
+     * still contributes no children, because that is what `CatalogChildResolver` does with one.
      */
     internal fun childResolver(surface: SurfaceModel): ChildResolver =
         resolvers.getOrPut(surface.catalogId) {
-            if (catalogs.none { it.catalogId == surface.catalogId }) {
-                ChildResolver.NONE
-            } else {
-                CatalogChildResolver.of(catalogs, surface.catalogId, validationLimits)
-            }
+            CatalogChildResolver.of(catalogs, surface.catalogId, validationLimits)
         }
 }

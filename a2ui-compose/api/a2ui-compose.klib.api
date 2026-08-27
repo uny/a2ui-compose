@@ -88,7 +88,6 @@ final class dev.ynagai.a2ui.compose/A2uiChild { // dev.ynagai.a2ui.compose/A2uiC
 
     final fun component1(): kotlin/String // dev.ynagai.a2ui.compose/A2uiChild.component1|component1(){}[0]
     final fun component2(): dev.ynagai.a2ui.core.surface/EvaluationScope // dev.ynagai.a2ui.compose/A2uiChild.component2|component2(){}[0]
-    final fun copy(kotlin/String = ..., dev.ynagai.a2ui.core.surface/EvaluationScope = ...): dev.ynagai.a2ui.compose/A2uiChild // dev.ynagai.a2ui.compose/A2uiChild.copy|copy(kotlin.String;dev.ynagai.a2ui.core.surface.EvaluationScope){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.compose/A2uiChild.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.compose/A2uiChild.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.ynagai.a2ui.compose/A2uiChild.toString|toString(){}[0]
@@ -114,7 +113,6 @@ final class dev.ynagai.a2ui.compose/A2uiComponentScope { // dev.ynagai.a2ui.comp
     final fun component2(): kotlin/String // dev.ynagai.a2ui.compose/A2uiComponentScope.component2|component2(){}[0]
     final fun component3(): dev.ynagai.a2ui.core.protocol/Component // dev.ynagai.a2ui.compose/A2uiComponentScope.component3|component3(){}[0]
     final fun component4(): dev.ynagai.a2ui.core.surface/EvaluationScope // dev.ynagai.a2ui.compose/A2uiComponentScope.component4|component4(){}[0]
-    final fun copy(dev.ynagai.a2ui.compose/A2uiRenderer = ..., kotlin/String = ..., dev.ynagai.a2ui.core.protocol/Component = ..., dev.ynagai.a2ui.core.surface/EvaluationScope = ..., kotlin/Function1<dev.ynagai.a2ui.core.protocol/RendererToAgentMessage, kotlin/Unit> = ...): dev.ynagai.a2ui.compose/A2uiComponentScope // dev.ynagai.a2ui.compose/A2uiComponentScope.copy|copy(dev.ynagai.a2ui.compose.A2uiRenderer;kotlin.String;dev.ynagai.a2ui.core.protocol.Component;dev.ynagai.a2ui.core.surface.EvaluationScope;kotlin.Function1<dev.ynagai.a2ui.core.protocol.RendererToAgentMessage,kotlin.Unit>){}[0]
     final fun dispatch(dev.ynagai.a2ui.core.protocol/Action) // dev.ynagai.a2ui.compose/A2uiComponentScope.dispatch|dispatch(dev.ynagai.a2ui.core.protocol.Action){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.compose/A2uiComponentScope.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.compose/A2uiComponentScope.hashCode|hashCode(){}[0]

@@ -145,6 +145,109 @@ class A2uiComponentScopeTest {
     }
 
     @Test
+    fun an_invoke_action_runs_with_the_provenance_a_user_gesture_gives_it() {
+        // `openUrl` is the one function that can tell the two invocation contexts apart -- the
+        // specification requires it to refuse anything a user gesture did not cause. So it is what
+        // pins `dispatch`'s choice of USER_ACTION: swap that for RENDER and the evaluator throws
+        // before the opener is reached, leaving `opened` empty.
+        val opened = mutableListOf<String>()
+        val renderer = A2uiRenderer(clock = { FIXED_TIMESTAMP }, urlOpener = { opened += it })
+            .also { it.applyAll(MESSAGES) }
+        val scope = scopeFor("button", renderer)
+        val action = A2uiJson.strict.decodeFromString(
+            Action.serializer(),
+            """{"functionCall":{"call":"openUrl","args":{"url":"https://example.com/a"}}}""",
+        )
+        scope.dispatch(action)
+        assertEquals(listOf("https://example.com/a"), opened)
+    }
+
+    @Test
+    fun a_write_the_data_model_cannot_take_leaves_it_unchanged_rather_than_raising() {
+        val renderer = renderer()
+        val before = renderer.state.surfaces.getValue(SURFACE).dataModel
+        // `/items` holds three entries, so index 9 would leave a gap and `JsonObject.write` refuses
+        // it. The address is the agent's -- it arrives as a component's `path` -- and this is what
+        // an input callback calls on every keystroke, so raising here would turn one malformed
+        // binding into a crash on the first character typed.
+        renderer.write(SURFACE, JsonPointer.parse("/items/9/label"), JsonPrimitive("x"))
+        assertEquals(before, renderer.state.surfaces.getValue(SURFACE).dataModel)
+        // A root write of a non-object is the other branch that refuses.
+        renderer.write(SURFACE, JsonPointer.parse("/"), JsonPrimitive("not an object"))
+        assertEquals(before, renderer.state.surfaces.getValue(SURFACE).dataModel)
+    }
+
+    @Test
+    fun a_registry_does_not_follow_the_map_it_was_built_from() {
+        // `@Immutable` promises Compose the contents never change, and `LocalA2uiRegistry` is a
+        // *static* composition local, so a registry that tracked its caller's map would change
+        // lookups with nothing invalidated.
+        val backing = mutableMapOf<String, ComponentRenderer>()
+        val registry = ComponentRegistry(backing)
+        backing["Text"] = ComponentRenderer { _, _ -> }
+        assertNull(registry["Text"])
+        assertEquals(emptySet(), registry.types)
+    }
+
+    @Test
+    fun a_component_that_names_its_own_catalog_resolves_against_it() {
+        // `createSurface` may carry no `catalogId` at all, and a component may name one itself.
+        // Deciding the resolver from the surface default alone dropped every child of a component
+        // whose own catalog this renderer does hold -- a silently childless tree, not an error.
+        val renderer = A2uiRenderer(clock = { FIXED_TIMESTAMP })
+        renderer.applyAll(
+            listOf(
+                """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE"}}""",
+                """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
+                  {"id":"root","component":"Column","catalogId":"CATALOG_ID","children":["t1","t2"]},
+                  {"id":"t1","component":"Text","catalogId":"CATALOG_ID","text":"one"},
+                  {"id":"t2","component":"Text","catalogId":"CATALOG_ID","text":"two"}
+                ]}}""",
+            ).map {
+                A2uiJson.strict.decodeFromString(
+                    AgentToRendererMessage.serializer(),
+                    it.replace("CATALOG_ID", BasicCatalog.id),
+                )
+            },
+        )
+        val scope = A2uiComponentScope(
+            renderer = renderer,
+            surfaceId = SURFACE,
+            component = renderer.state.surfaces.getValue(SURFACE).components.getValue("root"),
+            evaluationScope = EvaluationScope.Root,
+            onMessage = {},
+        )
+        assertEquals(listOf("t1", "t2"), scope.children("children").map { it.componentId })
+    }
+
+    @Test
+    fun one_gesture_cannot_open_more_than_the_evaluator_allows() {
+        // An event's context is read, not performed. Evaluated with user-action authority each
+        // field got its own evaluator and so its own "one open per expression" budget, and this
+        // payload opened three windows from a single tap.
+        val opened = mutableListOf<String>()
+        val renderer = A2uiRenderer(clock = { FIXED_TIMESTAMP }, urlOpener = { opened += it })
+            .also { it.applyAll(MESSAGES) }
+        val sent = mutableListOf<RendererToAgentMessage>()
+        val scope = scopeFor("button", renderer, onMessage = { sent += it })
+        scope.dispatch(
+            A2uiJson.strict.decodeFromString(
+                Action.serializer(),
+                """{"event":{"name":"go","context":{
+                  "a":{"call":"openUrl","args":{"url":"https://example.com/1"}},
+                  "b":{"call":"openUrl","args":{"url":"https://example.com/2"}},
+                  "c":{"call":"openUrl","args":{"url":"https://example.com/3"}}
+                }}}""",
+            ),
+        )
+        assertEquals(emptyList(), opened)
+        // The event still reaches the agent; only the side effect is refused, and the field that
+        // asked for it reports null rather than taking the whole message down with it.
+        val message = assertNotNull(sent.singleOrNull() as? ActionMessage)
+        assertEquals(setOf("a", "b", "c"), message.context.keys)
+    }
+
+    @Test
     fun a_surface_whose_catalog_is_absent_reports_no_children_rather_than_guessing() {
         // No fallback resolver that reads `child` and `children`: those names are the basic
         // catalog's, and guessing them would silently drop `Modal.trigger` and the child inside

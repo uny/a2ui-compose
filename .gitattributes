@@ -1,0 +1,6 @@
+# The vendored specification files are embedded verbatim into generated Kotlin source, so their
+# bytes are part of what ships. Without this, a checkout with `core.autocrlf=true` rewrites them to
+# CRLF and the embedded constants differ from the specification's own file -- while still parsing as
+# JSON and still passing every test, which is the one failure mode vendoring is meant to rule out.
+a2ui-core/spec/**       text eol=lf
+a2ui-gallery/spec/**    text eol=lf

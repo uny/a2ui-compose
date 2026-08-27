@@ -224,8 +224,20 @@ public class SchemaEvaluator(
                         }
                     }
 
-                    "type" -> if (!instance.matchesType(value)) {
-                        reject("expected ${value.describeType()}, but the value is ${instance.typeName()}.")
+                    "type" -> {
+                        // A name outside the seven JSON types is a constraint written wrongly, and
+                        // treating it as satisfied is the silent acceptance this evaluator exists
+                        // to prevent -- `"type": "strng"` would otherwise let every value through
+                        // with nothing reported.
+                        val unknown = value.unknownTypeNames()
+                        if (unknown.isNotEmpty()) {
+                            unknown.forEach { unsupported += "type: $it" }
+                            reject("the catalog names a type this renderer does not know.")
+                        } else if (!instance.matchesType(value)) {
+                            reject(
+                                "expected ${value.describeType()}, but the value is ${instance.typeName()}.",
+                            )
+                        }
                     }
 
                     "const" -> if (instance != value) {
@@ -363,6 +375,10 @@ public class SchemaEvaluator(
                             // keys arrived in. `JsonPrimitive` keeps the text, so `1` and `1.0`
                             // compare unequal here -- accepted, because refusing a duplicate the
                             // agent did not write is worse than missing one it spelled twice.
+                            // Charged per entry: the scan is proportional to the array, and the
+                            // array is the agent's to size. An uncharged pass over it is work the
+                            // total budget cannot see.
+                            repeat(array.size) { charge(at) }
                             if (array.toSet().size != array.size) {
                                 reject("the entries must be distinct, and two are not.")
                             }
@@ -473,9 +489,9 @@ public class SchemaEvaluator(
                     }
 
                     "minimum" -> {
-                        val number = (instance as? JsonPrimitive)?.takeIf { !it.isString }?.doubleOrNull
-                        val minimum = (value as? JsonPrimitive)?.doubleOrNull
-                        if (number != null && minimum != null && number < minimum) {
+                        val number = (instance as? JsonPrimitive)?.takeIf { !it.isString }
+                        val minimum = value as? JsonPrimitive
+                        if (number != null && minimum != null && compareNumbers(number, minimum) < 0) {
                             reject("must be at least ${value.describeLiteral()}.")
                         }
                     }
@@ -638,8 +654,17 @@ public class SchemaEvaluator(
                 }
             }
 
+            // The cap bounds how much is *said*, never whether it failed. With
+            // `maxViolations = 0` -- a value the public constructor accepts -- `record` keeps
+            // nothing, and reading the verdict off the list alone reported every invalid value as
+            // valid: a caller tightening the cap turned the checker off.
+            val collected = violations?.toList().orEmpty()
             return Outcome(
-                violations = violations?.toList() ?: if (failed) INVALID_MARKER else emptyList(),
+                violations = when {
+                    collected.isNotEmpty() -> collected
+                    failed -> INVALID_MARKER
+                    else -> emptyList()
+                },
                 evaluatedProperties = properties ?: emptySet(),
                 evaluatedItems = items,
                 discriminated = discriminated,

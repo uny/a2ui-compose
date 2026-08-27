@@ -376,4 +376,63 @@ class SchemaEvaluatorTest {
         }
     }
 
+    @Test
+    fun refuses_a_type_this_renderer_does_not_know() {
+        // All seven JSON types are implemented, so a name outside them is a constraint written
+        // wrongly -- and one that reads as satisfied is a constraint an agent deletes by
+        // misspelling it.
+        for (schema in listOf(
+            """{"type": "strng"}""",
+            """{"type": "Number"}""",
+            """{"type": ["string", "nummber"]}""",
+        )) {
+            val result = evaluator().validate(
+                parse(schema),
+                FUNCTION_CALL,
+                Json.parseToJsonElement("""{"anything": 1}"""),
+            )
+            assertFalse(result.isValid, schema)
+            assertTrue(result.unsupportedKeywords.any { it.startsWith("type:") }, schema)
+        }
+    }
+
+    @Test
+    fun a_violation_cap_of_zero_does_not_turn_the_checker_off() {
+        // The cap bounds how much is said, never the verdict. `ValidationLimits(maxViolations = 0)`
+        // is a value the public constructor accepts.
+        val result = SchemaEvaluator(
+            SchemaRegistry.of(listOf(parse(COMMON_TYPES)), activeCatalog = parse(CATALOG)),
+            ValidationLimits(maxViolations = 0),
+        ).validate(parse("""{"type": "string"}"""), FUNCTION_CALL, Json.parseToJsonElement("5"))
+        assertFalse(result.isValid, "the cap decided the verdict")
+    }
+
+    @Test
+    fun minimum_compares_integers_as_integers() {
+        // Routing both through `Double` makes these two the same number, so a bound just past the
+        // range a `Double` can name would accept a value below it.
+        val result = evaluator().validate(
+            parse("""{"minimum": 9007199254740993}"""),
+            FUNCTION_CALL,
+            Json.parseToJsonElement("9007199254740992"),
+        )
+        assertFalse(result.isValid, "precision was lost through Double")
+    }
+
+    @Test
+    fun scanning_an_array_for_duplicates_is_charged_to_the_budget() {
+        // The scan is proportional to the array, and the array is the agent's to size, so an
+        // uncharged pass over it is work the total budget cannot see.
+        val entries = (0 until 500).joinToString(",")
+        val result = SchemaEvaluator(
+            SchemaRegistry.of(listOf(parse(COMMON_TYPES)), activeCatalog = parse(CATALOG)),
+            ValidationLimits(maxSteps = 50),
+        ).validate(
+            parse("""{"uniqueItems": true}"""),
+            FUNCTION_CALL,
+            Json.parseToJsonElement("[" + entries + "]"),
+        )
+        assertTrue(result.truncated, "the scan was not charged")
+    }
+
 }

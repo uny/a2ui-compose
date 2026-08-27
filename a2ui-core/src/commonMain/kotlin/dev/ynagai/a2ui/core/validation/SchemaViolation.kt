@@ -220,6 +220,38 @@ private fun JsonElement.matchesTypeName(name: String): Boolean = when (name) {
     else -> true
 }
 
+/**
+ * The names in a `type` keyword that are not one of the seven JSON types.
+ *
+ * Every one of the seven is implemented, so anything else is a constraint written wrongly rather
+ * than one this evaluator has not got to -- and a `type` nobody can satisfy must not read as a
+ * `type` everybody satisfies.
+ */
+internal fun JsonElement.unknownTypeNames(): List<String> = when (this) {
+    is JsonArray -> flatMap { it.unknownTypeNames() }
+    is JsonPrimitive -> if (isString && content in JSON_TYPE_NAMES) emptyList() else listOf(content)
+    else -> listOf("a value that is not a type name")
+}
+
+private val JSON_TYPE_NAMES: Set<String> =
+    setOf("object", "array", "string", "number", "integer", "boolean", "null")
+
+/**
+ * [a] against [b] as JSON Schema compares numbers, which is by mathematical value.
+ *
+ * Integers are compared as integers. Routing them through `Double` makes `9007199254740992` and
+ * `9007199254740993` the same number, so a `minimum` just above the range a `Double` can name
+ * would accept a value below it.
+ */
+internal fun compareNumbers(a: JsonPrimitive, b: JsonPrimitive): Int {
+    val left = a.longOrNull
+    val right = b.longOrNull
+    if (left != null && right != null) return left.compareTo(right)
+    val leftDouble = a.doubleOrNull ?: return 0
+    val rightDouble = b.doubleOrNull ?: return 0
+    return leftDouble.compareTo(rightDouble)
+}
+
 /** How [this] `type` keyword reads in a message. */
 internal fun JsonElement.describeType(): String = when (this) {
     is JsonArray -> joinToString(" or ") { it.describeType() }

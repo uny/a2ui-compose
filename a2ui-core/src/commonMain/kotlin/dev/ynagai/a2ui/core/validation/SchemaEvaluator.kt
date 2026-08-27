@@ -394,13 +394,21 @@ public class SchemaEvaluator(
                                     value,
                                     location.child("propertyNames"),
                                     JsonPrimitive(name),
-                                    at.child(name),
+                                    at,
                                     depth + 1,
                                     collect = false,
                                 )
-                                // The name itself, not the value under it -- so the message names
-                                // the key and quotes nothing from the instance's data.
-                                if (!outcome.valid) reject("`$name` is not a name allowed here.")
+                                // Under every other keyword a property name is a name the *catalog*
+                                // chose, and quoting it tells the agent nothing about the user.
+                                // Under this one the name IS the value being constrained -- an
+                                // object keyed by account number is the shape `propertyNames`
+                                // exists for -- so it is neither quoted nor written into the
+                                // pointer. Reported once: without the name there is nothing to say
+                                // a second time. See [SchemaViolation].
+                                if (!outcome.valid) {
+                                    reject("a property name here is not one the catalog allows.")
+                                    break
+                                }
                             }
                         }
                     }

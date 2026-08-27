@@ -356,4 +356,24 @@ class SchemaEvaluatorTest {
         assertContains(ok.violations.single().message, "`child` is required")
     }
 
+    @Test
+    fun a_rejected_property_name_is_not_quoted_back_to_the_agent() {
+        // `propertyNames` is the one keyword whose subject is the key itself, so the key is
+        // instance data: an object keyed by account number is exactly what it is written for.
+        // A renderer turns this violation into the `error` it sends the agent.
+        val result = evaluator().validate(
+            parse("""{"propertyNames": {"pattern": "^[a-z]+${'$'}"}}"""),
+            FUNCTION_CALL,
+            Json.parseToJsonElement("""{"4111111111111111": null}"""),
+        )
+        assertFalse(result.isValid)
+        for (violation in result.violations) {
+            assertFalse(
+                violation.message.contains("4111111111111111") ||
+                    violation.location.contains("4111111111111111"),
+                "the key reached the message: $violation",
+            )
+        }
+    }
+
 }

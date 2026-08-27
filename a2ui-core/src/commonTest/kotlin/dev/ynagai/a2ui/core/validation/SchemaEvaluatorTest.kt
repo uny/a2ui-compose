@@ -293,6 +293,29 @@ class SchemaEvaluatorTest {
         assertContains(result.violations.first().message, "steps")
     }
 
+    @Test
+    fun keeps_the_violation_when_explaining_a_deep_failure_runs_out() {
+        // Explaining a failed `oneOf` re-runs its branches collecting, and collecting is what
+        // turns the short-circuit off -- so the pass that produces the message costs what the
+        // first pass avoids. Left to spend the whole budget it takes the answer with it: the
+        // exhaustion unwinds past the violation it was about to report. What must survive is a
+        // violation the agent can locate, rather than one about the renderer's own budget.
+        var payload = """{"call": "regex", "args": {"value": "a", "pattern": 7}}"""
+        repeat(3) {
+            payload = """{"call": "regex", "args": {"value": $payload, "pattern": "^a"}}"""
+        }
+        val result = check(payload)
+        assertFalse(result.isValid)
+        assertTrue(
+            result.violations.none { "steps" in it.message },
+            "the budget answered instead of the payload: ${result.violations}",
+        )
+        assertTrue(
+            result.violations.any { it.location.startsWith("/args") },
+            "no violation names a place in the payload: ${result.violations}",
+        )
+    }
+
     // --- what the messages may carry ----------------------------------------------------------
 
     @Test

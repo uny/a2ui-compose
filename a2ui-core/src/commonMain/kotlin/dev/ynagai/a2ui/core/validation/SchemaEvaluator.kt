@@ -73,8 +73,16 @@ public class SchemaEvaluator(
         /** (subschema, instance location) pairs on the current path, for the cycle guard. */
         private val active: MutableSet<Pair<SchemaLocation, String>> = mutableSetOf()
 
+        /**
+         * The step count this run may not pass, lowered while [explain] re-runs a branch.
+         *
+         * A ceiling rather than a second counter, so the bound is enforced inside the recursion
+         * where the cost actually is. [explain] restores it.
+         */
+        private var ceiling: Int = limits.maxSteps
+
         fun charge(at: InstancePath) {
-            if (++steps > limits.maxSteps) {
+            if (++steps > ceiling) {
                 throw BudgetExhausted(
                     SchemaViolation(at.render(), "the schema did not settle within ${limits.maxSteps} steps."),
                 )
@@ -97,11 +105,29 @@ public class SchemaEvaluator(
          * complaints than a `Divider` that objects only to the name, so the message would be
          * `expected \`Divider\`` on a component the agent never mentioned.
          *
-         * The step budget is charged for this exactly as for the first pass, so a payload that
-         * fails deep inside a large `oneOf` cannot make a renderer pay twice without limit.
+         * **This pass gets an allowance of its own, and gives up rather than spending the run's.**
+         * Collecting is what turns the speculative short-circuit off — a branch being explained is
+         * walked to the end so its complaints can be counted — so this costs the `3^depth` the
+         * first pass exists to avoid. Left to reach [ValidationLimits.maxSteps] it takes the
+         * answer with it: [BudgetExhausted] unwinds past the violation this was about to report
+         * and replaces it with one about the budget, so a `checks` expression nesting `and`/`or`
+         * one level deep with a bad argument came back as "did not settle within 100000 steps"
+         * rather than naming the argument. Giving up leaves the generic message *located at the
+         * right place*, which is worse than the best answer and far better than that one.
+         *
+         * See [EXPLAIN_SHARE] for how much, and why that much. [plausible] is what usually keeps
+         * it well inside that: the alternatives whose discriminator the value already failed in
+         * the first pass are not re-walked at all. A catalog offers eighteen components and
+         * fourteen functions at every level, and each of those reaches back into the catalog
+         * through its arguments — re-running all of them without the short-circuit costs the
+         * product of those fan-outs down the whole subtree, which is how a `checks` expression
+         * two levels deep used to spend a hundred thousand steps deriving one message. The
+         * branches dropped are the ones [closerThan] ranks last anyway; the difference is that now
+         * they are not walked to find that out.
          */
         fun explain(
             branches: JsonArray,
+            plausible: List<Int>,
             keyword: String,
             location: SchemaLocation,
             instance: JsonElement,
@@ -110,20 +136,39 @@ public class SchemaEvaluator(
             collect: Boolean,
         ): List<Outcome> {
             if (!collect) return listOf(Outcome.invalid(false, at, "does not match."))
+            // None kept its discriminator -- the value matches no alternative even by name, so
+            // there is no near miss to prefer and every one of them is a candidate.
+            val candidates = plausible.ifEmpty { branches.indices.toList() }
             var closest: Outcome? = null
-            branches.forEachIndexed { index, branch ->
-                val outcome = evaluate(
-                    branch,
-                    location.child(keyword, index.toString()),
-                    instance,
-                    at,
-                    depth + 1,
-                    collect = true,
-                )
-                if (outcome.violations.isNotEmpty() && outcome.closerThan(closest)) closest = outcome
+            var gaveUp = false
+            val outer = ceiling
+            ceiling = minOf(outer, steps + limits.maxSteps / EXPLAIN_SHARE)
+            try {
+                for (index in candidates) {
+                    val outcome = evaluate(
+                        branches[index],
+                        location,
+                        instance,
+                        at,
+                        depth + 1,
+                        collect = true,
+                    )
+                    if (outcome.violations.isNotEmpty() && outcome.closerThan(closest)) closest = outcome
+                }
+            } catch (exhausted: BudgetExhausted) {
+                // The run's own budget, not the allowance, means the run really is over.
+                if (steps > limits.maxSteps) throw exhausted
+                truncated = true
+                gaveUp = true
+            } finally {
+                ceiling = outer
             }
             return listOfNotNull(
-                closest ?: Outcome.invalid(true, at, "no alternative the catalog allows here matched."),
+                // A partial scan ranked a partial field. Saying which alternative came closest on
+                // the strength of the ones that happened to be reached first would name a branch
+                // the agent never meant -- worse than declining to name one.
+                (if (gaveUp) null else closest)
+                    ?: Outcome.invalid(true, at, "no alternative the catalog allows here matched."),
             )
         }
 
@@ -540,6 +585,7 @@ public class SchemaEvaluator(
                     "anyOf" -> {
                         val branches = value as? JsonArray ?: JsonArray(emptyList())
                         var matched = false
+                        val plausible = mutableListOf<Int>()
                         branches.forEachIndexed { index, branch ->
                             val outcome = evaluate(
                                 branch,
@@ -552,6 +598,8 @@ public class SchemaEvaluator(
                             if (outcome.valid) {
                                 matched = true
                                 merge(outcome.withoutViolations())
+                            } else if (!outcome.discriminated) {
+                                plausible += index
                             }
                         }
                         if (!matched) {
@@ -560,7 +608,7 @@ public class SchemaEvaluator(
                             // and the properties it happened to reach are not evaluated by any
                             // schema that held -- carrying them up would be an annotation from a
                             // subschema that did not apply.
-                            explain(branches, "anyOf", location, instance, at, depth, collect)
+                            explain(branches, plausible, "anyOf", location, instance, at, depth, collect)
                                 .forEach { outcome -> outcome.violations.forEach(::record) }
                         }
                     }
@@ -569,6 +617,7 @@ public class SchemaEvaluator(
                         val branches = value as? JsonArray ?: JsonArray(emptyList())
                         var match: Outcome? = null
                         var matches = 0
+                        val plausible = mutableListOf<Int>()
                         for ((index, branch) in branches.withIndex()) {
                             val outcome = evaluate(
                                 branch,
@@ -581,12 +630,14 @@ public class SchemaEvaluator(
                             if (outcome.valid) {
                                 matches++
                                 if (matches == 1) match = outcome else break
+                            } else if (!outcome.discriminated) {
+                                plausible += index
                             }
                         }
                         when (matches) {
                             0 -> {
                                 failed = true
-                                explain(branches, "oneOf", location, instance, at, depth, collect)
+                                explain(branches, plausible, "oneOf", location, instance, at, depth, collect)
                                     .forEach { outcome -> outcome.violations.forEach(::record) }
                             }
                             1 -> merge(match!!.withoutViolations())
@@ -708,6 +759,16 @@ public class SchemaEvaluator(
          * speculative branch of `oneOf` costs one shared list rather than one message per failure.
          */
         val INVALID_MARKER: List<SchemaViolation> = listOf(SchemaViolation("", "does not match."))
+
+        /**
+         * What fraction of [ValidationLimits.maxSteps] one [Run.explain] may spend.
+         *
+         * Half, so that whatever the explanation costs, the rest of the message is still checked
+         * against the other half. Not less: `ConformanceCostTest` measures the specification's own
+         * refusal cases needing something over an eighth, and a bound that cuts those off answers
+         * about itself rather than about the payload.
+         */
+        const val EXPLAIN_SHARE: Int = 2
     }
 }
 

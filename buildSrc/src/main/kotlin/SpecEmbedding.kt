@@ -3,6 +3,9 @@ import org.gradle.api.Task
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskProvider
 
+/** The name the generated index takes, and therefore the one no document may take. */
+private const val INDEX_NAME = "ALL"
+
 /**
  * A constant name for the file at [path], derived so that adding a file to a scanned directory
  * does not also mean editing a build script. `initial_state_validation.json` becomes
@@ -26,12 +29,35 @@ private fun constantName(path: String): String {
     return name
 }
 
+/**
+ * [text] split into [size]-unit chunks that never cut a surrogate pair in half.
+ *
+ * `String.chunked` counts UTF-16 code units, so a boundary landing between the halves of an astral
+ * character leaves a lone surrogate at the end of one chunk and another at the start of the next.
+ * `writeText` encodes each of those as `?`, so the embedded document would differ from the vendored
+ * file by two characters -- while still compiling, still parsing as JSON, and still passing every
+ * test. Silent, and exactly what embedding the file verbatim is supposed to rule out.
+ *
+ * The boundary is pushed out by one unit rather than pulled in, so a chunk always makes progress.
+ */
+private fun String.chunkedWholeCodePoints(size: Int): List<String> {
+    val chunks = mutableListOf<String>()
+    var start = 0
+    while (start < length) {
+        var end = minOf(start + size, length)
+        if (end < length && this[end - 1].isHighSurrogate() && this[end].isLowSurrogate()) end++
+        chunks += substring(start, end)
+        start = end
+    }
+    return chunks
+}
+
 /** [text] as a Kotlin string literal, chunked so no single source line grows unbounded. */
 private fun literal(text: String, indent: String): String {
     val quote = "\""
     // Chunked before escaping, not after: splitting the escaped text can cut an escape sequence
     // in half and emit a source file that does not parse.
-    val chunks = text.chunked(100).joinToString(quote + " +\n" + indent + quote) { chunk ->
+    val chunks = text.chunkedWholeCodePoints(100).joinToString(quote + " +\n" + indent + quote) { chunk ->
         chunk.replace("\\", "\\\\")
             .replace(quote, "\\" + quote)
             .replace("$", "\\$")
@@ -72,6 +98,11 @@ fun Project.embedSpecDocuments(
     directory: String? = null,
     namedConstants: Boolean = true,
 ): TaskProvider<Task> = tasks.register(taskName) {
+    // Read while configuring, not while running. Inside `doLast` the nearest receiver is the task,
+    // so `project` there means `Task.getProject()` -- which the configuration cache refuses at
+    // execution time. `gradle.properties` turns that cache off only until KGP supports it, so a
+    // task that reaches for a `Project` while running is a second blocker this build would own.
+    val moduleName = this@embedSpecDocuments.name
     val specDir = layout.projectDirectory.dir("spec")
     val outputDir = layout.buildDirectory.dir("generated/$taskName/kotlin")
     inputs.dir(specDir).withPathSensitivity(PathSensitivity.RELATIVE)
@@ -79,7 +110,11 @@ fun Project.embedSpecDocuments(
     // which documents are listed -- or flipping `namedConstants` -- leaves the task up to date with
     // stale generated source in place, and what fails is a later compile somewhere else.
     inputs.property("documents", documents)
-    inputs.property("directory", directory.orEmpty())
+    inputs.property("moduleName", moduleName)
+    // Optional rather than `orEmpty()`: "scan nothing" and "scan `spec/` itself" are different
+    // configurations, and collapsing both to `""` leaves the task up to date across that change
+    // with the previous run's generated source still in place.
+    inputs.property("directory", directory).optional(true)
     inputs.property("namedConstants", namedConstants)
     inputs.property("packageName", packageName)
     inputs.property("objectName", objectName)
@@ -89,6 +124,17 @@ fun Project.embedSpecDocuments(
             specDir.dir(relative).asFile.listFiles()
                 .orEmpty()
                 .filter { it.isFile && it.extension == "json" }
+                .also { files ->
+                    // A directory that is missing, renamed, or empty yields `null` or an empty
+                    // array, and this task would then succeed with an empty `ALL` -- the same
+                    // silent shortfall the collision check below refuses, arrived at from the
+                    // other side. The corpus's own count assertion would catch it eventually, in
+                    // a test, far from the path that was actually wrong.
+                    require(files.isNotEmpty()) {
+                        "`$relative` holds no `.json` files (looked in " +
+                            "`${specDir.dir(relative).asFile}`). Check the path."
+                    }
+                }
                 // Sorted so the generated source is the same on every machine; a directory
                 // listing is not ordered, and an unstable one makes the build non-reproducible.
                 .sortedBy { it.name }
@@ -117,11 +163,30 @@ fun Project.embedSpecDocuments(
         // one would collide in the generated `mapOf` -- which Kotlin accepts, last wins.
         val byFile = all.values.groupBy { it.substringAfterLast('/') }.filterValues { it.size > 1 }
         require(byFile.isEmpty()) { "documents share a filename and would collide in `ALL`: $byFile" }
-        val target = outputDir.get().asFile.resolve(packageName.replace('.', '/'))
+        // `ALL` is the index's own name. A document that claims it emits both `const val ALL` and
+        // `val ALL` into one object, and the generated file then fails to compile on conflicting
+        // declarations -- a build error in a file nobody wrote, which is what every other check
+        // here exists to convert into a sentence naming the document.
+        require(!namedConstants || INDEX_NAME !in all.keys) {
+            "`${all[INDEX_NAME]}` takes the name `$INDEX_NAME`, which the generated index uses."
+        }
+        // Cleared, not just overwritten. Gradle does not empty a task's output directory between
+        // runs, so renaming `objectName` or `packageName` leaves the previous file beside the new
+        // one -- and a stale generated object compiles perfectly well and ships.
+        val root = outputDir.get().asFile
+        root.deleteRecursively()
+        val target = root.resolve(packageName.replace('.', '/'))
         target.mkdirs()
 
         val body = if (namedConstants) {
             all.entries.joinToString("\n\n") { (name, path) ->
+                // Hand-listed keys go through the same check as derived ones. Skipping them is how
+                // `documents = mapOf("basic-catalog" to ...)` reaches the compiler as
+                // `const val basic-catalog` -- a build failure in a generated file nobody wrote,
+                // which is precisely what `constantName` exists to convert into a named message.
+                require(Regex("[A-Z_][A-Z0-9_]*").matches(name)) {
+                    "`$name` (listed for `$path`) does not name a Kotlin constant."
+                }
                 listOf(
                     "    /** `$path`, verbatim. See `spec/README.md` for its provenance. */",
                     "    internal const val $name: String =",
@@ -137,16 +202,26 @@ fun Project.embedSpecDocuments(
         // forget when the specification adds a file.
         val index = listOf(
             "",
-            "    /** Every document above, keyed by the file it was generated from. */",
-            "    internal val ALL: Map<String, String> = mapOf(",
+            if (namedConstants) {
+                "    /** Every document above, keyed by the file it was generated from. */"
+            } else {
+                // There is nothing above when the constants are suppressed, and a comment that
+                // points at absent declarations reads as a generator that only half ran.
+                "    /** Every document, keyed by the file it was generated from. */"
+            },
+            "    internal val $INDEX_NAME: Map<String, String> = mapOf(",
         ) + all.entries.sortedBy { it.key }.map { (name, path) ->
             val value = if (namedConstants) name else literal(specDir.file(path).asFile.readText(), "            ")
-            "        \"" + path.substringAfterLast('/') + "\" to " + value + ","
+            // The key goes through `literal` too. A filename is not a Kotlin string literal --
+            // a POSIX name may hold a quote, a backslash or a newline -- and pasting one in raw
+            // either breaks the generated file or, worse, leaves `ALL` keyed by something that is
+            // not the filename any more.
+            "        " + literal(path.substringAfterLast('/'), "            ") + " to " + value + ","
         } + listOf("    )")
 
         target.resolve("$objectName.kt").writeText(
             listOfNotNull(
-                "// Generated by the `$taskName` task from `${project.name}/spec`. Do not edit.",
+                "// Generated by the `$taskName` task from `$moduleName/spec`. Do not edit.",
                 "package $packageName",
                 "",
                 "internal object $objectName {",

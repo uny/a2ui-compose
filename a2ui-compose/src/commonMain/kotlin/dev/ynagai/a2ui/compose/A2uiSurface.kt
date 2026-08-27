@@ -79,6 +79,10 @@ public sealed interface A2uiPlaceholderReason {
      * agent's *data model* talking, and an estimate made from the components alone cannot know it.
      * The budget is therefore also carried down the descent and spent as it is expanded. Reported
      * rather than silently shortened, for the reason core's walk refuses rather than truncating.
+     *
+     * Only a surface holding a template reaches this. Everywhere else the estimate counted the
+     * instances rather than bounding them, and a subtree it has already proved fits is drawn
+     * whole -- see [RenderCost.Fits.exact].
      */
     public data class TooManyChildren(
         public val componentId: String,
@@ -186,8 +190,10 @@ public fun A2uiSurface(
  * the scope's renderer, surface and message sink for it.
  *
  * @param budget how many component instances this subtree may compose, itself included. Defaults
- *   to the whole surface's, which is what a top-level entry gets; [RenderChild] passes down the
- *   share [A2uiComponentScope] divided out. A parameter rather than a composition local because
+ *   to the whole surface's; [RenderChild] passes down the share [A2uiComponentScope] divided out.
+ *   Consulted only where the estimate could not count the subtree exactly -- a top-level entry
+ *   whose surface holds no template is opened unrationed, because [RenderCost.Fits.exact] has
+ *   already proved it composes within the bound. A parameter rather than a composition local because
  *   providing one wraps every child in another composable, and that layer was enough to stop a
  *   leaf from being skipped on two of the targets -- the recomposition granularity this design
  *   exists to buy.

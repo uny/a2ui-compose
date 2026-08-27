@@ -156,4 +156,63 @@ class CatalogChildResolverTest {
             )
         }
     }
+    @Test
+    fun finds_children_under_an_else_branch_and_in_a_map_shaped_slot() {
+        // Neither shape appears in the published basic catalog, and both are legal. A child the
+        // resolver does not find is a container drawn without it and nothing said -- and
+        // `CompositionValidator` never sees the edge either, so its rules go unchecked too.
+        val source = """
+        {
+          "${'$'}id": "urn:test:shapes",
+          "catalogId": "urn:test:shapes",
+          "components": {
+            "Panel": {
+              "type": "object",
+              "properties": {
+                "component": {"const": "Panel"},
+                "slots": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/Child"
+                  }
+                }
+              },
+              "if": {"properties": {"mode": {"const": "a"}}},
+              "then": {
+                "properties": {
+                  "primary": {
+                    "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/Child"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "fallback": {
+                    "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/Child"
+                  }
+                }
+              }
+            }
+          }
+        }
+        """.trimIndent()
+        val catalog = A2uiJson.strict.decodeFromString(CatalogDefinition.serializer(), source)
+        val resolver = CatalogChildResolver.of(listOf(catalog), surfaceDefault = catalog.catalogId)
+        val found = resolver.childrenOf(
+            A2uiJson.strict.decodeFromString(
+                Component.serializer(),
+                """{"id": "p", "component": "Panel", "mode": "b", "fallback": "c1",
+                    "slots": {"header": "c2"}}""",
+            ),
+        )
+        assertEquals(
+            setOf(
+                ChildReference.Single("fallback", "c1"),
+                ChildReference.Single("slots/header", "c2"),
+            ),
+            found.toSet(),
+            found.toString(),
+        )
+    }
+
 }

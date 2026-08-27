@@ -28,7 +28,6 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 public class CatalogChildResolver private constructor(
     private val registry: SchemaRegistry,
-    private val catalogUri: String?,
     private val surfaceDefault: String?,
     private val limits: ValidationLimits,
 ) : ChildResolver {
@@ -50,9 +49,8 @@ public class CatalogChildResolver private constructor(
         // business rather than this one's. Naming a catalog nothing holds does *not* fall back to
         // the surface default: the fallback would read one catalog's property names off another's
         // component of the same name, which is a wrong tree rather than a missing one.
-        val named = component.catalogId ?: surfaceDefault
+        val named = component.catalogId ?: surfaceDefault ?: return null
         val uri = when {
-            named == null -> catalogUri ?: return null
             registry.document(named) != null -> named
             else -> return null
         }
@@ -140,6 +138,29 @@ public class CatalogChildResolver private constructor(
                 }
             }
             obj["then"]?.let { run(it, location.child("then"), value, path, depth + 1) }
+            // `else` for the same reason every `oneOf` branch is followed: which one applies is
+            // the checker's answer, and a child sitting only under the `else` was invisible here.
+            obj["else"]?.let { run(it, location.child("else"), value, path, depth + 1) }
+
+            // A component may carry its children in a map rather than a fixed property --
+            // `"slots": {"additionalProperties": {"$ref": ".../Child"}}` with a value of
+            // `{"header": "c1"}`. Without this the payload validates and the children vanish.
+            // `patternProperties` is deliberately NOT walked: matching it needs the catalog's own
+            // regex, which this library refuses to compile for the reason [matcher] gives.
+            obj["additionalProperties"]?.let { subschema ->
+                val container = value as? JsonObject ?: return@let
+                val named = (obj["properties"] as? JsonObject)?.keys.orEmpty()
+                for ((name, child) in container) {
+                    if (name in named) continue
+                    run(
+                        subschema,
+                        location.child("additionalProperties"),
+                        child,
+                        path.child(name),
+                        depth + 1,
+                    )
+                }
+            }
         }
 
         private fun emitSingle(value: JsonElement, path: Path) {
@@ -211,7 +232,6 @@ public class CatalogChildResolver private constructor(
                     as JsonObject
             }
             val activeIndex = catalogs.indexOfFirst { it.catalogId == surfaceDefault }
-            val active = surfaceDefault?.takeIf { activeIndex >= 0 }
             return CatalogChildResolver(
                 registry = SchemaRegistry.of(
                     documents = ProtocolSchemas.documents + documents,
@@ -221,7 +241,6 @@ public class CatalogChildResolver private constructor(
                     // the hole `SchemaRegistry` closes only when it is told which catalog is live.
                     activeCatalog = documents.getOrNull(activeIndex),
                 ),
-                catalogUri = active,
                 surfaceDefault = surfaceDefault,
                 limits = limits,
             )

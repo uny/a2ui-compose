@@ -96,6 +96,12 @@ public class CompositionValidator(
         resolver: ChildResolver,
     ): List<CompositionViolation> {
         val out = mutableListOf<CompositionViolation>()
+        // The surface names the catalog its components belong to, and it is right here. Reading
+        // only the constructor's default meant a validator built from a catalog list alone --
+        // which is what a renderer holding several catalogs would build -- found no definition for
+        // any component that did not name a catalog itself, and returned an empty list. No
+        // violations and "I could not check" are not the same answer.
+        val default = surfaceDefault ?: surface.catalogId
         // The reserved container is the implicit parent of `root`, which is what makes
         // `"allowedParents": ["Surface"]` mean "only at the top level of a surface".
         surface.root?.let { root ->
@@ -105,13 +111,14 @@ public class CompositionValidator(
                 child = root,
                 property = Surface.ROOT_ID,
                 into = out,
+                default = default,
             )
         }
         for (component in surface.components.values) {
             for (reference in resolver.childrenOf(component)) {
                 for (id in reference.ids()) {
                     val child = surface.component(id) ?: continue
-                    check(component, component.component, child, reference.property, out)
+                    check(component, component.component, child, reference.property, out, default)
                 }
             }
         }
@@ -124,8 +131,9 @@ public class CompositionValidator(
         child: Component,
         property: String,
         into: MutableList<CompositionViolation>,
+        default: String?,
     ) {
-        val childDefinition = definitionOf(child)
+        val childDefinition = definitionOf(child, default)
         // A null list means "unconstrained", which is not the same as an empty one: a catalog bars
         // a component from every parent by writing `"allowedParents": []`.
         childDefinition?.allowedParents?.let { allowed ->
@@ -140,7 +148,7 @@ public class CompositionValidator(
                 )
             }
         }
-        val parentDefinition = parent?.let(::definitionOf)
+        val parentDefinition = parent?.let { definitionOf(it, default) }
         parentDefinition?.allowedChildren?.let { allowed ->
             if (child.component !in allowed) {
                 into += CompositionViolation(
@@ -155,8 +163,8 @@ public class CompositionValidator(
         }
     }
 
-    private fun definitionOf(component: Component): ComponentDefinition? {
-        val catalogId = component.catalogId ?: surfaceDefault ?: return null
+    private fun definitionOf(component: Component, default: String?): ComponentDefinition? {
+        val catalogId = component.catalogId ?: default ?: return null
         return byId[catalogId]?.components?.get(component.component)
     }
 }

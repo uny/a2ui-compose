@@ -245,4 +245,25 @@ class CompositionValidatorTest {
         assertEquals("children", found.single().property)
         assertTrue(found.single().message.isNotEmpty())
     }
+    @Test
+    fun the_surface_supplies_the_default_when_the_validator_was_not_given_one() {
+        // What a renderer holding several catalogs builds: one validator over the list, and the
+        // surface says which catalog it belongs to. Reading only the constructor default returned
+        // an empty list here -- composition checking silently off.
+        val validator = CompositionValidator(listOf(CATALOG))
+        val resolver = CatalogChildResolver.of(listOf(CATALOG), surfaceDefault = CATALOG.catalogId)
+        val violations = validator.validate(
+            surface(
+                """{"id": "root", "component": "Menu", "children": ["l"]}""",
+                """{"id": "l", "component": "Label"}""",
+            ),
+            resolver,
+        )
+        assertEquals(
+            listOf(CompositionViolation.UNALLOWED_CHILD),
+            violations.map { it.code },
+            violations.toString(),
+        )
+    }
+
 }

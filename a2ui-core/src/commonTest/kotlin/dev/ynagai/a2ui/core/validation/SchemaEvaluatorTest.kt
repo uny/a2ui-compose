@@ -330,4 +330,30 @@ class SchemaEvaluatorTest {
         assertTrue(result.isValid)
         assertContains(result.unsupportedKeywords, "maxLength")
     }
+    @Test
+    fun refuses_a_schema_whose_required_is_not_a_list_of_names() {
+        // The schema is as agent-controlled as the instance once a catalog may be inlined, so a
+        // `required` written wrongly must not read as "nothing is required".
+        for (malformed in listOf(
+            """{"type": "object", "required": "child"}""",
+            """{"type": "object", "required": {"child": true}}""",
+            """{"type": "object", "required": ["child", 7]}""",
+        )) {
+            val result = evaluator().validate(
+                parse(malformed),
+                FUNCTION_CALL,
+                Json.parseToJsonElement("{}"),
+            )
+            assertFalse(result.isValid, malformed)
+        }
+        // The well-formed case still says which property is missing.
+        val ok = evaluator().validate(
+            parse("""{"type": "object", "required": ["child"]}"""),
+            FUNCTION_CALL,
+            Json.parseToJsonElement("{}"),
+        )
+        assertFalse(ok.isValid)
+        assertContains(ok.violations.single().message, "`child` is required")
+    }
+
 }

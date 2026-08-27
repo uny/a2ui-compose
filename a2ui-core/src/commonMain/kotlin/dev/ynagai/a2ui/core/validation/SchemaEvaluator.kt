@@ -245,10 +245,21 @@ public class SchemaEvaluator(
                     }
 
                     "required" -> {
-                        val obj = instance as? JsonObject
-                        val names = (value as? JsonArray).orEmptyStrings()
-                        if (obj != null) {
-                            names.filterNot(obj::containsKey).forEach { reject("`$it` is required.") }
+                        // A malformed `required` is refused rather than skipped. The schema is as
+                        // agent-controlled as the instance once a catalog may be inlined, and
+                        // `"required": "child"` read as "nothing is required" is a constraint
+                        // deleted by writing it wrongly -- silent acceptance, which is the one
+                        // failure this evaluator exists to prevent.
+                        val names = value as? JsonArray
+                        if (names == null || names.any { !(it as? JsonPrimitive).isJsonString() }) {
+                            reject("the catalog's `required` is not a list of property names.")
+                        } else {
+                            val obj = instance as? JsonObject
+                            if (obj != null) {
+                                names.orEmptyStrings()
+                                    .filterNot(obj::containsKey)
+                                    .forEach { reject("`$it` is required.") }
+                            }
                         }
                     }
 
@@ -663,6 +674,9 @@ private fun Outcome.closerThan(other: Outcome?): Boolean = when {
     discriminated != other.discriminated -> !discriminated
     else -> violations.size < other.violations.size
 }
+
+/** Whether this is a JSON string, for a keyword whose entries must all be property names. */
+private fun JsonPrimitive?.isJsonString(): Boolean = this != null && isString
 
 private fun JsonArray?.orEmptyStrings(): List<String> =
     this?.mapNotNull { (it as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content }.orEmpty()

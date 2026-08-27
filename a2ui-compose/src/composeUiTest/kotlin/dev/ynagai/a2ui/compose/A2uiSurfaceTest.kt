@@ -155,22 +155,6 @@ class A2uiSurfaceTest {
         }
 
         /**
-         * The same descent with no layout node around it.
-         *
-         * For the depth test only. That fixture is a chain of 264 containers, and with
-         * [StackingRenderer] almost all of its cost is 264 nested `Column`s being measured and laid
-         * out -- which is not what the depth guard does. In a browser it overran mocha's budget
-         * outright, where the guard itself is a list membership test per level.
-         *
-         * The component type stays `Column`, because the child resolver reads the *catalog* to find
-         * children: a type the basic catalog does not define would resolve none at all, the chain
-         * would end at its first link, and the test would pass for the wrong reason.
-         */
-        val BareRenderer = ComponentRenderer { scope, _ ->
-            scope.rememberAllChildren().forEach { child -> scope.RenderChild(child) }
-        }
-
-        /**
          * Just enough of a catalog to exercise the adapter: a `Text` that draws its resolved
          * string and two containers that stack their children.
          *
@@ -182,10 +166,6 @@ class A2uiSurfaceTest {
          * source order, so referring to it from above would read null here and fail with no
          * mention of ordering.
          */
-        /** [TestRegistry] with the containers stripped of their layout. See [BareRenderer]. */
-        val DeepRegistry: ComponentRegistry
-            get() = TestRegistry.with(mapOf("Column" to BareRenderer, "List" to BareRenderer))
-
         val TestRegistry = ComponentRegistry(
             mapOf(
                 "Text" to ComponentRenderer { scope, modifier ->

@@ -41,8 +41,14 @@ import kotlinx.serialization.json.doubleOrNull
  * against `/items/3` rather than the root, and losing it is the usual cause of a nested component
  * rendering empty.
  *
- * A data class so that `remember` keys built from it compare by value; without that, every
- * recomposition would rebuild the derived states below.
+ * **What keeps the derived states below alive is this object's identity, not its equality.**
+ * [A2uiComponent] builds exactly one of these per component instance and holds it in a `remember`,
+ * so `remember(this, name)` in [rememberString] and its siblings matches on the same instance
+ * every time. Do not read the `data` modifier as a promise that an equal scope built elsewhere
+ * would hit those caches: [onMessage] is one of the compared components and it holds an
+ * indirection allocated inside that `remember`, so two independently constructed scopes never
+ * compare equal. The `data` modifier is here for `toString` in test failures and for destructuring;
+ * the caching contract is [A2uiComponent]'s.
  */
 @ConsistentCopyVisibility
 @Stable

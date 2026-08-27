@@ -31,3 +31,4 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 include(":a2ui-core")
 include(":a2ui-compose")
+include(":a2ui-gallery")

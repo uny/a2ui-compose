@@ -24,8 +24,6 @@ import kotlin.test.assertTrue
  * half-drawn widget in the way -- costs far more than finding out now.
  */
 class ExampleCorpusTest {
-    private val validator = CatalogValidator.of(listOf(BASIC_CATALOG))
-
     @Test
     fun the_corpus_is_the_specifications_own() {
         assertEquals(EXAMPLES_EXPECTED, EXAMPLES.size, "vendored example count changed")
@@ -53,7 +51,7 @@ class ExampleCorpusTest {
     fun every_message_validates_against_the_basic_catalog() {
         val failures = EXAMPLES.flatMap { example ->
             example.raw.mapIndexedNotNull { index, message ->
-                val validation = validator.validateMessage(
+                val validation = VALIDATOR.validateMessage(
                     message = message,
                     direction = MessageDirection.AGENT_TO_RENDERER,
                     catalogId = BASIC_CATALOG_ID,
@@ -89,5 +87,15 @@ class ExampleCorpusTest {
     private companion object {
         const val EXAMPLES_EXPECTED = 43
         const val BASIC_CATALOG_ID = "https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json"
+
+        /**
+         * Built once for the whole class, not per test.
+         *
+         * `kotlin.test` constructs a new instance of the test class for every test method, so a
+         * `private val` here would build the schema registry over a fifty-kilobyte catalog four
+         * times. On a JVM that is invisible; in a browser on a CI runner it was most of a mocha
+         * timeout, and a timeout is what karma reports as a bare `Error`.
+         */
+        val VALIDATOR = CatalogValidator.of(listOf(BASIC_CATALOG))
     }
 }

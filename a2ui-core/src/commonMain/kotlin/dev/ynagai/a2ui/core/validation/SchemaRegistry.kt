@@ -164,13 +164,37 @@ public class SchemaRegistry private constructor(
             // inlined in an agent's capabilities message, so a document claiming a URI an earlier
             // one already published is choosing what a payload is checked against rather than
             // registering itself. Callers pass the specification's own documents first.
+            val ordered = documents + listOfNotNull(activeCatalog)
             val all = mutableMapOf<String, JsonObject>()
-            for (document in documents + listOfNotNull(activeCatalog)) {
+            for (document in ordered) {
                 val id = document.declaredId() ?: continue
                 if (id !in all) all[id] = document
             }
-            return SchemaRegistry(all, activeCatalog?.declaredId(), activeCatalog)
+            // A second pass, and after the first for a reason. `catalogId` is the name a component
+            // or a surface says it belongs to, and `catalog_definition.json` requires only that
+            // one -- so a conformant catalog may carry no `$id` at all, and one that did was
+            // reachable by neither name: every component in it failed to resolve, and every one of
+            // its containers reported no children, silently. Easy to miss, because the published
+            // basic catalog gives both identifiers the same value.
+            //
+            // Registered only where nothing has spoken for the name. `catalogId` is an
+            // agent-supplied string with no more constraint on it than `"type": "string"`, so a
+            // catalog naming itself after another document must not answer for it -- and running
+            // this pass second is what guarantees `$id` always wins the name.
+            for (document in ordered) {
+                val catalogId = document.declaredCatalogId() ?: continue
+                if (catalogId !in all) all[catalogId] = document
+            }
+            // The name the active catalog is reachable by. Its `$id` when it declares one, which
+            // keeps the existing rules exactly as they were -- a claim on a library URI is refused
+            // by [document] rather than here -- and its `catalogId` only when it declares no `$id`.
+            val activeUri = activeCatalog?.let { it.declaredId() ?: it.declaredCatalogId() }
+            return SchemaRegistry(all, activeUri, activeCatalog)
         }
+
+        /** The catalog's own name, which is not required to agree with its `$id`. */
+        private fun JsonObject.declaredCatalogId(): String? =
+            (this["catalogId"] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content
 
         private fun JsonObject.declaredId(): String? =
             (this["\$id"] as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content

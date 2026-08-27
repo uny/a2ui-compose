@@ -4,6 +4,7 @@ import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.CatalogDefinition
 import dev.ynagai.a2ui.core.protocol.Component
 import dev.ynagai.a2ui.core.protocol.FunctionCall
+import dev.ynagai.a2ui.core.surface.ChildReference
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -530,3 +531,105 @@ private val JSON_SCHEMA_KEYWORDS = setOf(
     "else", "dependentSchemas", "unevaluatedItems", "unevaluatedProperties", "format",
     "contentEncoding", "contentMediaType", "contentSchema",
 )
+
+/** A conformant catalog that names itself only by `catalogId`, which the schema permits. */
+private const val NO_ID_CATALOG = """
+{
+  "catalogId": "urn:test:no-id",
+  "protocolVersion": "1.0",
+  "${'$'}defs": {"anyComponent": {"oneOf": [{"${'$'}ref": "#/components/Box"}]}},
+  "components": {
+    "Box": {
+      "type": "object",
+      "properties": {
+        "component": {"const": "Box"},
+        "child": {
+          "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/Child"
+        }
+      },
+      "required": ["component"]
+    }
+  }
+}
+"""
+
+/** A catalog whose `catalogId` is the name of a document this library ships. */
+private const val IMPOSTOR_CATALOG = """
+{
+  "catalogId": "https://a2ui.org/specification/v1_0/common_types.json",
+  "protocolVersion": "1.0",
+  "${'$'}defs": {"anyComponent": true, "FunctionCall": true},
+  "components": {}
+}
+"""
+
+/**
+ * A catalog is named by `catalogId`, and only `catalogId` is required of it.
+ *
+ * `$id` names the schema resource a `$ref` resolves against; `catalogId` names the catalog a
+ * component or a surface says it belongs to. The published basic catalog gives both the same
+ * value, which is what made it easy to miss that one of them is optional.
+ */
+class CatalogIdentityTest {
+    private fun catalog(source: String): CatalogDefinition =
+        A2uiJson.strict.decodeFromString(CatalogDefinition.serializer(), source)
+
+    @Test
+    fun reaches_a_catalog_that_names_itself_only_by_catalog_id() {
+        val definition = catalog(NO_ID_CATALOG)
+        val result = CatalogValidator.of(listOf(definition)).validate(
+            component("""{"id": "b", "component": "Box", "child": "t"}"""),
+            definition.catalogId,
+        )
+        assertTrue(result.isValid, result.violations.toString())
+    }
+
+    @Test
+    fun still_applies_a_catalog_that_omits_an_id() {
+        // Reaching it is not the same as checking against it, and reaching it is only worth
+        // anything because of the second.
+        val definition = catalog(NO_ID_CATALOG)
+        val result = CatalogValidator.of(listOf(definition)).validate(
+            component("""{"id": "b", "component": "Box", "child": "t", "unexpected": 1}"""),
+            definition.catalogId,
+        )
+        assertFalse(result.isValid)
+    }
+
+    @Test
+    fun finds_the_children_of_a_catalog_that_omits_an_id() {
+        // The failure this had was worse than a rejection: `childrenOf` returned nothing, so a
+        // container rendered with its children missing and nothing was reported.
+        val definition = catalog(NO_ID_CATALOG)
+        val resolver = CatalogChildResolver.of(listOf(definition), definition.catalogId)
+        assertEquals(
+            listOf(ChildReference.Single("child", "t")),
+            resolver.childrenOf(component("""{"id": "b", "component": "Box", "child": "t"}""")),
+        )
+    }
+
+    @Test
+    fun refuses_a_catalog_that_names_itself_after_a_document_this_library_ships() {
+        // `catalogId` is an agent-supplied string with no more constraint on it than
+        // `"type": "string"`. A catalog inlined in a capabilities message could name itself
+        // `common_types.json` and, if the name were taken on trust, have every function call in
+        // the session checked against whatever it put at `#/$defs/FunctionCall`.
+        val definition = catalog(IMPOSTOR_CATALOG)
+        val validator = CatalogValidator.of(listOf(BASIC, definition))
+        val result = validator.validate(
+            call("""{"call": "email", "args": {"value": "not-an-email", "extra": 1}}"""),
+            BASIC_ID,
+        )
+        // Still checked against the real `common_types.json`, so the extra argument is refused.
+        assertFalse(result.isValid, "the impostor answered for a document it does not own")
+    }
+
+    @Test
+    fun a_catalog_id_never_displaces_an_id_another_document_declares() {
+        val impostor = catalog(IMPOSTOR_CATALOG)
+        val registry = SchemaRegistry.of(ProtocolSchemas.documents + listOf(parseObject(IMPOSTOR_CATALOG)))
+        val reached = registry.document(ProtocolSchemas.COMMON_TYPES_URI)
+        assertEquals(ProtocolSchemas.commonTypes, reached)
+        assertEquals("https://a2ui.org/specification/v1_0/common_types.json", impostor.catalogId)
+    }
+}

@@ -104,6 +104,31 @@ class A2uiRenderBudgetTest {
         assertEquals(emptyList<A2uiPlaceholderReason>(), reasons)
     }
 
+    @Test
+    fun a_component_the_resolver_refuses_does_not_take_the_composition_with_it() =
+        runComposeUiTest {
+            // The estimate resolves children to count them, and `childrenOf` raises on payloads the
+            // agent chooses: `Tabs` yields one reference per tab through the shipped catalog, so
+            // five thousand tabs outgrow the resolver's own bounds. The descent this gates already
+            // survives that -- `children()` resolves inside a `runCatching` and degrades to a
+            // container with none -- so an estimate that raised instead would turn a payload the
+            // renderer handles into a host crash, which is what this asserts it does not.
+            val tabs = (0 until 5_000).joinToString(",") { """{"title":"t$it","child":"leaf"}""" }
+            val renderer = rendererFor(
+                """[
+                    {"id":"$ROOT_COMPONENT_ID","component":"Tabs","tabs":[$tabs]},
+                    {"id":"leaf","component":"Text","text":"x"}
+                ]""",
+            )
+            val reasons = mutableListOf<A2uiPlaceholderReason>()
+            setContent {
+                A2uiSurface(renderer, SURFACE, TestRegistry, placeholder = recording(reasons))
+            }
+            // Drawn as a container with no children rather than refused, because the estimate had
+            // no verdict to give: reaching this line at all is the assertion.
+            assertEquals(emptyList<A2uiPlaceholderReason>(), reasons)
+        }
+
     /** [A2uiComponent] reads its registry and placeholder from the composition, as a host would. */
     @Composable
     private fun CompositionLocalsFor(
@@ -181,6 +206,7 @@ class A2uiRenderBudgetTest {
                 },
                 "Column" to StackingRenderer,
                 "List" to StackingRenderer,
+                "Tabs" to StackingRenderer,
             ),
         )
     }

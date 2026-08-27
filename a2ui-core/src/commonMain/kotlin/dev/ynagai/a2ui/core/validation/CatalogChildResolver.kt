@@ -210,9 +210,17 @@ public class CatalogChildResolver private constructor(
                 A2uiJson.strict.encodeToJsonElement(CatalogDefinition.serializer(), catalog)
                     as JsonObject
             }
-            val active = surfaceDefault?.takeIf { id -> catalogs.any { it.catalogId == id } }
+            val activeIndex = catalogs.indexOfFirst { it.catalogId == surfaceDefault }
+            val active = surfaceDefault?.takeIf { activeIndex >= 0 }
             return CatalogChildResolver(
-                registry = SchemaRegistry.of(ProtocolSchemas.documents + documents),
+                registry = SchemaRegistry.of(
+                    documents = ProtocolSchemas.documents + documents,
+                    // Bound here too. Without it the placeholder falls through to the map, and an
+                    // inlined catalog publishing `$id` of `.../v1_0/catalog.json` answers
+                    // `catalog.json#/$defs/anyFunction` for a surface bound to another catalog --
+                    // the hole `SchemaRegistry` closes only when it is told which catalog is live.
+                    activeCatalog = documents.getOrNull(activeIndex),
+                ),
                 catalogUri = active,
                 surfaceDefault = surfaceDefault,
                 limits = limits,

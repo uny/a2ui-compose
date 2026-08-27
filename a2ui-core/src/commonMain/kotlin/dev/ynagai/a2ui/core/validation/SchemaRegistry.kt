@@ -30,8 +30,9 @@ public data class SchemaLocation(
  * own `$id` is `.../catalogs/basic/catalog.json`. The prose says so outright: it is "a placeholder
  * filename" (`docs/a2ui_protocol.md:146`).
  *
- * So a resolver cannot treat it as a URI. [SchemaRegistry] binds any reference whose path ends in
- * this name, and which no registered document claims, to the active catalog instead.
+ * So a resolver cannot treat it as a URI. [SchemaRegistry] binds the bare name to the active
+ * catalog before the registered documents are consulted, and any other spelling whose path ends in
+ * this name once no registered document claims it.
  */
 internal const val CATALOG_PLACEHOLDER: String = "catalog.json"
 
@@ -49,9 +50,18 @@ internal const val CATALOG_PLACEHOLDER: String = "catalog.json"
 public class SchemaRegistry private constructor(
     private val documents: Map<String, JsonObject>,
     private val activeCatalogUri: String?,
+    private val activeCatalog: JsonObject?,
 ) {
-    /** The document [uri] publishes, or null when nothing registered it. */
-    public fun document(uri: String): JsonObject? = documents[uri]
+    /**
+     * The document [uri] publishes, or null when nothing registered it.
+     *
+     * The catalog in play answers for its own URI whatever else claimed it. `$id` is a free string
+     * on a catalog, so two catalogs may publish the same one, and the map can only keep one of
+     * them -- but the placeholder resolves through this, and it must reach the catalog the caller
+     * named rather than whichever namesake happened to register.
+     */
+    public fun document(uri: String): JsonObject? =
+        if (uri == activeCatalogUri) activeCatalog ?: documents[uri] else documents[uri]
 
     /**
      * The subschema [reference] names, read relative to [base].
@@ -75,7 +85,7 @@ public class SchemaRegistry private constructor(
             uriPart.isEmpty() -> base.documentUri
             else -> resolveDocumentUri(uriPart, base.documentUri)
         }
-        val document = documents[documentUri] ?: return null
+        val document = document(documentUri) ?: return null
         val target = document.pointer(fragment) ?: return null
         return Resolved(target, SchemaLocation(documentUri, fragment))
     }
@@ -118,11 +128,14 @@ public class SchemaRegistry private constructor(
 
     public companion object {
         /**
-         * A registry over [documents], each keyed by its own `$id`.
+         * A registry over [documents], each keyed by its own `$id`, with the FIRST to claim a
+         * URI keeping it.
          *
-         * [activeCatalog] is registered like any other document *and* bound to
-         * [CATALOG_PLACEHOLDER]. Passing it separately rather than inferring "the one that has a
-         * `catalogId`" keeps a catalog that inlines another one from silently taking over.
+         * [activeCatalog] is bound to [CATALOG_PLACEHOLDER] and answers for its own URI directly,
+         * so it does not depend on winning that race -- it is appended last, and under first-wins
+         * it would otherwise lose every collision. Passing it separately rather than inferring
+         * "the one that has a `catalogId`" keeps a catalog that inlines another one from silently
+         * taking over.
          */
         public fun of(
             documents: List<JsonObject>,
@@ -138,7 +151,7 @@ public class SchemaRegistry private constructor(
                 val id = document.declaredId() ?: continue
                 if (id !in all) all[id] = document
             }
-            return SchemaRegistry(all, activeCatalog?.declaredId())
+            return SchemaRegistry(all, activeCatalog?.declaredId(), activeCatalog)
         }
 
         private fun JsonObject.declaredId(): String? =

@@ -394,7 +394,13 @@ public class SchemaEvaluator(
                                     value,
                                     location.child("propertyNames"),
                                     JsonPrimitive(name),
-                                    at,
+                                    // The name stays in the path handed *down*: the `$ref` cycle
+                                    // guard keys on it, and collapsing every name onto the
+                                    // enclosing path makes a `propertyNames` that refers back to
+                                    // an active schema read as a cycle and pass vacuously. Nothing
+                                    // from here reaches a message -- this subtree is evaluated
+                                    // with `collect = false`.
+                                    at.child(name),
                                     depth + 1,
                                     collect = false,
                                 )

@@ -210,10 +210,13 @@ public class CatalogValidator private constructor(
          * object and emits it verbatim — so the document `$ref` resolution sees is the one that
          * arrived.
          *
-         * **Two catalogs sharing a `catalogId` resolve to the last one given.** A renderer that
-         * mixes its own catalogs with ones an agent inlined should put its own last, or refuse the
-         * duplicate before it gets here: the id is what a payload names, so whichever wins is what
-         * every payload naming it is checked against.
+         * **Two catalogs sharing a `catalogId` resolve to the last one given, and two sharing a
+         * JSON Schema `$id` resolve to the FIRST.** The two keys are independent -- `$id` is a
+         * free string that need not equal `catalogId` -- so a renderer that mixes its own catalogs
+         * with ones an agent inlined cannot order the list to be safe on both, and should refuse
+         * the duplicate before it gets here. Neither ordering lets an inlined catalog displace the
+         * catalog a payload actually names: the one in play answers for its own URI whatever else
+         * claimed it (see [SchemaRegistry.document]).
          */
         public fun of(
             catalogs: List<CatalogDefinition>,

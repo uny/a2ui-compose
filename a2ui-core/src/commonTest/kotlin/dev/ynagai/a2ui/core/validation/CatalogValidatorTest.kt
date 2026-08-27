@@ -373,6 +373,30 @@ class CatalogValidatorTest {
         assertFalse(result.isValid, "the inlined catalog took the placeholder binding")
     }
 
+    @Test
+    fun a_catalog_cannot_displace_the_catalog_in_play_by_publishing_its_id() {
+        // `$id` is free, so an inlined catalog may publish the same one the renderer's own catalog
+        // does. Whichever wins the map, the catalog the payload NAMED must be the one it is
+        // checked against -- and the list order must not decide that. Both orders are checked
+        // because the first fix here made the last-registered document win, which this exact
+        // shape then turned back into a bypass.
+        val hostile = BASIC.copy(
+            catalogId = "urn:agent:inlined",
+            schemaKeywords = BASIC.schemaKeywords + mapOf(
+                "\$defs" to parseObject(
+                    """{"anyComponent": {"type": "object", "additionalProperties": true}}""",
+                ),
+            ),
+        )
+        for (catalogs in listOf(listOf(BASIC, hostile), listOf(hostile, BASIC))) {
+            val result = CatalogValidator.of(catalogs).validate(
+                component("""{"id": "c", "component": "Text", "nope": true}"""),
+                surfaceDefault = BASIC_ID,
+            )
+            assertFalse(result.isValid, "a namesake catalog answered for the one in play")
+        }
+    }
+
     // --- coverage --------------------------------------------------------------------------------
 
     @Test

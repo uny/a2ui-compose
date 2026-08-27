@@ -21,9 +21,22 @@ plugins {
  * A constant name for the file at [path], derived so that adding a file to a scanned directory
  * does not also mean editing this build script. `initial_state_validation.json` becomes
  * `INITIAL_STATE_VALIDATION`.
+ *
+ * A filename the derivation cannot make an identifier out of is refused here, where the message
+ * can name the file. `dynamic-values.json` would otherwise emit `const val DYNAMIC-VALUES` and
+ * fail the Kotlin compiler on a generated file under `build/` that nobody wrote -- which is the
+ * whole cost of scanning a directory instead of listing it, and it should be paid once, loudly.
  */
-fun constantName(path: String): String =
-    path.substringAfterLast('/').removeSuffix(".json").uppercase()
+val identifier = Regex("[A-Z_][A-Z0-9_]*")
+
+fun constantName(path: String): String {
+    val file = path.substringAfterLast('/')
+    val name = file.removeSuffix(".json").uppercase()
+    require(identifier.matches(name)) {
+        "`$file` does not name a Kotlin constant (`$name`). Rename the file, or list it by hand."
+    }
+    return name
+}
 
 fun embedSchemas(
     taskName: String,
@@ -44,9 +57,23 @@ fun embedSchemas(
                 // Sorted so the generated source is the same on every machine; a directory
                 // listing is not ordered, and an unstable one makes the build non-reproducible.
                 .sortedBy { it.name }
-                .associate { constantName(it.name) to "$relative/${it.name}" }
+                .map { constantName(it.name) to "$relative/${it.name}" }
+                .also { pairs ->
+                    // `associate` would keep the last silently, and a dropped case file reads as
+                    // a suite that simply has fewer assertions in it.
+                    val collisions = pairs.groupBy { it.first }.filterValues { it.size > 1 }
+                    require(collisions.isEmpty()) {
+                        "files in `$relative` share a constant name: " +
+                            collisions.values.joinToString { group -> group.map { it.second }.toString() }
+                    }
+                }
+                .toMap()
         }.orEmpty()
         val documents = documents + scanned
+        // `ALL` is keyed by bare filename, so two documents from different directories that share
+        // one would collide in the generated `mapOf` -- which Kotlin accepts, last wins.
+        val byFile = documents.values.groupBy { it.substringAfterLast('/') }.filterValues { it.size > 1 }
+        require(byFile.isEmpty()) { "documents share a filename and would collide in `ALL`: $byFile" }
         val target = outputDir.get().asFile.resolve(packageName.replace('.', '/'))
         target.mkdirs()
         val quote = "\""

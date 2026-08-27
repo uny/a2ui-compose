@@ -287,16 +287,17 @@ private val TYPE_NAMES: Set<String> =
  * A `type` this does not recognise is not a value that fails to match — it is a constraint that
  * was never applied, and the two look the same from the outside. The caller reports these rather
  * than letting a catalog written `{"type": 7}` accept every value silently; see
- * [SchemaValidation.unsupportedKeywords]. `null` counts as unreadable even though `"null"` is a
- * type name, because JSON Schema spells the name as a *string*.
+ * [SchemaValidation.unsupportedKeywords].
+ *
+ * The test is exactly the one [matchesType] applies, so that what is reported and what is enforced
+ * cannot disagree. Bare `null` is the case that makes the difference visible: JSON Schema spells
+ * the name as a string, but [matchesType] reads `JsonNull`'s content and refuses a string for it,
+ * so it is *applied* — and reporting it as unapplied would tell a renderer a constraint went
+ * unchecked on the very message that constraint just refused.
  */
 internal fun JsonElement.unreadableTypeNames(): List<String> = when (this) {
     is JsonArray -> flatMap { it.unreadableTypeNames() }
-    is JsonPrimitive -> when {
-        !isString -> listOf(content)
-        content in TYPE_NAMES -> emptyList()
-        else -> listOf(content)
-    }
+    is JsonPrimitive -> if (content in TYPE_NAMES) emptyList() else listOf(content)
     is JsonObject -> listOf("an object")
 }
 

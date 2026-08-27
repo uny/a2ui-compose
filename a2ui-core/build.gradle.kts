@@ -32,12 +32,23 @@ val identifier = Regex("[A-Z_][A-Z0-9_]*")
 fun constantName(path: String): String {
     val file = path.substringAfterLast('/')
     val name = file.removeSuffix(".json").uppercase()
-    require(identifier.matches(name)) {
+    require(Regex("[A-Z_][A-Z0-9_]*").matches(name)) {
         "`$file` does not name a Kotlin constant (`$name`). Rename the file, or list it by hand."
     }
     return name
 }
 
+/**
+ * Embeds the vendored specification schemas (`spec/`) in the library as Kotlin source.
+ *
+ * A catalog's `$ref`s reach into `common_types.json`, so a renderer cannot resolve them without
+ * the document. Generating it from the vendored file rather than transcribing it by hand is what
+ * keeps the two from drifting: a hand-written copy of a schema is wrong the first time the
+ * specification moves and says nothing about it.
+ *
+ * The text is embedded exactly as vendored, not reformatted, so that what ships can be diffed
+ * against the specification's own file.
+ */
 fun embedSchemas(
     taskName: String,
     packageName: String,

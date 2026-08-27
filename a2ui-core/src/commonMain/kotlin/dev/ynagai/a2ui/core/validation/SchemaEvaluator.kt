@@ -156,7 +156,14 @@ public class SchemaEvaluator(
                     if (outcome.violations.isNotEmpty() && outcome.closerThan(closest)) closest = outcome
                 }
             } catch (exhausted: BudgetExhausted) {
-                // The run's own budget, not the allowance, means the run really is over.
+                // Everything except the run's own budget is given up on here, **including a depth
+                // exhaustion**, and that is deliberate rather than an oversight to tidy up later.
+                // This pass is a diagnostic: the verdict was settled before it started, and the
+                // first pass reached it while short-circuiting, so a wall this pass hits by *not*
+                // short-circuiting is an artefact of asking for a better message. Letting it
+                // unwind would throw away the located violation and answer with the wall instead,
+                // which is the whole failure this method was rewritten to stop. `truncated` is
+                // what says something was cut short; the verdict is unaffected either way.
                 if (steps > limits.maxSteps) throw exhausted
                 truncated = true
                 gaveUp = true

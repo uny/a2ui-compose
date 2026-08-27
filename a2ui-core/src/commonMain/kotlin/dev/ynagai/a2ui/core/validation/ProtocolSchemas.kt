@@ -46,6 +46,21 @@ public object ProtocolSchemas {
     public val documents: List<JsonObject>
         get() = listOf(commonTypes, agentToRenderer, rendererToAgent, catalogDefinition)
 
+    /**
+     * The `$id`s of the documents this library ships, which is what makes a schema trusted.
+     *
+     * A schema read from one of these was vendored from the specification and reviewed; a schema
+     * read from anywhere else came from a catalog, and a catalog may arrive inlined in an agent's
+     * capabilities message. [SchemaEvaluator] uses the distinction for `pattern`, which is the one
+     * keyword whose cost is chosen by whoever wrote the schema.
+     */
+    internal val libraryUris: Set<String> by lazy {
+        documents.mapNotNull { document ->
+            (document["\$id"] as? kotlinx.serialization.json.JsonPrimitive)
+                ?.takeIf { it.isString }?.content
+        }.toSet()
+    }
+
     /** Where a `FunctionCall` is checked from: `common_types.json#/$defs/FunctionCall`. */
     public val functionCall: SchemaLocation =
         SchemaLocation(COMMON_TYPES_URI, "/\$defs/FunctionCall")

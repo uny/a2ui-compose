@@ -431,7 +431,47 @@ class CatalogValidatorTest {
             verdict("""{"tags": ["a"], "names": {"Surface": 1}, "version": "1.0.0"}"""),
             "propertyNames",
         )
-        assertFalse(verdict("""{"tags": ["a"], "names": {}, "version": "v1.0"}"""), "pattern")
+        // `pattern` is deliberately absent here: a pattern read from a document this library
+        // does not ship is agent-supplied, and the evaluator now reports it unapplied rather than
+        // handing an unbounded backtracking cost to a phone. It is covered by the two tests below
+        // -- applied from the shipped document, refused and reported from a catalog.
+    }
+
+    @Test
+    fun applies_a_pattern_read_from_a_document_the_library_ships() {
+        val document = ProtocolSchemas.catalogDefinition
+        val at = SchemaLocation(
+            "https://a2ui.org/specification/v1_0/catalog_definition.json",
+            "/properties/protocolVersion",
+        )
+        val schema = document.pointer(at.pointer)!!
+        val evaluator = SchemaEvaluator(SchemaRegistry.of(ProtocolSchemas.documents))
+        fun verdict(payload: String): SchemaValidation =
+            evaluator.validate(schema, at, Json.parseToJsonElement(payload))
+
+        val good = verdict(""""1.0"""")
+        assertTrue(good.isValid, good.violations.toString())
+        assertEquals(emptySet(), good.unsupportedKeywords)
+
+        // `v1.0` is the envelope's spelling; a catalog says `1.0`, and the pattern is what says so.
+        val bad = verdict(""""v1.0"""")
+        assertFalse(bad.isValid, "the semver pattern was not applied")
+        assertEquals(emptySet(), bad.unsupportedKeywords)
+    }
+
+    @Test
+    fun does_not_apply_a_pattern_a_catalog_supplied_and_says_so() {
+        // Neither length bound constrains backtracking, and the cost lands on Kotlin/Native and JS
+        // rather than the JVM -- so the target that hangs is a phone. Refusing is reported through
+        // `unsupportedKeywords`, never silently.
+        val registry = SchemaRegistry.of(listOf(parseObject(KEYWORD_PROBE_SCHEMA)))
+        val result = SchemaEvaluator(registry).validate(
+            parseObject(KEYWORD_PROBE_SCHEMA),
+            SchemaLocation("urn:probe", ""),
+            Json.parseToJsonElement("""{"tags": ["a"], "names": {}, "version": "not-a-semver"}"""),
+        )
+        assertTrue(result.isValid, "an agent's pattern was compiled")
+        assertContains(result.unsupportedKeywords, "pattern")
     }
 
     @Test

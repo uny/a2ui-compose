@@ -432,10 +432,25 @@ public class SchemaEvaluator(
                         val text = (instance as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content
                         val source = (value as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content
                         if (text != null && source != null) {
-                            when (matchesPattern(source, text, limits)) {
-                                FormatVerdict.VALID -> Unit
-                                FormatVerdict.INVALID -> reject("does not have the form the catalog requires.")
-                                FormatVerdict.UNKNOWN -> unsupported += "pattern"
+                            if (location.documentUri !in ProtocolSchemas.libraryUris) {
+                                // A `pattern` that did not come from a document this library ships
+                                // is agent-supplied once a catalog may be inlined, and neither
+                                // length bound constrains backtracking: `(x+x+)+y` costs about four
+                                // times as much per two characters on Kotlin/Native -- fifty-nine
+                                // seconds at twenty-seven, where `maxSubjectLength` allows two
+                                // thousand -- while the whole match is charged as one step. The JVM
+                                // optimises these away and Native and JS do not, so the target that
+                                // hangs is a phone. `matcher()` already refuses to compile an
+                                // agent's pattern for property names; this is the same refusal for
+                                // values, and it is reported rather than silently skipped.
+                                unsupported += "pattern"
+                            } else {
+                                when (matchesPattern(source, text, limits)) {
+                                    FormatVerdict.VALID -> Unit
+                                    FormatVerdict.INVALID ->
+                                        reject("does not have the form the catalog requires.")
+                                    FormatVerdict.UNKNOWN -> unsupported += "pattern"
+                                }
                             }
                         }
                     }

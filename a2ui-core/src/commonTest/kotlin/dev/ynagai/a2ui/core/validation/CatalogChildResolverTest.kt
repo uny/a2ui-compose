@@ -215,4 +215,36 @@ class CatalogChildResolverTest {
         )
     }
 
+    @Test
+    fun does_not_invent_a_child_for_a_name_pattern_properties_covers() {
+        // `additionalProperties` applies only to what neither `properties` nor `patternProperties`
+        // covers. An invented edge is worse than a missing one: `CompositionValidator` would then
+        // report UNALLOWED_CHILD for a pairing the catalog never declared.
+        val source = """
+        {
+          "${'$'}id": "urn:test:patterned",
+          "catalogId": "urn:test:patterned",
+          "components": {
+            "Panel": {
+              "type": "object",
+              "properties": {"component": {"const": "Panel"}},
+              "patternProperties": {"^data_": {"type": "string"}},
+              "additionalProperties": {
+                "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/Child"
+              }
+            }
+          }
+        }
+        """.trimIndent()
+        val catalog = A2uiJson.strict.decodeFromString(CatalogDefinition.serializer(), source)
+        val found = CatalogChildResolver.of(listOf(catalog), surfaceDefault = catalog.catalogId)
+            .childrenOf(
+                A2uiJson.strict.decodeFromString(
+                    Component.serializer(),
+                    """{"id": "p", "component": "Panel", "data_note": "c1"}""",
+                ),
+            )
+        assertEquals(emptyList(), found, "a pattern-covered property was read as a child")
+    }
+
 }

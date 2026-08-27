@@ -69,10 +69,14 @@ public class SchemaRegistry private constructor(
      *
      * A catalog that claims a library URI therefore reaches neither branch as itself: the
      * placeholder binds to that URI, the library document answers, and the pointer into it fails
-     * to resolve. That is reported as an unresolvable reference, which is the truth.
+     * to resolve. That is reported as an unresolvable reference, which is the truth. It also means
+     * no schema text a catalog wrote is ever read at a library [SchemaLocation.documentUri], which
+     * is what [SchemaEvaluator] keys its `pattern` trust decision on.
      */
     public fun document(uri: String): JsonObject? = when {
-        uri in ProtocolSchemas.libraryUris -> documents[uri]
+        // Read from the library itself rather than from the map, so the guarantee does not depend
+        // on the caller having passed the specification's documents first. `of` is public.
+        uri in ProtocolSchemas.libraryUris -> ProtocolSchemas.libraryDocuments[uri]
         uri == activeCatalogUri -> activeCatalog ?: documents[uri]
         else -> documents[uri]
     }

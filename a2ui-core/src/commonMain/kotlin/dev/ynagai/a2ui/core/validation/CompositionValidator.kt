@@ -96,12 +96,13 @@ public class CompositionValidator(
         resolver: ChildResolver,
     ): List<CompositionViolation> {
         val out = mutableListOf<CompositionViolation>()
-        // The surface names the catalog its components belong to, and it is right here. Reading
-        // only the constructor's default meant a validator built from a catalog list alone --
-        // which is what a renderer holding several catalogs would build -- found no definition for
-        // any component that did not name a catalog itself, and returned an empty list. No
-        // violations and "I could not check" are not the same answer.
-        val default = surfaceDefault ?: surface.catalogId
+        // The surface names the catalog its components belong to, and it is right here -- so it
+        // wins over the constructor's default, which cannot know which surface it is being asked
+        // about. Reading only that default meant a validator built from a catalog list alone --
+        // what a renderer holding several catalogs would build -- found no definition for any
+        // component that did not name a catalog itself, and returned an empty list. No violations
+        // and "I could not check" are not the same answer.
+        val default = surface.catalogId ?: surfaceDefault
         // The reserved container is the implicit parent of `root`, which is what makes
         // `"allowedParents": ["Surface"]` mean "only at the top level of a surface".
         surface.root?.let { root ->

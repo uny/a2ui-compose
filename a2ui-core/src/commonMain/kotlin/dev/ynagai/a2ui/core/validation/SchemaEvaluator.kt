@@ -756,7 +756,7 @@ private fun JsonObject.declaredPatterns(): Set<String> =
  * here would put a backtracking engine on a path that runs once per property of every object in a
  * payload, and the catalog that supplied it is the same party that supplied the payload.
  */
-private fun matcher(pattern: String): ((String) -> Boolean)? = when (pattern) {
+internal fun matcher(pattern: String): ((String) -> Boolean)? = when (pattern) {
     UAX31_IDENTIFIER_PATTERN -> ::isUnicodeIdentifier
     else -> null
 }
@@ -766,7 +766,14 @@ private fun SchemaLocation.child(vararg steps: String): SchemaLocation =
 
 private fun String.escapePointer(): String = replace("~", "~0").replace("/", "~1")
 
-/** The keywords [SchemaEvaluator] applies. Anything else is reported rather than silently skipped. */
+/**
+ * The keywords [SchemaEvaluator] applies. Anything else is reported rather than silently skipped.
+ *
+ * `pattern` is the one conditional member: it is applied only when the schema was read from a
+ * document this library ships, and reported through [SchemaValidation.unsupportedKeywords] when it
+ * came from a catalog. Membership here means "this evaluator knows the keyword", which for
+ * `pattern` is not the same as "every occurrence of it is enforced".
+ */
 internal val SUPPORTED_KEYWORDS: Set<String> = setOf(
     "\$ref", "type", "const", "enum", "required", "properties", "additionalProperties", "items",
     "minItems", "minimum", "maxProperties", "minProperties", "uniqueItems", "contains",

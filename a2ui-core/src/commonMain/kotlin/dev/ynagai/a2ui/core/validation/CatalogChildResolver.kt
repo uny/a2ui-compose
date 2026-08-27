@@ -150,8 +150,18 @@ public class CatalogChildResolver private constructor(
             obj["additionalProperties"]?.let { subschema ->
                 val container = value as? JsonObject ?: return@let
                 val named = (obj["properties"] as? JsonObject)?.keys.orEmpty()
+                val patterns = (obj["patternProperties"] as? JsonObject)?.keys.orEmpty()
+                // `additionalProperties` applies only to what neither `properties` nor
+                // `patternProperties` covers. Emitting a reference for a name a pattern claims
+                // would invent a child the catalog never declared -- and an invented edge is worse
+                // than a missing one here, because `CompositionValidator` then reports
+                // `UNALLOWED_CHILD` for a pairing that does not exist. So when a pattern cannot be
+                // matched -- this library will not compile a catalog's regex, see [matcher] -- the
+                // walk stops rather than guessing.
+                if (patterns.any { matcher(it) == null }) return@let
                 for ((name, child) in container) {
                     if (name in named) continue
+                    if (patterns.any { matcher(it)?.invoke(name) == true }) continue
                     run(
                         subschema,
                         location.child("additionalProperties"),

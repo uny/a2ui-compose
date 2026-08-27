@@ -266,4 +266,20 @@ class CompositionValidatorTest {
         )
     }
 
+    @Test
+    fun the_surface_wins_over_a_default_that_cannot_know_which_surface_it_is() {
+        // A validator built with an explicit default, handed a surface that names a catalog it
+        // does not hold. The surface is the authoritative, more specific context: the answer must
+        // be "I have no definition for these" rather than a verdict from the wrong catalog.
+        val validator = CompositionValidator(listOf(CATALOG), surfaceDefault = CATALOG.catalogId)
+        val elsewhere = SurfaceModel(surfaceId = "s", catalogId = "urn:test:other")
+            .withComponents(
+                listOf(
+                    """{"id": "root", "component": "Menu", "children": ["l"]}""",
+                    """{"id": "l", "component": "Label"}""",
+                ).map(::component),
+            )
+        assertEquals(emptyList(), validator.validate(elsewhere, RESOLVER))
+    }
+
 }

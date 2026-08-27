@@ -54,12 +54,15 @@ public object ProtocolSchemas {
      * capabilities message. [SchemaEvaluator] uses the distinction for `pattern`, which is the one
      * keyword whose cost is chosen by whoever wrote the schema.
      */
-    internal val libraryUris: Set<String> by lazy {
+    internal val libraryDocuments: Map<String, JsonObject> by lazy {
         documents.mapNotNull { document ->
             (document["\$id"] as? kotlinx.serialization.json.JsonPrimitive)
-                ?.takeIf { it.isString }?.content
-        }.toSet()
+                ?.takeIf { it.isString }?.content?.let { id -> id to document }
+        }.toMap()
     }
+
+    /** The URIs [libraryDocuments] covers. */
+    internal val libraryUris: Set<String> get() = libraryDocuments.keys
 
     /** Where a `FunctionCall` is checked from: `common_types.json#/$defs/FunctionCall`. */
     public val functionCall: SchemaLocation =

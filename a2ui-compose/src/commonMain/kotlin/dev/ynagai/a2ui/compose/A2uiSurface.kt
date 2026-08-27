@@ -11,25 +11,11 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
 import dev.ynagai.a2ui.core.protocol.Surface
-import dev.ynagai.a2ui.core.surface.DEFAULT_MAX_DEPTH
 import dev.ynagai.a2ui.core.surface.EvaluationScope
+import dev.ynagai.a2ui.core.surface.RenderCost
+import dev.ynagai.a2ui.core.surface.RenderLimits
+import dev.ynagai.a2ui.core.surface.renderCost
 
-/**
- * How deep the tree may nest before rendering stops.
- *
- * Core's own depth bound rather than a second copy of the number: [A2uiComponent]'s guard and
- * [dev.ynagai.a2ui.core.surface.walk]'s have to agree, and two `const val`s holding 256 agree only
- * until someone changes one of them.
- *
- * **Depth is not the only bound core carries, and it is not the one that stops the worst payload.**
- * `walk` also refuses past [dev.ynagai.a2ui.core.surface.DEFAULT_WALK_LIMIT] *instances*, because
- * the adjacency list is a graph: n layers of components that each name the same two children
- * expand to 2^n instances from 2n components, and neither the depth guard nor the cycle guard
- * bounds that -- no path repeats an id and none of them is deep. This composition has no instance
- * budget, so that bound does not exist on the path that actually draws. See the review note on
- * this PR; closing it needs a budget carried down the descent, which is more than a constant.
- */
-public const val MAX_RENDER_DEPTH: Int = DEFAULT_MAX_DEPTH
 
 /**
  * The id the specification reserves for a surface's root component.
@@ -68,8 +54,40 @@ public sealed interface A2uiPlaceholderReason {
     /** Drawing this would revisit a component already on the path from the root. */
     public data class Cycle(public val componentId: String) : A2uiPlaceholderReason
 
-    /** The tree nests deeper than [MAX_RENDER_DEPTH]. */
+    /** The tree nests deeper than [RenderLimits.maxDepth]. */
     public data class TooDeep(public val componentId: String) : A2uiPlaceholderReason
+
+    /**
+     * Drawing this component would compose more than [limit] instances, so none of it was drawn.
+     *
+     * The one reason here that is not a component degrading. The adjacency list is a graph: n
+     * layers naming the same two children expand to 2^n instances from 2n components, which no
+     * depth or cycle guard bounds. Composition does not survive that and does not raise when it
+     * gives way, so the estimate is taken before descending and the whole subtree is refused --
+     * drawing the first [limit] of it would be a wrong UI shown without complaint.
+     */
+    public data class BudgetExceeded(
+        public val componentId: String,
+        public val limit: Int,
+    ) : A2uiPlaceholderReason
+
+    /**
+     * [dropped] children of this container were not drawn, because its share of the surface's
+     * instance budget ran out.
+     *
+     * What [BudgetExceeded] cannot catch: how many instances a `ChildList` template yields is the
+     * agent's *data model* talking, and an estimate made from the components alone cannot know it.
+     * The budget is therefore also carried down the descent and spent as it is expanded. Reported
+     * rather than silently shortened, for the reason core's walk refuses rather than truncating.
+     *
+     * Only a surface holding a template reaches this. Everywhere else the estimate counted the
+     * instances rather than bounding them, and a subtree it has already proved fits is drawn
+     * whole -- see [RenderCost.Fits.exact].
+     */
+    public data class TooManyChildren(
+        public val componentId: String,
+        public val dropped: Int,
+    ) : A2uiPlaceholderReason
 }
 
 /**
@@ -93,12 +111,35 @@ public val LocalA2uiPlaceholder: ProvidableCompositionLocal<A2uiPlaceholder> =
  * The ids on the path from the root to what is being drawn.
  *
  * The adjacency list an agent sends is not guaranteed acyclic, and this recursion is lazy, so
- * nothing else would stop `a -> b -> a`. The core walk keeps the same guard for the same reason;
- * it cannot be reused here because that walk is eager and this one has to follow composition.
+ * nothing else would stop `a -> b -> a`. Core's traversal keeps the same guard for the same
+ * reason; it cannot be reused here because that traversal is eager and this one has to follow
+ * composition, which is why the *bounds* are shared rather than the descent.
  *
  * Not static: it changes at every level, and a static local would invalidate the whole subtree.
  */
-private val LocalRenderPath = compositionLocalOf { emptyList<String>() }
+private val LocalRenderPath = compositionLocalOf<RenderPath?> { null }
+
+/**
+ * One link of the path from the root to what is being drawn.
+ *
+ * A linked chain rather than a `List<String>`, which is what the two operations this local exists
+ * for cost. `path + componentId` copies the whole path at every level and `componentId in path`
+ * scans it, so a surface nested d deep did O(d^2) work per frame and allocated a list per node.
+ * Core's traversal shares its ancestors by reference for the same reason.
+ */
+private class RenderPath(val id: String, val parent: RenderPath?) {
+    val depth: Int = (parent?.depth ?: 0) + 1
+
+    fun contains(id: String): Boolean {
+        var link: RenderPath? = this
+        while (link != null) {
+            if (link.id == id) return true
+            link = link.parent
+        }
+        return false
+    }
+}
+
 
 /**
  * Draws the surface [surfaceId], starting at its `root` component.
@@ -122,6 +163,13 @@ public fun A2uiSurface(
     CompositionLocalProvider(
         LocalA2uiRegistry provides registry,
         LocalA2uiPlaceholder provides placeholder,
+        // A surface starts its own path. Component ids are scoped to the surface that defined
+        // them, so a path carried in from an enclosing surface is a path of somebody else's ids:
+        // it makes this surface's `root` look like a cycle against the outer one's, and it leaves
+        // [A2uiComponent]'s budget gate -- which opens on a null path -- shut. A host drawing a
+        // second surface from inside a component renderer would then compose the one payload the
+        // gate exists to refuse.
+        LocalRenderPath provides null,
     ) {
         A2uiComponent(
             renderer = renderer,
@@ -140,6 +188,15 @@ public fun A2uiSurface(
  * Public because a host embedding a single component without a surface around it is a reasonable
  * thing to want. A container drawing its own children calls [RenderChild] instead, which carries
  * the scope's renderer, surface and message sink for it.
+ *
+ * @param budget how many component instances this subtree may compose, itself included. Defaults
+ *   to the whole surface's; [RenderChild] passes down the share [A2uiComponentScope] divided out.
+ *   Consulted only where the estimate could not count the subtree exactly -- a top-level entry
+ *   whose surface holds no template is opened unrationed, because [RenderCost.Fits.exact] has
+ *   already proved it composes within the bound. A parameter rather than a composition local because
+ *   providing one wraps every child in another composable, and that layer was enough to stop a
+ *   leaf from being skipped on two of the targets -- the recomposition granularity this design
+ *   exists to buy.
  */
 @Composable
 public fun A2uiComponent(
@@ -148,18 +205,59 @@ public fun A2uiComponent(
     componentId: String,
     evaluationScope: EvaluationScope,
     modifier: Modifier = Modifier,
+    budget: Int = renderer.renderLimits.maxInstances,
     onMessage: (RendererToAgentMessage) -> Unit = {},
 ) {
     val registry = LocalA2uiRegistry.current
     val placeholder = LocalA2uiPlaceholder.current
     val path = LocalRenderPath.current
+    val limits = renderer.renderLimits
+
+    // Nothing above this call is drawing A2UI, so this is where the surface's budget is opened.
+    // The check belongs here rather than in `A2uiSurface` because this function is public: a host
+    // embedding one component without a surface around it reaches the same descent, and a gate
+    // only `A2uiSurface` passed through would be a gate with a documented way around it.
+    val opened = if (path == null) {
+        val model = renderer.state.surfaces[surfaceId]
+        // Keyed on the surface's components rather than the surface, so an estimate survives every
+        // data model write -- which is also why it is an estimate. `renderer` and `limits` are
+        // keys of their own: the same components resolve to different children under a different
+        // catalog, and to a different verdict under different bounds.
+        //
+        // Resolved inside a `runCatching`, for the reason [A2uiComponentScope.children] resolves
+        // its own children inside one: `ChildResolver.childrenOf` raises on agent-controlled input
+        // -- a component carrying more than `MAX_REFERENCES` references, or a schema that outgrows
+        // [A2uiRenderer.validationLimits] -- and a `Tabs` of five thousand tabs reaches it through
+        // the shipped catalog. Estimating is not where that answer arrives. The descent this gates
+        // already degrades to a component with no children when the resolver refuses it, so an
+        // estimate that threw instead would turn a payload the renderer survives into a
+        // composition that does not.
+        val cost = remember(renderer, surfaceId, componentId, model?.components, limits) {
+            model?.let {
+                runCatching { it.renderCost(renderer.childResolver(it), limits, componentId) }
+                    .getOrNull()
+            }
+        }
+        if (cost is RenderCost.Exceeds) {
+            placeholder.Render(A2uiPlaceholderReason.BudgetExceeded(componentId, cost.limit), modifier)
+            return
+        }
+        // An exact estimate that fits has already counted what this subtree composes, so there is
+        // nothing left for a budget to ration: dividing one down it could only take children from
+        // a surface that was never going to exceed anything. It is exact whenever no template was
+        // met, which is where the components stop saying how many instances there are -- so the
+        // division stays in force for exactly the surfaces it was written for.
+        if (cost is RenderCost.Fits && cost.exact) Int.MAX_VALUE else budget
+    } else {
+        budget
+    }
     when {
-        componentId in path -> {
+        path?.contains(componentId) == true -> {
             placeholder.Render(A2uiPlaceholderReason.Cycle(componentId), modifier)
             return
         }
 
-        path.size >= MAX_RENDER_DEPTH -> {
+        (path?.depth ?: 0) >= limits.maxDepth -> {
             placeholder.Render(A2uiPlaceholderReason.TooDeep(componentId), modifier)
             return
         }
@@ -190,12 +288,40 @@ public fun A2uiComponent(
     // message stamped with `a` and hands it to the host's handler for `b`. Sharing the keys means
     // a rebuilt scope gets a rebuilt cell, and a retained scope keeps reaching the callback that
     // belonged to it.
-    val latest = remember(renderer, surfaceId, component, evaluationScope) { mutableStateOf(onMessage) }
-    latest.value = onMessage
-    val scope = remember(renderer, surfaceId, component, evaluationScope) {
-        A2uiComponentScope(renderer, surfaceId, component, evaluationScope) { latest.value(it) }
+    val latest = remember(renderer, surfaceId, component, evaluationScope) {
+        mutableStateOf(onMessage)
     }
-    CompositionLocalProvider(LocalRenderPath provides path + componentId) {
+    latest.value = onMessage
+    // `budget` is not a key either, and for a sharper reason than `onMessage`. The share a child
+    // is handed is the remainder divided by how many children there are, so appending one item to
+    // a bound array changes it for every sibling -- 1,666 to 1,249 on a list going from three
+    // items to four. Keying on it rebuilt every scope in the subtree on that append, and took
+    // every `derivedStateOf` cache under it along, which is the granularity #12 exists to keep.
+    // Held in a cell the same shape and with the same keys, so a rebuilt scope gets a rebuilt cell
+    // and a retained scope keeps reading the budget that belongs to it. Read through a function
+    // rather than captured, so `expansion` sees the current share: it runs inside a
+    // `derivedStateOf`, which subscribes to this cell and recomputes the children when it moves.
+    val budgetCell = remember(renderer, surfaceId, component, evaluationScope) {
+        mutableStateOf(opened)
+    }
+    budgetCell.value = opened
+    val scope = remember(renderer, surfaceId, component, evaluationScope) {
+        A2uiComponentScope(
+            renderer,
+            surfaceId,
+            component,
+            evaluationScope,
+            { budgetCell.value },
+        ) { latest.value(it) }
+    }
+    // Remembered, and that is load-bearing rather than an optimisation. A composition local
+    // invalidates its readers when the value *provided* changes, and `RenderPath` is a chain of
+    // links compared by identity, so a fresh one per recomposition would invalidate the entire
+    // subtree below every component -- which the `List<String>` this replaced did not, being
+    // compared structurally. The previous list cost O(depth) per node to copy and scan; this
+    // costs O(1) and is built once per component instance.
+    val childPath = remember(componentId, path) { RenderPath(componentId, path) }
+    CompositionLocalProvider(LocalRenderPath provides childPath) {
         componentRenderer.Render(scope, modifier)
     }
 }
@@ -210,12 +336,23 @@ public fun A2uiComponent(
  */
 @Composable
 public fun A2uiComponentScope.RenderChild(child: A2uiChild, modifier: Modifier = Modifier) {
+    // The one entry that is not a component. A container gets these back from `rememberChildren`
+    // in place of the children its budget did not reach, so every container reports a shortened
+    // list without its author having to know the budget exists.
+    if (child.dropped > 0) {
+        LocalA2uiPlaceholder.current.Render(
+            A2uiPlaceholderReason.TooManyChildren(component.id, child.dropped),
+            modifier,
+        )
+        return
+    }
     A2uiComponent(
         renderer = renderer,
         surfaceId = surfaceId,
         componentId = child.componentId,
         evaluationScope = child.evaluationScope,
         modifier = modifier,
+        budget = child.budget,
         onMessage = onMessage,
     )
 }

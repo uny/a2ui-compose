@@ -5,7 +5,6 @@ import dev.ynagai.a2ui.core.protocol.Component
 import dev.ynagai.a2ui.core.protocol.ComponentId
 import dev.ynagai.a2ui.core.protocol.Surface
 import dev.ynagai.a2ui.core.protocol.SurfaceMetadata
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
@@ -150,6 +149,14 @@ public fun interface ChildResolver {
  *
  * It remains a bound, and [walk] still raises rather than truncating. A renderer that must show
  * lists longer than this wants virtualization rather than a larger number here.
+ *
+ * **What it counts is every reference followed, not every component found.** A reference naming a
+ * component that never arrived, one the cycle guard turns back, and one [DEFAULT_MAX_DEPTH] stops
+ * are each charged, though none of them is emitted. Counting only what resolved would leave the
+ * cheapest payload of all unbounded: a `ChildList` of a hundred thousand ids the agent never
+ * defined costs nothing to look up and one placeholder each to draw. So [walk] raises on surfaces
+ * it once returned a short list for, and the number below bounds the *work*, which is what the
+ * bound was ever for.
  */
 public const val DEFAULT_WALK_LIMIT: Int = 100_000
 
@@ -189,83 +196,7 @@ public fun SurfaceModel.walk(
     resolver: ChildResolver,
     limit: Int = DEFAULT_WALK_LIMIT,
     maxDepth: Int = DEFAULT_MAX_DEPTH,
-): List<Pair<Component, EvaluationScope>> {
-    val out = mutableListOf<Pair<Component, EvaluationScope>>()
-    val pending = ArrayDeque<Frame>()
-    root?.let { pending.addLast(Frame(it, EvaluationScope.Root, null)) }
-
-    while (pending.isNotEmpty()) {
-        val frame = pending.removeLast()
-        out += frame.component to frame.scope
-        // Ancestors are shared by reference rather than copied per node: copying the path into a
-        // set at every step is what makes a deep surface quadratic, which `maxDepth` alone would
-        // not fix cheaply enough for the js and wasmJs targets.
-        val ancestors = Ancestor(frame.component.id, frame.ancestors)
-        if (ancestors.depth > maxDepth) {
-            throw A2uiStateException(
-                "surface `$surfaceId` nests components more than $maxDepth deep.",
-                surfaceId,
-            )
-        }
-
-        val children = mutableListOf<Frame>()
-        fun descend(id: ComponentId, childScope: EvaluationScope) {
-            val child = components[id] ?: return
-            if (ancestors.contains(child.id)) return
-            // Consulted before the frame is built, not after the reference is fully expanded.
-            // A `Template` bound to an agent-sent array of a million items would otherwise
-            // allocate a million frames — each holding a scope whose pointer is built eagerly —
-            // before the budget was read at all, which is both the cheapest way to exhaust the
-            // renderer and the one a bound checked afterwards does not close.
-            if (out.size + pending.size + children.size >= limit) {
-                throw A2uiStateException(
-                    "surface `$surfaceId` expands to more than $limit component instances.",
-                    surfaceId,
-                )
-            }
-            children += Frame(child, childScope, ancestors)
-        }
-        for (reference in resolver.childrenOf(frame.component)) {
-            when (reference) {
-                is ChildReference.Single -> descend(reference.id, frame.scope)
-                is ChildReference.Fixed -> reference.ids.forEach { descend(it, frame.scope) }
-                is ChildReference.Template -> {
-                    val items = read(reference.path, frame.scope) as? JsonArray ?: continue
-                    // The template component is re-entered once per item: each instance is a
-                    // distinct rendering in a distinct scope, so only a reference back up the
-                    // *current* path counts as a cycle.
-                    items.indices.forEach { index ->
-                        descend(reference.componentId, frame.scope.iterate(reference.path, index))
-                    }
-                }
-            }
-        }
-        // Reversed, so that popping from the end visits the children in the order the resolver
-        // reported them.
-        for (index in children.indices.reversed()) pending.addLast(children[index])
-    }
-    return out
-}
-
-private class Frame(
-    val component: Component,
-    val scope: EvaluationScope,
-    val ancestors: Ancestor?,
-)
-
-/** One link of the chain of component ids on the path from the root to the current node. */
-private class Ancestor(val id: ComponentId, val parent: Ancestor?) {
-    val depth: Int = (parent?.depth ?: 0) + 1
-
-    fun contains(id: ComponentId): Boolean {
-        var link: Ancestor? = this
-        while (link != null) {
-            if (link.id == id) return true
-            link = link.parent
-        }
-        return false
-    }
-}
+): List<Pair<Component, EvaluationScope>> = walkVia(resolver, limit, maxDepth)
 
 /** Reads [ChildList] out of an already-decoded property value. */
 public fun ChildList.asReference(property: String): ChildReference = when (this) {

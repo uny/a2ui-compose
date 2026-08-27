@@ -1428,6 +1428,55 @@ public final class dev/ynagai/a2ui/core/surface/ProcessResult {
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract interface class dev/ynagai/a2ui/core/surface/RenderCost {
+}
+
+public final class dev/ynagai/a2ui/core/surface/RenderCost$Exceeds : dev/ynagai/a2ui/core/surface/RenderCost {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Ldev/ynagai/a2ui/core/surface/RenderCost$Exceeds;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/RenderCost$Exceeds;IILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/RenderCost$Exceeds;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLimit ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/RenderCost$Fits : dev/ynagai/a2ui/core/surface/RenderCost {
+	public fun <init> (IZ)V
+	public final fun component1 ()I
+	public final fun component2 ()Z
+	public final fun copy (IZ)Ldev/ynagai/a2ui/core/surface/RenderCost$Fits;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/RenderCost$Fits;IZILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/RenderCost$Fits;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExact ()Z
+	public final fun getInstances ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/RenderLimits {
+	public static final field Companion Ldev/ynagai/a2ui/core/surface/RenderLimits$Companion;
+	public fun <init> ()V
+	public fun <init> (III)V
+	public synthetic fun <init> (IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (III)Ldev/ynagai/a2ui/core/surface/RenderLimits;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/core/surface/RenderLimits;IIIILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/RenderLimits;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMaxDepth ()I
+	public final fun getMaxInstances ()I
+	public final fun getTemplateFanout ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/surface/RenderLimits$Companion {
+	public final fun getDEFAULT ()Ldev/ynagai/a2ui/core/surface/RenderLimits;
+}
+
 public abstract interface class dev/ynagai/a2ui/core/surface/RendererEffect {
 	public fun getSurfaceId ()Ljava/lang/String;
 }
@@ -1559,6 +1608,11 @@ public final class dev/ynagai/a2ui/core/surface/SurfaceModelKt {
 	public static final fun asReference (Ldev/ynagai/a2ui/core/protocol/ChildList;Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/ChildReference;
 	public static final fun walk (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ldev/ynagai/a2ui/core/surface/ChildResolver;II)Ljava/util/List;
 	public static synthetic fun walk$default (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ldev/ynagai/a2ui/core/surface/ChildResolver;IIILjava/lang/Object;)Ljava/util/List;
+}
+
+public final class dev/ynagai/a2ui/core/surface/TraversalKt {
+	public static final fun renderCost (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ldev/ynagai/a2ui/core/surface/ChildResolver;Ldev/ynagai/a2ui/core/surface/RenderLimits;Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/RenderCost;
+	public static synthetic fun renderCost$default (Ldev/ynagai/a2ui/core/surface/SurfaceModel;Ldev/ynagai/a2ui/core/surface/ChildResolver;Ldev/ynagai/a2ui/core/surface/RenderLimits;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/core/surface/RenderCost;
 }
 
 public final class dev/ynagai/a2ui/core/validation/CatalogChildResolver : dev/ynagai/a2ui/core/surface/ChildResolver {

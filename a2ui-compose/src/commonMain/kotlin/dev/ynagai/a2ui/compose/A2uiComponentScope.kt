@@ -49,6 +49,15 @@ import kotlinx.serialization.json.doubleOrNull
  * indirection allocated inside that `remember`, so two independently constructed scopes never
  * compare equal. The `data` modifier is here for `toString` in test failures and for destructuring;
  * the caching contract is [A2uiComponent]'s.
+ *
+ * **[budget] is read rather than held, so that the same identity survives a share that moves.**
+ * The share a child is handed is the remainder divided by how many children there are, so
+ * appending one item to a bound array changes it for every sibling. Held as a value, it would have
+ * to be one of the `remember` keys that build this -- and then a one-item append would rebuild
+ * every scope in the subtree and discard every derived state under it, which is precisely the
+ * granularity this class exists to keep. Read through a function, the scope outlives the move and
+ * the reads that care see the new share: [children] runs inside a `derivedStateOf`, which
+ * subscribes to whatever this reads and recomputes when it changes.
  */
 @ConsistentCopyVisibility
 @Stable
@@ -57,6 +66,7 @@ public data class A2uiComponentScope internal constructor(
     public val surfaceId: String,
     public val component: Component,
     public val evaluationScope: EvaluationScope,
+    internal val budget: () -> Int,
     internal val onMessage: (RendererToAgentMessage) -> Unit,
 ) {
     /**
@@ -146,30 +156,97 @@ public data class A2uiComponentScope internal constructor(
      *
      * A [ChildReference.Template] becomes one entry per item of the array it is bound to, each in
      * its own collection scope, which is what a nested component's relative paths resolve against.
+     *
+     * Bounded by this instance's share of the surface's instance budget -- see [expansion]. An
+     * entry standing for children the budget did not reach draws as a
+     * [A2uiPlaceholderReason.TooManyChildren] placeholder when a container passes it to
+     * [RenderChild], so a shortened list is visible rather than silent.
      */
-    public fun children(name: String): List<A2uiChild> {
-        val surface = surface ?: return emptyList()
-        val references = runCatching { renderer.childResolver(surface).childrenOf(component) }
-            .getOrDefault(emptyList())
-        return references.filter { it.property == name }.flatMap { it.expand(surface) }
-    }
+    public fun children(name: String): List<A2uiChild> =
+        expansion().filter { it.property == name }
 
     /** Every child, in the order the catalog's schema puts them. */
-    public fun allChildren(): List<A2uiChild> {
+    public fun allChildren(): List<A2uiChild> = expansion()
+
+    /**
+     * Every child this instance may draw, with what is left of its budget divided among them.
+     *
+     * **The budget is divided rather than counted down.** How many instances a template yields is
+     * the agent's data model talking, so the estimate a renderer takes before it descends cannot
+     * know it -- a row template over a hundred items, each holding a cell template over another
+     * hundred, is four instances of structure and ten thousand of composition. A counter that
+     * noticed would notice too late: composition is not a traversal this library drives, and the
+     * instances would already exist by the time any total was read. Giving each child a share of
+     * what is left means no subtree can spend more than it was handed, whatever the data says.
+     *
+     * The division is even, and deliberately so: which sibling deserves more is a question about
+     * the content, and answering it wrong for an adversarial payload is how the bound gets lost.
+     * A container of two whose second child is a longer list than its share loses that list's
+     * tail, and says so.
+     *
+     * Every reference is expanded together rather than one property at a time, because the share
+     * is a fraction of the whole -- a container reading `children("a")` and `children("b")`
+     * separately must not be handed the budget twice.
+     */
+    private fun expansion(): List<A2uiChild> {
         val surface = surface ?: return emptyList()
         val references = runCatching { renderer.childResolver(surface).childrenOf(component) }
             .getOrDefault(emptyList())
-        return references.flatMap { it.expand(surface) }
+        if (references.isEmpty()) return emptyList()
+        val wanted = references.map { it.size(surface) }
+        val total = wanted.sumOf { it.toLong() }
+        // One instance for this component, and what is left goes to the children. Clamped before
+        // the subtraction rather than after it: `budget` arrives from a public parameter, and
+        // `Int.MIN_VALUE - 1` wraps to `Int.MAX_VALUE`, which coercing afterwards would read as
+        // room for everything -- the one input that turns the bound into its opposite.
+        val handed = budget()
+        val room = if (handed <= 1) 0 else handed - 1
+        // The entries reporting what was cut are themselves instances, and a bound that did not
+        // pay for them would be a bound that overspends by however many references a component
+        // carries. Reserved before the rest is divided; when even the reserve does not fit, some
+        // truncation goes unreported rather than unpaid, because the count is what has to hold.
+        var markers = if (total > room) minOf(references.size, room) else 0
+        val spendable = room - markers
+        var left = minOf(total, spendable.toLong()).toInt()
+        // `left` cannot exceed `spendable`, so every child that is kept gets a share of at least
+        // one -- an instance with nothing to spend draws itself and stops, which is the point.
+        val share = if (left > 0) spendable / left else 0
+        val out = mutableListOf<A2uiChild>()
+        references.forEachIndexed { index, reference ->
+            val want = wanted[index]
+            val take = minOf(want, left)
+            left -= take
+            out += reference.expand(take, share)
+            if (take < want && markers > 0) {
+                markers--
+                out += A2uiChild("", EvaluationScope.Root, reference.property, 0, want - take)
+            }
+        }
+        return out
     }
 
-    private fun ChildReference.expand(surface: SurfaceModel): List<A2uiChild> = when (this) {
-        is ChildReference.Single -> listOf(A2uiChild(id, evaluationScope))
-        is ChildReference.Fixed -> ids.map { A2uiChild(it, evaluationScope) }
+    /** How many instances this reference asks for, before any budget is applied. */
+    private fun ChildReference.size(surface: SurfaceModel): Int = when (this) {
+        is ChildReference.Single -> 1
+        is ChildReference.Fixed -> ids.size
         is ChildReference.Template -> {
             val bound = runCatching { surface.read(path, evaluationScope) }.getOrNull()
-            (bound as? JsonArray).orEmpty().indices.map { index ->
-                A2uiChild(componentId, evaluationScope.iterate(path, index))
-            }
+            (bound as? JsonArray)?.size ?: 0
+        }
+
+        else -> 0
+    }
+
+    /** The first [take] instances of this reference, each carrying a budget of [share]. */
+    private fun ChildReference.expand(take: Int, share: Int): List<A2uiChild> = when (this) {
+        is ChildReference.Single ->
+            if (take > 0) listOf(A2uiChild(id, evaluationScope, property, share)) else emptyList()
+
+        is ChildReference.Fixed ->
+            ids.take(take).map { A2uiChild(it, evaluationScope, property, share) }
+
+        is ChildReference.Template -> (0 until take).map { index ->
+            A2uiChild(componentId, evaluationScope.iterate(path, index), property, share)
         }
 
         else -> emptyList()
@@ -257,12 +334,24 @@ public data class A2uiComponentScope internal constructor(
     }
 }
 
-/** A child to draw: which component, and the scope its bound paths resolve against. */
+/**
+ * A child to draw: which component, and the scope its bound paths resolve against.
+ *
+ * Or, when [dropped] is positive, a stand-in for children the budget did not reach. It rides in
+ * the list rather than being reported beside it so that a container built the ordinary way --
+ * `rememberChildren` into [RenderChild] -- shows the shortfall without its author doing anything.
+ */
 @ConsistentCopyVisibility
 @Stable
 public data class A2uiChild internal constructor(
     public val componentId: String,
     public val evaluationScope: EvaluationScope,
+    // After the two public properties on purpose: `component1`/`component2` are part of the
+    // published surface, so putting a new one first would silently re-point every destructuring a
+    // host had written.
+    internal val property: String,
+    internal val budget: Int,
+    internal val dropped: Int = 0,
 )
 
 /**

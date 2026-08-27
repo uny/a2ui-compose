@@ -7,6 +7,7 @@ import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
 import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
 import dev.ynagai.a2ui.core.surface.EvaluationScope
 import dev.ynagai.a2ui.core.surface.JsonPointer
+import dev.ynagai.a2ui.core.surface.RenderLimits
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
@@ -77,6 +78,7 @@ class A2uiComponentScopeTest {
                 surfaceId = SURFACE,
                 component = listScope.renderer.state.surfaces.getValue(SURFACE).components.getValue("row"),
                 evaluationScope = child.evaluationScope,
+                budget = { BUDGET },
                 onMessage = {},
             )
         }
@@ -105,6 +107,7 @@ class A2uiComponentScopeTest {
             surfaceId = SURFACE,
             component = renderer.state.surfaces.getValue(SURFACE).components.getValue("row"),
             evaluationScope = second.evaluationScope,
+            budget = { BUDGET },
             onMessage = {},
         )
         // A relative pointer inside a template instance means "within this item". Rebased against
@@ -118,7 +121,7 @@ class A2uiComponentScopeTest {
                 A2uiComponentScope(
                     renderer, SURFACE,
                     renderer.state.surfaces.getValue(SURFACE).components.getValue("row"),
-                    child.evaluationScope, {},
+                    child.evaluationScope, { BUDGET }, {},
                 ).string("text")
             },
         )
@@ -215,9 +218,30 @@ class A2uiComponentScopeTest {
             surfaceId = SURFACE,
             component = renderer.state.surfaces.getValue(SURFACE).components.getValue("root"),
             evaluationScope = EvaluationScope.Root,
+            budget = { BUDGET },
             onMessage = {},
         )
         assertEquals(listOf("t1", "t2"), scope.children("children").map { it.componentId })
+    }
+
+    @Test
+    fun a_budget_below_one_buys_no_children_however_far_below_it_is() {
+        // `budget` is a public parameter of `A2uiComponent`, so every Int reaches this. The
+        // subtraction that leaves room for the children has to be clamped before it happens:
+        // `Int.MIN_VALUE - 1` wraps to `Int.MAX_VALUE`, and coercing after the wrap reads the one
+        // input furthest below the bound as room for everything.
+        val renderer = renderer()
+        for (budget in listOf(Int.MIN_VALUE, -1, 0, 1)) {
+            val scope = A2uiComponentScope(
+                renderer = renderer,
+                surfaceId = SURFACE,
+                component = renderer.state.surfaces.getValue(SURFACE).components.getValue("list"),
+                evaluationScope = EvaluationScope.Root,
+                budget = { budget },
+                onMessage = {},
+            )
+            assertEquals(emptyList(), scope.allChildren(), "budget $budget bought children")
+        }
     }
 
     @Test
@@ -259,6 +283,7 @@ class A2uiComponentScopeTest {
             surfaceId = SURFACE,
             component = renderer.state.surfaces.getValue(SURFACE).components.getValue("column"),
             evaluationScope = EvaluationScope.Root,
+            budget = { BUDGET },
             onMessage = {},
         )
         assertEquals(emptyList(), scope.children("children"))
@@ -276,11 +301,15 @@ class A2uiComponentScopeTest {
         surfaceId = SURFACE,
         component = renderer.state.surfaces.getValue(SURFACE).components.getValue(componentId),
         evaluationScope = EvaluationScope.Root,
+        budget = { BUDGET },
         onMessage = onMessage,
     )
 
     private companion object {
         const val SURFACE = "s"
+
+        /** The whole surface's budget: these tests are about what a scope resolves, not bounds. */
+        val BUDGET = RenderLimits.DEFAULT.maxInstances
         const val FIXED_TIMESTAMP = "2026-08-27T00:00:00Z"
 
         val MESSAGES: List<AgentToRendererMessage> = listOf(

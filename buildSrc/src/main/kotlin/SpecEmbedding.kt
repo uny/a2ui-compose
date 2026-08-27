@@ -35,6 +35,10 @@ private fun literal(text: String, indent: String): String {
         chunk.replace("\\", "\\\\")
             .replace(quote, "\\" + quote)
             .replace("$", "\\$")
+            // Both line terminators, not just LF. A vendored file saved with CRLF would otherwise
+            // put a bare carriage return inside a Kotlin line string, which does not compile --
+            // and the file that broke the build would be one under `build/` that nobody wrote.
+            .replace("\r", "\\r")
             .replace("\n", "\\n")
     }
     return quote + chunks + quote
@@ -71,6 +75,14 @@ fun Project.embedSpecDocuments(
     val specDir = layout.projectDirectory.dir("spec")
     val outputDir = layout.buildDirectory.dir("generated/$taskName/kotlin")
     inputs.dir(specDir).withPathSensitivity(PathSensitivity.RELATIVE)
+    // The vendored files are not the only thing the output depends on. Without these, changing
+    // which documents are listed -- or flipping `namedConstants` -- leaves the task up to date with
+    // stale generated source in place, and what fails is a later compile somewhere else.
+    inputs.property("documents", documents)
+    inputs.property("directory", directory.orEmpty())
+    inputs.property("namedConstants", namedConstants)
+    inputs.property("packageName", packageName)
+    inputs.property("objectName", objectName)
     outputs.dir(outputDir)
     doLast {
         val scanned = directory?.let { relative ->
@@ -92,6 +104,14 @@ fun Project.embedSpecDocuments(
                 }
                 .toMap()
         }.orEmpty()
+        // Checked before the merge, because `+` resolves a collision by keeping the scanned entry
+        // -- so a hand-listed document that a scanned filename happens to shadow would vanish, and
+        // a vanished document reads as one the specification simply does not have.
+        val shadowed = documents.keys intersect scanned.keys
+        require(shadowed.isEmpty()) {
+            "listed documents are shadowed by files in `$directory`: " +
+                shadowed.joinToString { "$it (${documents[it]} vs ${scanned[it]})" }
+        }
         val all = documents + scanned
         // `ALL` is keyed by bare filename, so two documents from different directories that share
         // one would collide in the generated `mapOf` -- which Kotlin accepts, last wins.

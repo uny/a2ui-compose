@@ -2,6 +2,7 @@ package dev.ynagai.a2ui.gallery
 
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
+import dev.ynagai.a2ui.compose.BasicCatalog
 import dev.ynagai.a2ui.core.protocol.CatalogDefinition
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -74,8 +75,13 @@ public val EXAMPLES: List<Example> = ExampleSources.ALL.entries
         )
     }
 
-/** The basic catalog, which every example's `createSurface` names. */
-public val BASIC_CATALOG: CatalogDefinition =
-    A2uiJson.strict.decodeFromString(CatalogDefinition.serializer(), GalleryCatalog.BASIC)
+/**
+ * The basic catalog, which every example's `createSurface` names.
+ *
+ * The renderer's copy, not a second one vendored here. A renderer needs the catalog document at
+ * runtime to resolve children and check components, so `a2ui-compose` publishes it -- and a corpus
+ * validated against a different copy would be checking something other than what will draw it.
+ */
+public val BASIC_CATALOG: CatalogDefinition get() = BasicCatalog.definition
 
 private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull

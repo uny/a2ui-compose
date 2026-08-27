@@ -1,0 +1,166 @@
+public final class dev/ynagai/a2ui/compose/A2uiChild {
+	public static final field $stable I
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ldev/ynagai/a2ui/core/surface/EvaluationScope;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComponentId ()Ljava/lang/String;
+	public final fun getEvaluationScope ()Ldev/ynagai/a2ui/core/surface/EvaluationScope;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/ynagai/a2ui/compose/A2uiClock {
+	public static final field Companion Ldev/ynagai/a2ui/compose/A2uiClock$Companion;
+	public abstract fun nowIso8601 ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/compose/A2uiClock$Companion {
+	public final fun getSystem ()Ldev/ynagai/a2ui/compose/A2uiClock;
+}
+
+public final class dev/ynagai/a2ui/compose/A2uiComponentScope {
+	public static final field $stable I
+	public final fun allChildren ()Ljava/util/List;
+	public final fun binding (Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/JsonPointer;
+	public final fun boolean (Ljava/lang/String;)Ljava/lang/Boolean;
+	public final fun children (Ljava/lang/String;)Ljava/util/List;
+	public final fun component1 ()Ldev/ynagai/a2ui/compose/A2uiRenderer;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ldev/ynagai/a2ui/core/protocol/Component;
+	public final fun component4 ()Ldev/ynagai/a2ui/core/surface/EvaluationScope;
+	public final fun dispatch (Ldev/ynagai/a2ui/core/protocol/Action;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComponent ()Ldev/ynagai/a2ui/core/protocol/Component;
+	public final fun getEvaluationScope ()Ldev/ynagai/a2ui/core/surface/EvaluationScope;
+	public final fun getRenderer ()Ldev/ynagai/a2ui/compose/A2uiRenderer;
+	public final fun getSurface ()Ldev/ynagai/a2ui/core/surface/SurfaceModel;
+	public final fun getSurfaceId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun number (Ljava/lang/String;)Ljava/lang/Double;
+	public final fun property (Ljava/lang/String;)Lkotlinx/serialization/json/JsonElement;
+	public final fun string (Ljava/lang/String;)Ljava/lang/String;
+	public final fun stringList (Ljava/lang/String;)Ljava/util/List;
+	public fun toString ()Ljava/lang/String;
+	public final fun value (Ljava/lang/String;)Lkotlinx/serialization/json/JsonElement;
+	public final fun write (Ldev/ynagai/a2ui/core/surface/JsonPointer;Lkotlinx/serialization/json/JsonElement;)V
+}
+
+public final class dev/ynagai/a2ui/compose/A2uiComponentScopeKt {
+	public static final fun rememberAllChildren (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Landroidx/compose/runtime/Composer;I)Ljava/util/List;
+	public static final fun rememberBoolean (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Ljava/lang/String;Landroidx/compose/runtime/Composer;I)Ljava/lang/Boolean;
+	public static final fun rememberChildren (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Ljava/lang/String;Landroidx/compose/runtime/Composer;I)Ljava/util/List;
+	public static final fun rememberNumber (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Ljava/lang/String;Landroidx/compose/runtime/Composer;I)Ljava/lang/Double;
+	public static final fun rememberString (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Ljava/lang/String;Landroidx/compose/runtime/Composer;I)Ljava/lang/String;
+	public static final fun rememberStringList (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Ljava/lang/String;Landroidx/compose/runtime/Composer;I)Ljava/util/List;
+}
+
+public abstract interface class dev/ynagai/a2ui/compose/A2uiPlaceholder {
+	public abstract fun Render (Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;I)V
+}
+
+public abstract interface class dev/ynagai/a2ui/compose/A2uiPlaceholderReason {
+}
+
+public final class dev/ynagai/a2ui/compose/A2uiPlaceholderReason$Cycle : dev/ynagai/a2ui/compose/A2uiPlaceholderReason {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$Cycle;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$Cycle;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$Cycle;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComponentId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/compose/A2uiPlaceholderReason$MissingComponent : dev/ynagai/a2ui/compose/A2uiPlaceholderReason {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$MissingComponent;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$MissingComponent;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$MissingComponent;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComponentId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/compose/A2uiPlaceholderReason$TooDeep : dev/ynagai/a2ui/compose/A2uiPlaceholderReason {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$TooDeep;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$TooDeep;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$TooDeep;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComponentId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/compose/A2uiPlaceholderReason$UnknownType : dev/ynagai/a2ui/compose/A2uiPlaceholderReason {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$UnknownType;
+	public static synthetic fun copy$default (Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$UnknownType;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ynagai/a2ui/compose/A2uiPlaceholderReason$UnknownType;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComponent ()Ljava/lang/String;
+	public final fun getComponentId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/compose/A2uiRenderer {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun <init> (Ljava/util/List;Ldev/ynagai/a2ui/core/function/LocaleFormatter;Ldev/ynagai/a2ui/core/function/UrlOpener;Ldev/ynagai/a2ui/compose/A2uiClock;Ldev/ynagai/a2ui/core/function/EvaluationLimits;Ldev/ynagai/a2ui/core/validation/ValidationLimits;Ldev/ynagai/a2ui/core/surface/RendererState;)V
+	public synthetic fun <init> (Ljava/util/List;Ldev/ynagai/a2ui/core/function/LocaleFormatter;Ldev/ynagai/a2ui/core/function/UrlOpener;Ldev/ynagai/a2ui/compose/A2uiClock;Ldev/ynagai/a2ui/core/function/EvaluationLimits;Ldev/ynagai/a2ui/core/validation/ValidationLimits;Ldev/ynagai/a2ui/core/surface/RendererState;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun apply (Ldev/ynagai/a2ui/core/protocol/AgentToRendererMessage;)Ljava/util/List;
+	public final fun applyAll (Ljava/lang/Iterable;)Ljava/util/List;
+	public final fun getCatalogs ()Ljava/util/List;
+	public final fun getClock ()Ldev/ynagai/a2ui/compose/A2uiClock;
+	public final fun getEvaluationLimits ()Ldev/ynagai/a2ui/core/function/EvaluationLimits;
+	public final fun getLocale ()Ldev/ynagai/a2ui/core/function/LocaleFormatter;
+	public final fun getState ()Ldev/ynagai/a2ui/core/surface/RendererState;
+	public final fun getUrlOpener ()Ldev/ynagai/a2ui/core/function/UrlOpener;
+	public final fun getValidationLimits ()Ldev/ynagai/a2ui/core/validation/ValidationLimits;
+	public final fun write (Ljava/lang/String;Ldev/ynagai/a2ui/core/surface/JsonPointer;Lkotlinx/serialization/json/JsonElement;)V
+}
+
+public final class dev/ynagai/a2ui/compose/A2uiSurfaceKt {
+	public static final field MAX_RENDER_DEPTH I
+	public static final field ROOT_COMPONENT_ID Ljava/lang/String;
+	public static final fun A2uiComponent (Ldev/ynagai/a2ui/compose/A2uiRenderer;Ljava/lang/String;Ljava/lang/String;Ldev/ynagai/a2ui/core/surface/EvaluationScope;Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;II)V
+	public static final fun A2uiSurface (Ldev/ynagai/a2ui/compose/A2uiRenderer;Ljava/lang/String;Ldev/ynagai/a2ui/compose/ComponentRegistry;Landroidx/compose/ui/Modifier;Ldev/ynagai/a2ui/compose/A2uiPlaceholder;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;II)V
+	public static final fun RenderChild (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Ldev/ynagai/a2ui/compose/A2uiChild;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun getLocalA2uiPlaceholder ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+	public static final fun getLocalA2uiRegistry ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+	public static final fun getNoPlaceholder ()Ldev/ynagai/a2ui/compose/A2uiPlaceholder;
+}
+
+public final class dev/ynagai/a2ui/compose/BasicCatalog {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/ynagai/a2ui/compose/BasicCatalog;
+	public final fun getDefinition ()Ldev/ynagai/a2ui/core/protocol/CatalogDefinition;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getSource ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/compose/ComponentRegistry {
+	public static final field $stable I
+	public static final field Companion Ldev/ynagai/a2ui/compose/ComponentRegistry$Companion;
+	public fun <init> (Ljava/util/Map;)V
+	public final fun get (Ljava/lang/String;)Ldev/ynagai/a2ui/compose/ComponentRenderer;
+	public final fun getTypes ()Ljava/util/Set;
+	public final fun with (Ljava/util/Map;)Ldev/ynagai/a2ui/compose/ComponentRegistry;
+}
+
+public final class dev/ynagai/a2ui/compose/ComponentRegistry$Companion {
+	public final fun getEmpty ()Ldev/ynagai/a2ui/compose/ComponentRegistry;
+}
+
+public abstract interface class dev/ynagai/a2ui/compose/ComponentRenderer {
+	public abstract fun Render (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;I)V
+}
+

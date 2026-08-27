@@ -9,8 +9,13 @@ specification and are redistributed under the Apache License, Version 2.0. They 
 embedded in the `a2ui-core` artifact as generated Kotlin source. See `a2ui-core/spec/README.md`
 for the file list and the revision each was taken from.
 
-The example payloads and the basic catalog under `a2ui-gallery/spec/` are copied verbatim
-from the same specification and are redistributed under the Apache License, Version 2.0.
-They are embedded in the `a2ui-gallery` module as generated Kotlin source; that module is
-not published. See `a2ui-gallery/spec/README.md` for the file list and the revision each
-was taken from.
+The basic catalog under `a2ui-compose/spec/` is copied verbatim from the same
+specification and is redistributed under the Apache License, Version 2.0. It is embedded
+in the `a2ui-compose` artifact as generated Kotlin source. See `a2ui-compose/spec/README.md`
+for the revision it was taken from.
+
+The example payloads under `a2ui-gallery/spec/` are copied verbatim from the same
+specification and are redistributed under the Apache License, Version 2.0. They are
+embedded in the `a2ui-gallery` module as generated Kotlin source; that module is not
+published. See `a2ui-gallery/spec/README.md` for the file list and the revision each was
+taken from.

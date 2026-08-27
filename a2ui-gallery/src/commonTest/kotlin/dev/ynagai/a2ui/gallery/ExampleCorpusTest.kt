@@ -79,23 +79,23 @@ class ExampleCorpusTest {
                     direction = MessageDirection.AGENT_TO_RENDERER,
                     catalogId = BASIC_CATALOG_ID,
                 )
-                when {
-                    // `isValid` reads `violations` alone. A keyword the evaluator does not apply,
-                    // or a run that hit its budget, both arrive as acceptance -- so checking only
-                    // `isValid` would report "the catalog accepts all 126" for messages part of
-                    // which was never checked. `a2ui-core`'s conformance suite guards the same two
-                    // fields for the same reason; the corpus needs it just as much.
-                    validation.unsupportedKeywords.isNotEmpty() ->
-                        "${example.file} #$index: checked against a schema this evaluator only " +
-                            "partly applies: ${validation.unsupportedKeywords}"
-                    validation.truncated ->
-                        "${example.file} #$index: validation stopped at its bounds, so the verdict " +
-                            "is about the budget rather than the payload"
-                    validation.isValid -> null
-                    else ->
-                        "${example.file} #$index: " +
-                            validation.violations.joinToString { "${it.location} ${it.message}" }
+                // `isValid` reads `violations` alone. A keyword the evaluator does not apply, or a
+                // run that hit its budget, both arrive as acceptance -- so checking only `isValid`
+                // would report "the catalog accepts all 126" for messages part of which was never
+                // checked. `a2ui-core`'s conformance suite guards the same two fields for the same
+                // reason; the corpus needs it just as much.
+                //
+                // Reported alongside the violations rather than instead of them: `truncated` is
+                // only ever set with violations already in hand, so a branch that returned early on
+                // it would name the budget and hide every violation that prompted the cap.
+                val notes = buildList {
+                    if (validation.unsupportedKeywords.isNotEmpty()) {
+                        add("schema only partly applied: ${validation.unsupportedKeywords}")
+                    }
+                    if (validation.truncated) add("stopped at its bounds, so this verdict is partial")
+                    addAll(validation.violations.map { "${it.location} ${it.message}" })
                 }
+                if (notes.isEmpty()) null else "${example.file} #$index: " + notes.joinToString("; ")
             }
         }
         assertTrue(failures.isEmpty(), "examples the basic catalog refuses:\n" + failures.joinToString("\n"))

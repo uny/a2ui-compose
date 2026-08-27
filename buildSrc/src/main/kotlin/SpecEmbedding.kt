@@ -41,6 +41,9 @@ private fun constantName(path: String): String {
  * The boundary is pushed out by one unit rather than pulled in, so a chunk always makes progress.
  */
 private fun String.chunkedWholeCodePoints(size: Int): List<String> {
+    // A non-positive width makes no progress -- `end == start` appends "" forever, and `size = 0`
+    // indexes `this[-1]` on the way. Both hang or crash the daemon rather than failing the task.
+    require(size >= 1) { "a chunk is at least one unit wide, not $size." }
     val chunks = mutableListOf<String>()
     var start = 0
     while (start < length) {
@@ -170,11 +173,20 @@ fun Project.embedSpecDocuments(
         require(!namedConstants || INDEX_NAME !in all.keys) {
             "`${all[INDEX_NAME]}` takes the name `$INDEX_NAME`, which the generated index uses."
         }
+        require(all.isNotEmpty()) {
+            "`$taskName` was given no documents and no directory, so `$objectName.ALL` would be " +
+                "empty -- which reads downstream as a corpus the specification does not have."
+        }
         // Cleared, not just overwritten. Gradle does not empty a task's output directory between
         // runs, so renaming `objectName` or `packageName` leaves the previous file beside the new
-        // one -- and a stale generated object compiles perfectly well and ships.
+        // one -- and a stale generated object compiles perfectly well and ships. Every check above
+        // runs first: a failed one must leave the previous output alone rather than clear it and
+        // then refuse to write a replacement.
         val root = outputDir.get().asFile
-        root.deleteRecursively()
+        // `deleteRecursively` reports a partial delete by returning false rather than throwing, and
+        // a survivor here is exactly the stale object this call exists to remove -- so an ignored
+        // result would hide the failure behind a check that looks like it ran.
+        require(root.deleteRecursively()) { "could not clear `$root` of the previous run's output." }
         val target = root.resolve(packageName.replace('.', '/'))
         target.mkdirs()
 

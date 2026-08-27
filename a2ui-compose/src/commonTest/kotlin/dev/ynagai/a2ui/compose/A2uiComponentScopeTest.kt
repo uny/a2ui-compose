@@ -230,11 +230,12 @@ class A2uiComponentScopeTest {
         // subtraction that leaves room for the children has to be clamped before it happens:
         // `Int.MIN_VALUE - 1` wraps to `Int.MAX_VALUE`, and coercing after the wrap reads the one
         // input furthest below the bound as room for everything.
+        val renderer = renderer()
         for (budget in listOf(Int.MIN_VALUE, -1, 0, 1)) {
             val scope = A2uiComponentScope(
-                renderer = renderer(),
+                renderer = renderer,
                 surfaceId = SURFACE,
-                component = renderer().state.surfaces.getValue(SURFACE).components.getValue("list"),
+                component = renderer.state.surfaces.getValue(SURFACE).components.getValue("list"),
                 evaluationScope = EvaluationScope.Root,
                 budget = budget,
                 onMessage = {},

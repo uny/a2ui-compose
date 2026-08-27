@@ -217,14 +217,15 @@ public fun A2uiComponent(
         // data model write -- which is also why it is an estimate. `renderer` and `limits` are
         // keys of their own: the same components resolve to different children under a different
         // catalog, and to a different verdict under different bounds.
-        // `runCatching`, and for the reason [A2uiComponentScope.children] resolves its own children
-        // inside one. `ChildResolver.childrenOf` raises on agent-controlled input -- a component
-        // carrying more than `MAX_REFERENCES` references, or a schema that outgrows
-        // [A2uiRenderer.validationLimits] -- and a `Tabs` of five thousand tabs is enough to reach
-        // it through the shipped catalog. Estimating is not the place that answer arrives: the
-        // descent this gates already degrades to a component with no children when the resolver
-        // refuses it, so an estimate that threw instead would turn a payload the renderer survives
-        // into a composition that does not.
+        //
+        // Resolved inside a `runCatching`, for the reason [A2uiComponentScope.children] resolves
+        // its own children inside one: `ChildResolver.childrenOf` raises on agent-controlled input
+        // -- a component carrying more than `MAX_REFERENCES` references, or a schema that outgrows
+        // [A2uiRenderer.validationLimits] -- and a `Tabs` of five thousand tabs reaches it through
+        // the shipped catalog. Estimating is not where that answer arrives. The descent this gates
+        // already degrades to a component with no children when the resolver refuses it, so an
+        // estimate that threw instead would turn a payload the renderer survives into a
+        // composition that does not.
         val cost = remember(renderer, surfaceId, componentId, model?.components, limits) {
             model?.let {
                 runCatching { it.renderCost(renderer.childResolver(it), limits, componentId) }

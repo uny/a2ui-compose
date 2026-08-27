@@ -6,6 +6,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
@@ -176,8 +177,15 @@ public fun A2uiComponent(
         return
     }
 
-    val scope = remember(renderer, surfaceId, component, evaluationScope, onMessage) {
-        A2uiComponentScope(renderer, surfaceId, component, evaluationScope, onMessage)
+    // `onMessage` is deliberately not a key. A host writing `onMessage = { viewModel.send(it) }`
+    // hands over a fresh lambda whenever the compiler cannot memoise it, and keying on it would
+    // rebuild every scope in the tree on every recomposition of the host. Rebuilding the scope is
+    // cheap; what it takes with it is not -- the `derivedStateOf` caches in `rememberString` and
+    // its siblings are keyed on the scope, so they would all be discarded, and the recomposition
+    // granularity this design exists to buy would quietly stop working.
+    val latest = rememberUpdatedState(onMessage)
+    val scope = remember(renderer, surfaceId, component, evaluationScope) {
+        A2uiComponentScope(renderer, surfaceId, component, evaluationScope) { latest.value(it) }
     }
     CompositionLocalProvider(LocalRenderPath provides path + componentId) {
         componentRenderer.Render(scope, modifier)

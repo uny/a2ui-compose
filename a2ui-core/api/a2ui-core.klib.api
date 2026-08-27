@@ -608,13 +608,16 @@ sealed interface dev.ynagai.a2ui.core.surface/RenderCost { // dev.ynagai.a2ui.co
     }
 
     final class Fits : dev.ynagai.a2ui.core.surface/RenderCost { // dev.ynagai.a2ui.core.surface/RenderCost.Fits|null[0]
-        constructor <init>(kotlin/Int) // dev.ynagai.a2ui.core.surface/RenderCost.Fits.<init>|<init>(kotlin.Int){}[0]
+        constructor <init>(kotlin/Int, kotlin/Boolean) // dev.ynagai.a2ui.core.surface/RenderCost.Fits.<init>|<init>(kotlin.Int;kotlin.Boolean){}[0]
 
+        final val exact // dev.ynagai.a2ui.core.surface/RenderCost.Fits.exact|{}exact[0]
+            final fun <get-exact>(): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RenderCost.Fits.exact.<get-exact>|<get-exact>(){}[0]
         final val instances // dev.ynagai.a2ui.core.surface/RenderCost.Fits.instances|{}instances[0]
             final fun <get-instances>(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderCost.Fits.instances.<get-instances>|<get-instances>(){}[0]
 
         final fun component1(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderCost.Fits.component1|component1(){}[0]
-        final fun copy(kotlin/Int = ...): dev.ynagai.a2ui.core.surface/RenderCost.Fits // dev.ynagai.a2ui.core.surface/RenderCost.Fits.copy|copy(kotlin.Int){}[0]
+        final fun component2(): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RenderCost.Fits.component2|component2(){}[0]
+        final fun copy(kotlin/Int = ..., kotlin/Boolean = ...): dev.ynagai.a2ui.core.surface/RenderCost.Fits // dev.ynagai.a2ui.core.surface/RenderCost.Fits.copy|copy(kotlin.Int;kotlin.Boolean){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RenderCost.Fits.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RenderCost.Fits.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RenderCost.Fits.toString|toString(){}[0]

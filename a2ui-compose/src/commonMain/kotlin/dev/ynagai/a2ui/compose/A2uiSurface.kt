@@ -211,7 +211,7 @@ public fun A2uiComponent(
     // The check belongs here rather than in `A2uiSurface` because this function is public: a host
     // embedding one component without a surface around it reaches the same descent, and a gate
     // only `A2uiSurface` passed through would be a gate with a documented way around it.
-    if (path == null) {
+    val opened = if (path == null) {
         val model = renderer.state.surfaces[surfaceId]
         // Keyed on the surface's components rather than the surface, so an estimate survives every
         // data model write -- which is also why it is an estimate. `renderer` and `limits` are
@@ -236,6 +236,14 @@ public fun A2uiComponent(
             placeholder.Render(A2uiPlaceholderReason.BudgetExceeded(componentId, cost.limit), modifier)
             return
         }
+        // An exact estimate that fits has already counted what this subtree composes, so there is
+        // nothing left for a budget to ration: dividing one down it could only take children from
+        // a surface that was never going to exceed anything. It is exact whenever no template was
+        // met, which is where the components stop saying how many instances there are -- so the
+        // division stays in force for exactly the surfaces it was written for.
+        if (cost is RenderCost.Fits && cost.exact) Int.MAX_VALUE else budget
+    } else {
+        budget
     }
     when {
         path?.contains(componentId) == true -> {
@@ -274,12 +282,31 @@ public fun A2uiComponent(
     // message stamped with `a` and hands it to the host's handler for `b`. Sharing the keys means
     // a rebuilt scope gets a rebuilt cell, and a retained scope keeps reaching the callback that
     // belonged to it.
-    val latest = remember(renderer, surfaceId, component, evaluationScope, budget) {
+    val latest = remember(renderer, surfaceId, component, evaluationScope) {
         mutableStateOf(onMessage)
     }
     latest.value = onMessage
-    val scope = remember(renderer, surfaceId, component, evaluationScope, budget) {
-        A2uiComponentScope(renderer, surfaceId, component, evaluationScope, budget) { latest.value(it) }
+    // `budget` is not a key either, and for a sharper reason than `onMessage`. The share a child
+    // is handed is the remainder divided by how many children there are, so appending one item to
+    // a bound array changes it for every sibling -- 1,666 to 1,249 on a list going from three
+    // items to four. Keying on it rebuilt every scope in the subtree on that append, and took
+    // every `derivedStateOf` cache under it along, which is the granularity #12 exists to keep.
+    // Held in a cell the same shape and with the same keys, so a rebuilt scope gets a rebuilt cell
+    // and a retained scope keeps reading the budget that belongs to it. Read through a function
+    // rather than captured, so `expansion` sees the current share: it runs inside a
+    // `derivedStateOf`, which subscribes to this cell and recomputes the children when it moves.
+    val budgetCell = remember(renderer, surfaceId, component, evaluationScope) {
+        mutableStateOf(opened)
+    }
+    budgetCell.value = opened
+    val scope = remember(renderer, surfaceId, component, evaluationScope) {
+        A2uiComponentScope(
+            renderer,
+            surfaceId,
+            component,
+            evaluationScope,
+            { budgetCell.value },
+        ) { latest.value(it) }
     }
     // Remembered, and that is load-bearing rather than an optimisation. A composition local
     // invalidates its readers when the value *provided* changes, and `RenderPath` is a chain of

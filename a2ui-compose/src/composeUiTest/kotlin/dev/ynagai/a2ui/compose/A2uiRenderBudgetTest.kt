@@ -101,6 +101,71 @@ class A2uiRenderBudgetTest {
     }
 
     @Test
+    fun a_surface_the_estimate_counted_exactly_is_not_rationed() = runComposeUiTest {
+        // The division is for what the components cannot say, and a surface holding no template
+        // says everything: the estimate counted the instances rather than bounding them, and it
+        // fits. Dividing anyway took children from surfaces that were never going to exceed the
+        // bound -- an even split gives this root's two children nine each, and the second wants
+        // fifteen, so six of them used to vanish behind a placeholder on a surface costing 18 of
+        // the 20 budgeted.
+        val leaves = (0 until 15).joinToString(",") { """{"id":"c$it","component":"Text","text":"x"}""" }
+        val ids = (0 until 15).joinToString(",") { "\"c$it\"" }
+        val renderer = rendererFor(
+            """[
+                {"id":"$ROOT_COMPONENT_ID","component":"Column","children":["a","b"]},
+                {"id":"a","component":"Text","text":"leaf"},
+                {"id":"b","component":"Column","children":[$ids]},
+                $leaves
+            ]""",
+            limits = RenderLimits(maxInstances = 20),
+        )
+        val reasons = mutableListOf<A2uiPlaceholderReason>()
+        val drawn = mutableSetOf<Pair<String, EvaluationScope>>()
+        setContent {
+            A2uiSurface(renderer, SURFACE, counting(drawn), placeholder = recording(reasons))
+        }
+        assertEquals(emptyList<A2uiPlaceholderReason>(), reasons, "nothing here needed rationing")
+        // root, `a`, `b`, and all fifteen leaves -- the exact count the estimate reported.
+        assertEquals(18, drawn.size)
+    }
+
+    @Test
+    fun a_row_keeps_its_scope_when_the_list_it_belongs_to_grows() = runComposeUiTest {
+        // The share a row is handed is the remainder divided by how many rows there are, so an
+        // append moves it for every sibling that was already there. While that share was one of
+        // the scope's `remember` keys, appending a single item rebuilt every scope in the subtree
+        // and discarded every `derivedStateOf` under it -- the granularity #12 exists to keep.
+        val renderer = rendererFor(TEMPLATE, items = 3)
+        val scopes = mutableMapOf<EvaluationScope, MutableList<A2uiComponentScope>>()
+        val registry = ComponentRegistry(
+            mapOf(
+                "List" to StackingRenderer,
+                "Text" to ComponentRenderer { scope, _ ->
+                    scopes.getOrPut(scope.evaluationScope) { mutableListOf() }
+                        .let { seen -> if (seen.none { it === scope }) seen += scope }
+                },
+            ),
+        )
+        setContent { A2uiSurface(renderer, SURFACE, registry) }
+        val before = scopes.keys.toSet()
+        assertEquals(3, before.size)
+
+        renderer.applyAll(
+            listOf(
+                """{"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","path":"/items/-",
+                   "value":{"label":"row3","cells":[]}}}""",
+            ).map { A2uiJson.strict.decodeFromString(AgentToRendererMessage.serializer(), it) },
+        )
+        waitForIdle()
+
+        assertEquals(4, scopes.keys.size, "the appended row should have been drawn")
+        // One scope object per row, still, for every row that was already there.
+        for (scope in before) {
+            assertEquals(1, scopes.getValue(scope).size, "row $scope was rebuilt by the append")
+        }
+    }
+
+    @Test
     fun an_ordinary_surface_is_not_touched_by_any_of_this() = runComposeUiTest {
         // The bound has to be invisible to real content, which the official corpus puts at 7
         // levels and a handful of components. A guard that cost anything here would be the wrong

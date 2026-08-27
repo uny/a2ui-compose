@@ -48,7 +48,7 @@ class RenderCostTest {
         val ids = (0 until 500).joinToString(",") { "\"ghost$it\"" }
         val model = surface("""{"id": "root", "component": "Column", "children": [$ids]}""")
         assertEquals(1, model.components.size)
-        assertEquals(RenderCost.Fits(501), model.renderCost(resolver))
+        assertEquals(RenderCost.Fits(501, exact = true), model.renderCost(resolver))
         assertEquals(RenderCost.Exceeds(100), model.renderCost(resolver, RenderLimits(maxInstances = 100)))
     }
 
@@ -63,7 +63,7 @@ class RenderCostTest {
             """{"id": "row", "component": "Text", "text": "x"}""",
             data = """{"xs": [$items]}""",
         )
-        assertEquals(RenderCost.Fits(1 + RenderLimits.DEFAULT.templateFanout), model.renderCost(resolver))
+        assertEquals(RenderCost.Fits(1 + RenderLimits.DEFAULT.templateFanout, exact = false), model.renderCost(resolver))
     }
 
     @Test
@@ -77,7 +77,7 @@ class RenderCostTest {
             """{"id": "leaf", "component": "Text", "text": "x"}""",
         )
         // 1 + 2 + 4 + 8, with the fanout of 2 applied at every level.
-        assertEquals(RenderCost.Fits(15), model.renderCost(resolver))
+        assertEquals(RenderCost.Fits(15, exact = false), model.renderCost(resolver))
     }
 
     @Test
@@ -97,7 +97,7 @@ class RenderCostTest {
             }.toTypedArray(),
         )
         val limits = RenderLimits.DEFAULT
-        assertEquals(RenderCost.Fits(limits.maxDepth + 1), model.renderCost(resolver, limits))
+        assertEquals(RenderCost.Fits(limits.maxDepth + 1, exact = true), model.renderCost(resolver, limits))
     }
 
     @Test
@@ -107,7 +107,7 @@ class RenderCostTest {
             """{"id": "a", "component": "Card", "child": "root"}""",
         )
         // root, a, and the instance of `root` that the cycle guard turns into a placeholder.
-        assertEquals(RenderCost.Fits(3), model.renderCost(resolver))
+        assertEquals(RenderCost.Fits(3, exact = true), model.renderCost(resolver))
     }
 
     @Test
@@ -118,8 +118,8 @@ class RenderCostTest {
             """{"id": "a", "component": "Card", "child": "b"}""",
             """{"id": "b", "component": "Text", "text": "x"}""",
         )
-        assertEquals(RenderCost.Fits(4), model.renderCost(resolver))
-        assertEquals(RenderCost.Fits(2), model.renderCost(resolver, from = "a"))
+        assertEquals(RenderCost.Fits(4, exact = true), model.renderCost(resolver))
+        assertEquals(RenderCost.Fits(2, exact = true), model.renderCost(resolver, from = "a"))
     }
 
     private companion object {

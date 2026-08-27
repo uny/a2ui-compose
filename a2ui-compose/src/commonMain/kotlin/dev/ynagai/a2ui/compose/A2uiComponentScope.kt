@@ -49,6 +49,15 @@ import kotlinx.serialization.json.doubleOrNull
  * indirection allocated inside that `remember`, so two independently constructed scopes never
  * compare equal. The `data` modifier is here for `toString` in test failures and for destructuring;
  * the caching contract is [A2uiComponent]'s.
+ *
+ * **[budget] is read rather than held, so that the same identity survives a share that moves.**
+ * The share a child is handed is the remainder divided by how many children there are, so
+ * appending one item to a bound array changes it for every sibling. Held as a value, it would have
+ * to be one of the `remember` keys that build this -- and then a one-item append would rebuild
+ * every scope in the subtree and discard every derived state under it, which is precisely the
+ * granularity this class exists to keep. Read through a function, the scope outlives the move and
+ * the reads that care see the new share: [children] runs inside a `derivedStateOf`, which
+ * subscribes to whatever this reads and recomputes when it changes.
  */
 @ConsistentCopyVisibility
 @Stable
@@ -57,7 +66,7 @@ public data class A2uiComponentScope internal constructor(
     public val surfaceId: String,
     public val component: Component,
     public val evaluationScope: EvaluationScope,
-    internal val budget: Int,
+    internal val budget: () -> Int,
     internal val onMessage: (RendererToAgentMessage) -> Unit,
 ) {
     /**
@@ -190,7 +199,8 @@ public data class A2uiComponentScope internal constructor(
         // the subtraction rather than after it: `budget` arrives from a public parameter, and
         // `Int.MIN_VALUE - 1` wraps to `Int.MAX_VALUE`, which coercing afterwards would read as
         // room for everything -- the one input that turns the bound into its opposite.
-        val room = if (budget <= 1) 0 else budget - 1
+        val handed = budget()
+        val room = if (handed <= 1) 0 else handed - 1
         // The entries reporting what was cut are themselves instances, and a bound that did not
         // pay for them would be a bound that overspends by however many references a component
         // carries. Reserved before the rest is divided; when even the reserve does not fit, some

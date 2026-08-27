@@ -78,7 +78,7 @@ class A2uiComponentScopeTest {
                 surfaceId = SURFACE,
                 component = listScope.renderer.state.surfaces.getValue(SURFACE).components.getValue("row"),
                 evaluationScope = child.evaluationScope,
-                budget = BUDGET,
+                budget = { BUDGET },
                 onMessage = {},
             )
         }
@@ -107,7 +107,7 @@ class A2uiComponentScopeTest {
             surfaceId = SURFACE,
             component = renderer.state.surfaces.getValue(SURFACE).components.getValue("row"),
             evaluationScope = second.evaluationScope,
-            budget = BUDGET,
+            budget = { BUDGET },
             onMessage = {},
         )
         // A relative pointer inside a template instance means "within this item". Rebased against
@@ -121,7 +121,7 @@ class A2uiComponentScopeTest {
                 A2uiComponentScope(
                     renderer, SURFACE,
                     renderer.state.surfaces.getValue(SURFACE).components.getValue("row"),
-                    child.evaluationScope, BUDGET, {},
+                    child.evaluationScope, { BUDGET }, {},
                 ).string("text")
             },
         )
@@ -218,7 +218,7 @@ class A2uiComponentScopeTest {
             surfaceId = SURFACE,
             component = renderer.state.surfaces.getValue(SURFACE).components.getValue("root"),
             evaluationScope = EvaluationScope.Root,
-            budget = BUDGET,
+            budget = { BUDGET },
             onMessage = {},
         )
         assertEquals(listOf("t1", "t2"), scope.children("children").map { it.componentId })
@@ -237,7 +237,7 @@ class A2uiComponentScopeTest {
                 surfaceId = SURFACE,
                 component = renderer.state.surfaces.getValue(SURFACE).components.getValue("list"),
                 evaluationScope = EvaluationScope.Root,
-                budget = budget,
+                budget = { budget },
                 onMessage = {},
             )
             assertEquals(emptyList(), scope.allChildren(), "budget $budget bought children")
@@ -283,7 +283,7 @@ class A2uiComponentScopeTest {
             surfaceId = SURFACE,
             component = renderer.state.surfaces.getValue(SURFACE).components.getValue("column"),
             evaluationScope = EvaluationScope.Root,
-            budget = BUDGET,
+            budget = { BUDGET },
             onMessage = {},
         )
         assertEquals(emptyList(), scope.children("children"))
@@ -301,7 +301,7 @@ class A2uiComponentScopeTest {
         surfaceId = SURFACE,
         component = renderer.state.surfaces.getValue(SURFACE).components.getValue(componentId),
         evaluationScope = EvaluationScope.Root,
-        budget = BUDGET,
+        budget = { BUDGET },
         onMessage = onMessage,
     )
 

@@ -51,8 +51,24 @@ public data class RenderLimits(
 
 /** What drawing a surface would cost, as far as its components alone can say. */
 public sealed interface RenderCost {
-    /** The surface fits, and drawing it composes [instances] component instances. */
-    public data class Fits(public val instances: Int) : RenderCost
+    /**
+     * The surface fits, and drawing it composes [instances] component instances.
+     *
+     * @param exact whether [instances] is the count itself rather than a bound on it. It is the
+     *   count whenever the traversal met no [ChildReference.Template]: every other reference names
+     *   a fixed number of children, so counting the paths *is* counting the instances. A template
+     *   is the one place the components stop saying, because how many instances it yields is the
+     *   agent's data model talking -- so a surface holding one is reported as fitting, and not as
+     *   exact.
+     *
+     *   The distinction is what lets a renderer stop dividing. An estimate that is exact and fits
+     *   has already proved the whole subtree composes within the bound, so a budget carried down
+     *   it can only take children away from a surface that was never going to exceed anything.
+     */
+    public data class Fits(
+        public val instances: Int,
+        public val exact: Boolean,
+    ) : RenderCost
 
     /** The surface expands past [RenderLimits.maxInstances] and must not be drawn. */
     public data class Exceeds(public val limit: Int) : RenderCost
@@ -73,6 +89,12 @@ public sealed interface RenderCost {
  * cached across them, and the count a template really has is bounded when the template is
  * expanded, where the array is in hand.
  *
+ * A surface holding no template is the case where none of that applies, and [RenderCost.Fits.exact]
+ * says so: every other reference names a fixed number of children, so the paths counted here *are*
+ * the instances that will be composed. A renderer that has been told the whole subtree fits has
+ * nothing left to ration, and a budget divided down it could then only take children away from a
+ * surface that was never going to exceed anything.
+ *
  * Shares [walk]'s traversal, so the child order, the cycle rule, the depth rule and the resolver
  * handling here are not a second implementation of them.
  */
@@ -91,7 +113,11 @@ public fun SurfaceModel.renderCost(
         emit = null,
     )
     val instances = traversal.run(from)
-    return if (instances < 0) RenderCost.Exceeds(limits.maxInstances) else RenderCost.Fits(instances)
+    return if (instances < 0) {
+        RenderCost.Exceeds(limits.maxInstances)
+    } else {
+        RenderCost.Fits(instances, exact = !traversal.estimated)
+    }
 }
 
 /**
@@ -128,6 +154,15 @@ private class Traversal(
 
     private var overflowed = false
 
+    /**
+     * Whether any part of the count was a template's [templateFanout] rather than its real length.
+     *
+     * One template anywhere is enough to make the whole answer a bound rather than a count, so
+     * this is never cleared once set.
+     */
+    var estimated = false
+        private set
+
     /** The instances reachable from [from], or -1 when the surface outgrew [maxInstances]. */
     fun run(from: ComponentId): Int {
         descend(from, EvaluationScope.Root, ancestors = null, depth = 0)
@@ -150,7 +185,7 @@ private class Traversal(
                         }
 
                     is ChildReference.Template -> {
-                        val count = templateFanout
+                        val count = templateFanout?.also { estimated = true }
                             ?: ((model.read(reference.path, frame.scope) as? JsonArray)?.size ?: 0)
                         // The template component is re-entered once per item: each instance is a
                         // distinct rendering in a distinct scope, so only a reference back up the

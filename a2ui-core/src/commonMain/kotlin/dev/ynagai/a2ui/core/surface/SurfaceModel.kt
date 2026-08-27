@@ -149,6 +149,14 @@ public fun interface ChildResolver {
  *
  * It remains a bound, and [walk] still raises rather than truncating. A renderer that must show
  * lists longer than this wants virtualization rather than a larger number here.
+ *
+ * **What it counts is every reference followed, not every component found.** A reference naming a
+ * component that never arrived, one the cycle guard turns back, and one [DEFAULT_MAX_DEPTH] stops
+ * are each charged, though none of them is emitted. Counting only what resolved would leave the
+ * cheapest payload of all unbounded: a `ChildList` of a hundred thousand ids the agent never
+ * defined costs nothing to look up and one placeholder each to draw. So [walk] raises on surfaces
+ * it once returned a short list for, and the number below bounds the *work*, which is what the
+ * bound was ever for.
  */
 public const val DEFAULT_WALK_LIMIT: Int = 100_000
 

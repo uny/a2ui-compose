@@ -152,6 +152,22 @@ public data class A2uiComponentScope internal constructor(
         (value(name) as? JsonArray)?.mapNotNull { it.asText() }
 
     /**
+     * Property [name] as an action, ready to hand back to [dispatch].
+     *
+     * Structure rather than a value, so it is read straight off the component instead of through
+     * [value]: an `Action` is a `functionCall` or an `event` the agent wrote out, not something a
+     * data binding resolves to. An action that will not decode reads as null, and the widget
+     * carrying it draws without a handler -- the same degradation an unreadable property gets,
+     * for the same reason.
+     */
+    public fun action(name: String): Action? {
+        val raw = property(name) ?: return null
+        return runCatching {
+            A2uiJson.strict.decodeFromJsonElement(Action.serializer(), raw)
+        }.getOrNull()
+    }
+
+    /**
      * The children [component] carries under [name], with templates already expanded.
      *
      * A [ChildReference.Template] becomes one entry per item of the array it is bound to, each in
@@ -386,6 +402,19 @@ public fun A2uiComponentScope.rememberBoolean(name: String): Boolean? {
 @Composable
 public fun A2uiComponentScope.rememberStringList(name: String): List<String>? {
     val value by remember(this, name) { derivedStateOf { stringList(name) } }
+    return value
+}
+
+/**
+ * Property [name] as an action, recomposing the caller only when the action changes.
+ *
+ * Wrapped like the value accessors even though an action is structure rather than a binding: the
+ * read still goes through [A2uiComponentScope.property], and a widget that read it bare would
+ * recompose on every write to the surface it sits in.
+ */
+@Composable
+public fun A2uiComponentScope.rememberAction(name: String): Action? {
+    val value by remember(this, name) { derivedStateOf { action(name) } }
     return value
 }
 

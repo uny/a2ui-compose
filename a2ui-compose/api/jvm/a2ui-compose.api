@@ -20,6 +20,7 @@ public final class dev/ynagai/a2ui/compose/A2uiClock$Companion {
 
 public final class dev/ynagai/a2ui/compose/A2uiComponentScope {
 	public static final field $stable I
+	public final fun action (Ljava/lang/String;)Ldev/ynagai/a2ui/core/protocol/Action;
 	public final fun allChildren ()Ljava/util/List;
 	public final fun binding (Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/JsonPointer;
 	public final fun boolean (Ljava/lang/String;)Ljava/lang/Boolean;
@@ -46,6 +47,7 @@ public final class dev/ynagai/a2ui/compose/A2uiComponentScope {
 }
 
 public final class dev/ynagai/a2ui/compose/A2uiComponentScopeKt {
+	public static final fun rememberAction (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Ljava/lang/String;Landroidx/compose/runtime/Composer;I)Ldev/ynagai/a2ui/core/protocol/Action;
 	public static final fun rememberAllChildren (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Landroidx/compose/runtime/Composer;I)Ljava/util/List;
 	public static final fun rememberBoolean (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Ljava/lang/String;Landroidx/compose/runtime/Composer;I)Ljava/lang/Boolean;
 	public static final fun rememberChildren (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Ljava/lang/String;Landroidx/compose/runtime/Composer;I)Ljava/util/List;

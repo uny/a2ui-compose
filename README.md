@@ -46,11 +46,16 @@ so every Android consumer must compile against 37 or later.
 | Artifact | Contents |
 |:--|:--|
 | `dev.ynagai.a2ui:a2ui-core` | Protocol types, v1.0 message parsing and serialization, data model and JSON Pointer binding, function evaluation, validation. **No Compose dependency.** |
-| `dev.ynagai.a2ui:a2ui-compose` | `A2UISurface`, the component registry, and the Material 3 catalog. |
+| `dev.ynagai.a2ui:a2ui-compose` | `A2uiSurface`, `A2uiRenderer`, the component registry, and the bounds that keep an agent's payload from outgrowing a composition. Depends on `compose.runtime` and `compose.ui` — **no design system.** |
+| `dev.ynagai.a2ui:a2ui-material3` | The catalog's components drawn with Material 3. Currently `Text`, `Row`, `Column`, `Button` and `TextField`; the rest of the eighteen draw as placeholders until they land. |
 
 The split follows the Core SDK / Framework Adapter separation in the A2UI project's own guidance for
-new client SDKs. Transport is deliberately absent: the library stays transport-free, so you can drive
-it from SSE, AG-UI, a WebSocket, or a local agent loop without the library taking an opinion.
+new client SDKs. Material 3 is a third artifact rather than part of the adapter because a design
+system is a host's choice: a host with its own components takes `a2ui-compose` alone and writes its
+own `ComponentRenderer`s, and pays nothing for a Material 3 it does not use.
+
+Transport is deliberately absent: the library stays transport-free, so you can drive it from SSE,
+AG-UI, a WebSocket, or a local agent loop without the library taking an opinion.
 
 ## Roadmap
 
@@ -58,7 +63,7 @@ it from SSE, AG-UI, a WebSocket, or a local agent loop without the library takin
 |:--|:--|:--|
 | **G0** | Skeleton — build, CI, all targets compiling | 2026-08-31 |
 | **G1** | `a2ui-core`: full v1.0 message handling, JSON Pointer binding, function evaluation | 2026-10-31 |
-| **G2** | `a2ui-compose`: the v1.0 standard widget catalog on Material 3 | 2026-12-31 |
+| **G2** | `a2ui-material3`: the v1.0 standard widget catalog on Material 3 | 2026-12-31 |
 | **G3** | Publish `0.1.0` to Maven Central | one month after G2 |
 
 ## Prior art

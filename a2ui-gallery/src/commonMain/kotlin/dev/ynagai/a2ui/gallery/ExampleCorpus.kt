@@ -26,7 +26,25 @@ public data class Example(
     public val description: String,
     public val raw: List<JsonElement>,
     public val decoded: List<AgentToRendererMessage>,
+    /**
+     * Every component type this example names.
+     *
+     * What makes "which examples can a registry draw?" a question with a mechanical answer rather
+     * than a hand-kept list -- see [isDrawableBy]. Read off the raw messages rather than the
+     * decoded ones because a component keeps its catalog-defined properties as an unparsed bag,
+     * and `component` is the one field the decoder does not have to interpret.
+     */
+    public val componentTypes: Set<String>,
 ) {
+    /**
+     * Whether [types] covers every component this example names.
+     *
+     * An empty example is not drawable by anything: it names no components, so the answer would
+     * otherwise be "yes" for every registry including the empty one.
+     */
+    public fun isDrawableBy(types: Set<String>): Boolean =
+        componentTypes.isNotEmpty() && types.containsAll(componentTypes)
+
     /**
      * Whether this is one of the five the SDK implementation skill names as the foundational
      * verification set, to be rendered before the rest of the catalog is attempted.
@@ -72,8 +90,29 @@ public val EXAMPLES: List<Example> = ExampleSources.ALL.entries
             decoded = raw.map {
                 A2uiJson.strict.decodeFromJsonElement(AgentToRendererMessage.serializer(), it)
             },
+            componentTypes = raw.componentTypes(),
         )
     }
+
+/**
+ * The `component` of every component in every `updateComponents` message.
+ *
+ * A flat scan rather than a walk of the whole document, and that is exact rather than approximate:
+ * the specification does not allow a component to be defined inline, so every component in a
+ * surface appears as an entry of some `updateComponents.components` array. A nested reference --
+ * a `Tabs` entry's `child`, a `Card`'s child -- is an id, and the component it names is in that
+ * same flat list.
+ */
+private fun List<JsonElement>.componentTypes(): Set<String> = buildSet {
+    for (message in this@componentTypes) {
+        val update = (message as? JsonObject)?.get("updateComponents") as? JsonObject ?: continue
+        val components = update["components"] as? JsonArray ?: continue
+        for (component in components) {
+            ((component as? JsonObject)?.get("component") as? JsonPrimitive)?.contentOrNull
+                ?.let { add(it) }
+        }
+    }
+}
 
 /**
  * The basic catalog, which every example's `createSurface` names.

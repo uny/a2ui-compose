@@ -52,14 +52,33 @@ kotlin {
     }
 
     sourceSets {
+        /**
+         * Tests that draw the corpus, rather than only decoding it.
+         *
+         * The same targets `a2ui-compose` and `a2ui-material3` draw on, excluded for the same
+         * reasons -- the Kotlin/JS harness cannot boot Skiko, and Android's host test task has no
+         * composition to draw into. The rest of this module's tests stay in `commonTest` and run
+         * everywhere, because decoding the corpus needs no screen.
+         */
+        val composeUiTest by creating { dependsOn(commonTest.get()) }
+
+        jvmTest.get().dependsOn(composeUiTest)
+        macosArm64Test.get().dependsOn(composeUiTest)
+        iosArm64Test.get().dependsOn(composeUiTest)
+        iosSimulatorArm64Test.get().dependsOn(composeUiTest)
+        wasmJsTest.get().dependsOn(composeUiTest)
+
         commonMain {
             kotlin.srcDir(generateExampleSources)
         }
         commonMain.dependencies {
-            api(projects.a2uiCompose)
-            // `a2ui-compose` keeps its Compose dependencies `implementation`, so they do not reach
-            // here through the `api` above -- and the Compose compiler plugin, now applied to this
-            // module, refuses to run without the runtime on the class path.
+            // The Material 3 adapter rather than `a2ui-compose` directly. The Gallery is the one
+            // place a browser actually runs this renderer, so what it should exercise is the whole
+            // stack a host would take -- and `a2ui-material3` re-exposes `a2ui-compose`, and
+            // `a2ui-core` through it, so nothing is lost by naming the top of it.
+            api(projects.a2uiMaterial3)
+            // Named even though they arrive transitively: the Compose compiler plugin is applied
+            // to this module and refuses to run without the runtime on the compile class path.
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
@@ -67,6 +86,12 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.compose.ui.test)
+        }
+        jvmTest.dependencies {
+            // As in the other modules: Compose's JVM test harness draws through Skiko, whose
+            // native library ships with the desktop artifact rather than with `ui-test`.
+            implementation(compose.desktop.currentOs)
         }
     }
 }

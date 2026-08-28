@@ -76,6 +76,14 @@ class LocaleFormatterTest {
         assertEquals("-10,000", text("formatNumber", """{"value":-10000}"""))
     }
 
+    @Test
+    fun formatNumberRejectsNegativeDecimals() {
+        val failure = assertFailsWith<A2uiFunctionException> {
+            text("formatNumber", """{"value":1,"decimals":-1}""")
+        }
+        assertTrue(failure.message!!.contains("`decimals` must not be negative"), failure.message!!)
+    }
+
     // ---- formatCurrency ---------------------------------------------------------------
 
     @Test

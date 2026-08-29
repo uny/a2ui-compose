@@ -95,21 +95,31 @@ public val EXAMPLES: List<Example> = ExampleSources.ALL.entries
     }
 
 /**
- * The `component` of every component in every `updateComponents` message.
+ * The `component` of every component the messages define.
  *
  * A flat scan rather than a walk of the whole document, and that is exact rather than approximate:
  * the specification does not allow a component to be defined inline, so every component in a
- * surface appears as an entry of some `updateComponents.components` array. A nested reference --
+ * surface appears as an entry of some message's `components` array -- `updateComponents`'s, or the
+ * optional one `createSurface` may carry. A nested reference --
  * a `Tabs` entry's `child`, a `Card`'s child -- is an id, and the component it names is in that
  * same flat list.
  */
 private fun List<JsonElement>.componentTypes(): Set<String> = buildSet {
     for (message in this@componentTypes) {
-        val update = (message as? JsonObject)?.get("updateComponents") as? JsonObject ?: continue
-        val components = update["components"] as? JsonArray ?: continue
-        for (component in components) {
-            ((component as? JsonObject)?.get("component") as? JsonPrimitive)?.contentOrNull
-                ?.let { add(it) }
+        val body = message as? JsonObject ?: continue
+        // Both carriers, not just `updateComponents`. `createSurface` takes an optional
+        // `components` of the same shape -- the catalog's own `instructions` field shows a payload
+        // that uses it -- and reading only the update would have called such an example drawable
+        // on the strength of the components that came *after* it.
+        // Listed here rather than in a top-level `val`: `EXAMPLES` above is itself a top-level
+        // initializer, and a property declared after it is still null when it runs -- which takes
+        // the whole file down with the `NoClassDefFoundError` its own comment warns about.
+        for (key in listOf("createSurface", "updateComponents")) {
+            val components = (body[key] as? JsonObject)?.get("components") as? JsonArray ?: continue
+            for (component in components) {
+                ((component as? JsonObject)?.get("component") as? JsonPrimitive)?.contentOrNull
+                    ?.let { add(it) }
+            }
         }
     }
 }

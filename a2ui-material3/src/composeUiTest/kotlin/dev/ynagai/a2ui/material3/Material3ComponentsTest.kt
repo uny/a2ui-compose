@@ -1,6 +1,8 @@
 package dev.ynagai.a2ui.material3
 
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
@@ -18,6 +20,7 @@ import dev.ynagai.a2ui.compose.A2uiPlaceholderReason
 import dev.ynagai.a2ui.compose.A2uiRenderer
 import dev.ynagai.a2ui.compose.A2uiSurface
 import dev.ynagai.a2ui.compose.BasicCatalog
+import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.ActionMessage
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
@@ -126,6 +129,39 @@ class Material3ComponentsTest {
                 date.left > root.left + root.width / 2f,
                 "the trailing text should sit in the right half: $date within $root",
             )
+        }
+    }
+
+    @Test
+    fun a_nested_row_whose_justify_is_bound_is_granted_room_too() {
+        // The parent reads the child's `justify` off the component, and the child resolves it
+        // through `rememberString` -- so a bound `justify` was resolved by the child, which then
+        // filled the width, while the parent saw nothing to grant a share for and the sibling
+        // starved exactly as before. A `justify` this side cannot read now counts as spanning.
+        runComposeUiTest {
+            setContent { Surface(BOUND_JUSTIFY_NESTED_ROW) }
+            val date = onNodeWithText("date").fetchSemanticsNode().boundsInRoot
+            assertTrue(date.width > 0f, "the trailing text should have been given room: $date")
+        }
+    }
+
+    @Test
+    fun a_subcomposed_child_does_not_bring_the_surface_down() {
+        // A host may register anything, and the thirteen components still to be written include
+        // ones a `LazyColumn` is the natural body for. An earlier fix for the sibling-starvation
+        // bug put `height(IntrinsicSize.Min)` on every default-`align` row, which asks each
+        // descendant for an intrinsic measurement -- and `SubcomposeLayout` raises rather than
+        // answering. Composing at all is the assertion.
+        runComposeUiTest {
+            val registry = Material3Components.Basic.with(
+                mapOf("Card" to ComponentRenderer { _, m -> LazyColumn(m) { item { Text("lazy") } } }),
+            )
+            setContent {
+                MaterialTheme {
+                    A2uiSurface(rendererFor(LAZY_CHILD), SURFACE, registry)
+                }
+            }
+            onNodeWithText("lazy").assertIsDisplayed()
         }
     }
 
@@ -285,7 +321,7 @@ class Material3ComponentsTest {
                 listOf(
                     """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
                     """{"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
-                        "user":{"name":"Ada"},"typed":""
+                        "user":{"name":"Ada"},"typed":"","justify":"center"
                     }}}""",
                     """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
                 ).map {
@@ -392,6 +428,21 @@ class Material3ComponentsTest {
             {"id":"action_button","component":"Button","child":"label",
              "action":{"neither":"an invoke nor an event"}},
             {"id":"label","component":"Text","text":"Send"}
+        ]"""
+
+        val BOUND_JUSTIFY_NESTED_ROW = """[
+            {"id":"root","component":"Row","children":["inner","date"],
+             "justify":"spaceBetween","align":"center"},
+            {"id":"inner","component":"Row","children":["origin"],
+             "justify":{"path":"/justify"},"align":"center"},
+            {"id":"origin","component":"Text","text":"origin"},
+            {"id":"date","component":"Text","text":"date"}
+        ]"""
+
+        val LAZY_CHILD = """[
+            {"id":"root","component":"Row","children":["lz"]},
+            {"id":"lz","component":"Card","child":"x"},
+            {"id":"x","component":"Text","text":"x"}
         ]"""
 
         val CARD = """[

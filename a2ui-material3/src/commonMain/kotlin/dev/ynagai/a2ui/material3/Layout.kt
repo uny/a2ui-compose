@@ -2,12 +2,9 @@ package dev.ynagai.a2ui.material3
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
@@ -21,8 +18,8 @@ import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.RenderChild
 import dev.ynagai.a2ui.compose.rememberString
 import dev.ynagai.a2ui.core.protocol.Component
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 
 /**
@@ -36,14 +33,8 @@ public val RowRenderer: ComponentRenderer = ComponentRenderer { scope, modifier 
     val justify = scope.rememberString("justify")
     val align = scope.rememberString("align")
     val children = scope.rememberLaidOutChildren()
-    val stretch = isStretch(align)
     Row(
-        modifier = modifier
-            .then(if (spansItsContainer(justify)) Modifier.fillMaxWidth() else Modifier)
-            // `stretch` is the children filling this row's height -- see [isStretch] -- and
-            // without this they measure against the *parent's* height instead, so an
-            // un-annotated row swelled to fill its column and left every later sibling at zero.
-            .then(if (stretch) Modifier.height(IntrinsicSize.Min) else Modifier),
+        modifier = if (spansItsContainer(justify)) modifier.fillMaxWidth() else modifier,
         horizontalArrangement = horizontalArrangement(justify),
         verticalAlignment = verticalAlignment(align),
     ) {
@@ -56,7 +47,6 @@ public val RowRenderer: ComponentRenderer = ComponentRenderer { scope, modifier 
                 // in a row that room has to be granted rather than taken.
                 childModifier = childModifier.weight(1f)
             }
-            if (stretch) childModifier = childModifier.fillMaxHeight()
             scope.RenderChild(child.child, childModifier)
         }
     }
@@ -73,16 +63,8 @@ public val ColumnRenderer: ComponentRenderer = ComponentRenderer { scope, modifi
     val justify = scope.rememberString("justify")
     val align = scope.rememberString("align")
     val children = scope.rememberLaidOutChildren()
-    val stretch = isStretch(align)
     Column(
-        modifier = modifier
-            .then(if (spansItsContainer(justify)) Modifier.fillMaxHeight() else Modifier)
-            // `Max` rather than `Min`, and the difference is the whole behaviour: a column's
-            // min intrinsic width is its widest *word*, so `Min` wraps every paragraph in the
-            // surface. `Max` is the max-content width CSS gives a flex item, and it is still
-            // clamped by whatever width the parent offers -- so a root column over prose fills
-            // and wraps exactly as before, while a column beside a sibling stops eating it.
-            .then(if (stretch) Modifier.width(IntrinsicSize.Max) else Modifier),
+        modifier = if (spansItsContainer(justify)) modifier.fillMaxHeight() else modifier,
         verticalArrangement = verticalArrangement(justify),
         horizontalAlignment = horizontalAlignment(align),
     ) {
@@ -93,7 +75,6 @@ public val ColumnRenderer: ComponentRenderer = ComponentRenderer { scope, modifi
             } else if (child.spansAlong("Column")) {
                 childModifier = childModifier.weight(1f)
             }
-            if (stretch) childModifier = childModifier.fillMaxWidth()
             scope.RenderChild(child.child, childModifier)
         }
     }
@@ -113,7 +94,7 @@ private data class LaidOutChild(
     val weight: Float,
     /** The child's own component type, and its `justify` -- what [spansAlong] answers from. */
     val component: String?,
-    val justify: String?,
+    val justify: JsonElement?,
 )
 
 /**
@@ -130,8 +111,19 @@ private data class LaidOutChild(
  * Only a same-direction container can claim the axis: a `Column` inside a `Row` spreads vertically
  * and takes no width from anyone.
  */
-private fun LaidOutChild.spansAlong(direction: String): Boolean =
-    component == direction && spansItsContainer(justify)
+private fun LaidOutChild.spansAlong(direction: String): Boolean {
+    if (component != direction) return false
+    // A `justify` that is not a plain string is one this side cannot read. The catalog types it as
+    // a string enum, so that is already a payload the schema refuses -- but the child's own
+    // renderer reads it through `rememberString`, which resolves a data binding regardless, and a
+    // child that reached `fillMaxWidth` while its parent granted it nothing is the starvation this
+    // function exists to stop. Unreadable therefore counts as spanning: granting a share that was
+    // not needed costs a container some slack, and withholding one costs a sibling entirely.
+    val justify = justify ?: return false
+    val name = (justify as? JsonPrimitive)?.takeIf { it.isString }?.content
+        ?: return true
+    return spansItsContainer(name)
+}
 
 /**
  * Every child, paired with its weight, recomposing the container only when that layout changes.
@@ -152,7 +144,7 @@ private fun A2uiComponentScope.rememberLaidOutChildren(): List<LaidOutChild> {
                     child = child,
                     weight = weightOf(component),
                     component = component?.component,
-                    justify = (component?.properties?.get("justify") as? JsonPrimitive)?.contentOrNull,
+                    justify = component?.properties?.get("justify"),
                 )
             }
         }
@@ -182,14 +174,6 @@ private fun weightOf(component: Component?): Float {
     return if (weight.isFinite() && weight > 0f) weight else 0f
 }
 
-/**
- * Whether `align` asks for the cross axis to be stretched.
- *
- * Null included, because `stretch` is the catalog's default for both containers. Compose has no
- * stretching `Alignment` -- the cross axis is stretched by the *children* filling it, so this
- * answers a question about the child modifier rather than about the container's alignment.
- */
-private fun isStretch(align: String?): Boolean = align == null || align == "stretch"
 
 /**
  * Whether this container has to span its parent along its own main axis.
@@ -240,14 +224,37 @@ private fun verticalArrangement(justify: String?): Arrangement.Vertical = when (
     else -> Arrangement.Top
 }
 
-/** `align` on a row's cross axis. `stretch` is the children's job -- see [isStretch]. */
+/**
+ * `stretch` -- the catalog's default `align` -- is not forced on the children, and that is a
+ * decision rather than an omission.
+ *
+ * Compose has no stretching `Alignment`: a cross axis is stretched by the children filling it, and
+ * a `fillMax*` taken inside a `Row` or a `Column` resolves against the space the *parent* offered
+ * rather than against this container's content. Written the obvious way it therefore swelled the
+ * container to its parent's full extent and left every later sibling measuring at zero -- a `Row`
+ * inside a `Column` hid everything below it, and a `Column` inside a `Row` hid everything after it.
+ *
+ * The Compose idiom that fixes that is `height(IntrinsicSize.Min)` on the container, and it was
+ * tried: it works for all five components here, and it makes *every descendant* answer intrinsic
+ * measurement queries. `SubcomposeLayout` cannot -- so a host registering a `LazyColumn`-backed
+ * renderer, or the `List` and `Tabs` still to be written, would raise
+ * `IllegalStateException: Asking for intrinsic measurements of SubcomposeLayout layouts is not
+ * supported` from inside a plain `Row`. Trading a hidden sibling for a crashed surface, in exactly
+ * the components that make stretching visible at all, is not a trade worth taking.
+ *
+ * So the children keep their natural cross-axis size and the container wraps them. For the five
+ * components this module draws the difference is invisible -- none of them paints a background or
+ * a border, which is what an equal-height row is for. It becomes visible when one does, and the
+ * fix then is a container that measures its children before it sizes them rather than one that
+ * asks them how big they would like to be.
+ */
 private fun verticalAlignment(align: String?): Alignment.Vertical = when (align) {
     "center" -> Alignment.CenterVertically
     "end" -> Alignment.Bottom
     else -> Alignment.Top
 }
 
-/** `align` on a column's cross axis. `stretch` is the children's job -- see [isStretch]. */
+/** `align` on a column's cross axis. `stretch` falls through to `start` -- see above. */
 private fun horizontalAlignment(align: String?): Alignment.Horizontal = when (align) {
     "center" -> Alignment.CenterHorizontally
     "end" -> Alignment.End

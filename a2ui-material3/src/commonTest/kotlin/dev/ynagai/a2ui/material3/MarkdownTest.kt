@@ -160,6 +160,21 @@ class MarkdownTest {
     }
 
     @Test
+    fun a_link_destination_may_carry_parentheses() {
+        // Stopping at the first `)` left the real closer behind, so a Wikipedia URL -- which is
+        // what an agent writing about anything reaches for -- rendered its label with a bracket
+        // stuck to it.
+        assertEquals(
+            "Wikipedia",
+            markdownText("[Wikipedia](https://en.wikipedia.org/wiki/Function_(mathematics))").text,
+        )
+        assertEquals("plain", markdownText("[plain](https://example.com/a)").text)
+        // An unbalanced destination still degrades to the literal bracket rather than swallowing
+        // the rest of the line.
+        assertEquals("[x](y", markdownText("[x](y").text)
+    }
+
+    @Test
     fun a_triple_run_is_bold_and_italic_at_once() {
         // Read before `**`, because `indexOf("**")` inside a `***` run matches the run's own tail:
         // the span closed a character short and `***important***` rendered as `*important*` with

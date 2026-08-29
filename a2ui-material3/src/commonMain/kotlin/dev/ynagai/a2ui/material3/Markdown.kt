@@ -205,7 +205,7 @@ private fun AnnotatedString.Builder.appendLink(
         append('[')
         return start + 1
     }
-    val paren = find(text, close + 2, ')', budget)
+    val paren = findDestinationEnd(text, close + 2, budget)
     if (paren < 0) {
         append('[')
         return start + 1
@@ -216,6 +216,34 @@ private fun AnnotatedString.Builder.appendLink(
         append(text, start + 1, close)
     }
     return paren + 1
+}
+
+/**
+ * The `)` that closes a link destination, with nested pairs balanced.
+ *
+ * Stopping at the first `)` is wrong for the destinations agents actually write:
+ * `[Wikipedia](https://en.wikipedia.org/wiki/Function_(mathematics))` ended the destination inside
+ * the URL and left the real closer behind, so the rendered text was `Wikipedia)` -- the label,
+ * correct, with a bracket after it. CommonMark balances parentheses here for the same reason.
+ *
+ * Charged against the budget the way [find] is, and refuses to start once it is spent.
+ */
+private fun findDestinationEnd(text: String, from: Int, budget: ScanBudget): Int {
+    if (budget.left <= 0) return -1
+    var depth = 1
+    var at = from
+    while (at < text.length) {
+        when (text[at]) {
+            '(' -> depth++
+            ')' -> if (--depth == 0) {
+                budget.left -= at - from + 1
+                return at
+            }
+        }
+        at++
+    }
+    budget.left -= text.length - from
+    return -1
 }
 
 /**

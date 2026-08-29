@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.em
  * specification's own example corpus actually uses, rendered rather than merely stripped.
  *
  * Covered: ATX headings (`# ` through `###### `), `**bold**`, `__bold__`, `*italic*`, `_italic_`,
+ * `***bold italic***`, `___bold italic___`,
  * `~~strikethrough~~`, `` `code` ``, `[label](url)` reduced to its label, and backslash escapes.
  * Headings are sized relative to the surrounding text rather than in absolute units, so a host that
  * restyles the base text keeps the ratios.
@@ -83,6 +84,16 @@ private fun AnnotatedString.Builder.appendInline(text: String, budget: ScanBudge
             }
 
             c == '`' -> appendCode(text, i, budget)
+            // Before `**`, because `indexOf("**")` inside a `***` run matches the run's own tail
+            // and the span closes one character short: `***important***` rendered as a bold
+            // `*important` followed by a stray `*`, which is the marker showing through that this
+            // whole file exists to prevent.
+            mayNest && text.startsWith("***", i) ->
+                appendEmphasis(text, i, "***", BOLD_ITALIC, budget, depth)
+
+            mayNest && text.startsWith("___", i) ->
+                appendEmphasis(text, i, "___", BOLD_ITALIC, budget, depth)
+
             mayNest && text.startsWith("**", i) -> appendEmphasis(text, i, "**", BOLD, budget, depth)
             mayNest && text.startsWith("__", i) -> appendEmphasis(text, i, "__", BOLD, budget, depth)
             mayNest && text.startsWith("~~", i) -> appendEmphasis(text, i, "~~", STRIKE, budget, depth)
@@ -98,10 +109,16 @@ private fun AnnotatedString.Builder.appendInline(text: String, budget: ScanBudge
     }
 }
 
-/** A `` `code` `` span, whose content is literal -- no Markdown is read inside one. */
+/**
+ * A `` `code` `` span, whose content is literal -- no Markdown is read inside one.
+ *
+ * An empty pair is emitted as text, for [appendEmphasis]'s reason: styling nothing is
+ * indistinguishable from styling nothing, and consuming the pair silently deleted two characters
+ * the agent sent.
+ */
 private fun AnnotatedString.Builder.appendCode(text: String, start: Int, budget: ScanBudget): Int {
     val end = find(text, start + 1, '`', budget)
-    if (end < 0) {
+    if (end < 0 || end == start + 1) {
         append('`')
         return start + 1
     }
@@ -223,6 +240,7 @@ private fun find(text: String, from: Int, needle: String, budget: ScanBudget): I
 
 private val BOLD = SpanStyle(fontWeight = FontWeight.Bold)
 private val ITALIC = SpanStyle(fontStyle = FontStyle.Italic)
+private val BOLD_ITALIC = SpanStyle(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)
 private val STRIKE = SpanStyle(textDecoration = TextDecoration.LineThrough)
 private val CODE = SpanStyle(fontFamily = FontFamily.Monospace)
 
@@ -236,7 +254,8 @@ private val HEADING_SCALE: List<TextUnit> =
     listOf(2.0.em, 1.5.em, 1.25.em, 1.1.em, 1.0.em, 0.9.em)
 
 private const val ESCAPABLE = "\\`*_{}[]()#+-.!~"
-private const val MAX_NESTING = 8
-private const val MAX_MARKDOWN_INPUT = 16_384
+/** Internal so the tests can pin the bound rather than restate its value. */
+internal const val MAX_NESTING = 8
+internal const val MAX_MARKDOWN_INPUT = 16_384
 private const val SCAN_BUDGET_BASE = 1_024
 private const val SCAN_BUDGET_PER_CHAR = 4

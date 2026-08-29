@@ -1,0 +1,23 @@
+public final class dev/ynagai/a2ui/material3/ButtonKt {
+	public static final fun getButtonRenderer ()Ldev/ynagai/a2ui/compose/ComponentRenderer;
+}
+
+public final class dev/ynagai/a2ui/material3/LayoutKt {
+	public static final fun getColumnRenderer ()Ldev/ynagai/a2ui/compose/ComponentRenderer;
+	public static final fun getRowRenderer ()Ldev/ynagai/a2ui/compose/ComponentRenderer;
+}
+
+public final class dev/ynagai/a2ui/material3/Material3Components {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/ynagai/a2ui/material3/Material3Components;
+	public final fun getBasic ()Ldev/ynagai/a2ui/compose/ComponentRegistry;
+}
+
+public final class dev/ynagai/a2ui/material3/TextFieldKt {
+	public static final fun getTextFieldRenderer ()Ldev/ynagai/a2ui/compose/ComponentRenderer;
+}
+
+public final class dev/ynagai/a2ui/material3/TextKt {
+	public static final fun getTextRenderer ()Ldev/ynagai/a2ui/compose/ComponentRenderer;
+}
+

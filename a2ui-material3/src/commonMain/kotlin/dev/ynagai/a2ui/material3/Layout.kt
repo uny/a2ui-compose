@@ -2,9 +2,12 @@ package dev.ynagai.a2ui.material3
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
@@ -17,7 +20,9 @@ import dev.ynagai.a2ui.compose.A2uiComponentScope
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.RenderChild
 import dev.ynagai.a2ui.compose.rememberString
+import dev.ynagai.a2ui.core.protocol.Component
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 
 /**
@@ -31,15 +36,27 @@ public val RowRenderer: ComponentRenderer = ComponentRenderer { scope, modifier 
     val justify = scope.rememberString("justify")
     val align = scope.rememberString("align")
     val children = scope.rememberLaidOutChildren()
+    val stretch = isStretch(align)
     Row(
-        modifier = if (spansItsContainer(justify)) modifier.fillMaxWidth() else modifier,
+        modifier = modifier
+            .then(if (spansItsContainer(justify)) Modifier.fillMaxWidth() else Modifier)
+            // `stretch` is the children filling this row's height -- see [isStretch] -- and
+            // without this they measure against the *parent's* height instead, so an
+            // un-annotated row swelled to fill its column and left every later sibling at zero.
+            .then(if (stretch) Modifier.height(IntrinsicSize.Min) else Modifier),
         horizontalArrangement = horizontalArrangement(justify),
         verticalAlignment = verticalAlignment(align),
     ) {
         children.forEach { child ->
             var childModifier: Modifier = Modifier
-            if (child.weight > 0f) childModifier = childModifier.weight(child.weight)
-            if (isStretch(align)) childModifier = childModifier.fillMaxHeight()
+            if (child.weight > 0f) {
+                childModifier = childModifier.weight(child.weight)
+            } else if (child.spansAlong("Row")) {
+                // See [spansAlong]: the child asked for room to spread its own children in, and
+                // in a row that room has to be granted rather than taken.
+                childModifier = childModifier.weight(1f)
+            }
+            if (stretch) childModifier = childModifier.fillMaxHeight()
             scope.RenderChild(child.child, childModifier)
         }
     }
@@ -56,15 +73,27 @@ public val ColumnRenderer: ComponentRenderer = ComponentRenderer { scope, modifi
     val justify = scope.rememberString("justify")
     val align = scope.rememberString("align")
     val children = scope.rememberLaidOutChildren()
+    val stretch = isStretch(align)
     Column(
-        modifier = if (spansItsContainer(justify)) modifier.fillMaxHeight() else modifier,
+        modifier = modifier
+            .then(if (spansItsContainer(justify)) Modifier.fillMaxHeight() else Modifier)
+            // `Max` rather than `Min`, and the difference is the whole behaviour: a column's
+            // min intrinsic width is its widest *word*, so `Min` wraps every paragraph in the
+            // surface. `Max` is the max-content width CSS gives a flex item, and it is still
+            // clamped by whatever width the parent offers -- so a root column over prose fills
+            // and wraps exactly as before, while a column beside a sibling stops eating it.
+            .then(if (stretch) Modifier.width(IntrinsicSize.Max) else Modifier),
         verticalArrangement = verticalArrangement(justify),
         horizontalAlignment = horizontalAlignment(align),
     ) {
         children.forEach { child ->
             var childModifier: Modifier = Modifier
-            if (child.weight > 0f) childModifier = childModifier.weight(child.weight)
-            if (isStretch(align)) childModifier = childModifier.fillMaxWidth()
+            if (child.weight > 0f) {
+                childModifier = childModifier.weight(child.weight)
+            } else if (child.spansAlong("Column")) {
+                childModifier = childModifier.weight(1f)
+            }
+            if (stretch) childModifier = childModifier.fillMaxWidth()
             scope.RenderChild(child.child, childModifier)
         }
     }
@@ -79,7 +108,30 @@ public val ColumnRenderer: ComponentRenderer = ComponentRenderer { scope, modifi
  * container reads it off each child on the child's behalf.
  */
 @Immutable
-private data class LaidOutChild(val child: A2uiChild, val weight: Float)
+private data class LaidOutChild(
+    val child: A2uiChild,
+    val weight: Float,
+    /** The child's own component type, and its `justify` -- what [spansAlong] answers from. */
+    val component: String?,
+    val justify: String?,
+)
+
+/**
+ * Whether this child will claim the whole main axis of a [direction] container it sits in.
+ *
+ * A container whose `justify` needs room spans its parent -- see [spansItsContainer] -- and a
+ * `fillMax*` taken inside a `Row` or a `Column` resolves against the space the *parent* offered,
+ * not against a share of it. So a nested row asking for `center` measured itself across the whole
+ * outer row and left its siblings at zero width: the sibling vanished, and nothing reported it.
+ *
+ * The parent is the only one that can settle this, because only a `RowScope`/`ColumnScope` can
+ * hand out a share. So the container grants the asking child a `weight` instead, which bounds it
+ * to a slot it can then fill -- the child gets the room it asked for, and the siblings keep theirs.
+ * Only a same-direction container can claim the axis: a `Column` inside a `Row` spreads vertically
+ * and takes no width from anyone.
+ */
+private fun LaidOutChild.spansAlong(direction: String): Boolean =
+    component == direction && spansItsContainer(justify)
 
 /**
  * Every child, paired with its weight, recomposing the container only when that layout changes.
@@ -93,13 +145,23 @@ private data class LaidOutChild(val child: A2uiChild, val weight: Float)
 @Composable
 private fun A2uiComponentScope.rememberLaidOutChildren(): List<LaidOutChild> {
     val value by remember(this) {
-        derivedStateOf { allChildren().map { LaidOutChild(it, weightOf(it)) } }
+        derivedStateOf {
+            allChildren().map { child ->
+                val component = surface?.components?.get(child.componentId)
+                LaidOutChild(
+                    child = child,
+                    weight = weightOf(component),
+                    component = component?.component,
+                    justify = (component?.properties?.get("justify") as? JsonPrimitive)?.contentOrNull,
+                )
+            }
+        }
     }
     return value
 }
 
 /**
- * The `weight` [child] declared, or 0 when it declared none.
+ * The `weight` [component] declared, or 0 when it declared none.
  *
  * Zero rather than a null, because zero is what "do not apply a weight modifier" already means to
  * the caller. Compose requires a positive weight and raises on anything else, so a non-finite or
@@ -109,10 +171,15 @@ private fun A2uiComponentScope.rememberLaidOutChildren(): List<LaidOutChild> {
  * Read straight off the component rather than through `number`, because the catalog types `weight`
  * as a plain number: it is not a `DynamicValue`, so there is no binding to resolve.
  */
-private fun A2uiComponentScope.weightOf(child: A2uiChild): Float {
-    val component = surface?.components?.get(child.componentId) ?: return 0f
-    val declared = (component.properties["weight"] as? JsonPrimitive)?.doubleOrNull ?: return 0f
-    return if (declared.isFinite() && declared > 0.0) declared.toFloat() else 0f
+private fun weightOf(component: Component?): Float {
+    val declared = (component?.properties?.get("weight") as? JsonPrimitive)?.doubleOrNull ?: return 0f
+    // Checked *after* the narrowing, not before it. `1e39` is a finite `Double` and becomes
+    // `Float.POSITIVE_INFINITY` on the way to a `Float` weight, so a guard that asked
+    // `declared.isFinite()` passed exactly the value it was written to refuse -- and Compose
+    // divides the free space by the weight total, so the sibling of an infinitely weighted child
+    // measured at zero and disappeared.
+    val weight = declared.toFloat()
+    return if (weight.isFinite() && weight > 0f) weight else 0f
 }
 
 /**

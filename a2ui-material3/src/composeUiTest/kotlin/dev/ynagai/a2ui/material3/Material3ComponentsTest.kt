@@ -6,10 +6,12 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.v2.runComposeUiTest
 import dev.ynagai.a2ui.compose.A2uiPlaceholder
 import dev.ynagai.a2ui.compose.A2uiPlaceholderReason
@@ -67,6 +69,120 @@ class Material3ComponentsTest {
             date.left > root.left + root.width / 2f,
             "the trailing text should sit in the right half: $date within $root",
         )
+    }
+
+    @Test
+    fun a_container_stretches_its_children_to_itself_rather_than_to_its_parent() {
+        // The catalog's default `align` is `stretch`, and no test used to exercise it: both layout
+        // fixtures set `align` explicitly. Stretch is the children filling the container's own
+        // cross axis, and a `fillMaxHeight` taken inside a `Row` measures against whatever the
+        // *parent* offered -- so an un-annotated row swelled to the full height of its column and
+        // every later sibling measured at zero. The trailing text is the whole assertion.
+        runComposeUiTest {
+            setContent { Surface(DEFAULT_ALIGN) }
+            val row = onNodeWithText("aaa").fetchSemanticsNode().boundsInRoot
+            val after = onNodeWithText("AFTER").fetchSemanticsNode().boundsInRoot
+            assertTrue(after.height > 0f, "the text after the row should have been drawn: $after")
+            assertTrue(
+                after.top >= row.bottom,
+                "the text after the row should sit below it: $after under $row",
+            )
+        }
+    }
+
+    @Test
+    fun a_column_inside_a_row_leaves_room_for_what_follows_it() {
+        // The mirror of the above on the other axis: a column's stretch children fill its width,
+        // and unbounded that width is the whole row's.
+        runComposeUiTest {
+            setContent { Surface(COLUMN_IN_ROW) }
+            val date = onNodeWithText("date").fetchSemanticsNode().boundsInRoot
+            assertTrue(date.width > 0f, "the trailing text should have been given room: $date")
+        }
+    }
+
+    @Test
+    fun a_field_beside_a_button_does_not_take_the_whole_row() {
+        // A `TextField` used to fill the width whatever its parent was, so the button next to it
+        // measured at zero and drew nothing -- a submit button that is on screen and invisible.
+        runComposeUiTest {
+            setContent { Surface(FIELD_AND_BUTTON) }
+            val go = onNodeWithText("GO").fetchSemanticsNode().boundsInRoot
+            assertTrue(go.width > 0f, "the button beside the field should have been drawn: $go")
+        }
+    }
+
+    @Test
+    fun a_nested_row_that_asks_to_spread_is_granted_room_rather_than_taking_it() {
+        // `a_nested_row_does_not_eat_the_width_its_parent_was_spreading` covers the `start` case.
+        // This is the same shape with the inner row asking for `center`, which used to reach
+        // `fillMaxWidth` and starve the sibling exactly as the unconditional rule had.
+        runComposeUiTest {
+            setContent { Surface(CENTERED_NESTED_ROW) }
+            val root = onRoot().fetchSemanticsNode().boundsInRoot
+            val date = onNodeWithText("date").fetchSemanticsNode().boundsInRoot
+            assertTrue(date.width > 0f, "the trailing text should have been given room: $date")
+            assertTrue(
+                date.left > root.left + root.width / 2f,
+                "the trailing text should sit in the right half: $date within $root",
+            )
+        }
+    }
+
+    @Test
+    fun a_weight_too_large_for_a_float_is_read_as_absent() {
+        // `1e39` is a finite `Double` and an infinite `Float`, so a guard that asked the `Double`
+        // whether it was finite passed the one value it was written to refuse. Compose divides the
+        // free space by the weight total, so the unweighted sibling measured at zero.
+        runComposeUiTest {
+            setContent { Surface(OVERFLOWING_WEIGHT) }
+            val bbb = onNodeWithText("bbb").fetchSemanticsNode().boundsInRoot
+            assertTrue(bbb.width > 0f, "the sibling of an over-large weight should be drawn: $bbb")
+        }
+    }
+
+    @Test
+    fun an_obscured_field_does_not_show_what_was_typed() {
+        // No test used to set a `variant` at all, so the branch that hides a password could have
+        // been deleted with the suite still green -- and the failure mode is a password drawn in
+        // clear text.
+        runComposeUiTest {
+            mainClock.autoAdvance = false
+            val renderer = rendererFor(OBSCURED_FIELD)
+            setContent { Surface(renderer) }
+            onNode(hasSetTextAction()).performTextReplacement("hunter2")
+            mainClock.advanceTimeByFrame()
+            // Both halves. The field still writes what was typed -- without this the assertion
+            // below would also pass for a field that had simply stopped accepting input.
+            runOnIdle {
+                assertEquals(
+                    JsonPrimitive("hunter2"),
+                    (renderer.state.surfaces[SURFACE]?.dataModel as JsonObject)["typed"],
+                )
+            }
+            // `EditableText` is what the field draws; `InputText` keeps the raw value for the IME
+            // and for accessibility, which is Compose's own contract rather than this renderer's.
+            // The assertion is therefore on the drawn text, and it is what the visual
+            // transformation -- the branch nothing used to exercise -- produces.
+            val drawn = onNode(hasSetTextAction()).fetchSemanticsNode()
+                .config[SemanticsProperties.EditableText].text
+            assertEquals("\u2022".repeat("hunter2".length), drawn, "the field should draw a mask")
+        }
+    }
+
+    @Test
+    fun a_button_whose_action_will_not_decode_still_draws_and_does_not_raise() {
+        // The documented degradation, asserted rather than described: `action()` swallows a decode
+        // failure so one malformed property costs its own handler rather than the surface. Without
+        // this, dropping the `runCatching` passes every test and throws out of composition on the
+        // first payload an agent gets wrong.
+        val sent = mutableListOf<RendererToAgentMessage>()
+        runComposeUiTest {
+            setContent { Surface(rendererFor(MALFORMED_ACTION), onMessage = { sent += it }) }
+            onNodeWithText("Send").assertIsDisplayed()
+            onNodeWithText("Send").performClick()
+            runOnIdle { assertEquals(emptyList(), sent, "there is nothing to dispatch") }
+        }
     }
 
     @Test
@@ -226,6 +342,56 @@ class Material3ComponentsTest {
         val LITERAL_FIELD = """[
             {"id":"root","component":"Column","children":["input"]},
             {"id":"input","component":"TextField","label":"Fixed","value":"not a binding"}
+        ]"""
+
+        val DEFAULT_ALIGN = """[
+            {"id":"root","component":"Column","children":["r","after"]},
+            {"id":"r","component":"Row","children":["aaa","bbb"]},
+            {"id":"aaa","component":"Text","text":"aaa"},
+            {"id":"bbb","component":"Text","text":"bbb"},
+            {"id":"after","component":"Text","text":"AFTER"}
+        ]"""
+
+        val COLUMN_IN_ROW = """[
+            {"id":"root","component":"Row","children":["col","date"]},
+            {"id":"col","component":"Column","children":["a"]},
+            {"id":"a","component":"Text","text":"aaa"},
+            {"id":"date","component":"Text","text":"date"}
+        ]"""
+
+        val FIELD_AND_BUTTON = """[
+            {"id":"root","component":"Row","children":["f","btn"]},
+            {"id":"f","component":"TextField","label":"Search","value":{"path":"/typed"}},
+            {"id":"btn","component":"Button","child":"lbl","action":{"event":{"name":"go"}}},
+            {"id":"lbl","component":"Text","text":"GO"}
+        ]"""
+
+        val CENTERED_NESTED_ROW = """[
+            {"id":"root","component":"Row","children":["inner","date"],
+             "justify":"spaceBetween","align":"center"},
+            {"id":"inner","component":"Row","children":["origin"],
+             "justify":"center","align":"center"},
+            {"id":"origin","component":"Text","text":"origin"},
+            {"id":"date","component":"Text","text":"date"}
+        ]"""
+
+        val OVERFLOWING_WEIGHT = """[
+            {"id":"root","component":"Row","children":["aaa","bbb"],"align":"center"},
+            {"id":"aaa","component":"Text","text":"aaa","weight":1e39},
+            {"id":"bbb","component":"Text","text":"bbb"}
+        ]"""
+
+        val OBSCURED_FIELD = """[
+            {"id":"root","component":"Column","children":["input"]},
+            {"id":"input","component":"TextField","label":"Password",
+             "value":{"path":"/typed"},"variant":"obscured"}
+        ]"""
+
+        val MALFORMED_ACTION = """[
+            {"id":"root","component":"Column","children":["action_button"]},
+            {"id":"action_button","component":"Button","child":"label",
+             "action":{"neither":"an invoke nor an event"}},
+            {"id":"label","component":"Text","text":"Send"}
         ]"""
 
         val CARD = """[

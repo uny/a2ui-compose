@@ -81,7 +81,7 @@ public val ColumnRenderer: ComponentRenderer = ComponentRenderer { scope, modifi
 }
 
 /**
- * A child of a row or a column, with the `weight` it declared.
+ * A child of a row or a column, with what its container has to know about it to lay it out.
  *
  * `weight` is a property of the *child* but only a row or a column can act on it -- Compose's
  * `weight` modifier exists on `RowScope` and `ColumnScope` and nowhere else, which is why
@@ -173,7 +173,6 @@ private fun weightOf(component: Component?): Float {
     val weight = declared.toFloat()
     return if (weight.isFinite() && weight > 0f) weight else 0f
 }
-
 
 /**
  * Whether this container has to span its parent along its own main axis.

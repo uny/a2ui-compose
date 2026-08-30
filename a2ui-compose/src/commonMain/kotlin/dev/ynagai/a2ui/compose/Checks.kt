@@ -9,7 +9,7 @@ import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.CheckRule
 import dev.ynagai.a2ui.core.protocol.Severity
 import dev.ynagai.a2ui.core.protocol.ValidationResult
-import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -48,11 +48,17 @@ public data class A2uiCheckFailure internal constructor(
  * [Severity.ERROR] alone, so that a `warning` says something without taking the action away.
  */
 public fun A2uiComponentScope.checkFailures(): List<A2uiCheckFailure> {
-    val raw = property("checks") ?: return emptyList()
-    val rules = runCatching {
-        A2uiJson.strict.decodeFromJsonElement(ListSerializer(CheckRule.serializer()), raw)
-    }.getOrNull() ?: return emptyList()
-    return rules.mapNotNull { rule ->
+    val raw = property("checks") as? JsonArray ?: return emptyList()
+    // Decoded one rule at a time, never as a whole `ListSerializer`. The list form is all-or-
+    // nothing: `A2uiJson.strict` refuses an unknown key, so a single rule carrying one -- or a
+    // single `condition` that is not a `BoundValue` -- would throw for the array and take every
+    // well-formed rule beside it down, leaving a `Button` the agent gated enabled and its field
+    // uncaptioned. That is a validation bypass rather than a degradation, and it is the opposite
+    // of what the paragraph above promises.
+    return raw.mapNotNull { element ->
+        val rule = runCatching {
+            A2uiJson.strict.decodeFromJsonElement(CheckRule.serializer(), element)
+        }.getOrNull() ?: return@mapNotNull null
         val result = evaluateCondition(rule) ?: return@mapNotNull null
         if (result.valid) {
             null
@@ -108,5 +114,18 @@ public fun A2uiComponentScope.rememberCheckFailures(): List<A2uiCheckFailure> {
  */
 public fun List<A2uiCheckFailure>.hasError(): Boolean = any { it.severity == Severity.ERROR }
 
-/** The first failure worth showing next to an input, or null when the input is valid. */
-public fun List<A2uiCheckFailure>.firstMessage(): A2uiCheckFailure? = firstOrNull { it.message != null }
+/**
+ * The first failure worth showing next to an input, or null when there is nothing to say.
+ *
+ * **An error outranks the agent's order; nothing else does.** Within one severity the order the
+ * agent wrote the rules in is the only ranking there is, so it is kept -- but a `warning` listed
+ * first must not bury an `error` listed second, because the error is the one that also disables
+ * the `Button` this input feeds. A renderer that showed the warning would leave the user with a
+ * greyed-out action, a field drawn as valid, and the actual reason nowhere on screen.
+ *
+ * A failure whose result and whose rule both omit a message has nothing to display and is skipped;
+ * it still counts for [hasError], which is what gates the action.
+ */
+public fun List<A2uiCheckFailure>.firstMessage(): A2uiCheckFailure? =
+    firstOrNull { it.message != null && it.severity == Severity.ERROR }
+        ?: firstOrNull { it.message != null }

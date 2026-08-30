@@ -89,6 +89,36 @@ class ChecksTest {
         assertEquals(listOf("first", "second"), failures.map { it.message })
     }
 
+    @Test
+    fun a_rule_that_will_not_decode_costs_only_its_own_rule() {
+        // The list is decoded one rule at a time, so an unreadable rule cannot take a readable one
+        // down with it. Read as a whole `ListSerializer` this returns nothing at all -- and
+        // "nothing failing" is what re-enables a `Button` the agent gated, which is a validation
+        // bypass rather than the degradation the API promises.
+        //
+        // Two ways to be unreadable, both of which `A2uiJson.strict` refuses for the whole array:
+        // a rule carrying a key `CheckRule` does not model, and a `condition` that is not a
+        // `BoundValue`. Either one is written *before* the real rule, so an implementation that
+        // stopped at the first failure would report nothing.
+        for (id in listOf("unknown_key_first", "bad_condition_first")) {
+            val failures = scopeFor(id).checkFailures()
+            assertEquals(listOf("Value is required"), failures.map { it.message }, "$id")
+            assertTrue(failures.hasError(), "$id should still disable the action it gates")
+        }
+    }
+
+    @Test
+    fun an_error_is_shown_ahead_of_a_warning_the_agent_happened_to_write_first() {
+        // Both fail. The warning is written first, so the agent's own order would put it on screen
+        // -- and the error, which is also what disables the `Button` this field feeds, would never
+        // be shown at all: a greyed-out action with a field drawn as a mild remark beside it.
+        // Within one severity the agent's order still decides; only an error jumps the queue.
+        val failures = scopeFor("warning_before_error").checkFailures()
+        assertEquals(listOf("Looks unusual", "Value is required"), failures.map { it.message })
+        assertEquals("Value is required", failures.firstMessage()?.message)
+        assertTrue(failures.hasError())
+    }
+
     private fun scopeFor(componentId: String): A2uiComponentScope {
         val renderer = A2uiRenderer(clock = { "2026-08-30T00:00:00Z" }).also { it.applyAll(MESSAGES) }
         return A2uiComponentScope(
@@ -138,6 +168,18 @@ class ChecksTest {
                "checks":[{"condition":{"path":"/note"},"message":"never shown"}]},
               {"id":"absent_path","component":"TextField","label":"X","value":{"path":"/blank"},
                "checks":[{"condition":{"path":"/nothing/here"},"message":"never shown"}]},
+              {"id":"warning_before_error","component":"TextField","label":"X","value":{"path":"/blank"},
+               "checks":[{"condition":{"path":"/unusual"}},
+                         {"condition":{"call":"required","args":{"value":{"path":"/blank"}}},
+                          "message":"Value is required"}]},
+              {"id":"unknown_key_first","component":"TextField","label":"X","value":{"path":"/blank"},
+               "checks":[{"condition":{"path":"/allowed"},"message":"never shown","severity":"error"},
+                         {"condition":{"call":"required","args":{"value":{"path":"/blank"}}},
+                          "message":"Value is required"}]},
+              {"id":"bad_condition_first","component":"TextField","label":"X","value":{"path":"/blank"},
+               "checks":[{"condition":true,"message":"never shown"},
+                         {"condition":{"call":"required","args":{"value":{"path":"/blank"}}},
+                          "message":"Value is required"}]},
               {"id":"two_failures","component":"TextField","label":"X","value":{"path":"/blank"},
                "checks":[{"condition":{"call":"required","args":{"value":{"path":"/blank"}}},"message":"first"},
                          {"condition":{"call":"email","args":{"value":{"path":"/blank"}}},"message":"second"}]}

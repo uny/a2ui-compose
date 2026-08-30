@@ -9,9 +9,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.firstMessage
+import dev.ynagai.a2ui.compose.hasError
 import dev.ynagai.a2ui.compose.rememberCheckFailures
 import dev.ynagai.a2ui.compose.rememberString
-import dev.ynagai.a2ui.core.protocol.Severity
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
@@ -36,7 +36,8 @@ public val TextFieldRenderer: ComponentRenderer = ComponentRenderer { scope, mod
     // Keyed on the scope alone: the pointer comes from the component's properties and this scope's
     // evaluation scope, and both of those are already what the scope's own identity is keyed on.
     val target = remember(scope) { scope.binding("value") }
-    val failure = scope.rememberCheckFailures().firstMessage()
+    val failures = scope.rememberCheckFailures()
+    val failure = failures.firstMessage()
     OutlinedTextField(
         value = value.orEmpty(),
         onValueChange = { typed -> target?.let { scope.write(it, JsonPrimitive(typed)) } },
@@ -58,7 +59,13 @@ public val TextFieldRenderer: ComponentRenderer = ComponentRenderer { scope, mod
         // A failing `check` colours the field and captions it. Only an `error` colours it: a
         // `warning` still gets its message, in the ordinary supporting-text colour, because
         // painting the field red for one would leave the agent no way to remark without alarming.
-        isError = failure?.severity == Severity.ERROR,
+        //
+        // Read off the whole list rather than off the captioned failure, because the two questions
+        // are different: an `error` whose rule and result both omit a message has nothing to
+        // display, but it is still what disables the `Button` -- and a field drawn as valid beside
+        // a greyed-out action is the state that leaves the user with no reason anywhere on screen.
+        // This is the same list `hasError` gates the action on, so the two cannot disagree.
+        isError = failures.hasError(),
         supportingText = failure?.let { { CheckMessage(it) } },
     )
 }

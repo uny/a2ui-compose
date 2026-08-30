@@ -20,10 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.firstMessage
+import dev.ynagai.a2ui.compose.hasError
 import dev.ynagai.a2ui.compose.rememberBoolean
 import dev.ynagai.a2ui.compose.rememberCheckFailures
 import dev.ynagai.a2ui.compose.rememberString
-import dev.ynagai.a2ui.core.protocol.Severity
 import dev.ynagai.a2ui.core.surface.JsonPointer
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -58,7 +58,8 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
     // Neither is the catalog's default pair, and it names no picker. See the KDoc.
     val showsDate = wantsDate || !wantsTime
     val target = remember(scope) { scope.binding("value") }
-    val failure = scope.rememberCheckFailures().firstMessage()
+    val failures = scope.rememberCheckFailures()
+    val failure = failures.firstMessage()
     val min = scope.rememberString("min")?.let { Iso8601.epochDay(it) }
     val max = scope.rememberString("max")?.let { Iso8601.epochDay(it) }
 
@@ -76,7 +77,7 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
             readOnly = true,
             enabled = target != null,
             label = label?.let { { Text(it) } },
-            isError = failure?.severity == Severity.ERROR,
+            isError = failures.hasError(),
             trailingIcon = {
                 IconButton(
                     onClick = { stage = if (showsDate) Stage.DATE else Stage.TIME },

@@ -40,28 +40,30 @@ import dev.ynagai.a2ui.compose.rememberString
  * The [modifier] handed in already carries the size the variant asks for and the margin the layout
  * needs; an implementation should pass it to whatever it draws rather than sizing the image itself.
  *
- * **[url] is the agent's string, and fetching it is a capability this module is handing over.**
- * The core makes the same handover for `openUrl` and states its half of the bargain: `UrlOpener`
- * receives a URL "guaranteed to be absolute and `http`- or `https`-schemed", because the evaluator
- * applied the specification's allowlist first. There is no equivalent guarantee here -- a renderer
- * has no scheme allowlist to apply and the catalog states none -- so an implementation is handed
- * whatever the agent wrote, and it is the implementation that has to decide what to do about it:
+ * **[url] is guaranteed to be an absolute `http` or `https` URL**, and that guarantee is the same
+ * one the core gives `UrlOpener`. Fetching an agent's string is a capability, and the two places
+ * this library hands one over should not disagree about who filters it: the evaluator applies the
+ * specification's allowlist before `openUrl` reaches a host, and [ImageRenderer] applies the same
+ * one before a loader does. A `url` with any other scheme draws the placeholder instead.
  *
- * - an image loader will resolve `file://` and, on Android, `content://`, so a payload can name a
- *   local path and learn from the drawing whether it was readable;
- * - an `https` URL the agent chose is fetched the moment the surface composes, with no gesture,
- *   which discloses the viewer's address and user agent to whoever the agent named.
+ * What that refuses is worth naming, because an image loader would otherwise accept it. `file://`
+ * and, on Android, `content://` resolve through the usual loaders, so a payload could name a local
+ * path and learn from whether the image appeared that it was readable. It does not refuse the
+ * ordinary risk of a remote URL, which no allowlist can: an `https` image the agent chose is still
+ * fetched the moment the surface composes, with no gesture, disclosing the viewer's address and
+ * user agent to whoever the agent named. A host rendering untrusted agents may want to decide
+ * separately whether an image may be fetched before the user has asked to see it.
  *
- * Neither is hypothetical for an agent that is prompt-injected rather than merely wrong. A host
- * that fetches should restrict the scheme, and one that renders untrusted agents should also decide
- * whether an image may be fetched before the user has asked to see it.
+ * `data:` is refused too, so a host that wants inline images registers its own `Image` renderer --
+ * the same escape hatch `Icon` offers for a host that wants the real Material Symbols set.
  */
 @Stable
 public fun interface A2uiImageLoader {
     /**
      * Draws the image at [url], sized and inset by [modifier].
      *
-     * [url] is agent-authored and unvalidated -- see the note on this interface.
+     * [url] is agent-authored, and absolute and `http`- or `https`-schemed -- see the note on this
+     * interface for what that does and does not promise.
      */
     @Composable
     public fun Image(url: String, description: String?, scale: ContentScale, modifier: Modifier)
@@ -103,7 +105,7 @@ public val ImageRenderer: ComponentRenderer = ComponentRenderer { scope, modifie
     val sized = modifier.leafMargin().variantSize(variant)
         .clip(if (variant == "avatar") CircleShape else MaterialTheme.shapes.small)
     val loader = LocalA2uiImageLoader.current
-    if (loader != null && url != null) {
+    if (loader != null && url != null && url.isFetchable()) {
         loader.Image(url, description, contentScale(fit), sized)
     } else {
         Box(
@@ -116,6 +118,21 @@ public val ImageRenderer: ComponentRenderer = ComponentRenderer { scope, modifie
         )
     }
 }
+
+/**
+ * Whether this URL may be handed to a loader -- see [A2uiImageLoader].
+ *
+ * The scheme is taken the way the core takes it for `openUrl`, and compared against the same two:
+ * everything before the first `:`, lowercased, so a URL with no scheme at all is relative and
+ * refused along with `file:`, `content:`, `data:` and the rest. A refusal is not an error; it
+ * draws the described placeholder, which is what an `Image` this module cannot draw looks like
+ * whatever the reason.
+ */
+private fun String.isFetchable(): Boolean =
+    substringBefore(':', missingDelimiterValue = "").lowercase() in FETCHABLE_SCHEMES
+
+/** The schemes an agent's `Image` may name, matching the core's own `openUrl` allowlist. */
+private val FETCHABLE_SCHEMES = setOf("http", "https")
 
 /** The size the guide gives each `variant`; `mediumFeature` is the catalog's default. */
 private fun Modifier.variantSize(variant: String?): Modifier = when (variant) {

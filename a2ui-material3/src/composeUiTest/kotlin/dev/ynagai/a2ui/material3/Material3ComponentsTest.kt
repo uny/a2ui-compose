@@ -430,6 +430,25 @@ class Material3ComponentsTest {
     }
 
     @Test
+    fun a_url_the_loader_should_not_fetch_never_reaches_it() = runComposeUiTest {
+        // The allowlist `A2uiImageLoader` promises. An image loader resolves `file://` and, on
+        // Android, `content://`, so without this a payload could name a local path and read back
+        // from the drawing whether it was there. Refused draws the placeholder, which still
+        // carries the description -- so the assertion is both halves: not fetched, still described.
+        val urls = mutableListOf<String>()
+        setContent {
+            CompositionLocalProvider(
+                LocalA2uiImageLoader provides A2uiImageLoader { url, _, _, modifier ->
+                    urls += url
+                    Text("drawn", modifier)
+                },
+            ) { Surface(LOCAL_FILE_IMAGE) }
+        }
+        onNodeWithContentDescription("a private file").assertIsDisplayed()
+        assertEquals(emptyList(), urls, "a file:// URL should never have reached the loader")
+    }
+
+    @Test
     fun a_leaf_carries_the_margin_the_spacing_strategy_asks_for() = runComposeUiTest {
         // §3's Leaf-Margin Strategy, asserted where it is visible: two texts in a column are
         // separated by twice the margin, and neither touches the surface's edge. Asserting the gap
@@ -769,6 +788,11 @@ class Material3ComponentsTest {
             {"id":"root","component":"Column","children":["pic"]},
             {"id":"pic","component":"Image","url":"https://example.test/cat.png",
              "description":"a cat","fit":"cover"}
+        ]"""
+
+        val LOCAL_FILE_IMAGE = """[
+            {"id":"root","component":"Column","children":["pic"]},
+            {"id":"pic","component":"Image","url":"file:///etc/passwd","description":"a private file"}
         ]"""
 
         val UNDRAWN = """[

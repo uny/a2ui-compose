@@ -36,13 +36,14 @@ public val TextFieldRenderer: ComponentRenderer = ComponentRenderer { scope, mod
     OutlinedTextField(
         value = value.orEmpty(),
         onValueChange = { typed -> target?.let { scope.write(it, JsonPrimitive(typed)) } },
-        // The parent's modifier, unembellished. A `fillMaxWidth` here measured against whatever
+        // The parent's modifier plus the margin every framed component carries -- see
+        // [leafMargin] -- and nothing else. A `fillMaxWidth` here measured against whatever
         // width the *grandparent* offered rather than against this field's share of its container,
         // so a field beside a `Button` in a `Row` took the whole row and left the button at zero
         // width. A `Column` with the catalog's default `align` already stretches its children, so
         // the common case still fills; letting the container decide is what makes the uncommon
         // one survive.
-        modifier = modifier,
+        modifier = modifier.leafMargin(),
         readOnly = target == null,
         label = label?.let { { Text(it) } },
         placeholder = placeholder?.let { { Text(it) } },

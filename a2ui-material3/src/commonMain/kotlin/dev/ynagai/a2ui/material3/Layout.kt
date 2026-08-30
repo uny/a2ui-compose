@@ -42,9 +42,9 @@ public val RowRenderer: ComponentRenderer = ComponentRenderer { scope, modifier 
             var childModifier: Modifier = Modifier
             if (child.weight > 0f) {
                 childModifier = childModifier.weight(child.weight)
-            } else if (child.spansAlong("Row")) {
-                // See [spansAlong]: the child asked for room to spread its own children in, and
-                // in a row that room has to be granted rather than taken.
+            } else if (child.claimsMainAxis("Row")) {
+                // See [claimsMainAxis]: the child would fill the row's width, and that room has to
+                // be granted as a share rather than taken from its siblings.
                 childModifier = childModifier.weight(1f)
             }
             scope.RenderChild(child.child, childModifier)
@@ -72,7 +72,7 @@ public val ColumnRenderer: ComponentRenderer = ComponentRenderer { scope, modifi
             var childModifier: Modifier = Modifier
             if (child.weight > 0f) {
                 childModifier = childModifier.weight(child.weight)
-            } else if (child.spansAlong("Column")) {
+            } else if (child.claimsMainAxis("Column")) {
                 childModifier = childModifier.weight(1f)
             }
             scope.RenderChild(child.child, childModifier)
@@ -92,9 +92,17 @@ public val ColumnRenderer: ComponentRenderer = ComponentRenderer { scope, modifi
 private data class LaidOutChild(
     val child: A2uiChild,
     val weight: Float,
-    /** The child's own component type, and its `justify` -- what [spansAlong] answers from. */
+    /** The child's own component type, and its `justify` -- what [claimsMainAxis] answers from. */
     val component: String?,
     val justify: JsonElement?,
+    /**
+     * `axis` and `variant`, the other two properties [claimsMainAxis] reads on a child's behalf.
+     *
+     * Read straight off the component like `weight` and for the same reason: the catalog types
+     * both as plain string enums rather than as `DynamicString`, so there is no binding to resolve.
+     */
+    val axis: String?,
+    val variant: String?,
 )
 
 /**
@@ -108,8 +116,47 @@ private data class LaidOutChild(
  * The parent is the only one that can settle this, because only a `RowScope`/`ColumnScope` can
  * hand out a share. So the container grants the asking child a `weight` instead, which bounds it
  * to a slot it can then fill -- the child gets the room it asked for, and the siblings keep theirs.
- * Only a same-direction container can claim the axis: a `Column` inside a `Row` spreads vertically
- * and takes no width from anyone.
+ *
+ * A container is not the only child that fills. `Divider` and `Image` are leaves that take a
+ * `fillMax*` of their own, and they starve a sibling exactly as a nested container does. What all
+ * three have in common is the axis: a child claims a container only when it fills *along* that
+ * container's main axis, which is why each case below asks about [direction] rather than about the
+ * child alone. A `Column` inside a `Row`, a divider drawn across a column, an avatar that named a
+ * fixed square -- none of them takes width from anyone, and none of them is granted a share.
+ */
+private fun LaidOutChild.claimsMainAxis(direction: String): Boolean = when (component) {
+    direction -> spansAlong(direction)
+    // A `Divider` fills the axis it is drawn along -- Material's `HorizontalDivider` is a
+    // `fillMaxWidth` box and `VerticalDivider` a `fillMaxHeight` one. Along a container running
+    // the same way, "the width of the container" is the whole container, and a hairline that took
+    // all of it left every sibling measuring at zero. A divider across a column, or down a row,
+    // claims nothing and is left alone.
+    "Divider" -> if ((axis ?: "horizontal") == "vertical") direction == "Column" else direction == "Row"
+    // The `Image` variants that fill their container do the same to a row. Including the default:
+    // `mediumFeature`'s 300dp cap bounds the image but does not save the sibling, because a
+    // phone-width row has less than 300dp to give -- and inside a horizontal `List`, whose items are
+    // capped at 280dp, it starves the sibling at every surface width. The three fixed-size
+    // variants ask for a square and are not the problem.
+    "Image" -> direction == "Row" && (variant ?: "mediumFeature") !in FIXED_SIZE_IMAGE_VARIANTS
+    else -> false
+}
+
+/** The `Image` variants that name a fixed square, and so cannot claim a row -- see [claimsMainAxis]. */
+private val FIXED_SIZE_IMAGE_VARIANTS = setOf("icon", "avatar", "smallFeature")
+
+/**
+ * A plain string enum read off [Component] without resolving anything.
+ *
+ * The catalog types `axis` and `variant` as string enums rather than as `DynamicString`, so there
+ * is no binding here to evaluate -- and a value that is not a plain string is one the schema
+ * already refuses. Null then reads as "the catalog's default", which is what each caller does.
+ */
+private fun Component?.enumProperty(name: String): String? =
+    (this?.properties?.get(name) as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+/**
+ * Whether a container child of this same type will claim the whole main axis -- see
+ * [claimsMainAxis], which is the only caller.
  */
 private fun LaidOutChild.spansAlong(direction: String): Boolean {
     if (component != direction) return false
@@ -145,6 +192,8 @@ private fun A2uiComponentScope.rememberLaidOutChildren(): List<LaidOutChild> {
                     weight = weightOf(component),
                     component = component?.component,
                     justify = component?.properties?.get("justify"),
+                    axis = component.enumProperty("axis"),
+                    variant = component.enumProperty("variant"),
                 )
             }
         }
@@ -241,11 +290,16 @@ private fun verticalArrangement(justify: String?): Arrangement.Vertical = when (
  * supported` from inside a plain `Row`. Trading a hidden sibling for a crashed surface, in exactly
  * the components that make stretching visible at all, is not a trade worth taking.
  *
- * So the children keep their natural cross-axis size and the container wraps them. For the five
- * components this module draws the difference is invisible -- none of them paints a background or
- * a border, which is what an equal-height row is for. It becomes visible when one does, and the
- * fix then is a container that measures its children before it sizes them rather than one that
- * asks them how big they would like to be.
+ * So the children keep their natural cross-axis size and the container wraps them.
+ *
+ * **That was invisible while this module drew five components and is not any more.** The argument
+ * here used to be that none of them painted a background or a border, which is what an equal-height
+ * row is for. `Card` paints an outline and `Image` a placeholder background, so the ragged edge is
+ * now something a surface can show: a column of cards squares up to the widest only by accident of
+ * its content. The trade is still the one taken -- an `IllegalStateException` out of a
+ * `SubcomposeLayout` descendant is worse than a ragged edge -- but it is now a visible cost rather
+ * than a theoretical one, and the fix, when it comes, is a container that measures its children
+ * before it sizes them rather than one that asks them how big they would like to be.
  */
 private fun verticalAlignment(align: String?): Alignment.Vertical = when (align) {
     "center" -> Alignment.CenterVertically

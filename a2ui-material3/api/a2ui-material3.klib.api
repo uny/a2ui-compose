@@ -6,6 +6,10 @@
 // - Show declarations: true
 
 // Library unique name: <dev.ynagai.a2ui:a2ui-material3>
+abstract fun interface dev.ynagai.a2ui.material3/A2uiImageLoader { // dev.ynagai.a2ui.material3/A2uiImageLoader|null[0]
+    abstract fun Image(kotlin/String, kotlin/String?, androidx.compose.ui.layout/ContentScale, androidx.compose.ui/Modifier, androidx.compose.runtime/Composer?, kotlin/Int) // dev.ynagai.a2ui.material3/A2uiImageLoader.Image|Image(kotlin.String;kotlin.String?;androidx.compose.ui.layout.ContentScale;androidx.compose.ui.Modifier;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+}
+
 final object dev.ynagai.a2ui.material3/Material3Components { // dev.ynagai.a2ui.material3/Material3Components|null[0]
     final val Basic // dev.ynagai.a2ui.material3/Material3Components.Basic|{}Basic[0]
         final fun <get-Basic>(): dev.ynagai.a2ui.compose/ComponentRegistry // dev.ynagai.a2ui.material3/Material3Components.Basic.<get-Basic>|<get-Basic>(){}[0]
@@ -13,8 +17,20 @@ final object dev.ynagai.a2ui.material3/Material3Components { // dev.ynagai.a2ui.
 
 final val dev.ynagai.a2ui.material3/ButtonRenderer // dev.ynagai.a2ui.material3/ButtonRenderer|{}ButtonRenderer[0]
     final fun <get-ButtonRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/ButtonRenderer.<get-ButtonRenderer>|<get-ButtonRenderer>(){}[0]
+final val dev.ynagai.a2ui.material3/CardRenderer // dev.ynagai.a2ui.material3/CardRenderer|{}CardRenderer[0]
+    final fun <get-CardRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/CardRenderer.<get-CardRenderer>|<get-CardRenderer>(){}[0]
 final val dev.ynagai.a2ui.material3/ColumnRenderer // dev.ynagai.a2ui.material3/ColumnRenderer|{}ColumnRenderer[0]
     final fun <get-ColumnRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/ColumnRenderer.<get-ColumnRenderer>|<get-ColumnRenderer>(){}[0]
+final val dev.ynagai.a2ui.material3/DividerRenderer // dev.ynagai.a2ui.material3/DividerRenderer|{}DividerRenderer[0]
+    final fun <get-DividerRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/DividerRenderer.<get-DividerRenderer>|<get-DividerRenderer>(){}[0]
+final val dev.ynagai.a2ui.material3/IconRenderer // dev.ynagai.a2ui.material3/IconRenderer|{}IconRenderer[0]
+    final fun <get-IconRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/IconRenderer.<get-IconRenderer>|<get-IconRenderer>(){}[0]
+final val dev.ynagai.a2ui.material3/ImageRenderer // dev.ynagai.a2ui.material3/ImageRenderer|{}ImageRenderer[0]
+    final fun <get-ImageRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/ImageRenderer.<get-ImageRenderer>|<get-ImageRenderer>(){}[0]
+final val dev.ynagai.a2ui.material3/ListRenderer // dev.ynagai.a2ui.material3/ListRenderer|{}ListRenderer[0]
+    final fun <get-ListRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/ListRenderer.<get-ListRenderer>|<get-ListRenderer>(){}[0]
+final val dev.ynagai.a2ui.material3/LocalA2uiImageLoader // dev.ynagai.a2ui.material3/LocalA2uiImageLoader|{}LocalA2uiImageLoader[0]
+    final fun <get-LocalA2uiImageLoader>(): androidx.compose.runtime/ProvidableCompositionLocal<dev.ynagai.a2ui.material3/A2uiImageLoader?> // dev.ynagai.a2ui.material3/LocalA2uiImageLoader.<get-LocalA2uiImageLoader>|<get-LocalA2uiImageLoader>(){}[0]
 final val dev.ynagai.a2ui.material3/RowRenderer // dev.ynagai.a2ui.material3/RowRenderer|{}RowRenderer[0]
     final fun <get-RowRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/RowRenderer.<get-RowRenderer>|<get-RowRenderer>(){}[0]
 final val dev.ynagai.a2ui.material3/TextFieldRenderer // dev.ynagai.a2ui.material3/TextFieldRenderer|{}TextFieldRenderer[0]

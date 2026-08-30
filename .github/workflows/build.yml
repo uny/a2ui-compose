@@ -9,12 +9,38 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Three jobs rather than one, split by *backend* rather than by module or by test.
+#
+# 58% of this build's wall-clock is linking test binaries; running the tests themselves is 6% and
+# compiling is under 2%. The unit of cost is therefore "one test executable per target", not "one
+# test", which is why the split is by target and why filtering tests would not have helped.
+#
+# The three shares are close to even -- JS 10.2m, wasmJs 11.1m, Apple 9.5m of a 35m build -- and
+# splitting JS from wasmJs is what makes the difference: they are 60% of the build between them, so
+# a two-job "Apple / everything else" split would have left one job holding 21 of the 35 minutes.
+#
+# The union of the three jobs' task graphs is exactly the task graph of the single
+# `build checkLegacyAbi` this replaces -- 858 tasks, verified with `--dry-run` and a set difference.
+# Nothing stopped being verified. Re-run that check when changing any of the command lines below:
+#
+#   ./gradlew <job's arguments> --dry-run | grep -oE '^:[a-zA-Z0-9:_-]+' | sort -u
+#
+# and confirm the three results still cover `./gradlew build checkLegacyAbi --dry-run`.
+
 jobs:
-  build:
-    # macOS so the Apple targets are actually compiled — on ubuntu they are silently skipped
-    # (kotlin.native.ignoreDisabledTargets=true), which turns a green build into a vacuous one.
+  # Everything that is not a web backend: the Apple targets, JVM, Android, the metadata and
+  # publication artifacts, and the public API check.
+  #
+  # macOS, because on Linux the Apple targets are silently skipped -- `kotlin.native.ignoreDisabledTargets=true`
+  # turns them off rather than failing -- and a green build that skipped them says nothing.
+  #
+  # `checkLegacyAbi` belongs here for the same reason and not merely by convenience: the checked-in
+  # klib dump covers `[iosArm64, iosSimulatorArm64, js, macosArm64, wasmJs]`, so on Linux the
+  # regenerated dump would be missing three targets and the check would compare against something
+  # the build cannot produce.
+  apple:
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v5
@@ -26,16 +52,99 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
+      # `build` minus the two web backends' test executables and production bundles, which the
+      # other two jobs own. The web *libraries* are still compiled here, because `assemble` builds
+      # them and they are cheap -- it is the executables that cost.
       - name: Build
-        run: ./gradlew build --stacktrace
-
-      - name: Check public API
-        run: ./gradlew checkLegacyAbi --stacktrace
+        run: >
+          ./gradlew build checkLegacyAbi
+          -x jsTest -x jsBrowserTest -x wasmJsTest -x wasmJsBrowserTest
+          -x jsBrowserDistribution -x wasmJsBrowserDistribution
+          -x compileProductionExecutableKotlinJs
+          -x compileProductionExecutableKotlinWasmJs
+          -x compileProductionExecutableKotlinWasmJsOptimize
+          --stacktrace
 
       - name: Upload reports
         if: failure()
         uses: actions/upload-artifact@v5
         with:
-          name: reports
+          name: reports-apple
           path: '**/build/reports/**'
           retention-days: 7
+
+  # Kotlin/JS: the browser tests and the production bundle.
+  #
+  # Ubuntu rather than macOS, and safely so: this job names only JS tasks, so there is no Apple
+  # target for the runner to skip. If one were named and the target were disabled, Gradle would
+  # fail with an unknown task rather than pass having done nothing -- which is the property that
+  # makes splitting off a Linux runner safe at all.
+  js:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Test
+        run: ./gradlew jsTest jsBrowserDistribution --stacktrace
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: reports-js
+          path: '**/build/reports/**'
+          retention-days: 7
+
+  # Kotlin/Wasm: the browser tests and the production bundle. The heaviest single share, and the
+  # only place the Compose UI tests run in a browser -- the JS harness cannot boot Skiko, so those
+  # tests are excluded from the `js` target's source set.
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Test
+        run: ./gradlew wasmJsTest wasmJsBrowserDistribution --stacktrace
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: reports-wasm
+          path: '**/build/reports/**'
+          retention-days: 7
+
+  # One check to require, so that a branch rule naming `build` keeps meaning "all of it".
+  #
+  # `always()` with an explicit result test rather than the default: without it a cancelled or
+  # skipped upstream job leaves this one skipped, and a skipped required check reads as satisfied.
+  build:
+    needs: [apple, js, wasm]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check the three backends passed
+        run: |
+          echo "apple=${{ needs.apple.result }} js=${{ needs.js.result }} wasm=${{ needs.wasm.result }}"
+          [ "${{ needs.apple.result }}" = "success" ] \
+            && [ "${{ needs.js.result }}" = "success" ] \
+            && [ "${{ needs.wasm.result }}" = "success" ]

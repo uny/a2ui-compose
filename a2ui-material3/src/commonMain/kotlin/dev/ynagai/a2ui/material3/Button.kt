@@ -8,7 +8,9 @@ import androidx.compose.ui.Modifier
 import dev.ynagai.a2ui.compose.A2uiComponentScope
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.RenderChild
+import dev.ynagai.a2ui.compose.hasError
 import dev.ynagai.a2ui.compose.rememberAction
+import dev.ynagai.a2ui.compose.rememberCheckFailures
 import dev.ynagai.a2ui.compose.rememberChildren
 import dev.ynagai.a2ui.compose.rememberString
 
@@ -27,22 +29,42 @@ import dev.ynagai.a2ui.compose.rememberString
  * A button whose `action` is absent or will not decode still draws and still responds; it just has
  * nothing to dispatch. Disabling it instead would present an agent's malformed payload to the user
  * as a deliberately unavailable action.
+ *
+ * **A failing `check` does disable it**, because that is the one the protocol asks for by name:
+ * "If any check fails, the button is automatically disabled. This allows the button's state to
+ * depend on the validity of data in the model." Errors alone -- see
+ * [hasError][dev.ynagai.a2ui.compose.hasError] -- so a `warning` result can say something without
+ * taking the action away. The button shows no message of its own: the inputs the checks are about
+ * carry theirs, and a greyed button captioned with the reason would say it twice.
  */
 public val ButtonRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
     val variant = scope.rememberString("variant")
     val action = scope.rememberAction("action")
+    val enabled = !scope.rememberCheckFailures().hasError()
     val onClick = { if (action != null) scope.dispatch(action) }
     when (variant) {
         // The theme's primary colour as a background with contrasting text, which is exactly what
         // Material 3's filled `Button` is.
-        "primary" -> Button(onClick = onClick, modifier = modifier.leafMargin()) { scope.Child() }
+        "primary" -> Button(
+            onClick = onClick,
+            modifier = modifier.leafMargin(),
+            enabled = enabled,
+        ) { scope.Child() }
         // "No visual border or background, making its child content appear like a clickable link."
-        "borderless" -> TextButton(onClick = onClick, modifier = modifier.leafMargin()) { scope.Child() }
+        "borderless" -> TextButton(
+            onClick = onClick,
+            modifier = modifier.leafMargin(),
+            enabled = enabled,
+        ) { scope.Child() }
         // "A subtle background and border." Material 3 has no button that is both: the outlined
         // one carries the border and leaves the container transparent, the tonal one carries a
         // container and no border. The border is the half that distinguishes a default button from
         // a borderless one, so it is the half kept.
-        else -> OutlinedButton(onClick = onClick, modifier = modifier.leafMargin()) { scope.Child() }
+        else -> OutlinedButton(
+            onClick = onClick,
+            modifier = modifier.leafMargin(),
+            enabled = enabled,
+        ) { scope.Child() }
     }
 }
 

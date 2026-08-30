@@ -266,6 +266,56 @@ class FunctionEvaluatorTest {
         }
     }
 
+    @Test
+    fun logicReadsAValidationResultAsItsValidity() {
+        // The specification contradicts itself here and its own examples pick a side.
+        // `catalog.json` types `required`/`email`/`regex`/`length`/`numeric` as
+        // `"returnType": "validationResult"` — the object this evaluator builds — while the basic
+        // catalog implementation guide's prose for the same five says each returns `true` or
+        // `false`, and `and`/`or`/`not` are typed `boolean` under either reading. Both
+        // `09_login-form` and `32_advanced-form-validator` then write
+        // `and(values: [email(...), length(...)])`, nesting one inside the other. Refusing that
+        // would fail the payloads the specification ships to demonstrate `checks`.
+        val evaluator = context("""{"email":"ada@example.com","blank":""}""")
+        val passing = """
+            {"call":"and","args":{"values":[
+              {"call":"email","args":{"value":{"path":"/email"}}},
+              {"call":"required","args":{"value":{"path":"/email"}}}
+            ]}}
+        """.trimIndent()
+        val failing = """
+            {"call":"and","args":{"values":[
+              {"call":"email","args":{"value":{"path":"/email"}}},
+              {"call":"required","args":{"value":{"path":"/blank"}}}
+            ]}}
+        """.trimIndent()
+        assertEquals(JsonPrimitive(true), evaluator.evaluate(call(passing)))
+        assertEquals(JsonPrimitive(false), evaluator.evaluate(call(failing)))
+        // `or` and `not` fold through the same reading, so neither can drift from `and`.
+        val eitherWay = """
+            {"call":"not","args":{"value":{"call":"required","args":{"value":{"path":"/blank"}}}}}
+        """.trimIndent()
+        assertEquals(JsonPrimitive(true), evaluator.evaluate(call(eitherWay)))
+    }
+
+    @Test
+    fun onlyTheLogicFunctionsReadAValidationResultAsABoolean() {
+        // The leniency is about one contradiction in how a validity is spelled, not a truthiness
+        // for the evaluator at large: an object where an ordinary boolean argument belongs is
+        // still the call failure it was.
+        val evaluator = context("""{"result":{"valid":true}}""")
+        assertFailsWith<A2uiFunctionException> {
+            evaluator.evaluate(
+                call("""{"call":"formatNumber","args":{"value":1000,"grouping":{"path":"/result"}}}"""),
+            )
+        }
+        // And an object that is not a validation result at all reaches the same refusal from
+        // inside `and`, rather than being read as some other kind of truth.
+        assertFailsWith<A2uiFunctionException> {
+            evaluator.evaluate(call("""{"call":"and","args":{"values":[{"path":"/nothing"},true]}}"""))
+        }
+    }
+
     // ---- @index -----------------------------------------------------------------------
 
     @Test

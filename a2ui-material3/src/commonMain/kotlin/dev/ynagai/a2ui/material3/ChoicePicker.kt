@@ -1,0 +1,250 @@
+package dev.ynagai.a2ui.material3
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
+import dev.ynagai.a2ui.compose.A2uiComponentScope
+import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.firstMessage
+import dev.ynagai.a2ui.compose.rememberBoolean
+import dev.ynagai.a2ui.compose.rememberCheckFailures
+import dev.ynagai.a2ui.compose.rememberString
+import dev.ynagai.a2ui.compose.rememberStringList
+import dev.ynagai.a2ui.core.surface.JsonPointer
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+
+/**
+ * `ChoicePicker` -- the catalog's one component whose bound value is a list.
+ *
+ * Two independent properties decide what it looks like and what it does, and keeping them
+ * independent is most of this file. `displayStyle` chooses the control -- a stack of rows, or a
+ * wrapping band of chips. `variant` chooses the arithmetic -- `mutuallyExclusive` replaces the
+ * selection, `multipleSelection` toggles within it. The implementation guide only spells out one
+ * of the four combinations (`checkbox` + either variant, drawn as checkboxes or radios), so the
+ * chips form takes its selection rule from `variant` alone rather than from a second guess.
+ *
+ * **Always a list, even when only one thing can be selected.** The catalog types `value` as a
+ * `DynamicStringList` under both variants, so `mutuallyExclusive` writes a one-element array
+ * rather than a bare string -- a renderer that "simplified" it would hand the agent back a data
+ * model of a different shape than the one it sent.
+ *
+ * `filterable` filters what is drawn and never what is selected. A selection the filter is
+ * currently hiding stays in the data model, because the filter is this renderer's own UI state and
+ * the agent never hears about it; a filter that silently deselected would lose the user's answer
+ * for typing.
+ *
+ * A picker whose `value` is not a data binding draws its options and refuses them, the same way
+ * [CheckBoxRenderer] does and for the same reason.
+ */
+public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+    val label = scope.rememberString("label")
+    val variant = scope.rememberString("variant")
+    val displayStyle = scope.rememberString("displayStyle")
+    val filterable = scope.rememberBoolean("filterable")
+    val selected = scope.rememberStringList("value").orEmpty()
+    val target = remember(scope) { scope.binding("value") }
+    val options = scope.rememberOptions()
+    val failure = scope.rememberCheckFailures().firstMessage()
+
+    // This renderer's own state, not the agent's: the filter is a way of looking at the options
+    // and there is nowhere in the payload it belongs. Keyed on the scope so that a component
+    // recycled onto a different picker does not inherit the last one's query.
+    var query by remember(scope) { mutableStateOf("") }
+    val shown = remember(options, query) {
+        if (query.isBlank()) options else options.filter { it.label.contains(query, ignoreCase = true) }
+    }
+
+    val exclusive = variant != "multipleSelection"
+    val onSelect: (String) -> Unit = { value ->
+        val pointer: JsonPointer? = target
+        if (pointer != null) {
+            val next = when {
+                // "Toggle selections in the data model upon user interaction." Toggling under
+                // `mutuallyExclusive` means the tapped option replaces whatever was there, and
+                // re-tapping the selected one clears it -- which is how a radio group with no
+                // required answer behaves, and the only way the user can get back to none.
+                exclusive -> if (selected == listOf(value)) emptyList() else listOf(value)
+                value in selected -> selected - value
+                else -> selected + value
+            }
+            scope.write(pointer, JsonArray(next.map(::JsonPrimitive)))
+        }
+    }
+
+    Column(modifier = modifier.leafMargin()) {
+        if (label != null) {
+            Text(text = label, style = MaterialTheme.typography.labelLarge)
+        }
+        if (filterable == true) {
+            // Hoisted out of the `leadingIcon` lambda, which is not only tidier: a composable
+            // lambda that captures nothing is compiled to a `ComposableSingletons` object whose
+            // name carries a hash, and that name is public ABI -- so a non-capturing lambda here
+            // would put a symbol in the published surface that churns on unrelated edits.
+            val searchIcon = remember { ICON_PATHS[SEARCH_GLYPH]?.let { iconVector(it) } }
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.padding(vertical = OPTION_GAP),
+                singleLine = true,
+                // A magnifier and no words. Every other string this module draws came out of the
+                // payload, and a label reading "Filter" would be the one piece of text the
+                // renderer wrote itself -- in English, on a surface whose language the agent
+                // chose. The glyph is the catalog's own `search`, so it is drawn by the same
+                // path an `Icon` component would take.
+                leadingIcon = {
+                    if (searchIcon != null) Icon(imageVector = searchIcon, contentDescription = null)
+                },
+            )
+        }
+        if (displayStyle == "chips") {
+            Chips(shown, selected, target != null, onSelect)
+        } else {
+            Rows(shown, selected, exclusive, target != null, onSelect)
+        }
+        CheckMessage(failure)
+    }
+}
+
+/** One option: the text the user reads, and the value the data model carries. */
+private data class Choice(val label: String, val value: String)
+
+/**
+ * A stack of rows, each a radio or a checkbox beside its label.
+ *
+ * `selectableGroup` on the column is what makes a set of radios one accessibility control rather
+ * than a run of independent ones -- and it is only correct for the exclusive case, so the
+ * multiple-selection form does without it and uses `toggleable` rows like [CheckBoxRenderer]'s.
+ */
+@Composable
+private fun Rows(
+    options: List<Choice>,
+    selected: List<String>,
+    exclusive: Boolean,
+    enabled: Boolean,
+    onSelect: (String) -> Unit,
+) {
+    Column(modifier = if (exclusive) Modifier.selectableGroup() else Modifier) {
+        options.forEach { option ->
+            val isSelected = option.value in selected
+            val row = if (exclusive) {
+                Modifier.selectable(
+                    selected = isSelected,
+                    enabled = enabled,
+                    role = Role.RadioButton,
+                    onClick = { onSelect(option.value) },
+                )
+            } else {
+                Modifier.toggleable(
+                    value = isSelected,
+                    enabled = enabled,
+                    role = Role.Checkbox,
+                    onValueChange = { onSelect(option.value) },
+                )
+            }
+            Row(modifier = row, verticalAlignment = Alignment.CenterVertically) {
+                // Null callbacks throughout, so the row keeps the click -- see [CheckBoxRenderer].
+                if (exclusive) {
+                    RadioButton(selected = isSelected, onClick = null, enabled = enabled)
+                } else {
+                    Checkbox(checked = isSelected, onCheckedChange = null, enabled = enabled)
+                }
+                Text(text = option.label, modifier = Modifier.padding(start = OPTION_GAP))
+            }
+        }
+    }
+}
+
+/**
+ * The chips form: "a horizontal, wrapping row of selectable chips/pills."
+ *
+ * `FlowRow` rather than a scrolling `Row`, because the guide asks for wrapping -- and because a
+ * horizontally scrolling band inside a surface that may itself scroll is the nesting
+ * [ListRenderer] is careful about.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Chips(
+    options: List<Choice>,
+    selected: List<String>,
+    enabled: Boolean,
+    onSelect: (String) -> Unit,
+) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(OPTION_GAP)) {
+        options.forEach { option ->
+            // `FilterChip` rather than `AssistChip`: it is the Material 3 chip that carries a
+            // selected state, which is the "distinct background/border" the guide asks for, and it
+            // gets that state from the theme rather than from a colour named here.
+            FilterChip(
+                selected = option.value in selected,
+                onClick = { onSelect(option.value) },
+                enabled = enabled,
+                label = { Text(option.label) },
+            )
+        }
+    }
+}
+
+/**
+ * The `options` array, with each `label` resolved, recomputed when a resolved label changes.
+ *
+ * `derivedStateOf` rather than a plain `remember` on the raw property, for the reason every
+ * accessor in the adapter layer uses one: a `label` may be a data binding, and a list keyed on the
+ * *unresolved* property would never recompute -- the property is the same JSON before and after
+ * the write, so an option named by the data model would show whatever it said when the picker was
+ * first drawn and never change again.
+ */
+@Composable
+private fun A2uiComponentScope.rememberOptions(): List<Choice> {
+    val options by remember(this) { derivedStateOf { options() } }
+    return options
+}
+
+/**
+ * The `options` array as this renderer reads it.
+ *
+ * Read off the raw property rather than through a typed accessor: `options` is an array of objects
+ * and the catalog types only the `label` inside each as dynamic, so this walks the structure and
+ * resolves the one part that can be bound. An entry missing either half is dropped -- the schema
+ * requires both, so it is a payload already refused, and drawing a nameless option would give the
+ * user something to select that says nothing.
+ */
+private fun A2uiComponentScope.options(): List<Choice> =
+    (property("options") as? JsonArray).orEmpty().mapNotNull { entry ->
+        val option = entry as? JsonObject ?: return@mapNotNull null
+        val value = (option["value"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+            ?: return@mapNotNull null
+        val label = option["label"]?.let { dynamicString(it) } ?: return@mapNotNull null
+        Choice(label = label, value = value)
+    }
+
+/** Between a control and its label, and between chips. */
+private val OPTION_GAP = 8.dp
+
+/** The catalog icon the filter box wears -- see the picker's filter branch. */
+private const val SEARCH_GLYPH = "search"

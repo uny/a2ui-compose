@@ -81,6 +81,18 @@ public data class A2uiComponentScope internal constructor(
     /** The raw property [name] as the agent sent it, uninterpreted. */
     public fun property(name: String): JsonElement? = component.properties[name]
 
+    /**
+     * [bound] evaluated against this scope for rendering, or null when it cannot be read.
+     *
+     * The rendering half of [dispatch]'s split: [InvocationContext.RENDER], because nothing here
+     * was caused by a gesture. Used by the property accessors below and by
+     * [checkFailures], which needs the evaluated result rather than a typed property.
+     */
+    internal fun evaluate(bound: BoundValue): JsonElement? {
+        val context = context(InvocationContext.RENDER) ?: return null
+        return runCatching { context.evaluate(bound) }.getOrNull()
+    }
+
     private fun context(invocation: InvocationContext): EvaluationContext? {
         val model = surface?.dataModel ?: return null
         return EvaluationContext(
@@ -118,17 +130,23 @@ public data class A2uiComponentScope internal constructor(
     }
 
     /** Property [name] as a string. A bound value is resolved and then read as text. */
-    public fun string(name: String): String? {
-        val raw = property(name) ?: return null
+    public fun string(name: String): String? = property(name)?.let(::dynamicString)
+
+    /**
+     * [element] read as a `DynamicString` and resolved against this scope.
+     *
+     * The same reading [string] gives a property, for a `DynamicString` that is *not* one. The
+     * catalog nests them: a `ChoicePicker`'s `options[].label` is a `DynamicString` inside an array
+     * inside a property, so a renderer that walks into a structured property still needs a way to
+     * resolve what it finds there.
+     */
+    public fun dynamicString(element: JsonElement): String? {
         val decoded = runCatching {
-            A2uiJson.strict.decodeFromJsonElement(DynamicString.serializer(), raw)
+            A2uiJson.strict.decodeFromJsonElement(DynamicString.serializer(), element)
         }.getOrNull()
         return when (decoded) {
             is DynamicString.Literal -> decoded.value
-            is BoundValue -> {
-                val context = context(InvocationContext.RENDER) ?: return null
-                runCatching { context.evaluate(decoded) }.getOrNull()?.asText()
-            }
+            is BoundValue -> evaluate(decoded)?.asText()
             else -> null
         }
     }

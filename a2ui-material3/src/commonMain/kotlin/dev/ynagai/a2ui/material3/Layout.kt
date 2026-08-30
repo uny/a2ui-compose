@@ -138,6 +138,11 @@ private fun LaidOutChild.claimsMainAxis(direction: String): Boolean = when (comp
     // capped at 280dp, it starves the sibling at every surface width. The three fixed-size
     // variants ask for a square and are not the problem.
     "Image" -> direction == "Row" && (variant ?: "mediumFeature") !in FIXED_SIZE_IMAGE_VARIANTS
+    // A `Slider` is the third leaf that fills. Material's slider lays its track across the whole
+    // width it is offered -- there is no intrinsic width a track could have -- so beside a `Text`
+    // in a `Row` it took the row and left the label at zero. Down a `Column` it fills the cross
+    // axis, which costs nobody anything, so only a row grants it a share.
+    "Slider" -> direction == "Row"
     else -> false
 }
 

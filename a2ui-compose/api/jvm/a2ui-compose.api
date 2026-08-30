@@ -1,3 +1,16 @@
+public final class dev/ynagai/a2ui/compose/A2uiCheckFailure {
+	public static final field $stable I
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ldev/ynagai/a2ui/core/protocol/Severity;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCode ()Ljava/lang/String;
+	public final fun getMessage ()Ljava/lang/String;
+	public final fun getSeverity ()Ldev/ynagai/a2ui/core/protocol/Severity;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/ynagai/a2ui/compose/A2uiChild {
 	public static final field $stable I
 	public final fun component1 ()Ljava/lang/String;
@@ -30,6 +43,7 @@ public final class dev/ynagai/a2ui/compose/A2uiComponentScope {
 	public final fun component3 ()Ldev/ynagai/a2ui/core/protocol/Component;
 	public final fun component4 ()Ldev/ynagai/a2ui/core/surface/EvaluationScope;
 	public final fun dispatch (Ldev/ynagai/a2ui/core/protocol/Action;)V
+	public final fun dynamicString (Lkotlinx/serialization/json/JsonElement;)Ljava/lang/String;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getComponent ()Ldev/ynagai/a2ui/core/protocol/Component;
 	public final fun getEvaluationScope ()Ldev/ynagai/a2ui/core/surface/EvaluationScope;
@@ -175,6 +189,13 @@ public final class dev/ynagai/a2ui/compose/BasicCatalog {
 	public final fun getDefinition ()Ldev/ynagai/a2ui/core/protocol/CatalogDefinition;
 	public final fun getId ()Ljava/lang/String;
 	public final fun getSource ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/compose/ChecksKt {
+	public static final fun checkFailures (Ldev/ynagai/a2ui/compose/A2uiComponentScope;)Ljava/util/List;
+	public static final fun firstMessage (Ljava/util/List;)Ldev/ynagai/a2ui/compose/A2uiCheckFailure;
+	public static final fun hasError (Ljava/util/List;)Z
+	public static final fun rememberCheckFailures (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Landroidx/compose/runtime/Composer;I)Ljava/util/List;
 }
 
 public final class dev/ynagai/a2ui/compose/ComponentRegistry {

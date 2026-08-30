@@ -8,7 +8,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.firstMessage
+import dev.ynagai.a2ui.compose.rememberCheckFailures
 import dev.ynagai.a2ui.compose.rememberString
+import dev.ynagai.a2ui.core.protocol.Severity
 import kotlinx.serialization.json.JsonPrimitive
 
 /**
@@ -33,6 +36,7 @@ public val TextFieldRenderer: ComponentRenderer = ComponentRenderer { scope, mod
     // Keyed on the scope alone: the pointer comes from the component's properties and this scope's
     // evaluation scope, and both of those are already what the scope's own identity is keyed on.
     val target = remember(scope) { scope.binding("value") }
+    val failure = scope.rememberCheckFailures().firstMessage()
     OutlinedTextField(
         value = value.orEmpty(),
         onValueChange = { typed -> target?.let { scope.write(it, JsonPrimitive(typed)) } },
@@ -51,6 +55,11 @@ public val TextFieldRenderer: ComponentRenderer = ComponentRenderer { scope, mod
         visualTransformation =
             if (variant == "obscured") PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType(variant)),
+        // A failing `check` colours the field and captions it. Only an `error` colours it: a
+        // `warning` still gets its message, in the ordinary supporting-text colour, because
+        // painting the field red for one would leave the agent no way to remark without alarming.
+        isError = failure?.severity == Severity.ERROR,
+        supportingText = failure?.let { { CheckMessage(it) } },
     )
 }
 

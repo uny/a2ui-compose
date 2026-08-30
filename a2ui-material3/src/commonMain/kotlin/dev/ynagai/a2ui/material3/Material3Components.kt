@@ -9,23 +9,25 @@ import dev.ynagai.a2ui.compose.ComponentRegistry
  * above it: every renderer here reads the theme's typography and colour scheme, which is the point
  * of a design-system adapter rather than an accident of how they are written.
  *
- * **Ten of the catalog's eighteen components, and the other eight are absent on purpose.**
+ * **Fourteen of the catalog's eighteen components, and the other four are absent on purpose.**
  * A component this registry does not know draws as an
  * [UnknownType][dev.ynagai.a2ui.compose.A2uiPlaceholderReason.UnknownType] placeholder rather than
  * as nothing, so a surface using one is visibly incomplete instead of quietly wrong. Adding the
  * rest is what the remaining work is; a host that has written its own can pass them to
  * [ComponentRegistry.with] and draw a mixed surface today. Missing: `Video`, `AudioPlayer`,
- * `Tabs`, `Modal`, `CheckBox`, `ChoicePicker`, `Slider` and `DateTimeInput`.
+ * `Tabs` and `Modal`.
  *
  * `Image` draws whatever [LocalA2uiImageLoader] is set to, and a described placeholder when the
  * host has set none -- this module fetches nothing itself. See [A2uiImageLoader].
  *
- * Not covered here: `checks`, the renderer-side validation the catalog folds into `Button` and
- * `TextField`. The rules parse -- `CheckRule` is in the core -- but nothing here evaluates them or
- * shows a validation message, so a payload carrying `checks` renders as though it carried none.
+ * `checks` -- the catalog's `Checkable` mixin -- is honoured by every component that carries it. A
+ * `Button` whose check fails is disabled, which is what the protocol asks for by name; a failing
+ * input is captioned with the message. See [checkFailures][dev.ynagai.a2ui.compose.checkFailures],
+ * where the rules are evaluated, which a host writing its own input renderer can call for the same
+ * behaviour.
  */
 public object Material3Components {
-    /** The ten components this module draws. */
+    /** The fourteen components this module draws. */
     public val Basic: ComponentRegistry = ComponentRegistry(
         mapOf(
             "Text" to TextRenderer,
@@ -38,6 +40,10 @@ public object Material3Components {
             "List" to ListRenderer,
             "Icon" to IconRenderer,
             "Image" to ImageRenderer,
+            "CheckBox" to CheckBoxRenderer,
+            "ChoicePicker" to ChoicePickerRenderer,
+            "Slider" to SliderRenderer,
+            "DateTimeInput" to DateTimeInputRenderer,
         ),
     )
 }

@@ -14,13 +14,17 @@ import kotlin.test.assertTrue
  */
 class DrawableExamplesTest {
     @Test
-    fun the_drawable_examples_are_the_ones_the_ten_basic_components_cover() {
+    fun the_drawable_examples_are_the_ones_the_fourteen_basic_components_cover() {
         val drawable = EXAMPLES
             .filter { it.isDrawableBy(Material3Components.Basic.types) }
             .map { it.file }
         // Written out rather than counted. This is the coverage claim, and a registry that lost a
         // component or a corpus that gained an example should have to say which one -- a count
-        // would go on passing while a different set of thirty-four passed through it.
+        // would go on passing while a different set of thirty-nine passed through it.
+        //
+        // The four left out are the four components still missing: `24_recipe-card` needs `Tabs`,
+        // `26_podcast-episode` an `AudioPlayer`, `36_modal` a `Modal`, and `29_movie-card` both a
+        // `Modal` and a `Video`.
         assertEquals(
             listOf(
                 "00_complex-layout.json",
@@ -35,6 +39,8 @@ class DrawableExamplesTest {
                 "03_calendar-day.json",
                 "04_weather-current.json",
                 "05_product-card.json",
+                "06_music-player.json",
+                "07_task-card.json",
                 "08_user-profile.json",
                 "09_login-form.json",
                 "10_notification-permission.json",
@@ -46,6 +52,7 @@ class DrawableExamplesTest {
                 "16_workout-summary.json",
                 "17_event-detail.json",
                 "18_track-list.json",
+                "19_software-purchase.json",
                 "20_restaurant-card.json",
                 "21_shipping-status.json",
                 "22_credit-card.json",
@@ -53,7 +60,9 @@ class DrawableExamplesTest {
                 "25_contact-card.json",
                 "27_stats-card.json",
                 "28_countdown-timer.json",
+                "30_live-invitation-builder.json",
                 "31_incremental-dashboard.json",
+                "32_advanced-form-validator.json",
                 "33_financial-data-grid.json",
                 "34_child-list-template.json",
                 "35_markdown-text.json",

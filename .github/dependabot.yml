@@ -1,0 +1,21 @@
+# The counterpart to pinning the actions in `build.yml` to commits.
+#
+# A pinned SHA is frozen in both directions: it cannot be moved under us, and it does not pick up
+# the action's own security fixes either. Pinning without this file trades a supply-chain risk for
+# a staleness one. Dependabot follows the `# v5.x.y` comment next to each hash, so it rewrites the
+# pin and the release note together rather than leaving the comment lying about the commit.
+#
+# Grouped into one pull request: these four move independently and each bump is a one-line diff, so
+# separate PRs would be four CI runs a week to review a hash apiece.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: ci

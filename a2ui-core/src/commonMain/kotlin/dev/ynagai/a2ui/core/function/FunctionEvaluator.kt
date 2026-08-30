@@ -880,7 +880,12 @@ internal class CallArguments(
      * `09_login-form` and `32_advanced-form-validator` write
      * `and(values: [email(...), length(...)])`, nesting a `validationResult` where a `boolean` is
      * typed. Refusing that would fail the payloads the specification ships to demonstrate the
-     * feature, so a one-key object carrying a boolean `valid` is read as that boolean.
+     * feature, so an object carrying a boolean `valid` is read as that boolean.
+     *
+     * Read off the key rather than through `ValidationResult`'s serializer, so the rule is "an
+     * object that states a validity" and not "an object that decodes as this library's model of
+     * one" -- the schema leaves that object open, and a domain check returning
+     * `{"valid": false, "code": …, "field": …}` is exactly the shape the protocol documents.
      *
      * **Only the logic functions are lenient.** [asBoolean] stays strict, so
      * `formatNumber(grouping: <a validation result>)` is still the error it was: this is about

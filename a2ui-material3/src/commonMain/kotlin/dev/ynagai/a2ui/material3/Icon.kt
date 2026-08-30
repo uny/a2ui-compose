@@ -15,8 +15,6 @@ import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.rememberString
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
 
 /**
  * `Icon` -- one of the catalog's fifty-nine names, or a path the agent drew itself.
@@ -38,12 +36,13 @@ import kotlinx.serialization.json.contentOrNull
  * shift every sibling in the row as well.
  */
 public val IconRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
-    // The `svgPath` form, read before the string form. Only a literal path is drawn: `svgPath` is
-    // typed as a `DynamicString`, and resolving a *nested* binding needs an evaluation context that
-    // the scope exposes only for its own top-level properties. An agent that binds it gets the
-    // empty square below, which is the same degradation an unknown name gets.
+    // The `svgPath` form, read before the string form. Resolved through `dynamicString` rather
+    // than read as a literal, because the catalog types `svgPath` as a `DynamicString` like any
+    // other -- it sits nested inside an object property, which is the one place a binding needs
+    // resolving by hand rather than by a typed accessor.
     val drawn = (scope.property("name") as? JsonObject)
-        ?.let { (it["svgPath"] as? JsonPrimitive)?.contentOrNull }
+        ?.get("svgPath")
+        ?.let { scope.dynamicString(it) }
         ?.takeIf { it.length <= MAX_SVG_PATH }
     val named = scope.rememberString("name")
     val data = drawn ?: named?.let { ICON_PATHS[it] }
@@ -63,7 +62,7 @@ public val IconRenderer: ComponentRenderer = ComponentRenderer { scope, modifier
 }
 
 /** The guide's suggested icon size, and the grid [ICON_PATHS] is drawn on. */
-private val ICON_SIZE = 24.dp
+internal val ICON_SIZE = 24.dp
 
 /**
  * The longest `svgPath` an agent may hand this renderer, in characters.
@@ -86,7 +85,7 @@ private const val MAX_SVG_PATH = 8192
  * The fill colour is black and is never seen: Material 3's `Icon` tints the whole vector with the
  * current content colour. Naming any other colour here would be naming one that gets overwritten.
  */
-private fun iconVector(pathData: String, fill: PathFillType): ImageVector? {
+internal fun iconVector(pathData: String, fill: PathFillType = PathFillType.EvenOdd): ImageVector? {
     val nodes: List<PathNode> = runCatching {
         PathParser().parsePathString(pathData).toNodes()
     }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return null

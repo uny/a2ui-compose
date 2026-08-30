@@ -378,7 +378,7 @@ internal class Evaluator(val context: EvaluationContext) {
         FunctionNames.OPEN_URL -> openUrl(args)
         FunctionNames.AND -> JsonPrimitive(all(args, expected = true))
         FunctionNames.OR -> JsonPrimitive(!all(args, expected = false))
-        FunctionNames.NOT -> JsonPrimitive(!args.boolean("value"))
+        FunctionNames.NOT -> JsonPrimitive(!args.asLogical(args.require("value"), "value"))
         // Truncated in both places: the name reaches here straight from the payload, and a
         // template may name a function of any length — `${<50k letters>()}` parses as a call.
         else -> throw A2uiFunctionException(
@@ -734,7 +734,7 @@ internal class Evaluator(val context: EvaluationContext) {
      */
     private fun all(args: CallArguments, expected: Boolean): Boolean {
         for (item in args.list("values")) {
-            if (args.asBoolean(item(), "values") != expected) return false
+            if (args.asLogical(item(), "values") != expected) return false
         }
         return true
     }
@@ -865,6 +865,36 @@ internal class CallArguments(
                 "`$call`: `$name` must be a boolean, but was ${describe(element)}.",
                 call,
             )
+
+    /**
+     * A boolean for `and`/`or`/`not`, reading a [ValidationResult]'s `valid` as the boolean it is.
+     *
+     * The specification disagrees with itself about what a validation function returns.
+     * `catalog.json` types `required`, `email`, `regex`, `length` and `numeric` as
+     * `"returnType": "validationResult"` -- the object this evaluator builds -- while the basic
+     * catalog implementation guide's prose for each of the five says it returns `true` or `false`,
+     * and `common_types.json` describes `checks` as "function calls that must return a boolean".
+     * `and`, `or` and `not` are typed `"returnType": "boolean"` under either reading.
+     *
+     * The specification's own examples settle which way the leniency has to run: both
+     * `09_login-form` and `32_advanced-form-validator` write
+     * `and(values: [email(...), length(...)])`, nesting a `validationResult` where a `boolean` is
+     * typed. Refusing that would fail the payloads the specification ships to demonstrate the
+     * feature, so an object carrying a boolean `valid` is read as that boolean.
+     *
+     * Read off the key rather than through `ValidationResult`'s serializer, so the rule is "an
+     * object that states a validity" and not "an object that decodes as this library's model of
+     * one" -- the schema leaves that object open, and a domain check returning
+     * `{"valid": false, "code": …, "field": …}` is exactly the shape the protocol documents.
+     *
+     * **Only the logic functions are lenient.** [asBoolean] stays strict, so
+     * `formatNumber(grouping: <a validation result>)` is still the error it was: this is about
+     * one contradiction in how validity is spelled, not a general truthiness for the evaluator.
+     */
+    fun asLogical(element: JsonElement, name: String): Boolean =
+        (element as? JsonObject)?.get("valid")
+            ?.let { (it as? JsonPrimitive)?.takeIf { primitive -> !primitive.isString }?.booleanOrNull }
+            ?: asBoolean(element, name)
 }
 
 /**

@@ -208,6 +208,41 @@ class InputComponentsTest {
     }
 
     @Test
+    fun a_slider_bound_to_a_non_finite_number_rests_at_its_minimum_rather_than_crashing() = runComposeUiTest {
+        // `"NaN"` is a legal JSON string, and `number()` reads a primitive's text -- so this is
+        // what a bound field holds the moment a user types those three letters into it. NaN
+        // survives `coerceIn` untouched -- both of its comparisons are false -- and Material then
+        // raises "current must not be NaN" building the slider's own `ProgressBarRangeInfo`,
+        // which takes the surface down. Without the guard this test fails with exactly that.
+        //
+        // The range is still readable here, so the slider is still drawn and still usable -- only
+        // the unreadable half degrades, and the thumb rests at `min`. The sibling text is the
+        // assertion that the surface survived at all.
+        setContent { Surface(rendererFor(NAN_SLIDER)) }
+        onNodeWithText("after").assertIsDisplayed()
+        val info = onAllNodes(hasProgressRange()).onFirst()
+            .fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo]
+        assertEquals(0f, info.current)
+        assertEquals(0f, info.range.start)
+        assertEquals(100f, info.range.endInclusive)
+    }
+
+    @Test
+    fun a_slider_with_more_divisions_than_material_can_allocate_still_draws() = runComposeUiTest {
+        // Compose's `steps` is an array size: Material builds `FloatArray(steps + 2)`. Passing the
+        // agent's number straight through asks for `Int.MAX_VALUE + 2`, which wraps negative and
+        // raises `NegativeArraySizeException` during composition. Clamped, the slider still draws
+        // and still reports a usable range.
+        setContent { Surface(rendererFor(HUGE_STEPS_SLIDER)) }
+        onNodeWithText("after").assertIsDisplayed()
+        val info = onAllNodes(hasProgressRange()).onFirst()
+            .fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo]
+        assertEquals(0f, info.range.start)
+        assertEquals(100f, info.range.endInclusive)
+        assertTrue(info.steps in 0..1000, "divisions should be bounded, was ${info.steps}")
+    }
+
+    @Test
     fun a_slider_beside_a_text_does_not_take_the_whole_row() = runComposeUiTest {
         // A slider's track has no intrinsic width, so it fills whatever it is offered -- and inside
         // a `Row` that is the parent's width, not a share of it. The label beside it measured at
@@ -438,9 +473,31 @@ class InputComponentsTest {
               "picked": [],
               "email": "",
               "amount": 1,
-              "unusual": {"valid": false, "severity": "warning", "message": "Looks unusual"}
+              "unusual": {"valid": false, "severity": "warning", "message": "Looks unusual"},
+              "notANumber": "NaN"
             }
         """.trimIndent()
+
+        /**
+         * A slider whose bound value is the string `"NaN"`, which is ordinary strict JSON.
+         *
+         * `A2uiComponentScope.number` reads a primitive's text, so this resolves to `Double.NaN` --
+         * the same value a user gets by typing "NaN" into a `TextField` bound to the same pointer.
+         */
+        val NAN_SLIDER = """[
+          {"id":"root","component":"Column","children":["vol","after"]},
+          {"id":"vol","component":"Slider","label":"Volume","min":0,"max":100,
+           "value":{"path":"/notANumber"}},
+          {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        /** `steps` past what Material can allocate a tick array for -- see `MAX_DIVISIONS`. */
+        val HUGE_STEPS_SLIDER = """[
+          {"id":"root","component":"Column","children":["vol","after"]},
+          {"id":"vol","component":"Slider","label":"Volume","min":0,"max":100,"steps":2147483647,
+           "value":{"path":"/volume"}},
+          {"id":"after","component":"Text","text":"after"}
+        ]"""
 
         val CHECKBOX = """[
           {"id":"root","component":"Column","children":["box","echo","literal"]},

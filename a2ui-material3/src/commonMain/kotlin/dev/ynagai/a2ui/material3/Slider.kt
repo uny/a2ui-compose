@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import dev.ynagai.a2ui.compose.A2uiComponentScope
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.firstMessage
 import dev.ynagai.a2ui.compose.rememberCheckFailures
@@ -33,9 +35,9 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 public val SliderRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
     val label = scope.rememberString("label")
-    val min = (scope.rememberNumber("min") ?: 0.0).toFloat()
-    val max = scope.rememberNumber("max")?.toFloat()
-    val value = scope.rememberNumber("value")?.toFloat() ?: min
+    val min = scope.finite("min") ?: 0f
+    val max = scope.finite("max")
+    val value = scope.finite("value") ?: min
     val divisions = scope.rememberNumber("steps")?.toInt()
     val target = remember(scope) { scope.binding("value") }
     val failure = scope.rememberCheckFailures().firstMessage()
@@ -52,10 +54,41 @@ public val SliderRenderer: ComponentRenderer = ComponentRenderer { scope, modifi
                 onValueChange = { now -> target?.let { scope.write(it, JsonPrimitive(now)) } },
                 enabled = target != null,
                 valueRange = min..max,
-                // See above: divisions, minus the two ends, and never negative.
-                steps = ((divisions ?: 1) - 1).coerceAtLeast(0),
+                // See above: divisions, minus the two ends, never negative -- and bounded above,
+                // because Compose's `steps` is an allocation. Material builds one tick fraction
+                // per stop as a `FloatArray(steps + 2)`, so the agent's number is an array size:
+                // `steps: 1e9` asks for four gigabytes, and `steps: 2147483647` saturates
+                // `Double.toInt()` to `Int.MAX_VALUE`, whose `+ 2` wraps negative and raises
+                // `NegativeArraySizeException` inside the composition. Clamped rather than
+                // refused, like the value above -- see [MAX_DIVISIONS].
+                steps = ((divisions ?: 1).coerceAtMost(MAX_DIVISIONS) - 1).coerceAtLeast(0),
             )
             CheckMessage(failure)
         }
     }
 }
+
+/**
+ * Property [name] as a finite `Float`, or null when it is absent or is not one.
+ *
+ * **Checked after the narrowing, not before.** `A2uiComponentScope.number` reads the primitive's
+ * text, so a data model holding the string `"NaN"` or `"Infinity"` -- which an agent can write and
+ * a user can type into a `TextField` bound to the same pointer -- resolves to a non-finite
+ * `Double`; and `1e300`, which is finite as a `Double`, becomes `Float.POSITIVE_INFINITY` on the
+ * way down. Both have to be caught here, because neither survives contact with a slider: `NaN`
+ * passes `coerceIn` untouched -- both of its comparisons are false -- and Material then raises
+ * `IllegalArgumentException("current must not be NaN")` building the slider's own
+ * `ProgressBarRangeInfo`, which takes the whole surface down.
+ */
+@Composable
+private fun A2uiComponentScope.finite(name: String): Float? =
+    rememberNumber(name)?.toFloat()?.takeIf { it.isFinite() }
+
+/**
+ * The most discrete divisions a `Slider` will draw.
+ *
+ * A bound on an agent-controlled magnitude, like `MAX_SVG_PATH` on a path and `maxInstances` on a
+ * subtree. There is no readable slider past a few dozen stops, so this is far above any real
+ * payload; what it refuses is the payload that is not a slider.
+ */
+private const val MAX_DIVISIONS = 1000

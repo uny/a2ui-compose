@@ -5,6 +5,17 @@ on:
     branches: [main]
   pull_request:
 
+# What the token may do, and how long it sticks around. Nothing here writes to the repository --
+# the jobs check out, build, and upload a failure artifact, and that upload authenticates with the
+# runtime token rather than this one -- and no step runs an authenticated git command, which is why
+# every checkout below also drops the credential rather than leaving it in `.git/config` for the
+# length of a build that runs this repository's own Gradle scripts and yarn-resolved npm packages.
+#
+# The repository default is already read-only; written down rather than relied upon, because a
+# default is a setting someone can change without touching this file.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -44,6 +55,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-java@v5
         with:
@@ -85,6 +98,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-java@v5
         with:
@@ -113,6 +128,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-java@v5
         with:

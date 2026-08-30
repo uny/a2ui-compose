@@ -107,6 +107,13 @@ public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer { scope, 
             // name carries a hash, and that name is public ABI -- so a non-capturing lambda here
             // would put a symbol in the published surface that churns on unrelated edits.
             val searchIcon = remember { ICON_PATHS[SEARCH_GLYPH]?.let { iconVector(it) } }
+            // Read out here for the same reason, and it is the same reason twice: a composable
+            // lambda that captures nothing is what gets lifted into `ComposableSingletons`. Left
+            // inline, `{ Text(LocalA2uiStrings.current.filter) }` captured nothing and put
+            // `getLambda$-840242893$...` into the published ABI dump -- a name that is a hash of
+            // this lambda's position in the file, so any later edit above it renames a public
+            // symbol and `checkLegacyAbi` reports a break on a change that touched no API.
+            val filterLabel = LocalA2uiStrings.current.filter
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
@@ -118,7 +125,7 @@ public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer { scope, 
                 // catalog gives a filter box no text of its own, and this module does not pick the
                 // surface's language. The magnifier beside it is the catalog's own `search` glyph,
                 // decorative now that the label names the field.
-                label = { Text(LocalA2uiStrings.current.filter) },
+                label = { Text(filterLabel) },
                 leadingIcon = {
                     if (searchIcon != null) Icon(imageVector = searchIcon, contentDescription = null)
                 },
@@ -235,15 +242,38 @@ private fun A2uiComponentScope.rememberOptions(): List<Choice> {
  * resolves the one part that can be bound. An entry missing either half is dropped -- the schema
  * requires both, so it is a payload already refused, and drawing a nameless option would give the
  * user something to select that says nothing.
+ *
+ * **Bounded, because nothing upstream bounds it.** The surface's instance budget divides among a
+ * component's *children*, and these are a property -- so a single `ChoicePicker` is one instance
+ * to the budget however many options it carries, while [Rows] and [Chips] compose every one of
+ * them eagerly in a non-lazy container. One `updateComponents` message carrying fifty thousand
+ * options is one component that walks straight past the ~5,000-widget ceiling the rest of this
+ * library is measured against. [MAX_OPTIONS] is the bound the budget cannot supply here.
  */
 private fun A2uiComponentScope.options(): List<Choice> =
-    (property("options") as? JsonArray).orEmpty().mapNotNull { entry ->
+    (property("options") as? JsonArray).orEmpty().take(MAX_OPTIONS).mapNotNull { entry ->
         val option = entry as? JsonObject ?: return@mapNotNull null
         val value = (option["value"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
             ?: return@mapNotNull null
         val label = option["label"]?.let { dynamicString(it) } ?: return@mapNotNull null
         Choice(label = label, value = value)
     }
+
+/**
+ * The most options a picker will draw -- see [options].
+ *
+ * Generous by the standard of anything a person reads down: a country list is about 250, and this
+ * is four times that. What it refuses is the payload that is not a list of choices.
+ *
+ * **The truncation is silent, which is the weaker half of this.** Everywhere else a bound is hit
+ * this library says so on screen -- a shortened child list draws an
+ * [A2uiPlaceholderReason.TooManyChildren][dev.ynagai.a2ui.compose.A2uiPlaceholderReason.TooManyChildren]
+ * placeholder. That machinery expands *children*, and these are a property, so there is no
+ * placeholder to hand back here without inventing one; and the alternative on offer -- a line of
+ * this module's own English under the picker -- is the thing [A2uiStrings] exists to keep to three
+ * words. Dropping the tail beats hanging the surface, but a visible degradation would beat both.
+ */
+private const val MAX_OPTIONS = 1000
 
 /** Between a control and its label, and between chips. */
 private val OPTION_GAP = 8.dp

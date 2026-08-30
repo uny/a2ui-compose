@@ -66,6 +66,36 @@ class Iso8601Test {
     }
 
     @Test
+    fun a_day_the_month_does_not_have_is_refused_rather_than_rolled_forward() {
+        // A day in `1..31` still has to exist in *its* month. Without the round-trip check
+        // `2026-02-31` converts happily -- to March the 3rd, which a field would then display and
+        // write back in place of what the agent sent.
+        for (text in listOf("2026-02-30", "2026-02-31", "2026-04-31", "2026-06-31", "2026-11-31")) {
+            assertNull(Iso8601.epochDay(text), "`$text` is not a day that exists")
+        }
+        // February the 29th is the case the check must not over-reject: real in 2024, not in 2026.
+        assertNull(Iso8601.epochDay("2026-02-29"))
+        assertEquals("2024-02-29", Iso8601.date(Iso8601.epochDay("2024-02-29")!!))
+        // And the last day of every month of an ordinary year still reads.
+        val lengths = listOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+        lengths.forEachIndexed { index, length ->
+            val month = (index + 1).toString().padStart(2, '0')
+            val text = "2026-$month-$length"
+            assertEquals(text, Iso8601.date(Iso8601.epochDay(text)!!), "`$text` should read")
+        }
+    }
+
+    @Test
+    fun a_year_is_read_back_off_a_day_count() {
+        // What a date picker's `yearRange` is measured in -- a range that does not cover the
+        // initial selection makes `DatePickerState` raise from inside the composition.
+        assertEquals(1970, Iso8601.year(0))
+        assertEquals(1969, Iso8601.year(-1))
+        assertEquals(1890, Iso8601.year(Iso8601.epochDay("1890-07-04")!!))
+        assertEquals(2150, Iso8601.year(Iso8601.epochDay("2150-12-31")!!))
+    }
+
+    @Test
     fun a_time_is_read_from_either_a_bare_clock_or_a_date_time() {
         assertEquals(9 to 15, Iso8601.hourMinute("09:15"))
         assertEquals(9 to 15, Iso8601.hourMinute("2026-08-30T09:15"))
@@ -101,6 +131,22 @@ class Iso8601Test {
         assertEquals("2024-02-29T23:05", written)
         assertEquals(Iso8601.epochDay("2024-02-29"), Iso8601.epochDay(written!!))
         assertEquals(23 to 5, Iso8601.hourMinute(written))
+    }
+
+    @Test
+    fun the_picker_s_year_range_widens_to_cover_what_the_payload_names() {
+        // A picker cannot scroll outside its `yearRange`, and Material's default is 1900..2100 --
+        // so a field bound to a date of birth in 1890 would show a value its own picker could not
+        // reach. Widened rather than replaced: narrowing the range to whatever one payload happens
+        // to name would take away every other year the user might want.
+        assertEquals(1900..2100, yearsSpanning(null, null, null))
+        assertEquals(1900..2100, yearsSpanning(Iso8601.epochDay("2026-08-30")))
+        assertEquals(1890..2100, yearsSpanning(Iso8601.epochDay("1890-07-04")))
+        assertEquals(1900..2150, yearsSpanning(null, null, Iso8601.epochDay("2150-12-31")))
+        assertEquals(
+            1890..2150,
+            yearsSpanning(Iso8601.epochDay("1890-07-04"), null, Iso8601.epochDay("2150-12-31")),
+        )
     }
 
     @Test

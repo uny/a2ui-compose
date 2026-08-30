@@ -2,6 +2,7 @@ package dev.ynagai.a2ui.material3
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -17,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.firstMessage
 import dev.ynagai.a2ui.compose.rememberBoolean
@@ -84,7 +84,13 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
                 ) {
                     val glyph = if (showsDate) ICON_PATHS[CALENDAR_GLYPH] else CLOCK_PATH
                     val vector = remember(glyph) { glyph?.let { iconVector(it) } }
-                    if (vector != null) Icon(imageVector = vector, contentDescription = null)
+                    // The field's own label, which is the only name for this button that came out
+                    // of the payload. A screen reader then announces the button as the field it
+                    // opens rather than as nothing at all. Naming it "Open date picker" here would
+                    // be this module writing English onto a surface whose language the agent chose
+                    // -- see the dialog's buttons, which have no payload text to borrow and so
+                    // remain unnamed.
+                    if (vector != null) Icon(imageVector = vector, contentDescription = label)
                 }
             },
         )
@@ -96,8 +102,23 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
         Stage.NONE -> Unit
 
         Stage.DATE -> {
+            val selected = Iso8601.epochDay(value)
             val state = rememberDatePickerState(
-                initialSelectedDateMillis = Iso8601.epochDay(value)?.let { it * Iso8601.DAY_MILLIS },
+                initialSelectedDateMillis = selected?.let { it * Iso8601.DAY_MILLIS },
+                // **Widened to cover what the payload names.** Material's default is 1900..2100,
+                // and a picker cannot scroll outside its `yearRange` -- so an agent binding a date
+                // of birth in 1890, or a bond maturing in 2150, hands the user a picker that
+                // cannot show the value the field is displaying, let alone change it. Widening is
+                // also what makes a `min`/`max` outside the default reachable at all.
+                //
+                // Not a crash, in this version. The Android documentation says `DatePickerState`
+                // validates its initial selection against the range and raises
+                // `IllegalArgumentException`, which would take the surface down from inside the
+                // composition; Compose Multiplatform 1.9.0 does not, as
+                // `a_datetime_field_out_of_the_pickers_default_year_range_still_opens` shows by
+                // opening the picker on 1890. The widening is here for reachability, and it
+                // happens to close that door too if a later version starts enforcing it.
+                yearRange = remember(selected, min, max) { yearsSpanning(selected, min, max) },
                 selectableDates = remember(min, max) { RangeOfDays(min, max) },
             )
             PickerDialog(
@@ -159,9 +180,11 @@ private enum class Stage { NONE, DATE, TIME }
  * Material 3 gives these, and using one shell means the two dialogs cannot drift apart in padding
  * or in where their buttons sit.
  *
- * The buttons are glyphs, not words, for [ChoicePickerRenderer]'s reason -- this module draws no
- * text the payload did not supply, and "OK"/"Cancel" would be two English strings on a surface
- * whose language the agent chose.
+ * The two buttons are words rather than glyphs, and the words come from [LocalA2uiStrings]. A
+ * dialog's confirm and cancel are the one place this module cannot borrow text from the payload --
+ * the catalog has none to give -- and a glyph-only pair announces nothing to a screen reader,
+ * which for a dialog's only two controls means it cannot be operated without sight. Letting the
+ * host supply them keeps the module from deciding the surface's language on the agent's behalf.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -170,21 +193,13 @@ private fun PickerDialog(
     onConfirm: () -> Unit,
     content: @Composable () -> Unit,
 ) {
+    val strings = LocalA2uiStrings.current
     DatePickerDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { GlyphButton(CHECK_GLYPH, onConfirm) },
-        dismissButton = { GlyphButton(CLOSE_GLYPH, onDismiss) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(strings.confirm) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(strings.cancel) } },
     ) {
         content()
-    }
-}
-
-/** One of the dialog's two buttons: a catalog glyph and no label. */
-@Composable
-private fun GlyphButton(name: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick) {
-        val vector = remember(name) { ICON_PATHS[name]?.let { iconVector(it) } }
-        if (vector != null) Icon(imageVector = vector, contentDescription = null, modifier = Modifier)
     }
 }
 
@@ -204,9 +219,22 @@ private class RangeOfDays(private val min: Long?, private val max: Long?) :
     }
 }
 
+/**
+ * The years a picker must offer for [days] to be reachable, widened from Material's own default.
+ *
+ * Widened rather than replaced: the default range is what an ordinary picker should scroll through,
+ * and narrowing it to whatever one payload happens to name would take away every other year the
+ * user might want.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+internal fun yearsSpanning(vararg days: Long?): IntRange {
+    val years = days.filterNotNull().map(Iso8601::year)
+    if (years.isEmpty()) return DatePickerDefaults.YearRange
+    return minOf(DatePickerDefaults.YearRange.first, years.min())..
+        maxOf(DatePickerDefaults.YearRange.last, years.max())
+}
+
 private const val CALENDAR_GLYPH = "calendarToday"
-private const val CHECK_GLYPH = "check"
-private const val CLOSE_GLYPH = "close"
 
 /**
  * A clock face, for the time-only field.

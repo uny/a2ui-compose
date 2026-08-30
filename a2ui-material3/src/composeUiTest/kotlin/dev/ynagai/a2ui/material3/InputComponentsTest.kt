@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
@@ -19,6 +20,8 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.isSelectable
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
@@ -240,9 +243,110 @@ class InputComponentsTest {
     }
 
     @Test
+    fun a_datetime_field_out_of_the_pickers_default_year_range_still_opens() = runComposeUiTest {
+        // Material's default `yearRange` is 1900..2100, and a date of birth in 1890 falls outside
+        // it. The Android documentation says `DatePickerState` raises `IllegalArgumentException`
+        // for an initial selection outside its range -- which would take the whole surface down
+        // from inside the composition. **Compose Multiplatform 1.9.0 does not raise**, as this
+        // test shows: it opens the picker on 1890 and the surface is still there. The test is kept
+        // as the guard for the version that starts enforcing it, and as the record of what this
+        // one does.
+        //
+        // What the widened range is actually for is reachability: a picker cannot scroll outside
+        // its `yearRange`, so without it the user is shown a field reading 1890 above a picker
+        // that cannot reach 1890. That claim is [Iso8601Test]'s `yearsSpanning`, because checking
+        // it here would mean driving Material's own year grid.
+        setContent { Surface(rendererFor(FAR_DATE)) }
+        onNodeWithText("1890-07-04").assertIsDisplayed()
+        // The state is only built when the dialog opens, so the button has to be pressed: a test
+        // that merely drew the field would never construct it.
+        onNodeWithContentDescription("Born").performClick()
+        onNodeWithText("after").assertIsDisplayed()
+    }
+
+    @Test
+    fun a_datetime_field_names_its_button_after_the_field() = runComposeUiTest {
+        // The only name for an icon-only button that came out of the payload. Without it a screen
+        // reader announces nothing at all for the one control the field has.
+        setContent { Surface(rendererFor(DATE_TIME)) }
+        onNodeWithContentDescription("When").assertExists()
+    }
+
+    @Test
+    fun a_date_picked_in_the_dialog_reaches_the_data_model_as_iso_8601() = runComposeUiTest {
+        // The whole round trip: open the picker, choose a different day, confirm, and read the
+        // model. This is what makes `Iso8601`'s arithmetic more than a unit test -- it is the only
+        // check that the day the grid reports and the string the field writes are the same day.
+        val renderer = rendererFor(DATE_TIME)
+        setContent { Surface(renderer) }
+        onNodeWithContentDescription("When").performClick()
+        // The fifteenth day cell. **By position, not by text**: Material's picker draws each cell's
+        // semantics in the machine's own locale -- on this one they read "2026年8月15日土曜日" --
+        // so a test that matched the day number would pass here and fail wherever CI runs. The day
+        // cells are the dialog's only selectable nodes, and August 2026 begins on the 1st, so the
+        // fifteenth of them is the 15th.
+        onAllNodes(isSelectable())[DAY_15].performClick()
+        onNodeWithText("OK").performClick()
+        assertEquals(JsonPrimitive("2026-08-15"), renderer.read("/when"))
+    }
+
+    @Test
+    fun a_dialog_dismissed_leaves_the_model_as_it_found_it() = runComposeUiTest {
+        val renderer = rendererFor(DATE_TIME)
+        setContent { Surface(renderer) }
+        onNodeWithContentDescription("When").performClick()
+        onAllNodes(isSelectable())[DAY_15].performClick()
+        // Choosing inside the dialog is not answering: only the confirm button writes.
+        onNodeWithText("Cancel").performClick()
+        assertEquals(JsonPrimitive("2026-08-30"), renderer.read("/when"))
+    }
+
+    @Test
     fun a_datetime_field_with_nowhere_to_write_is_disabled() = runComposeUiTest {
         setContent { Surface(rendererFor(DATE_TIME)) }
         onNodeWithText("Literal date").assertIsNotEnabled()
+    }
+
+    // ---- the words this module supplies itself ----------------------------------------------
+
+    @Test
+    fun a_picker_dialog_names_its_two_buttons() = runComposeUiTest {
+        // A dialog whose only two controls announce nothing cannot be operated without sight, and
+        // the catalog gives this module no text to borrow for them -- so they are the one place it
+        // supplies its own, from [LocalA2uiStrings].
+        setContent { Surface(rendererFor(DATE_TIME)) }
+        onNodeWithContentDescription("When").performClick()
+        onNodeWithText("OK").assertIsDisplayed()
+        onNodeWithText("Cancel").assertIsDisplayed()
+    }
+
+    @Test
+    fun a_host_replaces_the_words_this_module_supplies() = runComposeUiTest {
+        // The point of the composition local: the agent chose the surface's language, and a
+        // renderer that hardcoded English would be answering a question nobody asked it.
+        setContent {
+            CompositionLocalProvider(
+                LocalA2uiStrings provides A2uiStrings(confirm = "決定", cancel = "取消", filter = "絞り込み"),
+            ) {
+                Surface(rendererFor(DATE_TIME))
+            }
+        }
+        onNodeWithContentDescription("When").performClick()
+        onNodeWithText("決定").assertIsDisplayed()
+        onNodeWithText("取消").assertIsDisplayed()
+        onAllNodes(hasTextExactly("OK")).assertCountEquals(0)
+    }
+
+    @Test
+    fun a_filter_field_is_named_even_once_it_holds_a_query() = runComposeUiTest {
+        // A `placeholder` would vanish the moment the field had a value, leaving it unnamed for
+        // exactly as long as it was in use. The label persists.
+        mainClock.autoAdvance = false
+        setContent { Surface(rendererFor(PICKER)) }
+        onNodeWithText("Filter").assertIsDisplayed()
+        onNode(hasSetTextAction()).performTextReplacement("roc")
+        mainClock.advanceTimeByFrame()
+        onNodeWithText("Filter").assertIsDisplayed()
     }
 
     // ---- checks ---------------------------------------------------------------------------
@@ -313,6 +417,9 @@ class InputComponentsTest {
         const val SURFACE = "s"
         const val CLOCK = "2026-08-30T00:00:00Z"
 
+        /** The index of August 2026's fifteenth day among the picker's selectable cells. */
+        const val DAY_15 = 14
+
         /** A phone, which is the width a filling child starves its siblings at. */
         val PHONE_WIDTH = 320.dp
 
@@ -327,6 +434,7 @@ class InputComponentsTest {
               "volume": 20,
               "when": "2026-08-30",
               "who": "Ada",
+              "born": "1890-07-04",
               "picked": [],
               "email": "",
               "amount": 1,
@@ -390,6 +498,13 @@ class InputComponentsTest {
            "value":{"path":"/when"}},
           {"id":"literal","component":"DateTimeInput","label":"Literal date","enableDate":true,
            "value":"2026-01-01"}
+        ]"""
+
+        val FAR_DATE = """[
+          {"id":"root","component":"Column","children":["born","after"]},
+          {"id":"born","component":"DateTimeInput","label":"Born","enableDate":true,
+           "value":{"path":"/born"}},
+          {"id":"after","component":"Text","text":"after"}
         ]"""
 
         val VALIDATED = """[

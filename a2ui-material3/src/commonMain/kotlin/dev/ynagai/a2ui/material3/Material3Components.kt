@@ -20,6 +20,12 @@ import dev.ynagai.a2ui.compose.ComponentRegistry
  * `Image` draws whatever [LocalA2uiImageLoader] is set to, and a described placeholder when the
  * host has set none -- this module fetches nothing itself. See [A2uiImageLoader].
  *
+ * **Three words come from the host rather than from the payload.** A picker dialog's confirm and
+ * cancel buttons and a `filterable` `ChoicePicker`'s search field have no text in the catalog to
+ * borrow, and leaving them unnamed makes them unusable with a screen reader -- so they are named
+ * through [LocalA2uiStrings], English until a host provides otherwise. Everything else on a
+ * surface is the agent's own words.
+ *
  * `checks` -- the catalog's `Checkable` mixin -- is honoured by every component that carries it. A
  * `Button` whose check fails is disabled, which is what the protocol asks for by name; a failing
  * input is captioned with the message. See [checkFailures][dev.ynagai.a2ui.compose.checkFailures],

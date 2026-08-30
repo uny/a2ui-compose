@@ -62,8 +62,15 @@ internal object Iso8601 {
         val rest = value.substringAfter('-', "")
         val month = rest.substringBefore('-').toIntOrNull()?.takeIf { it in 1..12 } ?: return null
         val day = rest.substringAfter('-', "").take(2).toIntOrNull()?.takeIf { it in 1..31 } ?: return null
-        return daysFromCivil(year, month, day)
+        // The round trip is the calendar check. `1..31` lets February the 31st through, and
+        // `daysFromCivil` is happy to convert it -- into March the 3rd, which a field would then
+        // display and write back in place of what the agent sent. Converting and converting back
+        // rejects exactly the days the month does not have, leap years included, without a table.
+        return daysFromCivil(year, month, day).takeIf { civilFromDays(it) == Triple(year, month, day) }
     }
+
+    /** The Gregorian year a day count falls in -- what a date picker's `yearRange` is measured in. */
+    fun year(epochDay: Long): Int = civilFromDays(epochDay).first
 
     /** The `HH:mm` in an ISO 8601 string as an hour/minute pair, or null when there is not one. */
     fun hourMinute(value: String): Pair<Int, Int>? {

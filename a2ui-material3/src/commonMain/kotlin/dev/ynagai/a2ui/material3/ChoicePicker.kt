@@ -112,11 +112,13 @@ public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer { scope, 
                 onValueChange = { query = it },
                 modifier = Modifier.padding(vertical = OPTION_GAP),
                 singleLine = true,
-                // A magnifier and no words. Every other string this module draws came out of the
-                // payload, and a label reading "Filter" would be the one piece of text the
-                // renderer wrote itself -- in English, on a surface whose language the agent
-                // chose. The glyph is the catalog's own `search`, so it is drawn by the same
-                // path an `Icon` component would take.
+                // A `label` rather than a `placeholder`, because a placeholder disappears once
+                // there is a query and would leave the field with no accessible name for exactly
+                // as long as it had a value in it. The word comes from [LocalA2uiStrings]: the
+                // catalog gives a filter box no text of its own, and this module does not pick the
+                // surface's language. The magnifier beside it is the catalog's own `search` glyph,
+                // decorative now that the label names the field.
+                label = { Text(LocalA2uiStrings.current.filter) },
                 leadingIcon = {
                     if (searchIcon != null) Icon(imageVector = searchIcon, contentDescription = null)
                 },

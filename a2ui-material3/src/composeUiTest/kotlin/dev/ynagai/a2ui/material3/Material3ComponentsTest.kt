@@ -1,10 +1,18 @@
 package dev.ynagai.a2ui.material3
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -307,9 +315,14 @@ class Material3ComponentsTest {
         setContent { Surface(CARDED_AND_BARE) }
         val carded = onNodeWithText("carded").fetchSemanticsNode().boundsInRoot
         val bare = onNodeWithText("bare").fetchSemanticsNode().boundsInRoot
+        // The *size* of the inset, not merely its sign. Both texts carry the leaf margin and the
+        // card adds a 1dp outline, so `carded.left > bare.left` holds by 9dp with the card's own
+        // padding deleted -- the assertion passed under the regression it names. The padding is
+        // the only part of the difference worth 16dp.
+        val inset = carded.left - bare.left
         assertTrue(
-            carded.left > bare.left,
-            "the carded text should be inset by the card's frame and padding: $carded vs $bare",
+            inset >= CARD_PADDING_PX,
+            "the card's inner padding should inset its child by ~16dp, was ${inset}px: $carded vs $bare",
         )
     }
 
@@ -346,15 +359,27 @@ class Material3ComponentsTest {
             onNodeWithText("above").fetchSemanticsNode().boundsInRoot.bottom
         val plain = onNodeWithText("under").fetchSemanticsNode().boundsInRoot.top -
             onNodeWithText("over").fetchSemanticsNode().boundsInRoot.bottom
-        // The same two leaves with the same margins either side, so the difference is the divider.
-        assertTrue(divided > plain, "the divider should have taken room of its own: $divided vs $plain")
+        // The same two leaves with the same margins either side, so the difference is the divider:
+        // its own two margins plus the hairline. Asserted against the margins alone, because
+        // `divided > plain` is already true of a divider that draws nothing at all -- the leaf
+        // margin carries 16 of the 17dp, and this test used to pass with the hairline deleted.
+        val hairline = divided - plain - LEAF_MARGIN_PX * 2
+        assertTrue(
+            hairline > 0f,
+            "the divider itself should have taken room, not just its margins: $divided vs $plain",
+        )
     }
 
     @Test
-    fun an_icon_takes_the_room_its_glyph_needs() = runComposeUiTest {
+    fun an_icon_holds_a_24dp_slot_in_the_row_it_sits_in() = runComposeUiTest {
+        // **This asserts placement, not drawing, and is named for what it can actually settle.**
         // An icon carries no text and, having no `contentDescription` to give -- the catalog gives
-        // an `Icon` no accessibility property -- no semantics node either. So it is measured by
-        // what it displaces: the same label, in the same row, with and without an icon before it.
+        // an `Icon` no accessibility property -- no semantics node either, so the only thing a
+        // composition test can read is what it displaces. Both branches of `IconRenderer` displace
+        // the same 24dp, which is deliberate: the sibling test below asserts that the *unknown*
+        // name holds the identical slot. An earlier name for this test claimed it proved the glyph
+        // drew, and it passed with every glyph emptied out. That the glyphs resolve at all is
+        // `IconGlyphsTest`'s job, where it is checkable.
         setContent { Surface(ICON_AND_BARE_ROWS) }
         val after = onNodeWithText("after icon").fetchSemanticsNode().boundsInRoot
         val bare = onNodeWithText("no icon").fetchSemanticsNode().boundsInRoot
@@ -418,11 +443,80 @@ class Material3ComponentsTest {
             "the leaves' margins should separate them: $heading then $caption",
         )
     }
+
+    @Test
+    fun a_list_inside_a_list_does_not_bring_the_surface_down() = runComposeUiTest {
+        // A scroll container measured with an unbounded main axis raises out of the measure pass,
+        // and a `List` inside a `List` is exactly that: the outer one offers infinite height. The
+        // catalog permits the payload, so the renderer owes it a drawing rather than an exception.
+        setContent { Surface(NESTED_LISTS) }
+        onNodeWithText("deep").assertIsDisplayed()
+    }
+
+    @Test
+    fun a_list_survives_a_host_that_scrolls_the_surface_itself() = runComposeUiTest {
+        // The other way into the same crash, and the likelier one: a host putting the surface in
+        // its own scrolling column, which is how a surface sits in a chat transcript.
+        setContent {
+            MaterialTheme {
+                Column(Modifier.verticalScroll(rememberScrollState())) { Surface(TEMPLATED_LIST) }
+            }
+        }
+        onNodeWithText("one").assertIsDisplayed()
+    }
+
+    @Test
+    fun a_divider_does_not_take_the_row_it_sits_in() = runComposeUiTest {
+        // `HorizontalDivider` is a `fillMaxWidth` box, so a divider that named no axis took the
+        // whole row and left its sibling measuring at zero -- the starvation `claimsMainAxis`
+        // grants a share to avoid. Asserted on the sibling, which is what disappeared.
+        setContent { Surface(DIVIDER_IN_ROW) }
+        val sibling = onNodeWithText("beside the rule").fetchSemanticsNode().boundsInRoot
+        assertTrue(sibling.width > 0f, "the divider should not have taken the row: $sibling")
+    }
+
+    @Test
+    fun an_image_does_not_take_the_row_it_sits_in() = runComposeUiTest {
+        // The default `mediumFeature` variant, not one of the banner ones. **The surface is given
+        // a phone's width on purpose**: the variant's 300dp cap does save the sibling on a wide
+        // window, so a test drawn at the harness's default size passes whether the fix is there or
+        // not. 320dp is where the cap stops covering for it, and is also every phone.
+        setContent { Surface(IMAGE_IN_ROW, width = PHONE_WIDTH) }
+        val sibling = onNodeWithText("beside the picture").fetchSemanticsNode().boundsInRoot
+        assertTrue(sibling.width > 0f, "the image should not have taken the row: $sibling")
+    }
+
+    @Test
+    fun an_image_that_named_a_fixed_size_is_not_granted_a_share() = runComposeUiTest {
+        // The other half of that rule, and the reason it is a rule about the *variant* rather than
+        // about `Image`. An `avatar` is a 40dp square that claims nothing, so it must keep its
+        // size rather than be stretched across a share of the row. Same narrow surface, so that a
+        // granted share would be visible as a label pushed away from the left.
+        setContent { Surface(AVATAR_IN_ROW, width = PHONE_WIDTH) }
+        val label = onNodeWithText("beside the avatar").fetchSemanticsNode().boundsInRoot.left
+        assertTrue(
+            label < AVATAR_LABEL_MAX_LEFT,
+            "an avatar should stay a 40dp square, so its label starts near the left: $label",
+        )
+    }
+
     @Composable
     private fun Surface(
         components: String,
         placeholder: A2uiPlaceholder = A2uiPlaceholder { _, _ -> },
     ) = Surface(rendererFor(components), placeholder)
+
+    /**
+     * The surface drawn at a chosen width.
+     *
+     * For the layout claims that only hold on a *small* screen. The harness's own window is wide
+     * enough that a component with a max-width cap still leaves its siblings room, so a starvation
+     * test drawn at the default size passes with or without the fix that makes it true.
+     */
+    @Composable
+    private fun Surface(components: String, width: Dp) {
+        Box(Modifier.size(width, SURFACE_HEIGHT)) { Surface(components) }
+    }
 
     @Composable
     private fun Surface(
@@ -464,6 +558,27 @@ class Material3ComponentsTest {
 
     private companion object {
         const val SURFACE = "s"
+
+        /** A phone, which is the width the max-width caps stop covering for. */
+        val PHONE_WIDTH = 320.dp
+
+        /** Tall enough that nothing under test is height-constrained. */
+        val SURFACE_HEIGHT = 600.dp
+
+        /**
+         * `Card`'s inner padding and the leaf margin, in the pixels a test reads back.
+         *
+         * The composeUiTest harness draws at a density of 1, so a dp is a pixel here. Named rather
+         * than inlined because two assertions below subtract them from a measured gap.
+         */
+        const val CARD_PADDING_PX = 16f
+        const val LEAF_MARGIN_PX = 8f
+
+        /**
+         * How far from the left an avatar's label may start: its 40dp square plus the margins
+         * either side of it, and nothing like a share of a 320dp row.
+         */
+        const val AVATAR_LABEL_MAX_LEFT = 100f
 
         val TEXTS = """[
             {"id":"root","component":"Column","children":["heading","caption"]},
@@ -578,6 +693,30 @@ class Material3ComponentsTest {
         val CARD = """[
             {"id":"root","component":"Card","child":"inner"},
             {"id":"inner","component":"Text","text":"inside"}
+        ]"""
+
+        val NESTED_LISTS = """[
+            {"id":"root","component":"List","children":["inner"]},
+            {"id":"inner","component":"List","children":["deep"]},
+            {"id":"deep","component":"Text","text":"deep"}
+        ]"""
+
+        val DIVIDER_IN_ROW = """[
+            {"id":"root","component":"Row","children":["rule","beside"]},
+            {"id":"rule","component":"Divider"},
+            {"id":"beside","component":"Text","text":"beside the rule"}
+        ]"""
+
+        val IMAGE_IN_ROW = """[
+            {"id":"root","component":"Row","children":["pic","beside"]},
+            {"id":"pic","component":"Image","url":"https://example.test/cat.png"},
+            {"id":"beside","component":"Text","text":"beside the picture"}
+        ]"""
+
+        val AVATAR_IN_ROW = """[
+            {"id":"root","component":"Row","children":["pic","beside"]},
+            {"id":"pic","component":"Image","url":"https://example.test/cat.png","variant":"avatar"},
+            {"id":"beside","component":"Text","text":"beside the avatar"}
         ]"""
 
         val TEMPLATED_LIST = """[

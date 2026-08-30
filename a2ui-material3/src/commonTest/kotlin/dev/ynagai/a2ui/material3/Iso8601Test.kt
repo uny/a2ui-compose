@@ -3,6 +3,7 @@ package dev.ynagai.a2ui.material3
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * The calendar arithmetic behind `DateTimeInput`.
@@ -63,6 +64,26 @@ class Iso8601Test {
         for (text in listOf("", "09:15", "not a date", "26-08-30", "2026", "2026-13-01", "2026-08-32")) {
             assertNull(Iso8601.epochDay(text), "`$text` should not read as a date")
         }
+    }
+
+    @Test
+    fun a_year_this_module_could_not_spell_back_is_refused() {
+        // Everything downstream treats the day count as a magnitude. `DateTimeInput` multiplies it
+        // by `DAY_MILLIS` to seed the picker -- which overflows `Long` past about year 292,000,000
+        // and wraps to an unrelated date the user can then confirm over the agent's value -- and it
+        // widens the picker's `yearRange` to span the year named, which Material sizes a list from.
+        for (text in listOf("300000000-01-01", "2147483647-12-31", "10000-01-01", "0000-01-01")) {
+            assertNull(Iso8601.epochDay(text), "`$text` is outside the four-digit year")
+        }
+        // And the ends of the range still read, so the bound is not off by one.
+        assertEquals("0001-01-01", Iso8601.date(Iso8601.epochDay("0001-01-01")!!))
+        assertEquals("9999-12-31", Iso8601.date(Iso8601.epochDay("9999-12-31")!!))
+        // The invariant the bound exists for: what the parser accepts, the formatter can spell.
+        val widest = Iso8601.epochDay("9999-12-31")!!
+        assertTrue(
+            widest * Iso8601.DAY_MILLIS / Iso8601.DAY_MILLIS == widest,
+            "the widest accepted day must survive the millis conversion the picker needs",
+        )
     }
 
     @Test

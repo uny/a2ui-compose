@@ -25,6 +25,16 @@ internal object Iso8601 {
     /** Milliseconds in a day -- the unit Material's date picker reports its selection in. */
     const val DAY_MILLIS: Long = 86_400_000L
 
+    /**
+     * The years [epochDay] will read, which are the years [date] can write.
+     *
+     * ISO 8601's four-digit year, which is the shape this file both parses and formats. Years
+     * outside it need the standard's expanded form (`+12026-…`, agreed between the two parties in
+     * advance), which nothing in the catalog asks for -- so accepting one would mean reading a
+     * string this module could not spell back.
+     */
+    val YEARS: IntRange = 1..9999
+
     /** `yyyy-MM-dd` for a day count since 1970-01-01, negative counts included. */
     fun date(epochDay: Long): String {
         val (year, month, day) = civilFromDays(epochDay)
@@ -56,9 +66,21 @@ internal object Iso8601 {
      * `date`, `time` or `date-time`, and a `value` written by an agent may carry an offset this
      * module has no way to apply -- so the leading date is read and the rest is left alone rather
      * than the whole string being refused.
+     *
+     * **Forgiving about the tail, strict about the year.** The year is bounded to [YEARS], which is
+     * exactly the range [date] can spell back with its four-digit pad -- so what this parser
+     * accepts is what the formatter can produce, and nothing round-trips into a different string.
+     * The bound is also what keeps the arithmetic downstream in range: an agent is free to send
+     * `"300000000-01-01"`, and every step after this one treats the result as a magnitude.
+     * `DateTimeInput` multiplies it by [DAY_MILLIS] to seed Material's picker, which overflows
+     * `Long` past about year 292,000,000 and wraps to an unrelated date the user can then confirm
+     * over the top of the agent's value; and it widens the picker's `yearRange` to span the year
+     * named, which for a nine-digit year is a range Material sizes a list from. Capped here, at
+     * the one place both paths read from, rather than at each of them.
      */
     fun epochDay(value: String): Long? {
-        val year = value.substringBefore('-').toIntOrNull()?.takeIf { value.indexOf('-') >= 4 } ?: return null
+        val year = value.substringBefore('-').toIntOrNull()
+            ?.takeIf { value.indexOf('-') >= 4 && it in YEARS } ?: return null
         val rest = value.substringAfter('-', "")
         val month = rest.substringBefore('-').toIntOrNull()?.takeIf { it in 1..12 } ?: return null
         val day = rest.substringAfter('-', "").take(2).toIntOrNull()?.takeIf { it in 1..31 } ?: return null

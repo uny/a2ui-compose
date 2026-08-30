@@ -4,11 +4,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -33,7 +35,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * The five components, drawn.
+ * The ten components, drawn.
  *
  * Every claim here is one that only a composition can settle: whether a container puts its
  * children on screen, whether a tap reaches the agent with the data model resolved as of the tap,
@@ -147,7 +149,7 @@ class Material3ComponentsTest {
 
     @Test
     fun a_subcomposed_child_does_not_bring_the_surface_down() {
-        // A host may register anything, and the thirteen components still to be written include
+        // A host may register anything, and the eight components still to be written include
         // ones a `LazyColumn` is the natural body for. An earlier fix for the sibling-starvation
         // bug put `height(IntrinsicSize.Min)` on every default-`align` row, which asks each
         // descendant for an intrinsic measurement -- and `SubcomposeLayout` raises rather than
@@ -279,17 +281,143 @@ class Material3ComponentsTest {
     }
 
     @Test
-    fun the_thirteen_components_this_registry_does_not_draw_say_so() = runComposeUiTest {
-        // The registry's coverage claim, asserted rather than documented. A `Card` drawn as
-        // nothing would be indistinguishable from a `Card` drawn correctly and empty.
+    fun the_eight_components_this_registry_does_not_draw_say_so() = runComposeUiTest {
+        // The registry's coverage claim, asserted rather than documented. A `Tabs` drawn as
+        // nothing would be indistinguishable from a `Tabs` drawn correctly and empty.
         val reasons = mutableListOf<A2uiPlaceholderReason>()
-        setContent { Surface(CARD, placeholder = { reason, _ -> reasons += reason }) }
+        setContent { Surface(UNDRAWN, placeholder = { reason, _ -> reasons += reason }) }
         assertTrue(
-            reasons.any { it is A2uiPlaceholderReason.UnknownType && it.component == "Card" },
+            reasons.any { it is A2uiPlaceholderReason.UnknownType && it.component == "Tabs" },
             "an undrawn component type should be reported as one: $reasons",
         )
     }
 
+    @Test
+    fun a_card_draws_its_child_inside_itself() = runComposeUiTest {
+        setContent { Surface(CARD) }
+        onNodeWithText("inside").assertIsDisplayed()
+    }
+
+    @Test
+    fun a_card_insets_its_child_rather_than_letting_it_touch_the_outline() = runComposeUiTest {
+        // The guide's 16dp inner padding, which is the half of a card's spacing that is not the
+        // Leaf-Margin Strategy: without it the text sits on the border it is meant to be framed by.
+        // Measured against an uncarded twin in the same column rather than against the card's own
+        // bounds, because a card draws no semantics node of its own to measure.
+        setContent { Surface(CARDED_AND_BARE) }
+        val carded = onNodeWithText("carded").fetchSemanticsNode().boundsInRoot
+        val bare = onNodeWithText("bare").fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            carded.left > bare.left,
+            "the carded text should be inset by the card's frame and padding: $carded vs $bare",
+        )
+    }
+
+    @Test
+    fun a_list_draws_every_instance_of_its_template() = runComposeUiTest {
+        // Every `List` in the corpus is a template over a bound array. The adapter layer expands
+        // it; what this asserts is that the container draws all of what it was handed, each in the
+        // collection scope that makes a relative path resolve to that item.
+        setContent { Surface(TEMPLATED_LIST) }
+        for (item in listOf("one", "two", "three")) {
+            onNodeWithText(item).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun a_list_leaves_room_for_what_follows_it() = runComposeUiTest {
+        // Why this is a scrolling `Column` and not a `LazyColumn`: a lazy list fills the main axis
+        // it is offered rather than wrapping its content, so it would claim the whole column and
+        // push the text below it off the surface.
+        setContent { Surface(LIST_THEN_TEXT) }
+        val after = onNodeWithText("AFTER").fetchSemanticsNode().boundsInRoot
+        assertTrue(after.height > 0f, "the text after the list should have been drawn: $after")
+    }
+
+    @Test
+    fun a_divider_takes_room_between_the_things_it_separates() = runComposeUiTest {
+        // Both pairs in one composition, and the comparison inside it. Two `runComposeUiTest`
+        // blocks in a row would have been the natural way to write this and is wrong on the web
+        // targets: there the call returns before its body has run, so an assertion after it reads
+        // whatever the variables were initialised to -- which is how this first failed, on wasmJs
+        // alone, comparing 0.0 with 0.0 while every other target agreed it passed.
+        setContent { Surface(DIVIDED_AND_NOT) }
+        val divided = onNodeWithText("below").fetchSemanticsNode().boundsInRoot.top -
+            onNodeWithText("above").fetchSemanticsNode().boundsInRoot.bottom
+        val plain = onNodeWithText("under").fetchSemanticsNode().boundsInRoot.top -
+            onNodeWithText("over").fetchSemanticsNode().boundsInRoot.bottom
+        // The same two leaves with the same margins either side, so the difference is the divider.
+        assertTrue(divided > plain, "the divider should have taken room of its own: $divided vs $plain")
+    }
+
+    @Test
+    fun an_icon_takes_the_room_its_glyph_needs() = runComposeUiTest {
+        // An icon carries no text and, having no `contentDescription` to give -- the catalog gives
+        // an `Icon` no accessibility property -- no semantics node either. So it is measured by
+        // what it displaces: the same label, in the same row, with and without an icon before it.
+        setContent { Surface(ICON_AND_BARE_ROWS) }
+        val after = onNodeWithText("after icon").fetchSemanticsNode().boundsInRoot
+        val bare = onNodeWithText("no icon").fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            after.left > bare.left,
+            "the icon should have taken room before its label: $after vs $bare",
+        )
+    }
+
+    @Test
+    fun an_icon_whose_name_is_not_in_the_catalog_holds_its_place() = runComposeUiTest {
+        // The enum is closed, so an unknown name is a payload the schema already refuses. What a
+        // renderer owes is a layout that does not shift: collapsing the icon would move every
+        // sibling in the row, turning one bad property into a rearranged surface.
+        setContent { Surface(UNKNOWN_ICON_ROWS) }
+        val after = onNodeWithText("after icon").fetchSemanticsNode().boundsInRoot
+        val bare = onNodeWithText("no icon").fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            after.left > bare.left,
+            "an unknown icon should still hold its 24dp: $after vs $bare",
+        )
+    }
+
+    @Test
+    fun an_image_without_a_loader_still_carries_its_description() = runComposeUiTest {
+        // The placeholder is not a blank: this module fetches nothing, and the description is the
+        // one part of the image it can still deliver.
+        setContent { Surface(IMAGE) }
+        onNodeWithContentDescription("a cat").assertIsDisplayed()
+    }
+
+    @Test
+    fun an_image_is_drawn_by_the_loader_the_host_provided() = runComposeUiTest {
+        // The extension point, exercised. A host that provides a loader gets its own composable
+        // called with the resolved URL -- which is how a real image reaches the screen without
+        // this module owning an HTTP stack.
+        val urls = mutableListOf<String>()
+        setContent {
+            CompositionLocalProvider(
+                LocalA2uiImageLoader provides A2uiImageLoader { url, _, _, modifier ->
+                    urls += url
+                    Text("drawn", modifier)
+                },
+            ) { Surface(IMAGE) }
+        }
+        onNodeWithText("drawn").assertIsDisplayed()
+        assertEquals(listOf("https://example.test/cat.png"), urls)
+    }
+
+    @Test
+    fun a_leaf_carries_the_margin_the_spacing_strategy_asks_for() = runComposeUiTest {
+        // §3's Leaf-Margin Strategy, asserted where it is visible: two texts in a column are
+        // separated by twice the margin, and neither touches the surface's edge. Asserting the gap
+        // rather than the number keeps this a test of the strategy rather than of `8.dp`.
+        setContent { Surface(TEXTS) }
+        val heading = onNodeWithText("Hello, Minimal Catalog!").fetchSemanticsNode().boundsInRoot
+        val caption = onNodeWithText("a caption").fetchSemanticsNode().boundsInRoot
+        assertTrue(heading.top > 0f, "the first leaf should be inset from the top: $heading")
+        assertTrue(
+            caption.top > heading.bottom,
+            "the leaves' margins should separate them: $heading then $caption",
+        )
+    }
     @Composable
     private fun Surface(
         components: String,
@@ -321,7 +449,8 @@ class Material3ComponentsTest {
                 listOf(
                     """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
                     """{"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
-                        "user":{"name":"Ada"},"typed":"","justify":"center"
+                        "user":{"name":"Ada"},"typed":"","justify":"center",
+                        "items":[{"label":"one"},{"label":"two"},{"label":"three"}]
                     }}}""",
                     """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
                 ).map {
@@ -445,8 +574,67 @@ class Material3ComponentsTest {
             {"id":"x","component":"Text","text":"x"}
         ]"""
 
+
         val CARD = """[
             {"id":"root","component":"Card","child":"inner"},
+            {"id":"inner","component":"Text","text":"inside"}
+        ]"""
+
+        val TEMPLATED_LIST = """[
+            {"id":"root","component":"List","children":{"path":"/items","componentId":"item"}},
+            {"id":"item","component":"Text","text":{"path":"label"}}
+        ]"""
+
+        val LIST_THEN_TEXT = """[
+            {"id":"root","component":"Column","children":["lst","after"]},
+            {"id":"lst","component":"List","children":{"path":"/items","componentId":"item"}},
+            {"id":"item","component":"Text","text":{"path":"label"}},
+            {"id":"after","component":"Text","text":"AFTER"}
+        ]"""
+
+        val DIVIDED_AND_NOT = """[
+            {"id":"root","component":"Column","children":["above","rule","below","over","under"]},
+            {"id":"above","component":"Text","text":"above"},
+            {"id":"rule","component":"Divider"},
+            {"id":"below","component":"Text","text":"below"},
+            {"id":"over","component":"Text","text":"over"},
+            {"id":"under","component":"Text","text":"under"}
+        ]"""
+
+        val CARDED_AND_BARE = """[
+            {"id":"root","component":"Column","children":["card","bare"]},
+            {"id":"card","component":"Card","child":"carded"},
+            {"id":"carded","component":"Text","text":"carded"},
+            {"id":"bare","component":"Text","text":"bare"}
+        ]"""
+
+        val ICON_AND_BARE_ROWS = """[
+            {"id":"root","component":"Column","children":["with","without"]},
+            {"id":"with","component":"Row","children":["star","after"]},
+            {"id":"star","component":"Icon","name":"star"},
+            {"id":"after","component":"Text","text":"after icon"},
+            {"id":"without","component":"Row","children":["plain"]},
+            {"id":"plain","component":"Text","text":"no icon"}
+        ]"""
+
+        val UNKNOWN_ICON_ROWS = """[
+            {"id":"root","component":"Column","children":["with","without"]},
+            {"id":"with","component":"Row","children":["odd","after"]},
+            {"id":"odd","component":"Icon","name":"notAnIconInThisCatalog"},
+            {"id":"after","component":"Text","text":"after icon"},
+            {"id":"without","component":"Row","children":["plain"]},
+            {"id":"plain","component":"Text","text":"no icon"}
+        ]"""
+
+        val IMAGE = """[
+            {"id":"root","component":"Column","children":["pic"]},
+            {"id":"pic","component":"Image","url":"https://example.test/cat.png",
+             "description":"a cat","fit":"cover"}
+        ]"""
+
+        val UNDRAWN = """[
+            {"id":"root","component":"Column","children":["tabs"]},
+            {"id":"tabs","component":"Tabs","titles":["one"],"children":["inner"]},
             {"id":"inner","component":"Text","text":"inside"}
         ]"""
     }

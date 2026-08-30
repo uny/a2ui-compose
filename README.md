@@ -47,7 +47,7 @@ so every Android consumer must compile against 37 or later.
 |:--|:--|
 | `dev.ynagai.a2ui:a2ui-core` | Protocol types, v1.0 message parsing and serialization, data model and JSON Pointer binding, function evaluation, validation. **No Compose dependency.** |
 | `dev.ynagai.a2ui:a2ui-compose` | `A2uiSurface`, `A2uiRenderer`, the component registry, and the bounds that keep an agent's payload from outgrowing a composition. Depends on `compose.runtime` and `compose.ui` — **no design system.** |
-| `dev.ynagai.a2ui:a2ui-material3` | The catalog's components drawn with Material 3. Currently `Text`, `Row`, `Column`, `Button` and `TextField`; the rest of the eighteen draw as placeholders until they land. |
+| `dev.ynagai.a2ui:a2ui-material3` | The catalog's components drawn with Material 3. Currently `Text`, `Row`, `Column`, `Button`, `TextField`, `Card`, `Divider`, `List`, `Icon` and `Image`; the rest of the eighteen draw as placeholders until they land. `Image` draws through a host-provided `A2uiImageLoader`, and a described placeholder without one -- this library fetches nothing itself. |
 
 The split follows the Core SDK / Framework Adapter separation in the A2UI project's own guidance for
 new client SDKs. Material 3 is a third artifact rather than part of the adapter because a design

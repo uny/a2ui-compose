@@ -27,7 +27,7 @@ public val TextRenderer: ComponentRenderer = ComponentRenderer { scope, modifier
     val text = remember(source) { markdownText(source.orEmpty()) }
     Text(
         text = text,
-        modifier = modifier,
+        modifier = modifier.leafMargin(),
         style = with(MaterialTheme.typography) { if (caption) bodySmall else bodyLarge },
         // Unspecified is not "no colour": it tells `Text` to take the colour from the style, and
         // from `LocalContentColor` through it. Naming one here would break the inheritance a

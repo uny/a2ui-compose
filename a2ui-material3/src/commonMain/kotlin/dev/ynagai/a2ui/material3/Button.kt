@@ -35,14 +35,14 @@ public val ButtonRenderer: ComponentRenderer = ComponentRenderer { scope, modifi
     when (variant) {
         // The theme's primary colour as a background with contrasting text, which is exactly what
         // Material 3's filled `Button` is.
-        "primary" -> Button(onClick = onClick, modifier = modifier) { scope.Child() }
+        "primary" -> Button(onClick = onClick, modifier = modifier.leafMargin()) { scope.Child() }
         // "No visual border or background, making its child content appear like a clickable link."
-        "borderless" -> TextButton(onClick = onClick, modifier = modifier) { scope.Child() }
+        "borderless" -> TextButton(onClick = onClick, modifier = modifier.leafMargin()) { scope.Child() }
         // "A subtle background and border." Material 3 has no button that is both: the outlined
         // one carries the border and leaves the container transparent, the tonal one carries a
         // container and no border. The border is the half that distinguishes a default button from
         // a borderless one, so it is the half kept.
-        else -> OutlinedButton(onClick = onClick, modifier = modifier) { scope.Child() }
+        else -> OutlinedButton(onClick = onClick, modifier = modifier.leafMargin()) { scope.Child() }
     }
 }
 

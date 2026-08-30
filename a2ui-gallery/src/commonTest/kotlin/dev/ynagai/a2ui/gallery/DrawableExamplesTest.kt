@@ -14,13 +14,13 @@ import kotlin.test.assertTrue
  */
 class DrawableExamplesTest {
     @Test
-    fun the_drawable_examples_are_the_ones_the_five_basic_components_cover() {
+    fun the_drawable_examples_are_the_ones_the_ten_basic_components_cover() {
         val drawable = EXAMPLES
             .filter { it.isDrawableBy(Material3Components.Basic.types) }
             .map { it.file }
         // Written out rather than counted. This is the coverage claim, and a registry that lost a
         // component or a corpus that gained an example should have to say which one -- a count
-        // would go on passing while a different set of seven passed through it.
+        // would go on passing while a different set of thirty-four passed through it.
         assertEquals(
             listOf(
                 "00_complex-layout.json",
@@ -30,6 +30,33 @@ class DrawableExamplesTest {
                 "00_row-layout.json",
                 "00_simple-login-form.json",
                 "00_simple-text.json",
+                "01_flight-status.json",
+                "02_email-compose.json",
+                "03_calendar-day.json",
+                "04_weather-current.json",
+                "05_product-card.json",
+                "08_user-profile.json",
+                "09_login-form.json",
+                "10_notification-permission.json",
+                "11_purchase-complete.json",
+                "12_chat-message.json",
+                "13_coffee-order.json",
+                "14_sports-player.json",
+                "15_account-balance.json",
+                "16_workout-summary.json",
+                "17_event-detail.json",
+                "18_track-list.json",
+                "20_restaurant-card.json",
+                "21_shipping-status.json",
+                "22_credit-card.json",
+                "23_step-counter.json",
+                "25_contact-card.json",
+                "27_stats-card.json",
+                "28_countdown-timer.json",
+                "31_incremental-dashboard.json",
+                "33_financial-data-grid.json",
+                "34_child-list-template.json",
+                "35_markdown-text.json",
             ),
             drawable,
         )

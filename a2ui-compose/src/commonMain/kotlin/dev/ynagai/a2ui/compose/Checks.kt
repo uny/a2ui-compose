@@ -36,12 +36,17 @@ public data class A2uiCheckFailure internal constructor(
  * Evaluated on every read rather than cached, like every other bound property here: a check reads
  * the data model, so its answer changes as the user types.
  *
- * **A check that cannot be evaluated does not fail.** A rule that will not decode, a condition
- * whose function raises, or a result that is neither a boolean nor a `ValidationResult` is left
- * out of this list rather than reported as invalid. The alternative shows the user a validation
- * error the agent never expressed, and disables a `Button` for a reason nothing in the payload
- * says -- a malformed check should cost its own rule, which is the same degradation
- * [A2uiComponentScope.value] gives a malformed property.
+ * **A check that cannot be *read* does not fail; a check that cannot be *evaluated* does.** A rule
+ * that will not decode, or a result that is neither a boolean nor a `ValidationResult`, is left
+ * out of this list rather than reported as invalid: that is the agent describing a rule this
+ * version does not understand, and it should cost its own rule -- the same degradation
+ * [A2uiComponentScope.value] gives a malformed property. A condition whose evaluation *raises* is
+ * the opposite case and counts as a failure, because the user decides whether it raises: `regex`
+ * refuses a subject past the evaluator's limits, so skipping would let anyone re-open a gated
+ * `Button` by pasting enough characters into the field the rule is about.
+ *
+ * A condition that resolves to nothing -- a path whose `updateDataModel` has not arrived -- is
+ * neither of those. It is skipped, because progressive rendering is not a validation failure.
  *
  * A failure's severity comes from the result; a result that omits it is an error, per
  * [Severity.DEFAULT]. Callers that gate an interaction should gate on
@@ -82,7 +87,16 @@ public fun A2uiComponentScope.checkFailures(): List<A2uiCheckFailure> {
  * to `and`/`or`/`not`, in the one other place a validity has to be recognised.
  */
 private fun A2uiComponentScope.evaluateCondition(rule: CheckRule): ValidationResult? {
-    val element = evaluate(rule.condition) ?: return null
+    val outcome = evaluateCatching(rule.condition) ?: return null
+    // **A condition that raises has not passed.** The user chooses how long the string in the
+    // bound field is, and `regex` raises on a subject past `maxSubjectLength` -- so under the
+    // gentler reading, pasting 2049 characters made the rule vanish and re-enabled the very
+    // `Button` that rule was gating. A gate an attacker can open by feeding it something it
+    // cannot chew is not a gate. The cost is the other direction: an agent that writes a
+    // condition this evaluator refuses -- a function that does not exist, an argument of the
+    // wrong type -- now disables the action rather than being ignored. That is the safe way for
+    // this particular mistake to fail, and it is loud enough for the agent to notice.
+    val element = outcome.getOrElse { return ValidationResult(valid = false) }
     (element as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull?.let {
         return ValidationResult(valid = it)
     }

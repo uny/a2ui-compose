@@ -88,9 +88,22 @@ public data class A2uiComponentScope internal constructor(
      * was caused by a gesture. Used by the property accessors below and by
      * [checkFailures], which needs the evaluated result rather than a typed property.
      */
-    internal fun evaluate(bound: BoundValue): JsonElement? {
+    internal fun evaluate(bound: BoundValue): JsonElement? = evaluateCatching(bound)?.getOrNull()
+
+    /**
+     * [bound] evaluated for rendering, keeping *how* it failed, or null when there is no surface.
+     *
+     * The three outcomes are three different things and [evaluate] flattens two of them together.
+     * A null return is "there is nothing to evaluate against yet", which is progressive rendering
+     * and not a fault. A `Result` that failed is the evaluator raising -- a function that does not
+     * exist, an argument of the wrong type, a subject past the limits. Only [checkFailures] needs
+     * to tell those apart, because for a validation gate the difference decides whether the gate
+     * opens: a rule that raises has not passed, and treating it as absent lets the user re-open a
+     * check by feeding it something it cannot evaluate.
+     */
+    internal fun evaluateCatching(bound: BoundValue): Result<JsonElement>? {
         val context = context(InvocationContext.RENDER) ?: return null
-        return runCatching { context.evaluate(bound) }.getOrNull()
+        return runCatching { context.evaluate(bound) }
     }
 
     private fun context(invocation: InvocationContext): EvaluationContext? {

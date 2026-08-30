@@ -66,14 +66,35 @@ class ChecksTest {
     }
 
     @Test
-    fun a_check_that_cannot_be_evaluated_does_not_fail() {
-        // Three ways to be unreadable, none of which is an invalid answer: a function that does
-        // not exist, a condition that resolves to a string, and a path with nothing behind it. A
-        // renderer that counted these as failures would disable a button for a payload that never
-        // said anything was wrong.
-        for (id in listOf("unknown_function", "not_a_validity", "absent_path")) {
+    fun a_check_that_cannot_be_read_does_not_fail() {
+        // Two ways to be unreadable, neither of which is an invalid answer: a condition that
+        // resolves to a string, and a path with nothing behind it -- the second being ordinary
+        // progressive rendering, before the `updateDataModel` carrying it has arrived. A renderer
+        // that counted these as failures would disable a button for a payload that never said
+        // anything was wrong.
+        for (id in listOf("not_a_validity", "absent_path")) {
             assertEquals(emptyList(), scopeFor(id).checkFailures(), "$id should report nothing")
         }
+    }
+
+    @Test
+    fun a_condition_that_raises_is_a_failure_rather_than_a_skip() {
+        // The other half, and the half the user controls. `regex` refuses a subject past
+        // `maxSubjectLength`, so a rule gating a `Button` on a field's contents raises the moment
+        // the user pastes more than the evaluator will look at. Skipping it -- which is what
+        // "cannot be evaluated does not fail" used to mean -- deleted the rule and re-enabled the
+        // button, letting anyone through the gate by typing past it.
+        val failures = scopeFor("subject_too_long").checkFailures()
+        assertEquals("Letters and digits only", failures.single().message)
+        assertTrue(failures.hasError(), "a check the user broke must still hold the gate shut")
+
+        // The same rule passes when the subject is short enough, so the failure above is the
+        // limit talking and not the rule being permanently broken.
+        assertEquals(emptyList(), scopeFor("subject_short_enough").checkFailures())
+
+        // And the cost, stated: a function this evaluator does not have now disables the action
+        // rather than being ignored. That is the agent's mistake failing safe and loudly.
+        assertTrue(scopeFor("unknown_function").checkFailures().hasError())
     }
 
     @Test
@@ -143,7 +164,9 @@ class ChecksTest {
               "allowed":false,
               "card":{"valid":false,"code":"EXPIRED_CARD","message":"The card expiration date has passed."},
               "unusual":{"valid":false,"severity":"warning","message":"Looks unusual"},
-              "note":"not a validity"
+              "note":"not a validity",
+              "long":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              "short":"OK123"
             }}}
             """.trimIndent(),
             """
@@ -168,6 +191,12 @@ class ChecksTest {
                "checks":[{"condition":{"path":"/note"},"message":"never shown"}]},
               {"id":"absent_path","component":"TextField","label":"X","value":{"path":"/blank"},
                "checks":[{"condition":{"path":"/nothing/here"},"message":"never shown"}]},
+              {"id":"subject_too_long","component":"TextField","label":"X","value":{"path":"/long"},
+               "checks":[{"condition":{"call":"regex","args":{"pattern":"^[A-Z0-9]+$","value":{"path":"/long"}}},
+                          "message":"Letters and digits only"}]},
+              {"id":"subject_short_enough","component":"TextField","label":"X","value":{"path":"/short"},
+               "checks":[{"condition":{"call":"regex","args":{"pattern":"^[A-Z0-9]+$","value":{"path":"/short"}}},
+                          "message":"Letters and digits only"}]},
               {"id":"warning_before_error","component":"TextField","label":"X","value":{"path":"/blank"},
                "checks":[{"condition":{"path":"/unusual"}},
                          {"condition":{"call":"required","args":{"value":{"path":"/blank"}}},

@@ -39,10 +39,30 @@ import dev.ynagai.a2ui.compose.rememberString
  *
  * The [modifier] handed in already carries the size the variant asks for and the margin the layout
  * needs; an implementation should pass it to whatever it draws rather than sizing the image itself.
+ *
+ * **[url] is the agent's string, and fetching it is a capability this module is handing over.**
+ * The core makes the same handover for `openUrl` and states its half of the bargain: `UrlOpener`
+ * receives a URL "guaranteed to be absolute and `http`- or `https`-schemed", because the evaluator
+ * applied the specification's allowlist first. There is no equivalent guarantee here -- a renderer
+ * has no scheme allowlist to apply and the catalog states none -- so an implementation is handed
+ * whatever the agent wrote, and it is the implementation that has to decide what to do about it:
+ *
+ * - an image loader will resolve `file://` and, on Android, `content://`, so a payload can name a
+ *   local path and learn from the drawing whether it was readable;
+ * - an `https` URL the agent chose is fetched the moment the surface composes, with no gesture,
+ *   which discloses the viewer's address and user agent to whoever the agent named.
+ *
+ * Neither is hypothetical for an agent that is prompt-injected rather than merely wrong. A host
+ * that fetches should restrict the scheme, and one that renders untrusted agents should also decide
+ * whether an image may be fetched before the user has asked to see it.
  */
 @Stable
 public fun interface A2uiImageLoader {
-    /** Draws the image at [url], sized and inset by [modifier]. */
+    /**
+     * Draws the image at [url], sized and inset by [modifier].
+     *
+     * [url] is agent-authored and unvalidated -- see the note on this interface.
+     */
     @Composable
     public fun Image(url: String, description: String?, scale: ContentScale, modifier: Modifier)
 }
@@ -77,14 +97,17 @@ public val ImageRenderer: ComponentRenderer = ComponentRenderer { scope, modifie
     val description = scope.rememberString("description")
     val variant = scope.rememberString("variant")
     val fit = scope.rememberString("fit")
+    // The shape is part of what `variant` means -- "a hint for the image size and style" -- so it
+    // is taken before the branch rather than inside the placeholder. Applied only there, an
+    // `avatar` was a circle exactly while it was missing and a square once a host drew it.
     val sized = modifier.leafMargin().variantSize(variant)
+        .clip(if (variant == "avatar") CircleShape else MaterialTheme.shapes.small)
     val loader = LocalA2uiImageLoader.current
     if (loader != null && url != null) {
         loader.Image(url, description, contentScale(fit), sized)
     } else {
         Box(
             sized
-                .clip(if (variant == "avatar") CircleShape else MaterialTheme.shapes.small)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 // The description still reaches the accessibility tree. It is the one part of an
                 // image a renderer without a loader can still deliver, and the catalog asks for it

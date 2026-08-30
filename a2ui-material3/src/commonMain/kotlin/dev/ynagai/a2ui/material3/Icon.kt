@@ -44,9 +44,17 @@ public val IconRenderer: ComponentRenderer = ComponentRenderer { scope, modifier
     // empty square below, which is the same degradation an unknown name gets.
     val drawn = (scope.property("name") as? JsonObject)
         ?.let { (it["svgPath"] as? JsonPrimitive)?.contentOrNull }
+        ?.takeIf { it.length <= MAX_SVG_PATH }
     val named = scope.rememberString("name")
     val data = drawn ?: named?.let { ICON_PATHS[it] }
-    val vector = remember(data) { data?.let { iconVector(it) } }
+    // **Whose path it is decides the fill rule.** An agent's `svgPath` is SVG, and SVG's
+    // `fill-rule` defaults to non-zero -- so a glyph whose contours overlap to make one solid
+    // shape, which is the ordinary way to draw one, came out with the overlap punched into a hole.
+    // The glyphs in [ICON_PATHS] are the other case: they are drawn here, against even-odd, and
+    // their inner contours are meant as holes. Reading each under the rule it was authored with is
+    // the only way one code path can serve both.
+    val fill = if (drawn != null) PathFillType.NonZero else PathFillType.EvenOdd
+    val vector = remember(data, fill) { data?.let { iconVector(it, fill) } }
     if (vector == null) {
         Spacer(modifier.leafMargin().size(ICON_SIZE))
     } else {
@@ -58,16 +66,27 @@ public val IconRenderer: ComponentRenderer = ComponentRenderer { scope, modifier
 private val ICON_SIZE = 24.dp
 
 /**
- * [pathData] as a 24dp vector, or null when it will not parse.
+ * The longest `svgPath` an agent may hand this renderer, in characters.
  *
- * Filled even-odd rather than non-zero, which is what makes the holes holes: the paths here draw a
- * shape and then the shape cut out of it -- the ring of `accountCircle`, the lens of `settings` --
- * in the same winding direction, and non-zero would fill both as one solid blob.
- *
- * The fill is black and is never seen: Material 3's `Icon` tints the whole vector with the current
- * content colour. Naming any other colour here would be naming one that gets overwritten.
+ * Every other agent-controlled input in this library is bounded -- the evaluator caps a subject at
+ * 2048 characters and a pattern at 1024, and the surface caps instances at 5000. A path arrives
+ * through [A2uiComponentScope.property][dev.ynagai.a2ui.compose.A2uiComponentScope.property],
+ * which reads the literal JSON and so passes none of those, and it is parsed and rasterised once
+ * per instance that draws it. 8192 is roughly twenty times the longest glyph in [ICON_PATHS] and
+ * so is not a bound any real icon meets; what it refuses is the payload that is not an icon.
  */
-private fun iconVector(pathData: String): ImageVector? {
+private const val MAX_SVG_PATH = 8192
+
+/**
+ * [pathData] as a 24dp vector under [fill], or null when it will not parse.
+ *
+ * The fill rule is the caller's to choose and is not a detail -- see [IconRenderer], where the
+ * built-in glyphs and an agent's own path are read under different ones.
+ *
+ * The fill colour is black and is never seen: Material 3's `Icon` tints the whole vector with the
+ * current content colour. Naming any other colour here would be naming one that gets overwritten.
+ */
+private fun iconVector(pathData: String, fill: PathFillType): ImageVector? {
     val nodes: List<PathNode> = runCatching {
         PathParser().parsePathString(pathData).toNodes()
     }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return null
@@ -77,7 +96,7 @@ private fun iconVector(pathData: String): ImageVector? {
         viewportWidth = ICON_VIEWPORT,
         viewportHeight = ICON_VIEWPORT,
     ).apply {
-        addPath(pathData = nodes, fill = SolidColor(Color.Black), pathFillType = PathFillType.EvenOdd)
+        addPath(pathData = nodes, fill = SolidColor(Color.Black), pathFillType = fill)
     }.build()
 }
 

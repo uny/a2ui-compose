@@ -75,6 +75,10 @@ class Iso8601Test {
         for (text in listOf("300000000-01-01", "2147483647-12-31", "10000-01-01", "0000-01-01")) {
             assertNull(Iso8601.epochDay(text), "`$text` is outside the four-digit year")
         }
+        // Exactly four digits, so a padded year is refused too: `"02026-08-30"` parses as 2026 and
+        // would format back as `"2026-08-30"`, writing a different string than the agent sent.
+        assertNull(Iso8601.epochDay("02026-08-30"))
+        assertNull(Iso8601.epochDay("+2026-08-30"))
         // And the ends of the range still read, so the bound is not off by one.
         assertEquals("0001-01-01", Iso8601.date(Iso8601.epochDay("0001-01-01")!!))
         assertEquals("9999-12-31", Iso8601.date(Iso8601.epochDay("9999-12-31")!!))

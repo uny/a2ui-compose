@@ -78,7 +78,12 @@ public fun A2uiComponentScope.checkFailures(): List<A2uiCheckFailure> {
 }
 
 /**
- * [rule]'s condition as a [ValidationResult], or null when it cannot be read as one.
+ * [rule]'s condition as a [ValidationResult]: a failure when evaluating it raises, and null when it
+ * cannot be *read* as one.
+ *
+ * The distinction is the whole point and it is not a detail of the implementation -- see the
+ * comment on the `getOrElse` below before changing either branch. Collapsing the raising case back
+ * into null reopens a gate the user can walk through by typing past the evaluator's limits.
  *
  * Both shapes the specification describes are accepted. `catalog.json` types the basic catalog's
  * five validation functions as `"returnType": "validationResult"`, and the implementation guide's

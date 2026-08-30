@@ -79,8 +79,11 @@ internal object Iso8601 {
      * the one place both paths read from, rather than at each of them.
      */
     fun epochDay(value: String): Long? {
+        // Exactly four digits, not "at least four". `>= 4` also admitted a padded `"02026-08-30"`,
+        // which parses as 2026 and formats back as `"2026-08-30"` -- a different string than the
+        // one the agent sent, which is the round trip the paragraph above says cannot happen.
         val year = value.substringBefore('-').toIntOrNull()
-            ?.takeIf { value.indexOf('-') >= 4 && it in YEARS } ?: return null
+            ?.takeIf { value.indexOf('-') == 4 && it in YEARS } ?: return null
         val rest = value.substringAfter('-', "")
         val month = rest.substringBefore('-').toIntOrNull()?.takeIf { it in 1..12 } ?: return null
         val day = rest.substringAfter('-', "").take(2).toIntOrNull()?.takeIf { it in 1..31 } ?: return null

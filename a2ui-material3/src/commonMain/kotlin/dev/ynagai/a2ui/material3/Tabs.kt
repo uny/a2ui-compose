@@ -51,10 +51,15 @@ import kotlinx.serialization.json.JsonObject
  */
 public val TabsRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
     val tabs = scope.rememberTabs()
-    // Clamped rather than reset. A `Tabs` re-sent with fewer tabs would otherwise index past the
-    // end -- and resetting to zero on every change would throw away the user's place whenever the
-    // agent updated a title.
+    // **A re-sent `Tabs` starts again at the first tab.** The scope is remembered on the
+    // `Component` itself (`A2uiSurface.kt`), so an `updateComponents` touching this component at
+    // all -- a reworded title is enough -- builds a new scope, and this cell with it. A user
+    // sitting on the third tab is returned to the first. Carrying the selection across that would
+    // mean keying on the component's `id` instead of on the scope, which is a decision about how
+    // much of a re-sent component is the same component, and is not this line's to make.
     var selected by remember(scope) { mutableIntStateOf(0) }
+    // The clamp cannot fire while `tabs` and `selected` are keyed on the same `Component` -- they
+    // move together. It is here so that changing either key cannot silently index past the end.
     val index = selected.coerceIn(0, (tabs.size - 1).coerceAtLeast(0))
     if (tabs.isEmpty()) return@ComponentRenderer
     Column(modifier) {

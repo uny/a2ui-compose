@@ -63,7 +63,12 @@ public val VideoRenderer: ComponentRenderer = ComponentRenderer { scope, modifie
         if (loader != null && poster != null && poster.isFetchable()) {
             // Cropped rather than fitted: the still is the backdrop for the glyph in front of it,
             // and a letterboxed poster inside an already-letterboxed frame is two sets of bars.
-            loader.Image(poster, null, ContentScale.Crop, Modifier.fillMaxWidth())
+            // `matchParentSize` rather than `fillMaxWidth` is what makes that true -- a loader is
+            // promised a modifier that already carries the size, and given only a width it
+            // resolves the height from the source's own ratio, which is `Crop` cropping nothing
+            // and the bars back. It also keeps the poster out of the frame's own measurement,
+            // which is the half a `fillMaxSize` here would get wrong.
+            loader.Image(poster, null, ContentScale.Crop, Modifier.matchParentSize())
         }
         PlayGlyph(size = VIDEO_GLYPH)
     }
@@ -92,10 +97,13 @@ public val AudioPlayerRenderer: ComponentRenderer = ComponentRenderer { scope, m
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(AUDIO_PADDING)
-            // On the bar rather than on the glyph: merged onto one node, a screen reader reads the
-            // component once, as the thing it is. The glyph itself is described by nothing, which
-            // is `Icon`'s own rule for a leaf that repeats what the text beside it already says.
-            .semantics { description?.let { contentDescription = it } },
+            // On the bar rather than on the glyph, and merging rather than beside: without
+            // `mergeDescendants` the bar's description and the `Text` below it are two nodes
+            // carrying the same string, and a screen reader stops at both and says it twice.
+            // Merged, it reads the component once, as the thing it is. The glyph itself is
+            // described by nothing, which is `Icon`'s own rule for a leaf that repeats what the
+            // text beside it already says.
+            .semantics(mergeDescendants = true) { description?.let { contentDescription = it } },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PlayGlyph(size = ICON_SIZE)

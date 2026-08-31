@@ -1,5 +1,14 @@
 package dev.ynagai.a2ui.material3
 
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -9,13 +18,17 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.A2uiRenderer
 import dev.ynagai.a2ui.compose.A2uiSurface
 import dev.ynagai.a2ui.compose.BasicCatalog
@@ -133,6 +146,29 @@ class StatefulComponentsTest {
         assertEquals(emptyList(), sent.filterIsInstance<ActionMessage>())
     }
 
+    @Test
+    fun a_scroll_that_begins_on_the_trigger_scrolls_instead_of_opening() = runComposeUiTest {
+        // The interception takes the *release* and nothing before it, and this is the reason. An
+        // earlier version consumed the press and every move in the `Initial` pass, which made the
+        // trigger's whole area unscrollable -- a `List` is a `verticalScroll` `Column`, so a
+        // `Modal` inside one had a dead zone -- and then opened the dialog when the finger that
+        // had been trying to scroll lifted. Both halves are asserted, because fixing only the
+        // scroll would leave the surface opening a modal at the end of every swipe.
+        lateinit var scroll: ScrollState
+        setContent {
+            scroll = rememberScrollState()
+            MaterialTheme {
+                Column(Modifier.verticalScroll(scroll)) {
+                    Surface(rendererFor(MODAL))
+                    Spacer(Modifier.fillMaxWidth().height(TALLER_THAN_THE_WINDOW))
+                }
+            }
+        }
+        onNodeWithText("Open").performTouchInput { swipeUp() }
+        assertTrue(scroll.value > 0, "a swipe from the trigger should scroll: ${scroll.value}")
+        onAllNodes(hasText("the content")).assertCountEquals(0)
+    }
+
     // ---- Video and AudioPlayer -------------------------------------------------------------
 
     @Test
@@ -186,6 +222,30 @@ class StatefulComponentsTest {
         )
     }
 
+    @Test
+    fun an_audio_player_says_its_description_once_rather_than_twice() = runComposeUiTest {
+        setContent { Surface(rendererFor(AUDIO)) }
+        // `semantics` without `mergeDescendants` leaves the bar's description and the `Text`
+        // under it as two nodes carrying the same string, and a screen reader stops at both and
+        // says it twice. One count across *both* properties, because the unmerged tree holds one
+        // node of each kind -- a test that counted them separately would find one of each and
+        // pass, which is exactly what the first version of this test did.
+        onAllNodes(hasText("Episode 12") or hasContentDescription("Episode 12"))
+            .assertCountEquals(1)
+    }
+
+    @Test
+    fun a_video_does_not_take_the_row_it_sits_in() = runComposeUiTest {
+        // `claimsMainAxis`'s new arm, asserted on the sibling that disappears without it: a
+        // `Video` frame is a `fillMaxWidth`, and inside a `Row` a `fillMax*` resolves against the
+        // width the *parent* offered rather than against this child's share of it. Drawn at a
+        // phone's width for the same reason `an_image_does_not_take_the_row_it_sits_in` is --
+        // there is no cap here to cover for a missing share on a wide window either.
+        setContent { Surface(rendererFor(VIDEO_IN_ROW), width = PHONE_WIDTH) }
+        val sibling = onNodeWithText("beside the video").fetchSemanticsNode().boundsInRoot
+        assertTrue(sibling.width > 0f, "the video should not have taken the row: $sibling")
+    }
+
     // ---- Harness ---------------------------------------------------------------------------
 
     @Composable
@@ -201,6 +261,12 @@ class StatefulComponentsTest {
                 onMessage = onMessage,
             )
         }
+    }
+
+    /** The surface drawn at a chosen width, for the claims that are about a share of a row. */
+    @Composable
+    private fun Surface(renderer: A2uiRenderer, width: Dp) {
+        Box(Modifier.size(width, SURFACE_HEIGHT)) { Surface(renderer) }
     }
 
     private fun recordingLoader(into: MutableList<String>) =
@@ -280,6 +346,21 @@ class StatefulComponentsTest {
             {"id":"root","component":"Video","url":"https://example.test/v.mp4",
              "posterUrl":"file:///etc/hosts"}
         ]"""
+
+        val VIDEO_IN_ROW = """[
+            {"id":"root","component":"Row","children":["vid","cap"]},
+            {"id":"vid","component":"Video","url":"https://example.test/v.mp4"},
+            {"id":"cap","component":"Text","text":"beside the video"}
+        ]"""
+
+        /** Every phone, and narrow enough that a missing share starves the sibling outright. */
+        val PHONE_WIDTH = 320.dp
+
+        /** Tall enough that nothing under test is height-constrained. */
+        val SURFACE_HEIGHT = 600.dp
+
+        /** Enough content below the surface that the scroll container has somewhere to go. */
+        val TALLER_THAN_THE_WINDOW = 4_000.dp
 
         /** A payload with more tabs than [MAX_TABS] lets through -- see the bound's own test. */
         fun manyTabs(count: Int): String {

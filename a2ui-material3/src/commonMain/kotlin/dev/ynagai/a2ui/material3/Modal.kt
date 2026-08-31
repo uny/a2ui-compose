@@ -1,5 +1,8 @@
 package dev.ynagai.a2ui.material3
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,11 +44,23 @@ import dev.ynagai.a2ui.compose.rememberChildren
  * intercepts interactions (taps/clicks) on the `trigger`" is the guide's own sentence, and it has
  * to be read that strongly to work at all: every trigger in the corpus is a `Button`, and a
  * `Button` consumes its own clicks -- a wrapper waiting for one that got through would never open.
- * So the gesture is taken in the pointer input's [PointerEventPass.Initial] pass, before the child
- * sees it. The cost is real and worth naming: a trigger carrying an `action` does not dispatch it,
- * so an agent that wanted to be told the modal opened does not find out. Opening the dialog *and*
+ * So the tap's *release* is taken in the pointer input's [PointerEventPass.Initial] pass, before
+ * the child sees it; see [interceptTaps], which says why it is the release and nothing earlier.
+ * The cost is real and worth naming: a trigger carrying an `action` does not dispatch it, so an
+ * agent that wanted to be told the modal opened does not find out. Opening the dialog *and*
  * dispatching is not available as a third option -- the two would have to be the same gesture, and
  * a `Button` that received it would take it.
+ *
+ * **What the interception does not reach is a pointer, and that is a real gap rather than a
+ * rounding error.** It is a `pointerInput`, so it sits on the touch and mouse path only: a
+ * keyboard `Enter` on the focused trigger, and an accessibility service activating it, both go
+ * straight to the `Button`'s own `clickable` -- which dispatches the trigger's `action` and leaves
+ * the dialog shut, the exact inverse of what a tap does. The `semantics` block below was written
+ * to close the accessibility half and does not, because a merging node does not absorb a child
+ * that merges too, so the `Button` stays a separately activatable node of its own. A `Modal` whose
+ * trigger is disabled by a failing `check` is open to a tap for the same reason: this node cannot
+ * see the child's enabled state. Closing all three means the trigger opening the modal *itself*
+ * rather than having its input stolen, which is a change to how a renderer reaches its children.
  *
  * **Closing is a button, a tap outside, and the platform's back gesture.** The guide asks for a
  * mechanism and offers three; Compose's `Dialog` already carries the second and third, and the
@@ -68,11 +83,13 @@ public val ModalRenderer: ComponentRenderer = ComponentRenderer { scope, modifie
     Box(
         modifier
             .interceptTaps { open = true }
-            // The merged node's own click, so that a screen reader activating the trigger opens
-            // the dialog rather than firing the `Button` underneath -- which the pointer
-            // interception above cannot reach, semantics actions not being gestures. Merging keeps
-            // the trigger's label: the child's semantics fold into this node, and a key this node
-            // has already set is the one that survives, which is exactly the click.
+            // A click on the merged node, so that an accessibility service has something to
+            // activate that opens the dialog rather than firing the `Button` underneath -- which
+            // the pointer interception above cannot reach, semantics actions not being gestures.
+            // **It does not currently achieve that**, and the note on this renderer says why: a
+            // merging node does not absorb a child that merges as well, so this node is an
+            // unlabelled button and the trigger remains one of its own, still carrying its own
+            // click. Kept because it is half of the eventual answer and costs nothing standing.
             .semantics(mergeDescendants = true) {
                 role = Role.Button
                 onClick { open = true; true }
@@ -103,16 +120,26 @@ public val ModalRenderer: ComponentRenderer = ComponentRenderer { scope, modifie
 }
 
 /**
- * Takes every tap on this node's subtree before the subtree sees it, calling [onTap] on release.
+ * Takes the *release* of a tap on this node's subtree before the subtree sees it, calling [onTap].
  *
- * [PointerEventPass.Initial] runs from the root down, so consuming here leaves nothing for the
- * child's own gesture detector -- which is the whole point, the child being a `Button` that would
- * otherwise swallow the tap. `Modifier.clickable` cannot do this: it works in the `Main` pass,
- * which runs from the leaf up and reaches this node only after the button has taken the event.
+ * [PointerEventPass.Initial] runs from the root down, so a release consumed here reaches the
+ * child's own gesture detector already spent -- and `detectTapGestures`, which is what
+ * `Modifier.clickable` runs, reads a consumed release as a cancelled press rather than as a click.
+ * That is how the modal opens instead of the `Button` underneath firing. `Modifier.clickable` on
+ * this node could not do it: it works in the `Main` pass, which runs from the leaf up and arrives
+ * only after the button has taken the event.
  *
- * A release anywhere counts, including one that wandered off the trigger first. Distinguishing a
- * cancelled press would mean tracking bounds through consumed events for a control whose whole
- * hit area is the child; opening on a slipped tap is the friendlier half of that trade.
+ * **Only the release is taken, and nothing before it.** Consuming the press and every move as well
+ * would be simpler and is what this did first, but a consumed move is invisible to an ancestor
+ * that wanted to scroll: a `Modal` inside a `List` -- itself a `verticalScroll` -- made the whole
+ * area of its trigger unscrollable, and then opened the dialog when the finger that had tried to
+ * scroll lifted. Leaving the press and the moves alone costs nothing, because the child cannot
+ * complete a click without the release this node takes at the end.
+ *
+ * [waitForUpOrCancellation] is what decides the gesture stayed a tap: it yields null the moment
+ * anything else consumes a change, which is precisely the ancestor scrollable claiming the drag.
+ * A release that merely wandered off the trigger still counts, as before -- opening on a slipped
+ * tap is the friendlier half of a trade whose other half is a control whose hit area is the child.
  *
  * Keyed on nothing and reading [onTap] through a cell, rather than keyed on the lambda: a
  * `pointerInput` restarts its block whenever a key changes, so keying on a lambda the caller
@@ -122,20 +149,14 @@ public val ModalRenderer: ComponentRenderer = ComponentRenderer { scope, modifie
 private fun Modifier.interceptTaps(onTap: () -> Unit): Modifier {
     val latest by rememberUpdatedState(onTap)
     return pointerInput(Unit) {
-        awaitPointerEventScope {
-            while (true) {
-                // Down, consumed so the child never starts a press of its own.
-                var event = awaitPointerEvent(PointerEventPass.Initial)
-                if (event.changes.none { it.pressed }) continue
-                event.changes.forEach { it.consume() }
-                // Everything until the last finger lifts, consumed for the same reason: a child
-                // that saw the move would scroll or drag under a gesture this node has claimed.
-                while (event.changes.any { it.pressed }) {
-                    event = awaitPointerEvent(PointerEventPass.Initial)
-                    event.changes.forEach { it.consume() }
-                }
-                latest()
-            }
+        awaitEachGesture {
+            // Observed rather than claimed. `requireUnconsumed = false` because this runs ahead of
+            // everyone, so there is nothing that could have consumed it yet -- the flag is about
+            // not caring, not about expecting.
+            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            val up = waitForUpOrCancellation(PointerEventPass.Initial) ?: return@awaitEachGesture
+            up.consume()
+            latest()
         }
     }
 }

@@ -124,7 +124,12 @@ private fun trailingTrimmedFraction(magnitude: Double): Long {
     return if (fraction.isEmpty()) 0L else fraction.toLongOrNull() ?: 0L
 }
 
-/** Fraction digits of a form with no exponent, where a lone `0` after the point counts as none. */
+/**
+ * Fraction digits of a form with no exponent.
+ *
+ * The lone-`0` case is defensive rather than live: [plainDigits] strips a trailing `.0` on the
+ * plain branch and trims zeros on the expanded one, so no caller can reach it today.
+ */
 private fun plainFractionDigits(text: String): Int {
     val point = text.indexOf('.')
     if (point < 0) return 0

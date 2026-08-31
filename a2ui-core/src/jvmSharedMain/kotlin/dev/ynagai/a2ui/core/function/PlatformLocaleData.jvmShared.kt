@@ -11,7 +11,11 @@ import java.util.Locale
 public actual fun platformLocaleData(languageTag: String?): LocaleData =
     JavaTextLocaleData(
         if (languageTag == null) Locale.getDefault(Locale.Category.FORMAT)
-        else Locale.forLanguageTag(languageTag),
+        // `_` for `-` first. `ru_RU` is ICU's identifier form, the one `NSLocale` takes and the one
+        // `CldrPluralRules.languageSubtag` is written to strip, so it reaches here -- and
+        // `forLanguageTag` reads it as ill-formed and answers `und`. Un-normalised, one tag got
+        // three answers: root here, the runtime's default locale on the web, and `ru-RU` on Apple.
+        else Locale.forLanguageTag(languageTag.replace('_', '-')),
     )
 
 private class JavaTextLocaleData(private val locale: Locale) : LocaleData {

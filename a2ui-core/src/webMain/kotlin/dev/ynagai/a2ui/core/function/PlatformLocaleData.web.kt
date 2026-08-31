@@ -84,7 +84,17 @@ private fun intlSymbols(tag: String): String = js(
         try {
             new Intl.NumberFormat(loc);
         } catch (e) {
-            loc = undefined;
+            // `_` for `-` before giving up. `ru_RU` is ICU's identifier form -- the one `NSLocale`
+            // takes and the one `CldrPluralRules.languageSubtag` is written to strip -- and
+            // ECMA-402 reads it as ill-formed. Dropping it outright answered in the runtime's
+            // default locale, which is a different wrong answer from the JVM's root and from
+            // Apple's `ru-RU`; normalising first makes all three say `ru-RU`.
+            loc = loc.replace(/_/g, '-');
+            try {
+                new Intl.NumberFormat(loc);
+            } catch (e2) {
+                loc = undefined;
+            }
         }
         var nf = new Intl.NumberFormat(loc);
         var parts = nf.formatToParts(-12345678.9);
@@ -215,7 +225,17 @@ private fun intlCurrency(tag: String, code: String): String = js(
         try {
             new Intl.NumberFormat(loc);
         } catch (e) {
-            loc = undefined;
+            // `_` for `-` before giving up. `ru_RU` is ICU's identifier form -- the one `NSLocale`
+            // takes and the one `CldrPluralRules.languageSubtag` is written to strip -- and
+            // ECMA-402 reads it as ill-formed. Dropping it outright answered in the runtime's
+            // default locale, which is a different wrong answer from the JVM's root and from
+            // Apple's `ru-RU`; normalising first makes all three say `ru-RU`.
+            loc = loc.replace(/_/g, '-');
+            try {
+                new Intl.NumberFormat(loc);
+            } catch (e2) {
+                loc = undefined;
+            }
         }
         var cf;
         try {

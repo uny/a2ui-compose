@@ -89,12 +89,27 @@ class PlatformLocaleDataTest {
         // targets every `Intl` constructor raised a `RangeError` from inside `symbols`' `lazy`
         // while the other five degraded and formatted. `localeFormatter`'s contract is the
         // degradation, so the tag has to reach a usable formatter on all seven.
-        listOf("en_US", "en US", "e", "not_a_tag", "xx-YY").forEach { tag ->
+        listOf("en US", "e", "not_a_tag", "xx-YY").forEach { tag ->
             val formatter = localeFormatter(tag)
             assertTrue(formatter.formatNumber(1234.0, 0, grouping = false).isNotEmpty(), tag)
             assertTrue(formatter.formatDate(REFERENCE, "yyyy").isNotEmpty(), tag)
             assertTrue(formatter.formatCurrency(1.0, "USD", null, grouping = false).isNotEmpty(), tag)
         }
+    }
+
+    @Test
+    fun theUnderscoreIdentifierFormResolvesToTheSameLocaleEverywhere() {
+        // `ru_RU` is ICU's identifier form. Apple's `NSLocale` takes it as written, ECMA-402 and
+        // `Locale.forLanguageTag` both read it as ill-formed -- so one tag got three answers:
+        // `ru-RU` on Apple, root on the JVM, the runtime's default locale on the web. Every target
+        // normalises the separator now, which is the only reading under which they agree.
+        //
+        // Asserted through the separators rather than the reported tag: what a payload sees is the
+        // formatting, and Russian's are the pair `en-US` inverts.
+        val formatter = localeFormatter("ru_RU")
+        assertEquals("1 234,5", formatter.formatNumber(1234.5, 1, grouping = true).replace(' ', ' '))
+        // The plural rules follow the same tag, and Russian's `few` band is one English has not got.
+        assertEquals(PluralCategory.FEW, formatter.pluralCategory(2.0))
     }
 
     @Test

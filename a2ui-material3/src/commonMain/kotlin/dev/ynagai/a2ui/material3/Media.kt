@@ -48,17 +48,28 @@ import dev.ynagai.a2ui.compose.rememberString
  * The frame is 16:9 and fills the width it is offered, which is the guide's "span the full width
  * of the parent's container". A row grants it a share rather than letting it take the whole width
  * -- see `claimsMainAxis` in `Layout.kt`.
+ *
+ * **The frame is named, and the name is the host's.** A `Video` is the one component in the
+ * catalog carrying no words of the agent's -- no `description`, no `altText` -- so an unnamed
+ * frame is a region a screen reader passes over entirely. [A2uiStrings.video] supplies it.
  */
 public val VideoRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
     val poster = scope.rememberString("posterUrl")
     val loader = LocalA2uiImageLoader.current
+    val strings = LocalA2uiStrings.current
     Box(
         modifier
             .leafMargin()
             .fillMaxWidth()
             .aspectRatio(VIDEO_ASPECT)
             .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            // The frame's only name. Nothing inside it has one -- the glyph is decorative and the
+            // poster is a picture -- so without this a screen reader passes over the whole
+            // component as though the surface had nothing there. From [LocalA2uiStrings] because
+            // the catalog gives a `Video` no words of the agent's own, which is the bind a
+            // `Modal`'s close button is in.
+            .semantics { contentDescription = strings.video },
         contentAlignment = Alignment.Center,
     ) {
         if (loader != null && poster != null && poster.isFetchable()) {

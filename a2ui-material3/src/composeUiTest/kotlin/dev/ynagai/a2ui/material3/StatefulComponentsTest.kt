@@ -290,6 +290,19 @@ class StatefulComponentsTest {
     }
 
     @Test
+    fun a_video_frame_is_named_by_the_host() = runComposeUiTest {
+        // A `Video` carries no words of the agent's -- no `description`, no `altText` -- so an
+        // unnamed frame is a region a screen reader passes over as though the surface had nothing
+        // there. Counted rather than found, so that the name stays on one node.
+        setContent {
+            CompositionLocalProvider(LocalA2uiStrings provides A2uiStrings(video = "動画")) {
+                Surface(rendererFor(VIDEO))
+            }
+        }
+        onAllNodes(hasContentDescription("動画")).assertCountEquals(1)
+    }
+
+    @Test
     fun a_video_does_not_take_the_row_it_sits_in() = runComposeUiTest {
         // `claimsMainAxis`'s new arm, asserted on the sibling that disappears without it: a
         // `Video` frame is a `fillMaxWidth`, and inside a `Row` a `fillMax*` resolves against the

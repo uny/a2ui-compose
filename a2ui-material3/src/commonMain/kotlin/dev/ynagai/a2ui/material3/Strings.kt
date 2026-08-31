@@ -8,11 +8,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
  *
  * **Almost every string a surface shows came out of the agent's payload**, and that is deliberate:
  * the agent chose the surface's language, and a renderer that mixed its own English into it would
- * be answering a question nobody asked it. Four words cannot come from there. A picker dialog has
+ * be answering a question nobody asked it. Five words cannot come from there. A picker dialog has
  * a confirm and a cancel button, a filterable `ChoicePicker` has a search field, a `Modal` has the
- * button that closes it, and none of the four has any text in the catalog to borrow -- but an
- * unlabelled button is not a solution either: it announces nothing to a screen reader, which for a
- * dialog's only controls means the dialog cannot be operated without sight.
+ * button that closes it, a `Video` has the frame itself, and none of the five has any text in the
+ * catalog to borrow -- but leaving them unnamed is not a solution either: an unlabelled control
+ * announces nothing to a screen reader, which for a dialog's only controls means the dialog cannot
+ * be operated without sight, and an unnamed region is one a reader passes over as if it were not
+ * there.
  *
  * So they are named here and the host may replace them, the same shape [A2uiImageLoader] uses for
  * the same reason -- the library declines to decide something that belongs to the application:
@@ -43,6 +45,16 @@ public data class A2uiStrings(
      * half a glyph cannot supply.
      */
     public val close: String = "Close",
+    /**
+     * Names the frame a `Video` draws.
+     *
+     * The one component in the catalog with nothing of the agent's own to say: an `AudioPlayer`
+     * has a `description` and an `Image` has one too, and a `Video` has neither -- only a `url`
+     * this module does not fetch and a `posterUrl` that is a picture. Without a word from here a
+     * screen reader finds nothing at all where the frame is, which reads as an empty surface
+     * rather than as a video, so this is the whole of what a reader gets to know it is there.
+     */
+    public val video: String = "Video",
 )
 
 /**

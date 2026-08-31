@@ -23,11 +23,12 @@ import dev.ynagai.a2ui.compose.ComponentRegistry
  * `Image` draws whatever [LocalA2uiImageLoader] is set to, and a described placeholder when the
  * host has set none -- this module fetches nothing itself. See [A2uiImageLoader].
  *
- * **Four words come from the host rather than from the payload.** A picker dialog's confirm and
- * cancel buttons, a `filterable` `ChoicePicker`'s search field and a `Modal`'s close button have
- * no text in the catalog to borrow, and leaving them unnamed makes them unusable with a screen
- * reader -- so they are named through [LocalA2uiStrings], English until a host provides
- * otherwise. Everything else on a surface is the agent's own words.
+ * **Five words come from the host rather than from the payload.** A picker dialog's confirm and
+ * cancel buttons, a `filterable` `ChoicePicker`'s search field, a `Modal`'s close button and a
+ * `Video`'s frame have no text in the catalog to borrow, and leaving them unnamed makes them
+ * unusable with -- or invisible to -- a screen reader, so they are named through
+ * [LocalA2uiStrings], English until a host provides otherwise. Everything else on a surface is
+ * the agent's own words.
  *
  * **`Tabs` and `Modal` hold state the agent cannot see.** A tab strip's selected index and a
  * modal's open-ness are the renderer's, because the catalog gives neither component a property to

@@ -11,7 +11,7 @@ abstract fun interface dev.ynagai.a2ui.material3/A2uiImageLoader { // dev.ynagai
 }
 
 final class dev.ynagai.a2ui.material3/A2uiStrings { // dev.ynagai.a2ui.material3/A2uiStrings|null[0]
-    constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...) // dev.ynagai.a2ui.material3/A2uiStrings.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
+    constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...) // dev.ynagai.a2ui.material3/A2uiStrings.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
 
     final val cancel // dev.ynagai.a2ui.material3/A2uiStrings.cancel|{}cancel[0]
         final fun <get-cancel>(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.cancel.<get-cancel>|<get-cancel>(){}[0]
@@ -21,12 +21,15 @@ final class dev.ynagai.a2ui.material3/A2uiStrings { // dev.ynagai.a2ui.material3
         final fun <get-confirm>(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.confirm.<get-confirm>|<get-confirm>(){}[0]
     final val filter // dev.ynagai.a2ui.material3/A2uiStrings.filter|{}filter[0]
         final fun <get-filter>(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.filter.<get-filter>|<get-filter>(){}[0]
+    final val video // dev.ynagai.a2ui.material3/A2uiStrings.video|{}video[0]
+        final fun <get-video>(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.video.<get-video>|<get-video>(){}[0]
 
     final fun component1(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.component1|component1(){}[0]
     final fun component2(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.component2|component2(){}[0]
     final fun component3(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.component3|component3(){}[0]
     final fun component4(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.component4|component4(){}[0]
-    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...): dev.ynagai.a2ui.material3/A2uiStrings // dev.ynagai.a2ui.material3/A2uiStrings.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
+    final fun component5(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.component5|component5(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...): dev.ynagai.a2ui.material3/A2uiStrings // dev.ynagai.a2ui.material3/A2uiStrings.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.material3/A2uiStrings.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.material3/A2uiStrings.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.toString|toString(){}[0]

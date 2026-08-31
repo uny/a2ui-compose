@@ -1,10 +1,11 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
-    // Applied even though nothing here is `@Composable` yet: this module depends on Compose, and
-    // it is the Compose plugin that wires the Skiko runtime into the web test bundles. Without it
-    // the wasm test task loads an executable that cannot start and reports no tests at all --
-    // which the Gradle test task then refuses, rather than passing with zero.
+    // The Gallery is Compose, so the compiler plugin is needed for its own sake. It was applied
+    // here before that was true, and for a second reason that still holds: it is this plugin that
+    // wires the Skiko runtime into the web test bundles. Without it the wasm test task loads an
+    // executable that cannot start and reports no tests at all -- which the Gradle test task then
+    // refuses, rather than passing with zero.
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
 }
@@ -34,7 +35,13 @@ kotlin {
 
     iosArm64()
     iosSimulatorArm64()
-    macosArm64()
+    macosArm64 {
+        // A native macOS window rather than a library: `main.macos.kt` is the Gallery's entry
+        // point on this target, and without an executable binary nothing links it.
+        binaries.executable {
+            entryPoint = "dev.ynagai.a2ui.gallery.main"
+        }
+    }
 
     // `binaries.executable()` on both web targets, as in `a2ui-compose`. The Compose plugin
     // checks for it and says why (CMP-4906): without an executable binary webpack does not bundle
@@ -68,6 +75,23 @@ kotlin {
         iosSimulatorArm64Test.get().dependsOn(composeUiTest)
         wasmJsTest.get().dependsOn(composeUiTest)
 
+        /**
+         * The Gallery's entry points, grouped where two targets share one.
+         *
+         * The two iOS targets share a `MainViewController`, and the two web targets share a
+         * `main` -- the web pair can, because the container is named by id rather than reached
+         * through a DOM type, which is the one thing Kotlin/JS and Kotlin/Wasm do differently
+         * here. JVM and macOS each get their own, because a desktop `application {}` and an
+         * `NSApplication` run loop have nothing in common to share.
+         */
+        val iosMain by creating { dependsOn(commonMain.get()) }
+        iosArm64Main.get().dependsOn(iosMain)
+        iosSimulatorArm64Main.get().dependsOn(iosMain)
+
+        val webMain by creating { dependsOn(commonMain.get()) }
+        jsMain.get().dependsOn(webMain)
+        wasmJsMain.get().dependsOn(webMain)
+
         commonMain {
             kotlin.srcDir(generateExampleSources)
         }
@@ -88,10 +112,24 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.compose.ui.test)
         }
-        jvmTest.dependencies {
-            // As in the other modules: Compose's JVM test harness draws through Skiko, whose
-            // native library ships with the desktop artifact rather than with `ui-test`.
+        jvmMain.dependencies {
+            // `Window` and `application` are the desktop artifact's, not `compose.ui`'s. Named
+            // here rather than only in `jvmTest`, which already had it for Skiko: the entry point
+            // is production code on this target.
             implementation(compose.desktop.currentOs)
         }
+    }
+}
+
+/**
+ * The desktop entry point, so `./gradlew :a2ui-gallery:run` opens the Gallery.
+ *
+ * Only `mainClass` is set. Packaging (`packageDistributionForCurrentOS` and friends) would need a
+ * distribution name, a version and an icon per platform, and nothing asks for an installer: this
+ * module is a development tool that is not published.
+ */
+compose.desktop {
+    application {
+        mainClass = "dev.ynagai.a2ui.gallery.GalleryMain"
     }
 }

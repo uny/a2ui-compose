@@ -57,6 +57,28 @@ own `ComponentRenderer`s, and pays nothing for a Material 3 it does not use.
 Transport is deliberately absent: the library stays transport-free, so you can drive it from SSE,
 AG-UI, a WebSocket, or a local agent loop without the library taking an opinion.
 
+## Gallery
+
+`a2ui-gallery` is the reference environment the A2UI framework adapter blueprint asks every renderer
+to ship: three columns — the specification's forty-three examples on the left, the live surface with
+its JSON message stream and a step-one-message-at-a-time control in the middle, and the data model
+and action log on the right. It is a development tool, and it is **not published**.
+
+It is also where the renderer is exercised on Kotlin/JS. Compose's UI test harness cannot boot Skiko
+there, so JS has no rendering test — the Gallery is the thing that runs.
+
+```bash
+./gradlew :a2ui-gallery:run                              # desktop
+./gradlew :a2ui-gallery:wasmJsBrowserDevelopmentRun      # browser, Kotlin/Wasm
+./gradlew :a2ui-gallery:jsBrowserDevelopmentRun          # browser, Kotlin/JS
+./gradlew :a2ui-gallery:runDebugExecutableMacosArm64     # native macOS
+```
+
+On iOS the entry point is `MainViewController()`, exported from the framework for an Xcode project
+to set as its root view controller. No Xcode project is checked in, so nothing in this repository
+launches it. **Android is the one target the Gallery does not build for** — the three library modules
+do, and only the Gallery does not.
+
 ## Roadmap
 
 | Gate | Contents | Target |

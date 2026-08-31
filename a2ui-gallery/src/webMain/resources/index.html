@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A2UI Gallery</title>
+    <style>
+        /* The composition sizes itself to this element, so it has to have a size of its own --
+           a default-height div collapses to nothing and the Gallery renders zero pixels tall. */
+        html, body { margin: 0; padding: 0; height: 100%; }
+        #a2ui-gallery { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+<div id="a2ui-gallery"></div>
+<!-- The bundle, by the name webpack gives it on both web targets. Not injected for us: the
+     distribution copies this file through as a resource rather than templating it, so a page
+     without this line loads and shows an empty div. A classic script rather than a module,
+     because webpack resolves its own public path by looking for its `<script>` element. -->
+<script src="a2ui-gallery.js"></script>
+</body>
+</html>

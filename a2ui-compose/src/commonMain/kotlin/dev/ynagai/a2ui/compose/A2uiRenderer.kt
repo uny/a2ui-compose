@@ -59,9 +59,12 @@ public fun interface A2uiClock {
  * @param catalogs the catalogs this renderer can resolve. A component naming one that is absent
  *   renders as a placeholder rather than an error, because the specification requires missing
  *   references to degrade rather than fail.
- * @param urlOpener where `openUrl` sends a URL. The default does nothing, since there is no
- *   platform-independent way to open one; the platform implementations arrive with the locale
- *   formatters.
+ * @param locale how the four locale-sensitive functions format. The default is locale-independent
+ *   and English-shaped; `systemLocaleFormatter()` reads the device's locale and
+ *   `localeFormatter(tag)` takes a fixed one. Opt-in on purpose -- a renderer that reads the
+ *   device by default makes the same payload render differently in CI than on a desk.
+ * @param urlOpener where `openUrl` sends a URL. The default does nothing, since a library should
+ *   not navigate its host's window uninvited; `rememberPlatformUrlOpener()` is the platform's own.
  */
 @Stable
 public class A2uiRenderer(

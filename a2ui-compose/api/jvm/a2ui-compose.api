@@ -215,3 +215,7 @@ public abstract interface class dev/ynagai/a2ui/compose/ComponentRenderer {
 	public abstract fun Render (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;I)V
 }
 
+public final class dev/ynagai/a2ui/compose/PlatformUrlOpener_jvmKt {
+	public static final fun rememberPlatformUrlOpener (Landroidx/compose/runtime/Composer;I)Ldev/ynagai/a2ui/core/function/UrlOpener;
+}
+

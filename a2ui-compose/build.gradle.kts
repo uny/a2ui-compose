@@ -88,6 +88,21 @@ kotlin {
         iosSimulatorArm64Test.get().dependsOn(composeUiTest)
         wasmJsTest.get().dependsOn(composeUiTest)
 
+        /**
+         * The two iOS targets, and the two web ones, each sharing a [rememberPlatformUrlOpener].
+         *
+         * iOS opens a URL through `UIApplication` and macOS through `NSWorkspace`, so `appleMain`
+         * is one group too many here — the macOS implementation sits in its own target's source set
+         * instead. The web pair does share, because both reach `window.open` the same way.
+         */
+        val iosMain by creating { dependsOn(commonMain.get()) }
+        iosArm64Main.get().dependsOn(iosMain)
+        iosSimulatorArm64Main.get().dependsOn(iosMain)
+
+        val webMain by creating { dependsOn(commonMain.get()) }
+        jsMain.get().dependsOn(webMain)
+        wasmJsMain.get().dependsOn(webMain)
+
         commonMain {
             kotlin.srcDir(generateBasicCatalog)
         }

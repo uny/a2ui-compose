@@ -9,6 +9,28 @@ public final class dev/ynagai/a2ui/core/function/A2uiFunctionException : java/la
 	public final fun getCall ()Ljava/lang/String;
 }
 
+public final class dev/ynagai/a2ui/core/function/CldrPluralRules {
+	public static final field INSTANCE Ldev/ynagai/a2ui/core/function/CldrPluralRules;
+	public final fun categoryFor (Ljava/lang/String;D)Ldev/ynagai/a2ui/core/function/PluralCategory;
+	public final fun getLanguageTags ()Ljava/util/Set;
+}
+
+public final class dev/ynagai/a2ui/core/function/CurrencyAffixes {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V
+	public final fun getFractionDigits ()I
+	public final fun getNegativePrefix ()Ljava/lang/String;
+	public final fun getNegativeSuffix ()Ljava/lang/String;
+	public final fun getPositivePrefix ()Ljava/lang/String;
+	public final fun getPositiveSuffix ()Ljava/lang/String;
+}
+
+public final class dev/ynagai/a2ui/core/function/DateNames {
+	public fun <init> (Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public final fun getAbbreviated ()Ljava/util/List;
+	public final fun getNarrow ()Ljava/util/List;
+	public final fun getWide ()Ljava/util/List;
+}
+
 public final class dev/ynagai/a2ui/core/function/EvaluationContext {
 	public fun <init> (Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/surface/EvaluationScope;Ldev/ynagai/a2ui/core/function/LocaleFormatter;Ldev/ynagai/a2ui/core/function/InvocationContext;Ldev/ynagai/a2ui/core/function/UrlOpener;Ldev/ynagai/a2ui/core/function/EvaluationLimits;Lkotlinx/serialization/json/Json;)V
 	public synthetic fun <init> (Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/surface/EvaluationScope;Ldev/ynagai/a2ui/core/function/LocaleFormatter;Ldev/ynagai/a2ui/core/function/InvocationContext;Ldev/ynagai/a2ui/core/function/UrlOpener;Ldev/ynagai/a2ui/core/function/EvaluationLimits;Lkotlinx/serialization/json/Json;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -75,11 +97,32 @@ public final class dev/ynagai/a2ui/core/function/InvocationContext : java/lang/E
 	public static fun values ()[Ldev/ynagai/a2ui/core/function/InvocationContext;
 }
 
+public abstract interface class dev/ynagai/a2ui/core/function/LocaleData {
+	public abstract fun currency (Ljava/lang/String;)Ldev/ynagai/a2ui/core/function/CurrencyAffixes;
+	public abstract fun getSymbols ()Ldev/ynagai/a2ui/core/function/LocaleSymbols;
+}
+
 public abstract interface class dev/ynagai/a2ui/core/function/LocaleFormatter {
 	public abstract fun formatCurrency (DLjava/lang/String;Ljava/lang/Integer;Z)Ljava/lang/String;
 	public abstract fun formatDate (JLjava/lang/String;)Ljava/lang/String;
 	public abstract fun formatNumber (DLjava/lang/Integer;Z)Ljava/lang/String;
 	public abstract fun pluralCategory (D)Ldev/ynagai/a2ui/core/function/PluralCategory;
+}
+
+public final class dev/ynagai/a2ui/core/function/LocaleSymbols {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ldev/ynagai/a2ui/core/function/DateNames;Ldev/ynagai/a2ui/core/function/DateNames;Ljava/util/List;)V
+	public final fun getAmPm ()Ljava/util/List;
+	public final fun getDecimalSeparator ()Ljava/lang/String;
+	public final fun getGroupSeparator ()Ljava/lang/String;
+	public final fun getGroupSizes ()Ljava/util/List;
+	public final fun getLanguageTag ()Ljava/lang/String;
+	public final fun getMinusSign ()Ljava/lang/String;
+	public final fun getMonths ()Ldev/ynagai/a2ui/core/function/DateNames;
+	public final fun getWeekdays ()Ldev/ynagai/a2ui/core/function/DateNames;
+}
+
+public final class dev/ynagai/a2ui/core/function/PlatformLocaleData_jvmSharedKt {
+	public static final fun platformLocaleData (Ljava/lang/String;)Ldev/ynagai/a2ui/core/function/LocaleData;
 }
 
 public final class dev/ynagai/a2ui/core/function/PluralCategory : java/lang/Enum {
@@ -93,6 +136,20 @@ public final class dev/ynagai/a2ui/core/function/PluralCategory : java/lang/Enum
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Ldev/ynagai/a2ui/core/function/PluralCategory;
 	public static fun values ()[Ldev/ynagai/a2ui/core/function/PluralCategory;
+}
+
+public final class dev/ynagai/a2ui/core/function/SymbolLocaleFormatter : dev/ynagai/a2ui/core/function/LocaleFormatter {
+	public fun <init> (Ldev/ynagai/a2ui/core/function/LocaleData;)V
+	public fun formatCurrency (DLjava/lang/String;Ljava/lang/Integer;Z)Ljava/lang/String;
+	public fun formatDate (JLjava/lang/String;)Ljava/lang/String;
+	public fun formatNumber (DLjava/lang/Integer;Z)Ljava/lang/String;
+	public final fun getLanguageTag ()Ljava/lang/String;
+	public fun pluralCategory (D)Ldev/ynagai/a2ui/core/function/PluralCategory;
+}
+
+public final class dev/ynagai/a2ui/core/function/SymbolLocaleFormatterKt {
+	public static final fun localeFormatter (Ljava/lang/String;)Ldev/ynagai/a2ui/core/function/LocaleFormatter;
+	public static final fun systemLocaleFormatter ()Ldev/ynagai/a2ui/core/function/LocaleFormatter;
 }
 
 public abstract interface class dev/ynagai/a2ui/core/function/UrlOpener {

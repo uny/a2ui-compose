@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
@@ -24,8 +25,10 @@ import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -38,6 +41,7 @@ import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
 import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.math.abs
 import kotlin.test.assertTrue
 
 /**
@@ -169,6 +173,21 @@ class StatefulComponentsTest {
         onAllNodes(hasText("the content")).assertCountEquals(0)
     }
 
+    @Test
+    fun a_press_that_slides_off_the_trigger_does_not_open() = runComposeUiTest {
+        // The other half of taking only the release: `waitForUpOrCancellation` gives up when the
+        // pointer leaves this node, so a press that slid off the trigger before lifting is a
+        // cancelled press rather than a tap. The loop this replaced counted any release anywhere,
+        // which meant a modal could open from a finger that had already left it.
+        setContent { Surface(rendererFor(MODAL)) }
+        onNodeWithText("Open").performTouchInput {
+            down(center)
+            moveTo(center + Offset(0f, height * 4f))
+            up()
+        }
+        onAllNodes(hasText("the content")).assertCountEquals(0)
+    }
+
     // ---- Video and AudioPlayer -------------------------------------------------------------
 
     @Test
@@ -235,6 +254,26 @@ class StatefulComponentsTest {
     }
 
     @Test
+    fun a_video_poster_is_given_the_whole_frame_to_crop_into() = runComposeUiTest {
+        // What the loader is handed, measured rather than assumed. A width-only modifier leaves a
+        // loader resolving its own height -- for an image that is the source's ratio, and for the
+        // empty box this stand-in draws it is nothing at all -- so the poster stops filling the
+        // 16:9 frame it is supposed to be the backdrop of. Asserted through a loader that draws
+        // the modifier it was given, because the recording loader discards it.
+        setContent {
+            CompositionLocalProvider(LocalA2uiImageLoader provides drawingLoader()) {
+                Surface(rendererFor(VIDEO), width = PHONE_WIDTH)
+            }
+        }
+        val poster = onNodeWithTag(POSTER).fetchSemanticsNode().boundsInRoot
+        assertTrue(poster.height > 0f, "the poster should fill the frame, not collapse: $poster")
+        assertTrue(
+            abs(poster.width / poster.height - VIDEO_RATIO) < RATIO_TOLERANCE,
+            "the poster should be the frame's own 16:9, not the source's ratio: $poster",
+        )
+    }
+
+    @Test
     fun a_video_does_not_take_the_row_it_sits_in() = runComposeUiTest {
         // `claimsMainAxis`'s new arm, asserted on the sibling that disappears without it: a
         // `Video` frame is a `fillMaxWidth`, and inside a `Row` a `fillMax*` resolves against the
@@ -268,6 +307,12 @@ class StatefulComponentsTest {
     private fun Surface(renderer: A2uiRenderer, width: Dp) {
         Box(Modifier.size(width, SURFACE_HEIGHT)) { Surface(renderer) }
     }
+
+    /** A loader that draws nothing but the modifier it was handed, so its size can be measured. */
+    private fun drawingLoader() =
+        A2uiImageLoader { _, _, _: ContentScale, modifier: Modifier ->
+            Box(modifier.testTag(POSTER))
+        }
 
     private fun recordingLoader(into: MutableList<String>) =
         A2uiImageLoader { url, _, _: ContentScale, _: Modifier -> into += url }
@@ -352,6 +397,14 @@ class StatefulComponentsTest {
             {"id":"vid","component":"Video","url":"https://example.test/v.mp4"},
             {"id":"cap","component":"Text","text":"beside the video"}
         ]"""
+
+        const val POSTER = "poster"
+
+        /** The frame's own ratio, which is what the poster inside it should measure. */
+        const val VIDEO_RATIO = 16f / 9f
+
+        /** Slack for the rounding a dp-to-pixel frame picks up at any one density. */
+        const val RATIO_TOLERANCE = 0.05f
 
         /** Every phone, and narrow enough that a missing share starves the sibling outright. */
         val PHONE_WIDTH = 320.dp

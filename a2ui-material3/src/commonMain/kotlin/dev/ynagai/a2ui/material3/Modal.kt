@@ -136,10 +136,12 @@ public val ModalRenderer: ComponentRenderer = ComponentRenderer { scope, modifie
  * scroll lifted. Leaving the press and the moves alone costs nothing, because the child cannot
  * complete a click without the release this node takes at the end.
  *
- * [waitForUpOrCancellation] is what decides the gesture stayed a tap: it yields null the moment
- * anything else consumes a change, which is precisely the ancestor scrollable claiming the drag.
- * A release that merely wandered off the trigger still counts, as before -- opening on a slipped
- * tap is the friendlier half of a trade whose other half is a control whose hit area is the child.
+ * [waitForUpOrCancellation] is what decides the gesture stayed a tap, and it is stricter than the
+ * loop it replaced in two ways that are both wanted. It yields null the moment anything else
+ * consumes a change -- which is precisely the ancestor scrollable claiming the drag -- and again
+ * when the pointer leaves this node's bounds. So a press that slides off the trigger before
+ * lifting no longer opens the dialog, where the old loop counted any release anywhere. That is
+ * the behaviour every other control on the surface already has, the trigger `Button` included.
  *
  * Keyed on nothing and reading [onTap] through a cell, rather than keyed on the lambda: a
  * `pointerInput` restarts its block whenever a key changes, so keying on a lambda the caller

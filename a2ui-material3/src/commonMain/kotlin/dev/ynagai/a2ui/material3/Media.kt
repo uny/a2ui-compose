@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -63,12 +64,18 @@ public val VideoRenderer: ComponentRenderer = ComponentRenderer { scope, modifie
         if (loader != null && poster != null && poster.isFetchable()) {
             // Cropped rather than fitted: the still is the backdrop for the glyph in front of it,
             // and a letterboxed poster inside an already-letterboxed frame is two sets of bars.
-            // `matchParentSize` rather than `fillMaxWidth` is what makes that true -- a loader is
-            // promised a modifier that already carries the size, and given only a width it
-            // resolves the height from the source's own ratio, which is `Crop` cropping nothing
-            // and the bars back. It also keeps the poster out of the frame's own measurement,
-            // which is the half a `fillMaxSize` here would get wrong.
-            loader.Image(poster, null, ContentScale.Crop, Modifier.matchParentSize())
+            // `fillMaxSize` rather than `fillMaxWidth`: given only a width, a loader honouring
+            // its source's intrinsics resolves the height from that source's own ratio, which is
+            // `Crop` cropping nothing and the bars back for any poster wider than the frame.
+            // Filling costs the frame nothing, because the frame's size is already fixed by the
+            // `aspectRatio` above and a `Box` child cannot widen a parent measured at a fixed
+            // size. **Not `matchParentSize`**, which is `BoxScope` parent data rather than a size:
+            // it is read by the measure policy of the `Box` directly above the node it lands on,
+            // and [A2uiImageLoader] promises its implementations a modifier that already carries
+            // the size wherever they put it -- a loader that wraps its image in a `Crossfade` or
+            // any layout of its own would hand that parent data to the wrong parent and draw a
+            // poster of zero size.
+            loader.Image(poster, null, ContentScale.Crop, Modifier.fillMaxSize())
         }
         PlayGlyph(size = VIDEO_GLYPH)
     }

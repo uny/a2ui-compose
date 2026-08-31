@@ -35,6 +35,10 @@ class GalleryAppTest {
         onNodeWithTag(GalleryTags.MESSAGES).assertIsDisplayed()
         onNodeWithTag(GalleryTags.DATA_MODEL).assertIsDisplayed()
         onNodeWithTag(GalleryTags.ACTION_LOG).assertIsDisplayed()
+        // The step counter too, and displayed rather than merely present. It is the last thing in
+        // the stepper and the first thing to fall off the end: in a plain `Row` it was pushed out
+        // of the centre pane entirely, which no other assertion here would have noticed.
+        onNodeWithTag(GalleryTags.STEP_LABEL).assertIsDisplayed().assertTextEquals("0 / 2")
     }
 
     @Test
@@ -125,7 +129,11 @@ class GalleryAppTest {
 
     @Test
     fun a_narrow_window_reaches_the_same_three_panes_one_at_a_time() = runComposeUiTest {
-        setContent { Gallery(width = 480.dp, height = 800.dp) }
+        // 760dp, not 800: `requiredSize` discards the incoming constraint, so a height above the
+        // harness's 768dp root would hang the bottom of the pane outside the window rather than
+        // being clamped to it -- and the lower of the two `weight(1f)` inspection panes is what
+        // would fall off.
+        setContent { Gallery(width = 480.dp, height = 760.dp) }
 
         // The render pane first: on a narrow screen it is the one worth opening on.
         onNodeWithTag(GalleryTags.PREVIEW).assertIsDisplayed()

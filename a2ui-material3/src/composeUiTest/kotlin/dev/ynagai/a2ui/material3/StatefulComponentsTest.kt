@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
@@ -84,12 +85,27 @@ class StatefulComponentsTest {
         onAllNodes(isSelectable())[0].assertIsSelected()
         onNodeWithText("Details").performClick()
         onAllNodes(isSelectable())[1].assertIsSelected()
+        // The half that a strip reporting every tab as selected would still pass without.
+        onAllNodes(isSelectable())[0].assertIsNotSelected()
     }
 
     @Test
     fun a_tab_title_bound_to_the_data_model_resolves() = runComposeUiTest {
         setContent { Surface(rendererFor(BOUND_TABS)) }
         onNodeWithText("From the model").assertIsDisplayed()
+    }
+
+    @Test
+    fun a_tab_whose_title_will_not_resolve_keeps_its_place() = runComposeUiTest {
+        // The one error in this renderer that draws the *wrong* content rather than none. A tab
+        // is paired with its child by position -- `tabs/<i>/child` -- so a header dropped for an
+        // unresolvable title would shift every header after it while the children stayed put, and
+        // the second tab would draw the first one's body. Kept with an empty title instead, which
+        // is a blank header rather than a lie.
+        setContent { Surface(rendererFor(UNRESOLVED_TITLE_TABS)) }
+        onAllNodes(isSelectable()).assertCountEquals(2)
+        onNodeWithText("Second").performClick()
+        onNodeWithText("second tab").assertIsDisplayed()
     }
 
     @Test
@@ -353,6 +369,16 @@ class StatefulComponentsTest {
                 {"title":{"path":"/title"},"child":"one"}
             ]},
             {"id":"one","component":"Text","text":"first tab"}
+        ]"""
+
+        /** The first tab's title binds to a path the data model does not have. */
+        val UNRESOLVED_TITLE_TABS = """[
+            {"id":"root","component":"Tabs","tabs":[
+                {"title":{"path":"/nothing/here"},"child":"one"},
+                {"title":"Second","child":"two"}
+            ]},
+            {"id":"one","component":"Text","text":"first tab"},
+            {"id":"two","component":"Text","text":"second tab"}
         ]"""
 
         val MODAL = """[

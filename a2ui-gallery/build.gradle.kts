@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
@@ -38,7 +40,13 @@ kotlin {
     macosArm64 {
         // A native macOS window rather than a library: `main.macos.kt` is the Gallery's entry
         // point on this target, and without an executable binary nothing links it.
-        binaries.executable {
+        //
+        // Debug only. The default registers a release binary too, and `assemble` links it -- a
+        // whole-Compose, whole-Skiko Kotlin/Native release link added to the `apple` CI job, which
+        // already excludes every other production executable on the grounds that "it is the
+        // executables that cost" (`.github/workflows/build.yml`). Nothing documents or runs a
+        // release Gallery; `runDebugExecutableMacosArm64` is the task the README names.
+        binaries.executable(listOf(NativeBuildType.DEBUG)) {
             entryPoint = "dev.ynagai.a2ui.gallery.main"
         }
     }

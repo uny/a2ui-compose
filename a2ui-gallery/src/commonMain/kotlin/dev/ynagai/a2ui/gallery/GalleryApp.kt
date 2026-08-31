@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -245,12 +248,23 @@ private fun RenderPane(
     }
 }
 
+/**
+ * The stepper controls, wrapping rather than clipping.
+ *
+ * A `FlowRow`, not a `Row`: at [THREE_COLUMN_MIN_WIDTH] the two fixed side panes leave the centre
+ * under 300dp, which is less than the three buttons and the counter need in a line -- a plain
+ * `Row` pushed the counter off the end, where it was neither readable nor findable by tag. How
+ * much room the controls want depends on the platform's default type, so the wrap is the fix
+ * rather than a wider threshold measured on one of them.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Stepper(state: GalleryState) {
-    Row(
+    FlowRow(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         Button(
             onClick = { state.advance() },
@@ -349,7 +363,11 @@ private fun A2uiPlaceholderReason.describe(): String = when (this) {
 private fun MessageStream(state: GalleryState, modifier: Modifier = Modifier) {
     Column(modifier) {
         PaneTitle("Messages")
-        LazyColumn(Modifier.fillMaxSize().testTag(GalleryTags.MESSAGES)) {
+        // Keyed on the example, so choosing another sample opens its stream at the top. A
+        // `LazyColumn`'s own remembered state survives the content changing underneath it, which
+        // left a two-message example scrolled to where a six-message one had been.
+        val scroll = remember(state.example.file) { LazyListState() }
+        LazyColumn(state = scroll, modifier = Modifier.fillMaxSize().testTag(GalleryTags.MESSAGES)) {
             itemsIndexed(state.example.raw) { index, _ ->
                 val applied = index < state.cursor
                 Column(

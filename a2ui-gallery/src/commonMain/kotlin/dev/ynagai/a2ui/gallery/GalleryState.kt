@@ -63,9 +63,15 @@ public data class ActionLogEntry(
  * Snapshot state is used outside composition on purpose: writes are visible to a composition that
  * reads them, and to a test that does not have one, with no second code path.
  *
- * @param locale and @param urlOpener are threaded to the renderer this holds. The Gallery passes
- *   the platform's own; a test passes neither and gets the locale-independent defaults, so a
- *   formatted string asserted here does not change with the machine.
+ * @param clock the source of the `timestamp` on every action message. The system clock by default;
+ *   a test that asserts on a formatted timestamp passes a fixed one, as `ExampleRenderTest` does.
+ * @param locale how the four locale-sensitive functions format. Left at the locale-independent
+ *   default, which is what every entry point currently gets: **nothing wires
+ *   `systemLocaleFormatter()` in**, so the Gallery does not exercise the platform's own locale
+ *   tables on any target -- including Kotlin/JS, where it is the only thing that runs at all.
+ * @param urlOpener where an `openUrl` action sends a URL. Left at the no-op default for the same
+ *   reason: `rememberPlatformUrlOpener()` is never called, so such an action does nothing here.
+ *   Both are constructor parameters so a host -- or the integration suite -- can supply them.
  */
 @Stable
 public class GalleryState(
@@ -110,10 +116,22 @@ public class GalleryState(
     /** The model of [surfaceId], or null. */
     public val surface: SurfaceModel? get() = surfaceId?.let { renderer.state.surfaces[it] }
 
+    /**
+     * The surface the inspection panes read: the renderable one, or any surface that exists.
+     *
+     * Deliberately not [surface], which is the *preview's* and is null until the root component
+     * arrives. `00_incremental.json` sends its data model one message before that root, so a pane
+     * keyed to renderability shows `{}` over a surface that already holds the data -- hiding
+     * exactly the progressive-rendering step the stepper exists to make visible.
+     */
+    public val inspectedSurface: SurfaceModel?
+        get() = renderer.state.surfaces.values.firstOrNull { it.isRenderable }
+            ?: renderer.state.surfaces.values.firstOrNull()
+
     /** The live data model, pretty-printed. Empty object while no surface exists. */
     public val dataModelJson: String
         get() = GalleryJson.encodeToString<JsonElement>(
-            surface?.dataModel ?: JsonObject(emptyMap()),
+            inspectedSurface?.dataModel ?: JsonObject(emptyMap()),
         )
 
     /** Shows [example] from the start. A no-op for the one already showing, so that re-tapping the

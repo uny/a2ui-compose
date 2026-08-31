@@ -74,10 +74,11 @@ there, so JS has no rendering test — the Gallery is the thing that runs.
 ./gradlew :a2ui-gallery:runDebugExecutableMacosArm64     # native macOS
 ```
 
-On iOS the entry point is `MainViewController()`, exported from the framework for an Xcode project
-to set as its root view controller. No Xcode project is checked in, so nothing in this repository
-launches it. **Android is the one target the Gallery does not build for** — the three library modules
-do, and only the Gallery does not.
+On iOS the entry point is `MainViewController()`, written for an Xcode project to set as its root
+view controller. It is not reachable yet: the Gallery declares no `binaries.framework`, so there is
+no framework to link and no Xcode project is checked in — the iOS targets are compiled and tested,
+not packaged. **Android is the one target the Gallery does not build for** — the three library
+modules do, and only the Gallery does not.
 
 ## Roadmap
 

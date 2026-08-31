@@ -107,14 +107,35 @@ class GalleryStateTest {
     fun the_data_model_pane_follows_the_surface() {
         val state = GalleryState(examples = listOf(incremental))
         state.advanceAll()
-        val surface = assertNotNull(state.surface)
-        assertEquals(
-            GalleryJson.encodeToString<JsonElement>(surface.dataModel),
-            state.dataModelJson,
-        )
+        // Read the expected model off the renderer directly rather than off `state.surface`.
+        // Both sides of this assertion used to resolve through `surfaceId`, which made it hold for
+        // any implementation of that selection -- including one picking the wrong surface, the very
+        // thing the assertion claims to pin.
+        val model = assertNotNull(state.renderer.state.surfaces.values.singleOrNull()).dataModel
+        assertEquals(GalleryJson.encodeToString<JsonElement>(model), state.dataModelJson)
         // An example that writes a data model should have one worth showing; `{}` here would mean
         // the pane is reading the wrong surface rather than that the example is empty.
-        assertTrue(surface.dataModel.isNotEmpty(), "this example writes to its data model")
+        assertTrue(model.isNotEmpty(), "this example writes to its data model")
+    }
+
+    /**
+     * The inspector shows the data model before the root component arrives.
+     *
+     * `00_incremental.json` sends `updateDataModel` as its second message and the root only as its
+     * third, so between those two steps the surface holds data but is not renderable. The pane used
+     * to resolve through the *preview's* surface, which is null until the root lands, and so
+     * reported `{}` over a surface that already held the data -- concealing the one progressive
+     * rendering step the stepper exists to show.
+     */
+    @Test
+    fun the_data_model_pane_shows_data_that_arrived_before_the_root() {
+        val state = GalleryState(examples = listOf(incremental))
+        state.advance()
+        state.advance()
+        assertNull(state.surfaceId, "the root component has not arrived, so nothing is renderable")
+        val model = assertNotNull(state.renderer.state.surfaces.values.singleOrNull()).dataModel
+        assertTrue(model.isNotEmpty(), "the second message writes the data model")
+        assertEquals(GalleryJson.encodeToString<JsonElement>(model), state.dataModelJson)
     }
 
     @Test

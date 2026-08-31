@@ -1,6 +1,7 @@
 package dev.ynagai.a2ui.core.function
 
 import kotlin.math.abs
+import kotlin.math.floor
 
 /**
  * CLDR's cardinal plural rules for a bounded set of languages, evaluated in common code.
@@ -17,11 +18,12 @@ import kotlin.math.abs
  * category `pluralize` requires an author to supply, so an unlisted language degrades to the form
  * that is always present rather than to a missing argument. [languageTags] says which are covered.
  *
- * The operands are CLDR's, computed from the `Double` the function is given: `n` is its absolute
- * value, `i` the integer part, and `v` the number of fraction digits in the shortest representation
- * that round-trips. Reading `v` off the value rather than off a formatted string is what makes
- * `1.0` plural-equal to `1` here — a formatter asked for `1.00` would put it in `other` under
- * CLDR's own reading, and this signature never sees that request.
+ * The operands are CLDR's — see [Operands] for how a bare `Double` is read into them.
+ *
+ * **The table is checked against ICU rather than transcribed.** `CldrPluralRulesFixtureTest` holds
+ * a category for every language here at forty-four probe values, cut from `Intl.PluralRules`. That
+ * comparison is what found five languages sitting in the wrong family and two operands this did
+ * not have; nothing in the rules below should be changed without re-running it.
  */
 public object CldrPluralRules {
     /** The language subtags this object has rules for. Everything else is [PluralCategory.OTHER]. */
@@ -44,34 +46,85 @@ public object CldrPluralRules {
         languageTag.substringBefore('-').substringBefore('_').lowercase()
 }
 
-/** CLDR's plural operands, as far as a bare `Double` determines them. */
+/**
+ * CLDR's plural operands, as far as a bare `Double` determines them.
+ *
+ * The value is rounded to [MAX_FRACTION_DIGITS] first, and that is not an approximation but the
+ * rule. CLDR derives its operands from the number *as written*, and a `Double` has not been written
+ * yet; ECMA-402 resolves the same ambiguity by taking the number as its own formatter would render
+ * it, whose default maximum is three fraction digits. Following that is what makes `1e-7` here
+ * agree with `Intl.PluralRules` — it renders as `0`, so it selects like zero rather than like a
+ * seven-digit fraction. Reading the raw magnitude instead disagreed with ICU on seven of the
+ * languages below.
+ */
 private class Operands(value: Double) {
-    /** The absolute value of the source number. */
-    val n: Double = abs(value)
+    /** The absolute value of the source number, as its default rendering would write it. */
+    val n: Double = roundToFractionDigits(abs(value), MAX_FRACTION_DIGITS)
 
     /** The integer digits, as a value. Bounded so a huge magnitude cannot overflow the modulo. */
     val i: Long = if (n >= Long.MAX_VALUE.toDouble()) Long.MAX_VALUE else n.toLong()
 
-    /** Fraction digits in the shortest round-tripping form: `0` for `1.0`, `1` for `1.5`. */
+    /** Fraction digits in that rendering: `0` for `1.0`, `1` for `1.5`, `0` for `1e-7`. */
     val v: Int = fractionDigits(n)
 
+    /**
+     * Those digits as a number, with trailing zeros dropped — CLDR's `t`.
+     *
+     * `1` for `0.1` and also for `0.001`, `5` for `0.5`, `25` for `0.25`. Icelandic is the rule
+     * here that needs it: it puts `0.1` in the singular and `0.5` in the plural, a distinction
+     * neither [v] nor [n] draws.
+     */
+    val t: Long = trailingTrimmedFraction(n)
+
     fun iMod(divisor: Int): Long = i % divisor
+
+    fun tMod(divisor: Int): Long = t % divisor
 
     /** `n % divisor`, defined only where [n] is integral — every rule below guards on that. */
     fun nMod(divisor: Int): Long = i % divisor
 }
 
+/** At most [digits] fraction digits, leaving magnitudes too large to scale exactly alone. */
+private fun roundToFractionDigits(magnitude: Double, digits: Int): Double {
+    if (!magnitude.isFinite() || magnitude >= EXACT_INTEGER_LIMIT) return magnitude
+    var scale = 1.0
+    repeat(digits) { scale *= 10.0 }
+    return floor(magnitude * scale + 0.5) / scale
+}
+
 private fun fractionDigits(magnitude: Double): Int {
     if (!magnitude.isFinite()) return 0
     val text = magnitude.toString()
-    // An exponent form (`1.0E20`, `1.0E-7`) is not a fraction-digit count; both are integral or
-    // far below the precision any plural rule distinguishes, so they read as none.
+    // Past this point the value is an integer far beyond anything a count reaches, and the two
+    // exponent directions have already been resolved by the rounding above.
     if (text.any { it == 'e' || it == 'E' }) return 0
+    return plainFractionDigits(text)
+}
+
+/** The fraction digits of [magnitude] as a number, trailing zeros dropped. @see Operands.t */
+private fun trailingTrimmedFraction(magnitude: Double): Long {
+    if (!magnitude.isFinite()) return 0L
+    val text = magnitude.toString()
+    if (text.any { it == 'e' || it == 'E' }) return 0L
+    val point = text.indexOf('.')
+    if (point < 0) return 0L
+    val fraction = text.substring(point + 1).trimEnd('0')
+    return if (fraction.isEmpty()) 0L else fraction.toLongOrNull() ?: 0L
+}
+
+/** Fraction digits of a form with no exponent, where a lone `0` after the point counts as none. */
+private fun plainFractionDigits(text: String): Int {
     val point = text.indexOf('.')
     if (point < 0) return 0
     val fraction = text.substring(point + 1)
     return if (fraction == "0") 0 else fraction.length
 }
+
+/** ECMA-402's default `maximumFractionDigits`, which is what fixes this reading of the operands. */
+private const val MAX_FRACTION_DIGITS: Int = 3
+
+/** The largest magnitude a scaled, rounded [Double] still represents every integer below. */
+private const val EXACT_INTEGER_LIMIT: Double = 9.0e15
 
 private typealias Rule = (Operands) -> PluralCategory
 
@@ -93,6 +146,52 @@ private val ONE_WHEN_I_IS_0_OR_1: Rule = {
 /** `one: i = 0 or n = 1` — Hindi and its relatives. */
 private val ONE_WHEN_I_IS_0_OR_N_IS_1: Rule = {
     if (it.i == 0L || it.n == 1.0) PluralCategory.ONE else PluralCategory.OTHER
+}
+
+/** Danish: `one: n = 1 or t != 0 and i = 0,1` — a fraction below two is singular. */
+private val DANISH: Rule = {
+    if (it.n == 1.0 || (it.v != 0 && it.i in 0L..1L)) PluralCategory.ONE else PluralCategory.OTHER
+}
+
+/**
+ * Icelandic: `one: t = 0 and i % 10 = 1 and i % 100 != 11 or t % 10 = 1 and t % 100 != 11`.
+ *
+ * The integer half is the `one` band East Slavic draws — 21 and 101 singular, 11 not. The second
+ * half applies the same band to the fraction digits, which is why `0.1` and `0.001` are singular
+ * while `0.5` and `0.25` are not.
+ */
+private val ICELANDIC: Rule = {
+    val whole = it.t == 0L && it.iMod(10) == 1L && it.iMod(100) != 11L
+    val fraction = it.tMod(10) == 1L && it.tMod(100) != 11L
+    if (whole || fraction) PluralCategory.ONE else PluralCategory.OTHER
+}
+
+/**
+ * `many` for an exact multiple of a million, layered over [base].
+ *
+ * CLDR gave the Western Romance languages a category for the round large numbers that compact
+ * notation writes as `1 million`: `many: i != 0 and i % 1000000 = 0 and v = 0`. It sits in front of
+ * the language's own rule rather than replacing it, which is why it is written as a wrapper.
+ */
+private fun withRomanceMillions(base: Rule): Rule = { operands ->
+    if (operands.v == 0 && operands.i != 0L && operands.i % MILLION == 0L) PluralCategory.MANY
+    else base(operands)
+}
+
+private const val MILLION: Long = 1_000_000L
+
+/**
+ * Hebrew, which keeps a dual.
+ *
+ * `one: i = 1 and v = 0 or i = 0 and v != 0`, `two: i = 2 and v = 0`. The second half of `one` is
+ * what puts `0.5` in the singular while `0` stays `other`.
+ */
+private val HEBREW: Rule = {
+    when {
+        (it.i == 1L && it.v == 0) || (it.i == 0L && it.v != 0) -> PluralCategory.ONE
+        it.i == 2L && it.v == 0 -> PluralCategory.TWO
+        else -> PluralCategory.OTHER
+    }
 }
 
 /** Russian and Ukrainian: one/few/many on the last two integer digits, fractions always other. */
@@ -165,17 +264,24 @@ private val FAMILIES: Map<String, Rule> = buildMap {
     ).forEach { put(it, ONLY_OTHER) }
 
     listOf(
-        "en", "de", "nl", "sv", "da", "no", "nb", "nn", "fi", "et", "el", "it", "bg", "ca",
-        "af", "sw", "he", "eu", "gl", "fo", "is", "lb", "ml", "mr", "ta", "te", "ur", "kn",
+        "en", "de", "nl", "sv", "no", "nb", "nn", "fi", "et", "el", "bg",
+        "af", "sw", "eu", "gl", "fo", "lb", "ml", "mr", "ta", "te", "ur",
     ).forEach { put(it, ONE_WHEN_I_IS_1) }
 
-    listOf("es", "tr", "az", "kk", "ky", "uz", "hu", "ka", "hy", "ne").forEach {
-        put(it, ONE_WHEN_N_IS_1)
-    }
+    listOf("tr", "az", "kk", "ky", "uz", "hu", "ka", "ne").forEach { put(it, ONE_WHEN_N_IS_1) }
 
-    listOf("fr", "pt").forEach { put(it, ONE_WHEN_I_IS_0_OR_1) }
+    put("hy", ONE_WHEN_I_IS_0_OR_1)
 
-    listOf("hi", "bn", "gu", "fa", "zu").forEach { put(it, ONE_WHEN_I_IS_0_OR_N_IS_1) }
+    // The Western Romance group, which shares the millions rule but not the rest.
+    listOf("it", "ca").forEach { put(it, withRomanceMillions(ONE_WHEN_I_IS_1)) }
+    put("es", withRomanceMillions(ONE_WHEN_N_IS_1))
+    listOf("fr", "pt").forEach { put(it, withRomanceMillions(ONE_WHEN_I_IS_0_OR_1)) }
+
+    listOf("hi", "bn", "gu", "fa", "zu", "kn").forEach { put(it, ONE_WHEN_I_IS_0_OR_N_IS_1) }
+
+    put("da", DANISH)
+    put("is", ICELANDIC)
+    put("he", HEBREW)
 
     listOf("ru", "uk", "be").forEach { put(it, EAST_SLAVIC) }
 

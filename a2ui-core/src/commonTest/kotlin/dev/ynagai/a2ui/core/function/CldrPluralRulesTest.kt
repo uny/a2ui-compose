@@ -96,6 +96,52 @@ class CldrPluralRulesTest {
     }
 
     @Test
+    fun theLanguagesTheIcuComparisonMovedOutOfTheEnglishFamily() {
+        // All five read like English until they were compared against ICU. Kept as named cases
+        // beside the fixture, because the fixture says they differ and this says how.
+        // Danish: a fraction below two is singular, where English has no fractional singular.
+        assertEquals(PluralCategory.ONE, category("da", 0.5))
+        assertEquals(PluralCategory.ONE, category("da", 1.5))
+        // Icelandic: the `one` band runs on the last integer digit, and again on the fraction --
+        // which is why `0.1` is singular and `0.5` is not.
+        assertEquals(PluralCategory.ONE, category("is", 21.0))
+        assertEquals(PluralCategory.OTHER, category("is", 11.0))
+        assertEquals(PluralCategory.ONE, category("is", 0.1))
+        assertEquals(PluralCategory.OTHER, category("is", 0.5))
+        // Hebrew keeps a dual, and puts a fraction below one in the singular.
+        assertEquals(PluralCategory.TWO, category("he", 2.0))
+        assertEquals(PluralCategory.ONE, category("he", 0.5))
+        assertEquals(PluralCategory.OTHER, category("he", 0.0))
+        // Kannada and Armenian both count zero as singular.
+        assertEquals(PluralCategory.ONE, category("kn", 0.0))
+        assertEquals(PluralCategory.ONE, category("hy", 0.0))
+        assertEquals(PluralCategory.ONE, category("hy", 0.5))
+    }
+
+    @Test
+    fun theWesternRomanceLanguagesHaveACategoryForExactMillions() {
+        // `many` in Spanish, French, Italian, Portuguese and Catalan is the compact-notation
+        // bucket -- an exact multiple of a million and nothing else.
+        assertEquals(PluralCategory.MANY, category("fr", 1_000_000.0))
+        assertEquals(PluralCategory.MANY, category("es", 2_000_000.0))
+        assertEquals(PluralCategory.OTHER, category("fr", 1_500_000.0))
+        assertEquals(PluralCategory.OTHER, category("fr", 1_000_001.0))
+        // The rule sits in front of the language's own, which still decides everything else.
+        assertEquals(PluralCategory.ONE, category("fr", 0.0))
+        assertEquals(PluralCategory.OTHER, category("en", 1_000_000.0))
+    }
+
+    @Test
+    fun operandsAreReadFromTheValueAsItWouldBeWritten() {
+        // ECMA-402 resolves a bare number's operands through its default formatting, which stops
+        // at three fraction digits. So `1e-7` selects as zero rather than as a long fraction --
+        // the reading `Intl.PluralRules` makes, and the one the fixture is cut from.
+        assertEquals(PluralCategory.ZERO, category("ar", 1e-7))
+        assertEquals(PluralCategory.OTHER, category("cs", 1e-7))
+        assertEquals(PluralCategory.MANY, category("ru", 1e-7))
+    }
+
+    @Test
     fun anUnknownLanguageAnswersOtherRatherThanGuessing() {
         // `other` is the one argument `pluralize` requires, so an unlisted language degrades to a
         // form the author has certainly supplied. `qqq` is not a language; `cy` is one this set

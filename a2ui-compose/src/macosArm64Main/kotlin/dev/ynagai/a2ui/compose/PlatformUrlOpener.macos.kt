@@ -13,6 +13,11 @@ public actual fun rememberPlatformUrlOpener(): UrlOpener = remember {
     UrlOpener { url ->
         val target = NSURL.URLWithString(url)
             ?: throw A2uiFunctionException("openUrl: `$url` is not a URL macOS can parse.")
-        NSWorkspace.sharedWorkspace.openURL(target)
+        // `openURL` reports refusal in its return value rather than by raising -- no handler for
+        // the scheme, a URL the workspace declines -- and dropping it let `openUrl` report success
+        // for a request that opened nothing.
+        if (!NSWorkspace.sharedWorkspace.openURL(target)) {
+            throw A2uiFunctionException("openUrl: macOS declined to open `$url`.")
+        }
     }
 }

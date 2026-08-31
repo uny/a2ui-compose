@@ -73,7 +73,7 @@ class PlatformLocaleDataTest {
     @Test
     fun currencyMinorUnitsComeFromTheCode() {
         val data = platformLocaleData("en-US")
-        assertEquals("$", data.currency("USD").positivePrefix)
+        assertEquals("\$", data.currency("USD").positivePrefix)
         assertEquals(2, data.currency("USD").fractionDigits)
         // The currency with no minor unit, which is the case a hard-coded 2 gets wrong.
         assertEquals(0, data.currency("JPY").fractionDigits)
@@ -94,8 +94,8 @@ class PlatformLocaleDataTest {
     fun englishFormatsTheWayTheCorpusExpects() {
         val formatter = localeFormatter("en-US")
         assertEquals("1,234,567.50", formatter.formatNumber(1234567.5, 2, grouping = true))
-        assertEquals("$1,234.50", formatter.formatCurrency(1234.5, "USD", null, grouping = true))
-        assertEquals("-$1,234.50", formatter.formatCurrency(-1234.5, "USD", null, grouping = true))
+        assertEquals("\$1,234.50", formatter.formatCurrency(1234.5, "USD", null, grouping = true))
+        assertEquals("-\$1,234.50", formatter.formatCurrency(-1234.5, "USD", null, grouping = true))
         // The two pattern shapes the 43 examples actually use, including a quoted literal.
         assertEquals("Tuesday, August 26", formatter.formatDate(REFERENCE, "EEEE, MMMM d"))
         assertEquals(

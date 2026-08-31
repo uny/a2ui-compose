@@ -162,6 +162,13 @@ abstract fun interface dev.ynagai.a2ui.core.surface/ChildResolver { // dev.ynaga
     }
 }
 
+abstract interface dev.ynagai.a2ui.core.function/LocaleData { // dev.ynagai.a2ui.core.function/LocaleData|null[0]
+    abstract val symbols // dev.ynagai.a2ui.core.function/LocaleData.symbols|{}symbols[0]
+        abstract fun <get-symbols>(): dev.ynagai.a2ui.core.function/LocaleSymbols // dev.ynagai.a2ui.core.function/LocaleData.symbols.<get-symbols>|<get-symbols>(){}[0]
+
+    abstract fun currency(kotlin/String): dev.ynagai.a2ui.core.function/CurrencyAffixes // dev.ynagai.a2ui.core.function/LocaleData.currency|currency(kotlin.String){}[0]
+}
+
 abstract interface dev.ynagai.a2ui.core.function/LocaleFormatter { // dev.ynagai.a2ui.core.function/LocaleFormatter|null[0]
     abstract fun formatCurrency(kotlin/Double, kotlin/String, kotlin/Int?, kotlin/Boolean): kotlin/String // dev.ynagai.a2ui.core.function/LocaleFormatter.formatCurrency|formatCurrency(kotlin.Double;kotlin.String;kotlin.Int?;kotlin.Boolean){}[0]
     abstract fun formatDate(kotlin/Long, kotlin/String): kotlin/String // dev.ynagai.a2ui.core.function/LocaleFormatter.formatDate|formatDate(kotlin.Long;kotlin.String){}[0]
@@ -760,6 +767,32 @@ final class dev.ynagai.a2ui.core.function/A2uiFunctionException : kotlin/Runtime
         final fun <get-call>(): kotlin/String? // dev.ynagai.a2ui.core.function/A2uiFunctionException.call.<get-call>|<get-call>(){}[0]
 }
 
+final class dev.ynagai.a2ui.core.function/CurrencyAffixes { // dev.ynagai.a2ui.core.function/CurrencyAffixes|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/Int) // dev.ynagai.a2ui.core.function/CurrencyAffixes.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.Int){}[0]
+
+    final val fractionDigits // dev.ynagai.a2ui.core.function/CurrencyAffixes.fractionDigits|{}fractionDigits[0]
+        final fun <get-fractionDigits>(): kotlin/Int // dev.ynagai.a2ui.core.function/CurrencyAffixes.fractionDigits.<get-fractionDigits>|<get-fractionDigits>(){}[0]
+    final val negativePrefix // dev.ynagai.a2ui.core.function/CurrencyAffixes.negativePrefix|{}negativePrefix[0]
+        final fun <get-negativePrefix>(): kotlin/String // dev.ynagai.a2ui.core.function/CurrencyAffixes.negativePrefix.<get-negativePrefix>|<get-negativePrefix>(){}[0]
+    final val negativeSuffix // dev.ynagai.a2ui.core.function/CurrencyAffixes.negativeSuffix|{}negativeSuffix[0]
+        final fun <get-negativeSuffix>(): kotlin/String // dev.ynagai.a2ui.core.function/CurrencyAffixes.negativeSuffix.<get-negativeSuffix>|<get-negativeSuffix>(){}[0]
+    final val positivePrefix // dev.ynagai.a2ui.core.function/CurrencyAffixes.positivePrefix|{}positivePrefix[0]
+        final fun <get-positivePrefix>(): kotlin/String // dev.ynagai.a2ui.core.function/CurrencyAffixes.positivePrefix.<get-positivePrefix>|<get-positivePrefix>(){}[0]
+    final val positiveSuffix // dev.ynagai.a2ui.core.function/CurrencyAffixes.positiveSuffix|{}positiveSuffix[0]
+        final fun <get-positiveSuffix>(): kotlin/String // dev.ynagai.a2ui.core.function/CurrencyAffixes.positiveSuffix.<get-positiveSuffix>|<get-positiveSuffix>(){}[0]
+}
+
+final class dev.ynagai.a2ui.core.function/DateNames { // dev.ynagai.a2ui.core.function/DateNames|null[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String>) // dev.ynagai.a2ui.core.function/DateNames.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>){}[0]
+
+    final val abbreviated // dev.ynagai.a2ui.core.function/DateNames.abbreviated|{}abbreviated[0]
+        final fun <get-abbreviated>(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.function/DateNames.abbreviated.<get-abbreviated>|<get-abbreviated>(){}[0]
+    final val narrow // dev.ynagai.a2ui.core.function/DateNames.narrow|{}narrow[0]
+        final fun <get-narrow>(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.function/DateNames.narrow.<get-narrow>|<get-narrow>(){}[0]
+    final val wide // dev.ynagai.a2ui.core.function/DateNames.wide|{}wide[0]
+        final fun <get-wide>(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.function/DateNames.wide.<get-wide>|<get-wide>(){}[0]
+}
+
 final class dev.ynagai.a2ui.core.function/EvaluationContext { // dev.ynagai.a2ui.core.function/EvaluationContext|null[0]
     constructor <init>(kotlinx.serialization.json/JsonElement, dev.ynagai.a2ui.core.surface/EvaluationScope = ..., dev.ynagai.a2ui.core.function/LocaleFormatter = ..., dev.ynagai.a2ui.core.function/InvocationContext = ..., dev.ynagai.a2ui.core.function/UrlOpener? = ..., dev.ynagai.a2ui.core.function/EvaluationLimits = ..., kotlinx.serialization.json/Json = ...) // dev.ynagai.a2ui.core.function/EvaluationContext.<init>|<init>(kotlinx.serialization.json.JsonElement;dev.ynagai.a2ui.core.surface.EvaluationScope;dev.ynagai.a2ui.core.function.LocaleFormatter;dev.ynagai.a2ui.core.function.InvocationContext;dev.ynagai.a2ui.core.function.UrlOpener?;dev.ynagai.a2ui.core.function.EvaluationLimits;kotlinx.serialization.json.Json){}[0]
 
@@ -809,6 +842,39 @@ final class dev.ynagai.a2ui.core.function/EvaluationLimits { // dev.ynagai.a2ui.
         final val DEFAULT // dev.ynagai.a2ui.core.function/EvaluationLimits.Companion.DEFAULT|{}DEFAULT[0]
             final fun <get-DEFAULT>(): dev.ynagai.a2ui.core.function/EvaluationLimits // dev.ynagai.a2ui.core.function/EvaluationLimits.Companion.DEFAULT.<get-DEFAULT>|<get-DEFAULT>(){}[0]
     }
+}
+
+final class dev.ynagai.a2ui.core.function/LocaleSymbols { // dev.ynagai.a2ui.core.function/LocaleSymbols|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin.collections/List<kotlin/Int>, dev.ynagai.a2ui.core.function/DateNames, dev.ynagai.a2ui.core.function/DateNames, kotlin.collections/List<kotlin/String>) // dev.ynagai.a2ui.core.function/LocaleSymbols.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.collections.List<kotlin.Int>;dev.ynagai.a2ui.core.function.DateNames;dev.ynagai.a2ui.core.function.DateNames;kotlin.collections.List<kotlin.String>){}[0]
+
+    final val amPm // dev.ynagai.a2ui.core.function/LocaleSymbols.amPm|{}amPm[0]
+        final fun <get-amPm>(): kotlin.collections/List<kotlin/String> // dev.ynagai.a2ui.core.function/LocaleSymbols.amPm.<get-amPm>|<get-amPm>(){}[0]
+    final val decimalSeparator // dev.ynagai.a2ui.core.function/LocaleSymbols.decimalSeparator|{}decimalSeparator[0]
+        final fun <get-decimalSeparator>(): kotlin/String // dev.ynagai.a2ui.core.function/LocaleSymbols.decimalSeparator.<get-decimalSeparator>|<get-decimalSeparator>(){}[0]
+    final val groupSeparator // dev.ynagai.a2ui.core.function/LocaleSymbols.groupSeparator|{}groupSeparator[0]
+        final fun <get-groupSeparator>(): kotlin/String // dev.ynagai.a2ui.core.function/LocaleSymbols.groupSeparator.<get-groupSeparator>|<get-groupSeparator>(){}[0]
+    final val groupSizes // dev.ynagai.a2ui.core.function/LocaleSymbols.groupSizes|{}groupSizes[0]
+        final fun <get-groupSizes>(): kotlin.collections/List<kotlin/Int> // dev.ynagai.a2ui.core.function/LocaleSymbols.groupSizes.<get-groupSizes>|<get-groupSizes>(){}[0]
+    final val languageTag // dev.ynagai.a2ui.core.function/LocaleSymbols.languageTag|{}languageTag[0]
+        final fun <get-languageTag>(): kotlin/String // dev.ynagai.a2ui.core.function/LocaleSymbols.languageTag.<get-languageTag>|<get-languageTag>(){}[0]
+    final val minusSign // dev.ynagai.a2ui.core.function/LocaleSymbols.minusSign|{}minusSign[0]
+        final fun <get-minusSign>(): kotlin/String // dev.ynagai.a2ui.core.function/LocaleSymbols.minusSign.<get-minusSign>|<get-minusSign>(){}[0]
+    final val months // dev.ynagai.a2ui.core.function/LocaleSymbols.months|{}months[0]
+        final fun <get-months>(): dev.ynagai.a2ui.core.function/DateNames // dev.ynagai.a2ui.core.function/LocaleSymbols.months.<get-months>|<get-months>(){}[0]
+    final val weekdays // dev.ynagai.a2ui.core.function/LocaleSymbols.weekdays|{}weekdays[0]
+        final fun <get-weekdays>(): dev.ynagai.a2ui.core.function/DateNames // dev.ynagai.a2ui.core.function/LocaleSymbols.weekdays.<get-weekdays>|<get-weekdays>(){}[0]
+}
+
+final class dev.ynagai.a2ui.core.function/SymbolLocaleFormatter : dev.ynagai.a2ui.core.function/LocaleFormatter { // dev.ynagai.a2ui.core.function/SymbolLocaleFormatter|null[0]
+    constructor <init>(dev.ynagai.a2ui.core.function/LocaleData) // dev.ynagai.a2ui.core.function/SymbolLocaleFormatter.<init>|<init>(dev.ynagai.a2ui.core.function.LocaleData){}[0]
+
+    final val languageTag // dev.ynagai.a2ui.core.function/SymbolLocaleFormatter.languageTag|{}languageTag[0]
+        final fun <get-languageTag>(): kotlin/String // dev.ynagai.a2ui.core.function/SymbolLocaleFormatter.languageTag.<get-languageTag>|<get-languageTag>(){}[0]
+
+    final fun formatCurrency(kotlin/Double, kotlin/String, kotlin/Int?, kotlin/Boolean): kotlin/String // dev.ynagai.a2ui.core.function/SymbolLocaleFormatter.formatCurrency|formatCurrency(kotlin.Double;kotlin.String;kotlin.Int?;kotlin.Boolean){}[0]
+    final fun formatDate(kotlin/Long, kotlin/String): kotlin/String // dev.ynagai.a2ui.core.function/SymbolLocaleFormatter.formatDate|formatDate(kotlin.Long;kotlin.String){}[0]
+    final fun formatNumber(kotlin/Double, kotlin/Int?, kotlin/Boolean): kotlin/String // dev.ynagai.a2ui.core.function/SymbolLocaleFormatter.formatNumber|formatNumber(kotlin.Double;kotlin.Int?;kotlin.Boolean){}[0]
+    final fun pluralCategory(kotlin/Double): dev.ynagai.a2ui.core.function/PluralCategory // dev.ynagai.a2ui.core.function/SymbolLocaleFormatter.pluralCategory|pluralCategory(kotlin.Double){}[0]
 }
 
 final class dev.ynagai.a2ui.core.protocol/A2uiFormatException : kotlinx.serialization/SerializationException { // dev.ynagai.a2ui.core.protocol/A2uiFormatException|null[0]
@@ -1954,6 +2020,13 @@ final class dev.ynagai.a2ui.core.validation/ValidationLimits { // dev.ynagai.a2u
     }
 }
 
+final object dev.ynagai.a2ui.core.function/CldrPluralRules { // dev.ynagai.a2ui.core.function/CldrPluralRules|null[0]
+    final val languageTags // dev.ynagai.a2ui.core.function/CldrPluralRules.languageTags|{}languageTags[0]
+        final fun <get-languageTags>(): kotlin.collections/Set<kotlin/String> // dev.ynagai.a2ui.core.function/CldrPluralRules.languageTags.<get-languageTags>|<get-languageTags>(){}[0]
+
+    final fun categoryFor(kotlin/String, kotlin/Double): dev.ynagai.a2ui.core.function/PluralCategory // dev.ynagai.a2ui.core.function/CldrPluralRules.categoryFor|categoryFor(kotlin.String;kotlin.Double){}[0]
+}
+
 final object dev.ynagai.a2ui.core.function/FallbackLocaleFormatter : dev.ynagai.a2ui.core.function/LocaleFormatter { // dev.ynagai.a2ui.core.function/FallbackLocaleFormatter|null[0]
     final fun formatCurrency(kotlin/Double, kotlin/String, kotlin/Int?, kotlin/Boolean): kotlin/String // dev.ynagai.a2ui.core.function/FallbackLocaleFormatter.formatCurrency|formatCurrency(kotlin.Double;kotlin.String;kotlin.Int?;kotlin.Boolean){}[0]
     final fun formatDate(kotlin/Long, kotlin/String): kotlin/String // dev.ynagai.a2ui.core.function/FallbackLocaleFormatter.formatDate|formatDate(kotlin.Long;kotlin.String){}[0]
@@ -2057,3 +2130,6 @@ final fun (dev.ynagai.a2ui.core.surface/SurfaceModel).dev.ynagai.a2ui.core.surfa
 final fun (dev.ynagai.a2ui.core.surface/SurfaceModel).dev.ynagai.a2ui.core.surface/walk(dev.ynagai.a2ui.core.surface/ChildResolver, kotlin/Int = ..., kotlin/Int = ...): kotlin.collections/List<kotlin/Pair<dev.ynagai.a2ui.core.protocol/Component, dev.ynagai.a2ui.core.surface/EvaluationScope>> // dev.ynagai.a2ui.core.surface/walk|walk@dev.ynagai.a2ui.core.surface.SurfaceModel(dev.ynagai.a2ui.core.surface.ChildResolver;kotlin.Int;kotlin.Int){}[0]
 final fun (kotlinx.serialization.json/JsonElement).dev.ynagai.a2ui.core.surface/resolve(dev.ynagai.a2ui.core.surface/JsonPointer): kotlinx.serialization.json/JsonElement? // dev.ynagai.a2ui.core.surface/resolve|resolve@kotlinx.serialization.json.JsonElement(dev.ynagai.a2ui.core.surface.JsonPointer){}[0]
 final fun (kotlinx.serialization.json/JsonObject).dev.ynagai.a2ui.core.surface/write(dev.ynagai.a2ui.core.surface/JsonPointer, kotlinx.serialization.json/JsonElement): kotlinx.serialization.json/JsonObject // dev.ynagai.a2ui.core.surface/write|write@kotlinx.serialization.json.JsonObject(dev.ynagai.a2ui.core.surface.JsonPointer;kotlinx.serialization.json.JsonElement){}[0]
+final fun dev.ynagai.a2ui.core.function/localeFormatter(kotlin/String): dev.ynagai.a2ui.core.function/LocaleFormatter // dev.ynagai.a2ui.core.function/localeFormatter|localeFormatter(kotlin.String){}[0]
+final fun dev.ynagai.a2ui.core.function/platformLocaleData(kotlin/String?): dev.ynagai.a2ui.core.function/LocaleData // dev.ynagai.a2ui.core.function/platformLocaleData|platformLocaleData(kotlin.String?){}[0]
+final fun dev.ynagai.a2ui.core.function/systemLocaleFormatter(): dev.ynagai.a2ui.core.function/LocaleFormatter // dev.ynagai.a2ui.core.function/systemLocaleFormatter|systemLocaleFormatter(){}[0]

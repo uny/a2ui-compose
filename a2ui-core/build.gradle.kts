@@ -78,6 +78,42 @@ kotlin {
     wasmJs { browser() }
 
     sourceSets {
+        /**
+         * The JVM and Android halves of [platformLocaleData], which are the same code.
+         *
+         * Android's own locale tables are ICU's, reachable as `android.icu`, but the only thing
+         * this module asks a platform for is symbols -- separators, month and weekday names,
+         * currency affixes -- and `java.text.DateFormatSymbols`, `DecimalFormatSymbols` and
+         * `DecimalFormat` answer that identically on both. An `android.icu` implementation would
+         * be a second copy of this file that reads better tables the module never consults.
+         */
+        val jvmSharedMain by creating { dependsOn(commonMain.get()) }
+        jvmMain.get().dependsOn(jvmSharedMain)
+        androidMain.get().dependsOn(jvmSharedMain)
+
+        /**
+         * The Kotlin/JS and Kotlin/Wasm halves, which read the same `Intl` API.
+         *
+         * Shared despite the two targets' interop being different, because the bridge is written
+         * as `js(...)` bodies returning a `String` — the one shape both compile, and the reason
+         * `Intl`'s objects are flattened before they cross back into Kotlin.
+         */
+        val webMain by creating { dependsOn(commonMain.get()) }
+        jsMain.get().dependsOn(webMain)
+        wasmJsMain.get().dependsOn(webMain)
+
+        /**
+         * The three Apple targets, which share one Foundation implementation.
+         *
+         * Declared rather than inherited: the default hierarchy template stops being applied to a
+         * project that configures any `dependsOn` edge of its own, and the two above are edges of
+         * its own. So the group the template would have supplied is written out here.
+         */
+        val appleMain by creating { dependsOn(commonMain.get()) }
+        iosArm64Main.get().dependsOn(appleMain)
+        iosSimulatorArm64Main.get().dependsOn(appleMain)
+        macosArm64Main.get().dependsOn(appleMain)
+
         commonMain {
             kotlin.srcDir(generateProtocolSchemas)
         }

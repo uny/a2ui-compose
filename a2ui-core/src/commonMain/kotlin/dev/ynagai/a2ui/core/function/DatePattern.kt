@@ -96,13 +96,45 @@ private const val DAYS_PER_ERA: Long = 146097L
 /** Days from 0000-03-01 to 1970-01-01, the shift that puts the leap day last in the year. */
 private const val DAYS_FROM_ERA_TO_EPOCH: Long = 719468L
 
-private val MONTH_NAMES = listOf(
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+/**
+ * The names the pattern engine substitutes, which is the whole of what a locale changes about it.
+ *
+ * TR35's field *semantics* -- how many letters mean which width, that `yy` is the low two digits,
+ * that `h` counts from 12 -- are the same in every locale, so they stay in [field] and only the
+ * strings move out here.
+ */
+internal class DateFieldNames(
+    /** January first. */
+    val months: DateNames,
+    /** Sunday first, matching [CivilDateTime.dayOfWeek]. */
+    val weekdays: DateNames,
+    /** AM then PM. */
+    val amPm: List<String>,
 )
 
-private val DAY_NAMES = listOf(
-    "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+/**
+ * The English names [FallbackLocaleFormatter] writes, with the short widths taken as prefixes.
+ *
+ * Truncating is only correct because these are English: `September` really does abbreviate to `Sep`
+ * and narrow to `S`. [LocaleData] implementations must not do the same -- see [DateNames].
+ */
+internal val EnglishDateFieldNames: DateFieldNames = DateFieldNames(
+    months = prefixNames(
+        listOf(
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December",
+        ),
+    ),
+    weekdays = prefixNames(
+        listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"),
+    ),
+    amPm = listOf("AM", "PM"),
+)
+
+private fun prefixNames(wide: List<String>): DateNames = DateNames(
+    wide = wide,
+    abbreviated = wide.map { it.take(ABBREVIATION_LENGTH) },
+    narrow = wide.map { it.take(1) },
 )
 
 private const val ABBREVIATION_LENGTH: Int = 3
@@ -115,15 +147,22 @@ private const val HOURS_PER_HALF_DAY: Int = 12
 private const val PATTERN_EXCERPT: Int = 64
 
 /**
- * [epochMillis] rendered with the Unicode TR35 pattern [pattern], in UTC and with English names.
+ * [epochMillis] rendered with the Unicode TR35 pattern [pattern], in UTC and with [names]' names.
  *
  * The subset implemented is the one the catalog's own token reference documents — `y M d E h H m
  * s a` — plus `S` and TR35's single-quote literals, where `''` stands for one quote. Any other ASCII
  * letter raises rather than passing through: TR35 reserves the whole letter range for future
  * fields, so emitting an unrecognised one literally would silently produce a date string with a
  * stray letter in it, and a renderer would have no way to tell that from an intended literal.
+ *
+ * This is the only date engine in the module, on every target. [LocaleData] moves the names but
+ * not the interpretation, so one payload renders the same shape everywhere — see [LocaleData].
  */
-internal fun formatUtcPattern(epochMillis: Long, pattern: String): String {
+internal fun formatUtcPattern(
+    epochMillis: Long,
+    pattern: String,
+    names: DateFieldNames = EnglishDateFieldNames,
+): String {
     val at = CivilDateTime.ofEpochMillis(epochMillis)
     val out = StringBuilder(pattern.length)
     var i = 0
@@ -134,7 +173,7 @@ internal fun formatUtcPattern(epochMillis: Long, pattern: String): String {
             c in 'a'..'z' || c in 'A'..'Z' -> {
                 var end = i
                 while (end < pattern.length && pattern[end] == c) end++
-                out.append(field(c, end - i, at))
+                out.append(field(c, end - i, at, names))
                 i = end
             }
             else -> {
@@ -170,14 +209,16 @@ private fun appendQuoted(pattern: String, start: Int, out: StringBuilder): Int {
     )
 }
 
-private fun field(letter: Char, count: Int, at: CivilDateTime): String = when (letter) {
+private fun field(letter: Char, count: Int, at: CivilDateTime, names: DateFieldNames): String = when (letter) {
     // TR35 gives `yy` the special meaning "the low two digits", not "pad to two".
     'y' -> if (count == TWO_DIGIT_COUNT) pad(at.year.mod(100), TWO_DIGIT_COUNT)
     else pad(at.year, count)
-    'M' -> name(MONTH_NAMES[at.month - 1], count) ?: pad(at.month, count)
+    'M' -> name(names.months, at.month - 1, count) ?: pad(at.month, count)
     'd' -> pad(at.day, count)
-    'E' -> name(DAY_NAMES[at.dayOfWeek], if (count < ABBREVIATION_LENGTH) ABBREVIATION_LENGTH else count)
-        ?: DAY_NAMES[at.dayOfWeek].take(ABBREVIATION_LENGTH)
+    // `E` and `EE` are the abbreviated form rather than digits: TR35 has no numeric weekday under
+    // `E`, so the widths below three are the same as three rather than a request for a number.
+    'E' -> name(names.weekdays, at.dayOfWeek, if (count < ABBREVIATION_LENGTH) ABBREVIATION_LENGTH else count)
+        ?: names.weekdays.abbreviated[at.dayOfWeek]
     'h' -> pad(if (at.hour % HOURS_PER_HALF_DAY == 0) HOURS_PER_HALF_DAY else at.hour % HOURS_PER_HALF_DAY, count)
     'H' -> pad(at.hour, count)
     'm' -> pad(at.minute, count)
@@ -187,19 +228,19 @@ private fun field(letter: Char, count: Int, at: CivilDateTime): String = when (l
     // first digit is `0`, not `5`.
     'S' -> at.milli.toString().padStart(MILLI_DIGITS, '0')
         .let { if (count <= MILLI_DIGITS) it.take(count) else it.padEnd(count, '0') }
-    'a' -> if (at.hour < HOURS_PER_HALF_DAY) "AM" else "PM"
+    'a' -> names.amPm[if (at.hour < HOURS_PER_HALF_DAY) 0 else 1]
     else -> throw A2uiFunctionException(
         "formatDate: `$letter` is not a supported TR35 pattern letter " +
             "(supported: y M d E h H m s S a; quote it as '$letter' to emit it literally).",
     )
 }
 
-/** The textual form for a field of width [count], or null when [count] asks for digits. */
-private fun name(full: String, count: Int): String? = when {
+/** [forms]' entry [index] at the width [count] asks for, or null when [count] asks for digits. */
+private fun name(forms: DateNames, index: Int, count: Int): String? = when {
     count < ABBREVIATION_LENGTH -> null
-    count == ABBREVIATION_LENGTH -> full.take(ABBREVIATION_LENGTH)
-    count == WIDE_COUNT -> full
-    else -> full.take(1)
+    count == ABBREVIATION_LENGTH -> forms.abbreviated[index]
+    count == WIDE_COUNT -> forms.wide[index]
+    else -> forms.narrow[index]
 }
 
 private fun pad(value: Int, width: Int): String {

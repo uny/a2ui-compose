@@ -9,17 +9,18 @@ import kotlin.math.floor
  * `formatNumber`, `formatCurrency`, `formatDate` and `pluralize` are specified in terms of "the
  * platform's native locale formatting" — `Intl.NumberFormat` on the web, `NumberFormatter` on
  * Apple platforms, `android.icu` on Android. `commonMain` has none of those and Kotlin's standard
- * library carries no locale data at all, so a faithful implementation is seven `actual`
- * declarations, not one algorithm.
+ * library carries no locale data at all, so no implementation of this can live in `commonMain`
+ * alone.
  *
- * The evaluator therefore depends on this interface and never on a platform. [FallbackLocaleFormatter]
- * keeps the functions answering — well enough to specify and test their argument handling, their
- * error cases and their composition inside `formatString` — while the platform-native
- * implementations arrive with the renderer that needs them.
+ * The evaluator therefore depends on this interface and never on a platform. Two implementations
+ * ship: [FallbackLocaleFormatter], which is locale-independent and is what a renderer gets until it
+ * asks for otherwise, and [SymbolLocaleFormatter], which reads the platform's own symbols through
+ * [LocaleData]. A host reaches the second through `localeFormatter` or `systemLocaleFormatter`.
  *
- * This is deliberately an interface rather than an `expect` declaration. An `expect` obliges every
- * target to supply an `actual` before the module compiles at all, which is the work being deferred;
- * an injected interface defers it while still fixing the shape the implementations must have.
+ * This is deliberately an interface rather than an `expect` declaration, and it stayed one after
+ * the platform implementations landed: an `expect` would make every target's formatter the only
+ * formatter, and the injection point is what lets a host substitute its own — an app that already
+ * carries ICU, or a test that wants an instant to render the same in every environment.
  */
 public interface LocaleFormatter {
     /**
@@ -60,9 +61,10 @@ public enum class PluralCategory(public val argumentName: String) {
  * A locale-independent [LocaleFormatter]: ASCII separators, English names, English plural rules.
  *
  * **This is not a locale implementation and does not claim to be one.** It is what the four
- * locale-sensitive functions do until the platform-native formatters land, chosen so that their
- * output is predictable rather than plausible: `1234.5` is `1,234.5` here on every target and in
- * every environment, which is what makes the evaluator's own behaviour testable.
+ * locale-sensitive functions do when nobody has chosen a locale, chosen so that their output is
+ * predictable rather than plausible: `1234.5` is `1,234.5` here on every target and in every
+ * environment, which is what makes the evaluator's own behaviour testable. [SymbolLocaleFormatter]
+ * is what a host uses instead once it wants a locale.
  *
  * Its output is English-shaped rather than root-shaped on purpose. CLDR's root locale has a single
  * plural category and numeric month names, which would make `pluralize` and `formatDate` produce
@@ -109,15 +111,35 @@ private const val EXACT_INTEGER_LIMIT: Double = 9.0e15
 
 private const val GROUP_SIZE: Int = 3
 
+/** The separators a locale-independent formatter writes with, and the default for [formatDecimal]. */
+internal val AsciiNumberSymbols: NumberSymbols = NumberSymbols(".", ",", "-", listOf(GROUP_SIZE))
+
+/** Just the parts of [LocaleSymbols] that writing a number out needs. */
+internal class NumberSymbols(
+    val decimalSeparator: String,
+    val groupSeparator: String,
+    val minusSign: String,
+    val groupSizes: List<Int>,
+)
+
 /**
- * [value] as digits, with [decimals] fraction digits when given and `,` every three integer digits
- * when [grouping].
+ * [value] as digits, with [decimals] fraction digits when given and [symbols]' group separator
+ * between integer digit groups when [grouping].
  *
  * With no [decimals] the shortest representation that round-trips is used rather than a made-up
  * precision: a formatter with no locale has no basis for choosing 2 over 3, and silently rounding
  * a value the caller did not ask to round loses information that the caller cannot get back.
+ *
+ * The digits themselves are always Latin, on every locale. A locale's own numbering system is not
+ * expressible as a symbol table -- it is a per-digit mapping, and some systems are not positional
+ * at all -- so it is out of the seam [LocaleData] draws. This is the visible edge of that choice.
  */
-private fun formatDecimal(value: Double, decimals: Int?, grouping: Boolean): String {
+internal fun formatDecimal(
+    value: Double,
+    decimals: Int?,
+    grouping: Boolean,
+    symbols: NumberSymbols = AsciiNumberSymbols,
+): String {
     if (value.isNaN() || value.isInfinite()) return value.toString()
     val negative = value < 0.0 || (value == 0.0 && 1.0 / value < 0.0)
     val magnitude = abs(value)
@@ -136,9 +158,10 @@ private fun formatDecimal(value: Double, decimals: Int?, grouping: Boolean): Str
 
     val point = digits.indexOf('.')
     val integerPart = if (point < 0) digits else digits.substring(0, point)
-    val fractionPart = if (point < 0) "" else digits.substring(point)
-    val grouped = if (grouping) group(integerPart) else integerPart
-    return if (negative) "-$grouped$fractionPart" else grouped + fractionPart
+    val fractionPart =
+        if (point < 0) "" else symbols.decimalSeparator + digits.substring(point + 1)
+    val grouped = if (grouping) group(integerPart, symbols) else integerPart
+    return if (negative) symbols.minusSign + grouped + fractionPart else grouped + fractionPart
 }
 
 /** [magnitude] with exactly [decimals] fraction digits, or null when it cannot be rounded exactly. */
@@ -191,16 +214,25 @@ private fun shortestDigits(magnitude: Double): String {
     return if ('.' in expanded) expanded.trimEnd('0').trimEnd('.') else expanded
 }
 
-private fun group(integerPart: String): String {
-    if (integerPart.length <= GROUP_SIZE) return integerPart
-    val out = StringBuilder(integerPart.length + integerPart.length / GROUP_SIZE)
-    val lead = integerPart.length % GROUP_SIZE
-    if (lead != 0) out.append(integerPart, 0, lead)
-    var i = lead
-    while (i < integerPart.length) {
-        if (out.isNotEmpty()) out.append(',')
-        out.append(integerPart, i, i + GROUP_SIZE)
-        i += GROUP_SIZE
+/**
+ * [integerPart] split into groups and joined with [NumberSymbols.groupSeparator].
+ *
+ * Walked from the decimal separator outwards rather than from the left, because that is the
+ * direction CLDR's sizes are defined in and the only direction that renders `[3, 2]` -- the Indian
+ * grouping -- as `12,34,567` rather than `123,45,67`. The last size repeats for everything beyond
+ * the ones named.
+ */
+private fun group(integerPart: String, symbols: NumberSymbols): String {
+    val sizes = symbols.groupSizes
+    val chunks = ArrayList<String>(integerPart.length / sizes.last() + 1)
+    var end = integerPart.length
+    var index = 0
+    while (end > 0) {
+        val size = sizes[if (index < sizes.size) index else sizes.size - 1]
+        val start = if (end - size > 0) end - size else 0
+        chunks.add(integerPart.substring(start, end))
+        end = start
+        index++
     }
-    return out.toString()
+    return chunks.asReversed().joinToString(symbols.groupSeparator)
 }

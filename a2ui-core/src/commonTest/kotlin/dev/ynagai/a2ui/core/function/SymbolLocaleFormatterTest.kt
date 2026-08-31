@@ -2,6 +2,7 @@ package dev.ynagai.a2ui.core.function
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 /** 2025-08-26T09:30:00Z — a Tuesday, which is what the weekday fields below are read against. */
 private const val REFERENCE: Long = 1_756_200_600_000L
@@ -170,4 +171,70 @@ class SymbolLocaleFormatterTest {
     fun theResolvedTagIsReportedRatherThanTheOneAskedFor() {
         assertEquals("fr-FR", SymbolLocaleFormatter(fakeData("fr-FR")).languageTag)
     }
+}
+
+/**
+ * The guards on the three public data classes, which nothing else in the suite reaches.
+ *
+ * [LocaleData] is public and invites a host's own implementation, so these `require`s are part of
+ * the contract rather than internal assertions. The `groupSizes` one in particular is load-bearing:
+ * `group()` walks outwards by the size it is given, so a zero would leave `start == end` and the
+ * loop would never terminate. Deleting it turns a stated failure into a hang inside `formatNumber`.
+ */
+class LocaleDataGuardTest {
+
+    @Test
+    fun monthsAndWeekdaysMustHoldTheirWholeYearAndWeek() {
+        // 13 months is not a hypothetical: `java.text.DateFormatSymbols.getMonths()` returns that,
+        // with an empty undecimber slot, and a host wiring its own `LocaleData` from it would pass
+        // the array straight through.
+        assertFailsWith<IllegalArgumentException> { symbolsWith(months = names(13)) }
+        assertFailsWith<IllegalArgumentException> { symbolsWith(weekdays = names(8)) }
+    }
+
+    @Test
+    fun everyWidthMustHoldTheSameNumberOfNames() {
+        assertFailsWith<IllegalArgumentException> {
+            DateNames(wide = List(12) { "w" }, abbreviated = List(11) { "a" }, narrow = List(12) { "n" })
+        }
+    }
+
+    @Test
+    fun groupSizesMustBeNonEmptyAndPositive() {
+        assertFailsWith<IllegalArgumentException> { symbolsWith(groupSizes = emptyList()) }
+        assertFailsWith<IllegalArgumentException> { symbolsWith(groupSizes = listOf(0)) }
+        assertFailsWith<IllegalArgumentException> { symbolsWith(groupSizes = listOf(3, -1)) }
+    }
+
+    @Test
+    fun theDayPeriodsMustBeExactlyTwo() {
+        assertFailsWith<IllegalArgumentException> { symbolsWith(amPm = listOf("AM")) }
+        assertFailsWith<IllegalArgumentException> { symbolsWith(amPm = listOf("AM", "PM", "noon")) }
+    }
+
+    @Test
+    fun aCurrencyCannotHaveNegativeMinorUnits() {
+        // `java.util.Currency.getDefaultFractionDigits()` answers `-1` for codes such as `XXX`,
+        // which is the value a reader has to translate rather than pass on.
+        assertFailsWith<IllegalArgumentException> { CurrencyAffixes("", "", "", "", -1) }
+    }
+
+    private fun names(count: Int) =
+        DateNames(wide = List(count) { "w$it" }, abbreviated = List(count) { "a$it" }, narrow = List(count) { "n$it" })
+
+    private fun symbolsWith(
+        groupSizes: List<Int> = listOf(3),
+        months: DateNames = names(12),
+        weekdays: DateNames = names(7),
+        amPm: List<String> = listOf("AM", "PM"),
+    ) = LocaleSymbols(
+        languageTag = "xx",
+        decimalSeparator = ".",
+        groupSeparator = ",",
+        minusSign = "-",
+        groupSizes = groupSizes,
+        months = months,
+        weekdays = weekdays,
+        amPm = amPm,
+    )
 }

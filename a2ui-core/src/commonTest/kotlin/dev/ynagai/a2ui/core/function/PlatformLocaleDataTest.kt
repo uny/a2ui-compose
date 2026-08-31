@@ -71,6 +71,62 @@ class PlatformLocaleDataTest {
     }
 
     @Test
+    fun theIndianGroupingKeepsThreeDigitsNearestTheSeparator() {
+        // The one claim every platform's tables agree on for `hi-IN`: the group closest to the
+        // decimal separator is three digits, whatever the platform reports beyond it (the JVM's
+        // `DecimalFormat` exposes only the primary size, so it says `[3]` where `Intl` and
+        // `NSNumberFormatter` say `[3, 2]`). Asserting the first entry is what catches the pair
+        // being reported the wrong way round -- `[2, 3]` renders `1,23,456,78`, and the looser
+        // `all { it > 0 }` below cannot fail, since `LocaleSymbols` already requires it.
+        val sizes = platformLocaleData("hi-IN").symbols.groupSizes
+        assertEquals(3, sizes.first(), "the primary group must be the three nearest the separator")
+    }
+
+    @Test
+    fun anIllFormedTagDegradesRatherThanRaising() {
+        // `en_US` is the identifier form Apple's `NSLocale` takes and `CldrPluralRules` is written
+        // to strip -- and the form ECMA-402 rejects as structurally invalid, so on the two web
+        // targets every `Intl` constructor raised a `RangeError` from inside `symbols`' `lazy`
+        // while the other five degraded and formatted. `localeFormatter`'s contract is the
+        // degradation, so the tag has to reach a usable formatter on all seven.
+        listOf("en_US", "en US", "e", "not_a_tag", "xx-YY").forEach { tag ->
+            val formatter = localeFormatter(tag)
+            assertTrue(formatter.formatNumber(1234.0, 0, grouping = false).isNotEmpty(), tag)
+            assertTrue(formatter.formatDate(REFERENCE, "yyyy").isNotEmpty(), tag)
+            assertTrue(formatter.formatCurrency(1.0, "USD", null, grouping = false).isNotEmpty(), tag)
+        }
+    }
+
+    @Test
+    fun anInflectingLanguageGetsTheMonthNameADateUses() {
+        // Russian declines its month names: `август` stands alone, `августа` appears inside a
+        // date, and TR35's `MMMM` is the second. `java.text` and `NSDateFormatter` hand over the
+        // format form; `Intl` asked for a month on its own hands over the stand-alone one, so the
+        // web targets rendered `26 август` while the other five rendered `26 августа` -- one
+        // payload, two strings, which is the divergence this seam exists to remove.
+        assertEquals("26 августа", localeFormatter("ru-RU").formatDate(REFERENCE, "d MMMM"))
+        // Czech declines them too, and its stand-alone and format forms differ in more than a
+        // suffix, so it fails the same way for a different reason.
+        assertEquals("26. srpna", localeFormatter("cs-CZ").formatDate(REFERENCE, "d. MMMM"))
+    }
+
+    @Test
+    fun theNamesAreGregorianEvenWhereTheLocalesOwnCalendarIsNot() {
+        // `fa-IR`'s default calendar is `persian`, and both `Intl` and `NSDateFormatter` take the
+        // calendar from the locale unless told otherwise -- so slot 0 came back as `دی`, Dey, the
+        // Persian tenth month, while the pattern engine that indexes it decomposes the instant as
+        // proleptic Gregorian. The name for slot 0 has to be January's.
+        val months = platformLocaleData("fa-IR").symbols.months.wide
+        assertTrue(
+            months[0].startsWith("ژانویه"),
+            "fa-IR month 0 must be Gregorian January, but was ${months[0]}",
+        )
+        // Asserted by prefix rather than by equality: the platforms disagree about a trailing
+        // ezafe on the name, which is a CLDR-version difference and not the calendar.
+        assertTrue(months[7].startsWith("اوت"), "fa-IR month 7 must be August, but was ${months[7]}")
+    }
+
+    @Test
     fun currencyMinorUnitsComeFromTheCode() {
         val data = platformLocaleData("en-US")
         assertEquals("\$", data.currency("USD").positivePrefix)

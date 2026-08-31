@@ -1,5 +1,7 @@
 package dev.ynagai.a2ui.core.function
 
+import platform.Foundation.NSCalendar
+import platform.Foundation.NSCalendarIdentifierGregorian
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSLocale
 import platform.Foundation.NSNumberFormatter
@@ -26,7 +28,15 @@ private fun readSymbols(locale: NSLocale): LocaleSymbols {
         setLocale(locale)
         setNumberStyle(NSNumberFormatterDecimalStyle)
     }
-    val dates = NSDateFormatter().apply { setLocale(locale) }
+    val dates = NSDateFormatter().apply {
+        setLocale(locale)
+        // The calendar is pinned rather than inherited. `NSDateFormatter` takes it from the
+        // locale, and a locale's default calendar is not always the Gregorian one -- `fa_IR`
+        // resolves to `persian` -- while the pattern engine that consumes these names decomposes
+        // a UTC instant as proleptic Gregorian. Inherited, `fa_IR`'s `monthSymbols[0]` was its
+        // own tenth month filed under a Gregorian index.
+        setCalendar(NSCalendar(calendarIdentifier = NSCalendarIdentifierGregorian))
+    }
 
     val primary = numbers.groupingSize.toInt().takeIf { it > 0 } ?: DEFAULT_GROUP_SIZE
     val secondary = numbers.secondaryGroupingSize.toInt()

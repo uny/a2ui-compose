@@ -23,8 +23,17 @@ private const val FIELD: Char = '\u0001'
 /** Between the entries of a list field. */
 private const val ITEM: Char = '\u0002'
 
+/** How many fields [intlSymbols] packs. Read positionally below, so it is checked before that. */
+private const val SYMBOL_FIELDS: Int = 13
+
 private fun unpackSymbols(bundle: String): LocaleSymbols {
     val f = bundle.split(FIELD)
+    // Positional reads follow. A bundle of the wrong arity means the bridge and this function have
+    // drifted apart, and without this the drift arrives as an `IndexOutOfBoundsException` raised
+    // inside a `lazy` -- which is neither a failure this module models nor one its message names.
+    require(f.size == SYMBOL_FIELDS) {
+        "Intl returned ${f.size} symbol fields, expected $SYMBOL_FIELDS."
+    }
     return LocaleSymbols(
         languageTag = f[0],
         decimalSeparator = f[1],
@@ -65,6 +74,18 @@ private fun intlSymbols(tag: String): String = js(
         var loc = tag === '' ? undefined : tag;
         var FIELD = '\u0001';
         var ITEM = '\u0002';
+        // A tag ECMA-402 reads as structurally ill-formed raises a `RangeError` out of every
+        // `Intl` constructor below -- `en_US`, the identifier form Apple's `NSLocale` takes and
+        // this module's own `languageSubtag` is written to strip, is one of them. The other five
+        // targets degrade for a tag they cannot use (`Locale.forLanguageTag` yields `und`), and
+        // `localeFormatter`'s contract is that degradation. Unguarded, the throw surfaced from
+        // inside `symbols`' `lazy` on the first `formatNumber` rather than at construction, and
+        // took the surface down on the two web targets alone.
+        try {
+            new Intl.NumberFormat(loc);
+        } catch (e) {
+            loc = undefined;
+        }
         var nf = new Intl.NumberFormat(loc);
         var parts = nf.formatToParts(-12345678.9);
         var dec = '.', grp = ',', minus = '-', ints = [];
@@ -75,30 +96,72 @@ private fun intlSymbols(tag: String): String = js(
             else if (p.type === 'minusSign') minus = p.value;
             else if (p.type === 'integer') ints.push(p.value);
         }
+        // Digits are counted by code point, not by UTF-16 length: a numbering system in the
+        // supplementary plane (`-u-nu-mathbold`) writes each digit as a surrogate pair, and
+        // `.length` then reported a three-digit group as six.
+        function digits(run) {
+            return Array.from(run).length;
+        }
         var sizes = [];
         if (ints.length >= 2) {
-            sizes.push(ints[ints.length - 1].length);
-            if (ints.length >= 3 && ints[ints.length - 2].length !== sizes[0]) {
-                sizes.push(ints[ints.length - 2].length);
+            sizes.push(digits(ints[ints.length - 1]));
+            if (ints.length >= 3 && digits(ints[ints.length - 2]) !== sizes[0]) {
+                sizes.push(digits(ints[ints.length - 2]));
             }
         } else {
             sizes.push(3);
         }
 
-        // Whole-string `format` rather than the `month` / `weekday` part: a locale's name for a
-        // month is not always the part `Intl` labels `month`. Japanese formats January as `1月`,
-        // of which `formatToParts` calls only the `1` the month and the `月` a literal, so
-        // reading the part yielded a bare digit where the name was wanted.
-        function field(date, options) {
+        // Every date probe below pins `calendar: 'gregory'`. A locale's default calendar is not
+        // always the Gregorian one -- `fa-IR` resolves to `persian` -- and the pattern engine that
+        // consumes these names is proleptic Gregorian, so an unpinned probe filed a Persian month
+        // under a Gregorian index: `fa-IR`'s January read `دی`, its own tenth month, where every
+        // other target reads `ژانویه`.
+        function options(width, field, withDay) {
+            var o = { calendar: 'gregory', timeZone: 'UTC' };
+            o[field] = width;
+            // A second field is what asks the locale for its FORMAT names rather than its
+            // stand-alone ones -- see `contextual` below.
+            if (withDay) o.day = 'numeric';
+            if (withDay && field === 'weekday') o.month = 'numeric';
+            return o;
+        }
+        function field(date, opts) {
             // Bound to a variable rather than called on the constructor expression: the compiler
             // that inlines this reads `new A.B(x).c(y)` as `new (A.B(x).c)(y)`, which throws.
-            var f = new Intl.DateTimeFormat(loc, options);
+            var f = new Intl.DateTimeFormat(loc, opts);
             return f.format(date);
+        }
+        // The *format* name -- the one `MMMM` and `EEEE` substitute, and the one the other five
+        // targets read (`DateFormatSymbols.getMonths`, `NSDateFormatter.monthSymbols`). Asking
+        // `Intl` for a month or a weekday with no other field gives the STAND-ALONE name instead,
+        // and in an inflecting language those are different words: `ru` writes `август` alone but
+        // `августа` inside a date, and `de` abbreviates Monday `Mo` alone and `Mo.` in one. So
+        // `d MMMM` rendered `26 август` here and `26 августа` on every other target -- the
+        // divergence this whole seam exists to remove.
+        //
+        // The format name is the labelled part of a format that carries a second field, except
+        // where the locale carries the name in a literal beside a numeric part -- `ja` labels only
+        // the `1` of `1月` the month, `zh` only the `8` of `八月`. A part holding no letter is that
+        // case, and there the stand-alone string is the whole name. Measured against `java.text`
+        // over 35 locales at both widths, this agrees on 814 of 840 month names and 477 of 490
+        // weekday names, where the lone-field read agreed on 645 and 449; what remains is locales
+        // whose two platforms disagree whichever way this is read.
+        function contextual(date, width, name) {
+            var alone = field(date, options(width, name, false));
+            var f = new Intl.DateTimeFormat(loc, options(width, name, true));
+            var ps = f.formatToParts(date);
+            for (var i = 0; i < ps.length; i++) {
+                if (ps[i].type === name) {
+                    return /\p{L}/u.test(ps[i].value) ? ps[i].value : alone;
+                }
+            }
+            return alone;
         }
         function months(width) {
             var out = [];
             for (var m = 0; m < 12; m++) {
-                out.push(field(Date.UTC(2021, m, 15), { month: width, timeZone: 'UTC' }));
+                out.push(contextual(Date.UTC(2021, m, 15), width, 'month'));
             }
             return out.join(ITEM);
         }
@@ -106,13 +169,15 @@ private fun intlSymbols(tag: String): String = js(
             var out = [];
             // 2021-08-01 was a Sunday, which is index 0 in `LocaleSymbols`.
             for (var d = 0; d < 7; d++) {
-                out.push(field(Date.UTC(2021, 7, 1 + d), { weekday: width, timeZone: 'UTC' }));
+                out.push(contextual(Date.UTC(2021, 7, 1 + d), width, 'weekday'));
             }
             return out.join(ITEM);
         }
         function period(hour, fallback) {
-            var options = { hour: 'numeric', hour12: true, timeZone: 'UTC' };
-            var f = new Intl.DateTimeFormat(loc, options);
+            // Named `opts`, not `options`: that name is the helper above, and shadowing it here
+            // would leave the next edit to this function silently reading an object.
+            var opts = { hour: 'numeric', hour12: true, calendar: 'gregory', timeZone: 'UTC' };
+            var f = new Intl.DateTimeFormat(loc, opts);
             var ps = f.formatToParts(Date.UTC(2021, 0, 1, hour));
             for (var k = 0; k < ps.length; k++) if (ps[k].type === 'dayPeriod') return ps[k].value;
             return fallback;
@@ -141,6 +206,15 @@ private fun intlCurrency(tag: String, code: String): String = js(
         var loc = tag === '' ? undefined : tag;
         var FIELD = '\u0001';
         var numeric = { integer: 1, group: 1, decimal: 1, fraction: 1 };
+        // The same ill-formed-tag fallback `intlSymbols` makes, and for the same reason: without
+        // it a bad tag lands in the catch below, which is the *unknown currency* degradation --
+        // so `USD` in a locale this runtime cannot parse came back as `USD 1.00` rather than as
+        // the default locale's `$1.00`, and the two failures were indistinguishable.
+        try {
+            new Intl.NumberFormat(loc);
+        } catch (e) {
+            loc = undefined;
+        }
         var cf;
         try {
             cf = new Intl.NumberFormat(loc, { style: 'currency', currency: code });

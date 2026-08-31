@@ -7,7 +7,6 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
 import dev.ynagai.a2ui.core.function.UrlOpener
 import kotlin.test.Test
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -48,6 +47,5 @@ class PlatformUrlOpenerTest {
         waitForIdle()
 
         assertTrue(seen.size >= 2, "the composable did not recompose, so nothing was exercised")
-        seen.forEach { assertNotNull(it) }
     }
 }

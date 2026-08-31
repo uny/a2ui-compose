@@ -92,11 +92,23 @@ private fun roundToFractionDigits(magnitude: Double, digits: Int): Double {
     return floor(magnitude * scale + 0.5) / scale
 }
 
+/**
+ * [magnitude] written out in full, which is the form `v` and `t` are counts over.
+ *
+ * `Double.toString` is not that form: the JVM and Native switch to an exponent from 1e7 upwards
+ * and JavaScript not until 1e21, so reading the operands off it made `12345678.5` carry one
+ * fraction digit on the web and none on every other target -- and `pluralCategory("cs", …)` then
+ * answered `MANY` on one and `OTHER` on the other from the same payload. [shortestDigits] is the
+ * expansion [formatDecimal] already applies for exactly that reason; sharing it is what keeps the
+ * two readings of one number from drifting apart.
+ */
+private fun plainDigits(magnitude: Double): String = shortestDigits(magnitude)
+
 private fun fractionDigits(magnitude: Double): Int {
     if (!magnitude.isFinite()) return 0
-    val text = magnitude.toString()
-    // Past this point the value is an integer far beyond anything a count reaches, and the two
-    // exponent directions have already been resolved by the rounding above.
+    val text = plainDigits(magnitude)
+    // Only reachable if the expansion could not parse its own exponent, which leaves the value far
+    // beyond anything a count reaches; there is no fraction to report either way.
     if (text.any { it == 'e' || it == 'E' }) return 0
     return plainFractionDigits(text)
 }
@@ -104,7 +116,7 @@ private fun fractionDigits(magnitude: Double): Int {
 /** The fraction digits of [magnitude] as a number, trailing zeros dropped. @see Operands.t */
 private fun trailingTrimmedFraction(magnitude: Double): Long {
     if (!magnitude.isFinite()) return 0L
-    val text = magnitude.toString()
+    val text = plainDigits(magnitude)
     if (text.any { it == 'e' || it == 'E' }) return 0L
     val point = text.indexOf('.')
     if (point < 0) return 0L

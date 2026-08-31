@@ -190,8 +190,12 @@ private fun fixedDigits(magnitude: Double, decimals: Int): String? {
  * 1e21. Passing that form through would make `formatNumber(10000000)` render as `1.0E7` on one
  * target and `10,000,000` on another, from the same payload — which is the divergence a
  * locale-independent formatter exists to remove. So the exponent is applied to the digits here.
+ *
+ * `internal` rather than private because [CldrPluralRules] needs the same expansion: CLDR's `v`
+ * and `t` are counts of *written* fraction digits, so reading them off `Double.toString` made them
+ * depend on which target's threshold had switched to an exponent. One expander, one answer.
  */
-private fun shortestDigits(magnitude: Double): String {
+internal fun shortestDigits(magnitude: Double): String {
     val text = magnitude.toString()
     val marker = text.indexOfFirst { it == 'e' || it == 'E' }
     if (marker < 0) return if (text.endsWith(".0")) text.dropLast(2) else text

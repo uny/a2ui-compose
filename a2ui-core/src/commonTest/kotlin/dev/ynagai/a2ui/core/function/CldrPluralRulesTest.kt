@@ -164,6 +164,26 @@ class CldrPluralRulesTest {
     }
 
     @Test
+    fun theFractionOperandsSurviveTheExponentThresholdEveryTargetPicksDifferently() {
+        // `Double.toString` switches to an exponent at 1e7 on the JVM and Native and not until
+        // 1e21 in JavaScript, so reading `v` and `t` off it made `12345678.5` carry one fraction
+        // digit on the web and none anywhere else -- and these four calls then answered
+        // differently depending on which target ran them, from one payload. The values below are
+        // ICU's, which the web half already agreed with.
+        assertEquals(PluralCategory.MANY, category("cs", 12345678.5))
+        assertEquals(PluralCategory.MANY, category("sk", 12345678.5))
+        assertEquals(PluralCategory.OTHER, category("ru", 12345678.5))
+        assertEquals(PluralCategory.OTHER, category("pl", 12345678.5))
+        assertEquals(PluralCategory.OTHER, category("ar", 12345678.5))
+        // The integer at the same magnitude is unaffected, which is what says the fix moved the
+        // fraction reading rather than the whole operand set.
+        assertEquals(PluralCategory.OTHER, category("cs", 12345678.0))
+        assertEquals(PluralCategory.MANY, category("ru", 12345678.0))
+        // Icelandic reads `t`, the other operand the exponent form was erasing.
+        assertEquals(PluralCategory.ONE, category("is", 10000000.1))
+    }
+
+    @Test
     fun aHugeMagnitudeDoesNotOverflowTheModuloBands() {
         // The integer operand is bounded before the `%` runs; without that this raised or wrapped
         // into a band it does not belong to.

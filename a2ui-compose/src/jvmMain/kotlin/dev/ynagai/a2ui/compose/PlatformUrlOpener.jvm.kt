@@ -21,6 +21,16 @@ public actual fun rememberPlatformUrlOpener(): UrlOpener = remember {
         if (desktop == null || !desktop.isSupported(Desktop.Action.BROWSE)) {
             throw A2uiFunctionException("openUrl: this JVM cannot open a browser.")
         }
-        desktop.browse(URI(url))
+        // Both steps are converted rather than left to escape. The evaluator admits a URL on its
+        // scheme alone, so `https://example.com/a b` reaches here and `URI` rejects it; `browse`
+        // reports a launch failure with `IOException`. Neither is `A2uiFunctionException`, which
+        // is the one type this module's error channel names and what the other five actuals raise
+        // -- so a JVM host caught a `URISyntaxException` where every other target caught nothing.
+        val target = runCatching { URI(url) }.getOrElse {
+            throw A2uiFunctionException("openUrl: `$url` is not a URI this JVM can parse ($it).")
+        }
+        runCatching { desktop.browse(target) }.getOrElse {
+            throw A2uiFunctionException("openUrl: this JVM could not open `$url` ($it).")
+        }
     }
 }

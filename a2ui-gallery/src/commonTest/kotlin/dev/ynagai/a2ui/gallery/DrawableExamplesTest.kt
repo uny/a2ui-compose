@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Which of the specification's forty-three examples the shipped registry can draw.
+ * Which of the specification's forty-three examples the shipped registry can draw -- all of them.
  *
  * Derived from the corpus rather than listed by hand -- `isDrawableBy` compares the component
  * types an example names against the types the registry knows -- so this grows on its own as
@@ -14,17 +14,18 @@ import kotlin.test.assertTrue
  */
 class DrawableExamplesTest {
     @Test
-    fun the_drawable_examples_are_the_ones_the_fourteen_basic_components_cover() {
+    fun the_drawable_examples_are_all_forty_three_the_eighteen_basic_components_cover() {
         val drawable = EXAMPLES
             .filter { it.isDrawableBy(Material3Components.Basic.types) }
             .map { it.file }
         // Written out rather than counted. This is the coverage claim, and a registry that lost a
         // component or a corpus that gained an example should have to say which one -- a count
-        // would go on passing while a different set of thirty-nine passed through it.
+        // would go on passing while a different set of forty-three passed through it.
         //
-        // The four left out are the four components still missing: `24_recipe-card` needs `Tabs`,
-        // `26_podcast-episode` an `AudioPlayer`, `36_modal` a `Modal`, and `29_movie-card` both a
-        // `Modal` and a `Video`.
+        // Nothing is left out any more: the registry draws all eighteen of the basic catalog's
+        // components, so the list below is the corpus itself. What it now pins is the other
+        // direction -- an example added to the corpus that names a component from outside the
+        // basic catalog would be missing from this list rather than silently uncounted.
         assertEquals(
             listOf(
                 "00_complex-layout.json",
@@ -57,15 +58,19 @@ class DrawableExamplesTest {
                 "21_shipping-status.json",
                 "22_credit-card.json",
                 "23_step-counter.json",
+                "24_recipe-card.json",
                 "25_contact-card.json",
+                "26_podcast-episode.json",
                 "27_stats-card.json",
                 "28_countdown-timer.json",
+                "29_movie-card.json",
                 "30_live-invitation-builder.json",
                 "31_incremental-dashboard.json",
                 "32_advanced-form-validator.json",
                 "33_financial-data-grid.json",
                 "34_child-list-template.json",
                 "35_markdown-text.json",
+                "36_modal.json",
             ),
             drawable,
         )

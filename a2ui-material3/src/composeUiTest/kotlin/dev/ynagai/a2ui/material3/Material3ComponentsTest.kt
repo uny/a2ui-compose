@@ -289,14 +289,29 @@ class Material3ComponentsTest {
     }
 
     @Test
-    fun the_eight_components_this_registry_does_not_draw_say_so() = runComposeUiTest {
-        // The registry's coverage claim, asserted rather than documented. A `Tabs` drawn as
-        // nothing would be indistinguishable from a `Tabs` drawn correctly and empty.
+    fun a_component_from_outside_the_basic_catalog_says_so() = runComposeUiTest {
+        // The registry's coverage claim, from the other side. It now draws all eighteen of the
+        // basic catalog, so what is left to assert is that a type it does not know still reports
+        // itself: a component drawn as nothing would be indistinguishable from one drawn correctly
+        // and empty, which is the failure the placeholder machinery exists to make visible.
         val reasons = mutableListOf<A2uiPlaceholderReason>()
         setContent { Surface(UNDRAWN, placeholder = { reason, _ -> reasons += reason }) }
         assertTrue(
-            reasons.any { it is A2uiPlaceholderReason.UnknownType && it.component == "Tabs" },
+            reasons.any { it is A2uiPlaceholderReason.UnknownType && it.component == "Sparkline" },
             "an undrawn component type should be reported as one: $reasons",
+        )
+    }
+
+    @Test
+    fun the_registry_draws_every_component_the_basic_catalog_defines() {
+        // Pinned by name rather than by count, so a rename or a drop has to say which one.
+        assertEquals(
+            setOf(
+                "Text", "Row", "Column", "Button", "TextField", "Card", "Divider", "List",
+                "Icon", "Image", "CheckBox", "ChoicePicker", "Slider", "DateTimeInput",
+                "Tabs", "Modal", "Video", "AudioPlayer",
+            ),
+            Material3Components.Basic.types,
         )
     }
 
@@ -796,9 +811,8 @@ class Material3ComponentsTest {
         ]"""
 
         val UNDRAWN = """[
-            {"id":"root","component":"Column","children":["tabs"]},
-            {"id":"tabs","component":"Tabs","titles":["one"],"children":["inner"]},
-            {"id":"inner","component":"Text","text":"inside"}
+            {"id":"root","component":"Column","children":["chart"]},
+            {"id":"chart","component":"Sparkline","values":[1,2,3]}
         ]"""
     }
 }

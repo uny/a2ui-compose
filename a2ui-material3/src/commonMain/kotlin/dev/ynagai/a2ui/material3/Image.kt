@@ -127,8 +127,13 @@ public val ImageRenderer: ComponentRenderer = ComponentRenderer { scope, modifie
  * refused along with `file:`, `content:`, `data:` and the rest. A refusal is not an error; it
  * draws the described placeholder, which is what an `Image` this module cannot draw looks like
  * whatever the reason.
+ *
+ * Shared with `Video`'s poster rather than restated there. The guarantee belongs to
+ * [A2uiImageLoader] -- it promises its implementations an absolute `http` or `https` URL -- and a
+ * second caller carrying its own idea of the allowlist is how a guarantee like that stops being
+ * one.
  */
-private fun String.isFetchable(): Boolean =
+internal fun String.isFetchable(): Boolean =
     substringBefore(':', missingDelimiterValue = "").lowercase() in FETCHABLE_SCHEMES
 
 /** The schemes an agent's `Image` may name, matching the core's own `openUrl` allowlist. */

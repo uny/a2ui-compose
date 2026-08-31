@@ -11,10 +11,12 @@ abstract fun interface dev.ynagai.a2ui.material3/A2uiImageLoader { // dev.ynagai
 }
 
 final class dev.ynagai.a2ui.material3/A2uiStrings { // dev.ynagai.a2ui.material3/A2uiStrings|null[0]
-    constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ...) // dev.ynagai.a2ui.material3/A2uiStrings.<init>|<init>(kotlin.String;kotlin.String;kotlin.String){}[0]
+    constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...) // dev.ynagai.a2ui.material3/A2uiStrings.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
 
     final val cancel // dev.ynagai.a2ui.material3/A2uiStrings.cancel|{}cancel[0]
         final fun <get-cancel>(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.cancel.<get-cancel>|<get-cancel>(){}[0]
+    final val close // dev.ynagai.a2ui.material3/A2uiStrings.close|{}close[0]
+        final fun <get-close>(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.close.<get-close>|<get-close>(){}[0]
     final val confirm // dev.ynagai.a2ui.material3/A2uiStrings.confirm|{}confirm[0]
         final fun <get-confirm>(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.confirm.<get-confirm>|<get-confirm>(){}[0]
     final val filter // dev.ynagai.a2ui.material3/A2uiStrings.filter|{}filter[0]
@@ -23,7 +25,8 @@ final class dev.ynagai.a2ui.material3/A2uiStrings { // dev.ynagai.a2ui.material3
     final fun component1(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.component1|component1(){}[0]
     final fun component2(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.component2|component2(){}[0]
     final fun component3(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.component3|component3(){}[0]
-    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ...): dev.ynagai.a2ui.material3/A2uiStrings // dev.ynagai.a2ui.material3/A2uiStrings.copy|copy(kotlin.String;kotlin.String;kotlin.String){}[0]
+    final fun component4(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.component4|component4(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...): dev.ynagai.a2ui.material3/A2uiStrings // dev.ynagai.a2ui.material3/A2uiStrings.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.material3/A2uiStrings.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.material3/A2uiStrings.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.ynagai.a2ui.material3/A2uiStrings.toString|toString(){}[0]
@@ -34,6 +37,8 @@ final object dev.ynagai.a2ui.material3/Material3Components { // dev.ynagai.a2ui.
         final fun <get-Basic>(): dev.ynagai.a2ui.compose/ComponentRegistry // dev.ynagai.a2ui.material3/Material3Components.Basic.<get-Basic>|<get-Basic>(){}[0]
 }
 
+final val dev.ynagai.a2ui.material3/AudioPlayerRenderer // dev.ynagai.a2ui.material3/AudioPlayerRenderer|{}AudioPlayerRenderer[0]
+    final fun <get-AudioPlayerRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/AudioPlayerRenderer.<get-AudioPlayerRenderer>|<get-AudioPlayerRenderer>(){}[0]
 final val dev.ynagai.a2ui.material3/ButtonRenderer // dev.ynagai.a2ui.material3/ButtonRenderer|{}ButtonRenderer[0]
     final fun <get-ButtonRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/ButtonRenderer.<get-ButtonRenderer>|<get-ButtonRenderer>(){}[0]
 final val dev.ynagai.a2ui.material3/CardRenderer // dev.ynagai.a2ui.material3/CardRenderer|{}CardRenderer[0]
@@ -58,14 +63,20 @@ final val dev.ynagai.a2ui.material3/LocalA2uiImageLoader // dev.ynagai.a2ui.mate
     final fun <get-LocalA2uiImageLoader>(): androidx.compose.runtime/ProvidableCompositionLocal<dev.ynagai.a2ui.material3/A2uiImageLoader?> // dev.ynagai.a2ui.material3/LocalA2uiImageLoader.<get-LocalA2uiImageLoader>|<get-LocalA2uiImageLoader>(){}[0]
 final val dev.ynagai.a2ui.material3/LocalA2uiStrings // dev.ynagai.a2ui.material3/LocalA2uiStrings|{}LocalA2uiStrings[0]
     final fun <get-LocalA2uiStrings>(): androidx.compose.runtime/ProvidableCompositionLocal<dev.ynagai.a2ui.material3/A2uiStrings> // dev.ynagai.a2ui.material3/LocalA2uiStrings.<get-LocalA2uiStrings>|<get-LocalA2uiStrings>(){}[0]
+final val dev.ynagai.a2ui.material3/ModalRenderer // dev.ynagai.a2ui.material3/ModalRenderer|{}ModalRenderer[0]
+    final fun <get-ModalRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/ModalRenderer.<get-ModalRenderer>|<get-ModalRenderer>(){}[0]
 final val dev.ynagai.a2ui.material3/RowRenderer // dev.ynagai.a2ui.material3/RowRenderer|{}RowRenderer[0]
     final fun <get-RowRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/RowRenderer.<get-RowRenderer>|<get-RowRenderer>(){}[0]
 final val dev.ynagai.a2ui.material3/SliderRenderer // dev.ynagai.a2ui.material3/SliderRenderer|{}SliderRenderer[0]
     final fun <get-SliderRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/SliderRenderer.<get-SliderRenderer>|<get-SliderRenderer>(){}[0]
+final val dev.ynagai.a2ui.material3/TabsRenderer // dev.ynagai.a2ui.material3/TabsRenderer|{}TabsRenderer[0]
+    final fun <get-TabsRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/TabsRenderer.<get-TabsRenderer>|<get-TabsRenderer>(){}[0]
 final val dev.ynagai.a2ui.material3/TextFieldRenderer // dev.ynagai.a2ui.material3/TextFieldRenderer|{}TextFieldRenderer[0]
     final fun <get-TextFieldRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/TextFieldRenderer.<get-TextFieldRenderer>|<get-TextFieldRenderer>(){}[0]
 final val dev.ynagai.a2ui.material3/TextRenderer // dev.ynagai.a2ui.material3/TextRenderer|{}TextRenderer[0]
     final fun <get-TextRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/TextRenderer.<get-TextRenderer>|<get-TextRenderer>(){}[0]
+final val dev.ynagai.a2ui.material3/VideoRenderer // dev.ynagai.a2ui.material3/VideoRenderer|{}VideoRenderer[0]
+    final fun <get-VideoRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/VideoRenderer.<get-VideoRenderer>|<get-VideoRenderer>(){}[0]
 final val dev.ynagai.a2ui.material3/dev_ynagai_a2ui_material3_A2uiStrings$stableprop // dev.ynagai.a2ui.material3/dev_ynagai_a2ui_material3_A2uiStrings$stableprop|#static{}dev_ynagai_a2ui_material3_A2uiStrings$stableprop[0]
 final val dev.ynagai.a2ui.material3/dev_ynagai_a2ui_material3_Material3Components$stableprop // dev.ynagai.a2ui.material3/dev_ynagai_a2ui_material3_Material3Components$stableprop|#static{}dev_ynagai_a2ui_material3_Material3Components$stableprop[0]
 

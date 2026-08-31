@@ -143,6 +143,12 @@ private fun LaidOutChild.claimsMainAxis(direction: String): Boolean = when (comp
     // in a `Row` it took the row and left the label at zero. Down a `Column` it fills the cross
     // axis, which costs nobody anything, so only a row grants it a share.
     "Slider" -> direction == "Row"
+    // The two media components and the tab strip are the rest of the same family. The guide asks
+    // for both media frames to "span the full width of the parent's container" and this module
+    // draws them that way, and a `Tabs` is a strip that measures itself across whatever it is
+    // offered. Each takes a row's whole width for the same reason a slider does, and each is
+    // harmless down a column, where filling costs a sibling nothing.
+    "Video", "AudioPlayer", "Tabs" -> direction == "Row"
     else -> false
 }
 

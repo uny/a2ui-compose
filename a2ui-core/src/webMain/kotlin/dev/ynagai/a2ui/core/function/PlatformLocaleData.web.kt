@@ -117,13 +117,15 @@ private fun intlSymbols(tag: String): String = js(
         // consumes these names is proleptic Gregorian, so an unpinned probe filed a Persian month
         // under a Gregorian index: `fa-IR`'s January read `دی`, its own tenth month, where every
         // other target reads `ژانویه`.
-        function options(width, field, withDay) {
+        // `name` rather than `field`, which is the function just below: a parameter of that name
+        // would shadow it here, and the next edit to this helper would reach for the wrong one.
+        function options(width, name, withDay) {
             var o = { calendar: 'gregory', timeZone: 'UTC' };
-            o[field] = width;
+            o[name] = width;
             // A second field is what asks the locale for its FORMAT names rather than its
             // stand-alone ones -- see `contextual` below.
             if (withDay) o.day = 'numeric';
-            if (withDay && field === 'weekday') o.month = 'numeric';
+            if (withDay && name === 'weekday') o.month = 'numeric';
             return o;
         }
         function field(date, opts) {

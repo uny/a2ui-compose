@@ -33,8 +33,9 @@ private fun readSymbols(locale: NSLocale): LocaleSymbols {
         // The calendar is pinned rather than inherited. `NSDateFormatter` takes it from the
         // locale, and a locale's default calendar is not always the Gregorian one -- `fa_IR`
         // resolves to `persian` -- while the pattern engine that consumes these names decomposes
-        // a UTC instant as proleptic Gregorian. Inherited, `fa_IR`'s `monthSymbols[0]` was its
-        // own tenth month filed under a Gregorian index.
+        // a UTC instant as proleptic Gregorian. Inherited, `fa_IR`'s `monthSymbols[0]` was
+        // `فروردین` -- Farvardin, the first month of the Persian year, which begins at the March
+        // equinox -- filed under the index the engine uses for January.
         setCalendar(NSCalendar(calendarIdentifier = NSCalendarIdentifierGregorian))
     }
 

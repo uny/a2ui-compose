@@ -41,12 +41,29 @@ import dev.ynagai.a2ui.compose.rememberChildren
  * library documents as usual, so it is not an exotic case -- it took down half the specification's
  * own corpus in the Gallery, on macOS and iOS both.
  *
- * The four conditions are all required, and each on its own is fine: the same swap with a bounded
- * height, the same `Surface` with a literal child instead of [RenderChild], the same [RenderChild]
- * in a plain `Box`, and a bare `OutlinedCard` with these colours and no `A2uiSurface` around it all
- * pass. `Button`'s clickable `Surface` overload passes too, so the blast radius is this component.
- * JVM and both web targets never reproduced it. Neither half is wrong on its own, which is why this
- * is a workaround rather than a fix: the defect is below both of them.
+ * Three of those four hold as stated and one does not. The same `Surface` with a literal child
+ * instead of [RenderChild], the same [RenderChild] in a plain `Box`, and a bare `OutlinedCard` with
+ * these colours and no `A2uiSurface` around it all pass. **The bounded height does not.** Re-run
+ * against this renderer's `OutlinedCard` form, `CardScrollSwapTest`'s own swap still segfaults
+ * macOS with the `verticalScroll` taken off its host and nothing else touched. So the scrolling
+ * parent is where the crash was *found*, not something it needs, and what stays required is the
+ * `Surface`, the [RenderChild] and the replacement -- with the `Surface` in the component that
+ * *arrives*, which is the one thing every reproduction has in common. JVM and both web targets
+ * never reproduced any of it. Neither half is wrong on its own, which is why this is a workaround
+ * rather than a fix: the defect is below both of them.
+ *
+ * **The other two renderers that could have met the same conditions.** `Button` reaches `Surface`'s
+ * clickable overload, a different code path; nothing pins that directly, but the Gallery walks the
+ * whole corpus -- `Button` among it -- through forty-two surface replacements in a scrolling pane,
+ * and that is green on macOS and iOS. `ModalRenderer` reaches the same non-interactive overload
+ * this one did, and draws its content through [RenderChild]. **Its `Dialog` does not protect it**,
+ * whatever an earlier version of this note said: an `OutlinedCard`-shaped renderer as an open
+ * modal's content crashes there too, in a bounded host as readily as a scrolling one. Its own
+ * dialog `Surface` is fine because a content swap leaves it standing rather than replacing it.
+ * What leaves `Modal` safe, then, is that nothing the catalog draws *arrives* as a `Surface` any
+ * more, this renderer having been the last -- a property of the catalog rather than of `Modal`, and
+ * one a host registering its own renderer can take away. `ModalScrollSwapTest` covers the modal
+ * swap path and says as much about itself.
  *
  * The catalog gives a card exactly one `child`, and a payload wanting more is told to wrap them in
  * a `Column`. Nothing here enforces that: the children are iterated, so a payload the schema

@@ -71,7 +71,12 @@ import dev.ynagai.a2ui.compose.rememberChildren
  * The dialog is a centred surface rather than a bottom sheet. The guide splits the two by platform
  * -- popup on desktop, sheet on mobile -- and this module draws one surface for every target it
  * publishes to; a host that wants the sheet on Android registers its own `Modal` renderer, which
- * is the same escape hatch `Icon` offers.
+ * is the same escape hatch `Icon` offers. **A host taking that hatch, or registering any renderer
+ * a modal's content might reach, should read the warning on
+ * [ComponentRegistry.with][dev.ynagai.a2ui.compose.ComponentRegistry.with] first**: a Material 3
+ * `Surface` drawing children through `RenderChild` still segfaults Kotlin/Native when it is
+ * replaced, and a modal's content is where that lands least visibly. The `Dialog` does not prevent
+ * it -- measured, not assumed; `CardRenderer`'s note carries the runs.
  *
  * **Open-ness is the renderer's state, like `Tabs`'s selected index.** The catalog gives a `Modal`
  * nothing to bind it to, so an agent can neither open one nor learn that it is open.

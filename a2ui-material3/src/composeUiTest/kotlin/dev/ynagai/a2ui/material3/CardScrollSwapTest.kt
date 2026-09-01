@@ -16,6 +16,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.A2uiRenderer
 import dev.ynagai.a2ui.compose.A2uiSurface
+import dev.ynagai.a2ui.compose.BasicCatalog
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
 import kotlin.test.Test
@@ -34,7 +35,9 @@ import kotlin.test.Test
  * module, and take an iOS app down in the one placement this library documents as usual. This is
  * the only thing standing between that change and a release.
  *
- * The assertions are almost beside the point -- reaching them at all is the claim.
+ * Reaching the assertions at all is most of the claim, but not all of it: they also have to say
+ * that the swap *happened*, or a surface that quietly stopped replacing anything would keep this
+ * pin green while the condition it exists to hold went away.
  */
 @OptIn(ExperimentalTestApi::class)
 class CardScrollSwapTest {
@@ -55,12 +58,16 @@ class CardScrollSwapTest {
         renderer = surfaceWith(CARD_ROOT)
 
         onNodeWithText("in a card").assertIsDisplayed()
+        // *Replaced*, which is the word in this test's name and the condition the crash needs.
+        // Without this the test also passes on a surface that composed the new root alongside the
+        // old one, and a swap that never happened is exactly the way this pin would go quiet.
+        onNodeWithText("before").assertDoesNotExist()
     }
 
     private fun surfaceWith(components: String) = A2uiRenderer().also { renderer ->
         renderer.applyAll(
             listOf(
-                """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE_ID","catalogId":"$CATALOG"}}""",
+                """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE_ID","catalogId":"${BasicCatalog.id}"}}""",
                 """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE_ID","components":[$components]}}""",
             ).map { A2uiJson.strict.decodeFromString<AgentToRendererMessage>(it) }
         )
@@ -68,7 +75,6 @@ class CardScrollSwapTest {
 
     private companion object {
         const val SURFACE_ID = "s"
-        const val CATALOG = "https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json"
         const val TEXT_ROOT = """{"id":"root","component":"Text","text":"before"}"""
 
         /**

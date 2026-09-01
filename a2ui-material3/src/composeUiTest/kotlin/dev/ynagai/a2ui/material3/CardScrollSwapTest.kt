@@ -47,7 +47,10 @@ class CardScrollSwapTest {
         setContent {
             MaterialTheme {
                 // Unbounded height: the placement a host gives a surface it expects to scroll, and
-                // the one the condition needs. With a fixed height this passed all along.
+                // where the crash was found. Not where it is confined, though -- see the note on
+                // `CardRenderer`: with the `verticalScroll` taken off, an `OutlinedCard`-based
+                // `CardRenderer` segfaults here just the same. Kept because it is the placement
+                // this library documents as usual, not because the height is load-bearing.
                 Box(Modifier.requiredSize(400.dp, 600.dp).verticalScroll(rememberScrollState())) {
                     A2uiSurface(renderer, SURFACE_ID, Material3Components.Basic)
                 }

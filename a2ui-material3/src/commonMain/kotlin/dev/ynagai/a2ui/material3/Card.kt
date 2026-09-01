@@ -44,9 +44,17 @@ import dev.ynagai.a2ui.compose.rememberChildren
  * The four conditions are all required, and each on its own is fine: the same swap with a bounded
  * height, the same `Surface` with a literal child instead of [RenderChild], the same [RenderChild]
  * in a plain `Box`, and a bare `OutlinedCard` with these colours and no `A2uiSurface` around it all
- * pass. `Button`'s clickable `Surface` overload passes too, so the blast radius is this component.
- * JVM and both web targets never reproduced it. Neither half is wrong on its own, which is why this
- * is a workaround rather than a fix: the defect is below both of them.
+ * pass. JVM and both web targets never reproduced it. Neither half is wrong on its own, which is
+ * why this is a workaround rather than a fix: the defect is below both of them.
+ *
+ * **The other two renderers that could have met the same conditions were checked, not reasoned
+ * about.** `Button` reaches `Surface`'s clickable overload, which is a different code path and
+ * passes. `ModalRenderer` reaches the same non-interactive overload this one did, and draws its
+ * content through [RenderChild] -- three of the four conditions -- but its content sits inside a
+ * `Dialog`, whose own window bounds it, so the unbounded-height condition never holds; replacing an
+ * open modal's content with a `Card` passes, in a scrolling host and a bounded one alike. That is
+ * `ModalScrollSwapTest`. An earlier version of this note claimed the blast radius from `Button`
+ * alone, which did not cover `Modal` at all -- the claim is now the two tests.
  *
  * The catalog gives a card exactly one `child`, and a payload wanting more is told to wrap them in
  * a `Column`. Nothing here enforces that: the children are iterated, so a payload the schema

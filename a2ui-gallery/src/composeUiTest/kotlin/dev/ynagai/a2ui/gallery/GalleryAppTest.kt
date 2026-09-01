@@ -127,6 +127,23 @@ class GalleryAppTest {
         onNodeWithText("Actions (1)").assertIsDisplayed()
     }
 
+    /**
+     * The Gallery stands up on its own defaults.
+     *
+     * Every other test here passes a [GalleryState] in, so none of them touches `GalleryApp`'s own
+     * default -- which is the one the six entry points actually get, and which calls
+     * `systemLocaleFormatter()`. That reads the platform's locale tables through `platformLocaleData`,
+     * a different `actual` on each target; a target where it threw would take the real Gallery down
+     * on its first frame while the whole suite stayed green.
+     */
+    @Test
+    fun the_default_state_reads_the_whole_corpus_and_the_platform_locale() = runComposeUiTest {
+        setContent { Box(Modifier.requiredSize(1000.dp, 760.dp)) { GalleryApp() } }
+        onNodeWithTag(GalleryTags.SAMPLE_LIST).assertIsDisplayed()
+        onNodeWithText("Samples (${EXAMPLES.size})").assertIsDisplayed()
+        onNodeWithTag(GalleryTags.EXAMPLE_TITLE).assertTextEquals(EXAMPLES.first().name)
+    }
+
     @Test
     fun a_narrow_window_reaches_the_same_three_panes_one_at_a_time() = runComposeUiTest {
         // 760dp, not 800: `requiredSize` discards the incoming constraint, so a height above the

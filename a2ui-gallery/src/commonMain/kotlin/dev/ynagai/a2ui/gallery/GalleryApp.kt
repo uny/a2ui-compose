@@ -47,6 +47,7 @@ import dev.ynagai.a2ui.compose.A2uiPlaceholder
 import dev.ynagai.a2ui.compose.A2uiPlaceholderReason
 import dev.ynagai.a2ui.compose.A2uiSurface
 import dev.ynagai.a2ui.compose.ComponentRegistry
+import dev.ynagai.a2ui.core.function.systemLocaleFormatter
 import dev.ynagai.a2ui.material3.Material3Components
 
 /**
@@ -107,13 +108,24 @@ private enum class Pane(val title: String) {
  *
  * @param state the Gallery's state. Hoisted so the integration suite can drive the same object the
  *   UI does -- see [GalleryState], which is where stepping and the action log live.
+ *
+ *   The default reads the device's locale, which the library itself deliberately does not: a
+ *   renderer that did would make the same payload render differently in CI than on a desk. A
+ *   development tool is the one place that trade sits the other way round -- the corpus calls
+ *   `formatDate`, `formatNumber` and `formatCurrency` in thirty-odd places, and a Gallery showing
+ *   the locale-independent fallback would be showing what no host ever sees. It is also the only
+ *   thing that runs `platformLocaleData` on Kotlin/JS, which has no Compose UI test harness.
+ *
+ *   `urlOpener` is deliberately *not* wired the same way: an `openUrl` action here still does
+ *   nothing, because opening one is a capability handed to an agent's payload rather than a
+ *   formatter reading the machine.
  * @param registry what draws the surface. The shipped Material 3 registry by default; a host
  *   trying its own component renderer passes [ComponentRegistry.with]'s result.
  */
 @Composable
 public fun GalleryApp(
     modifier: Modifier = Modifier,
-    state: GalleryState = remember { GalleryState() },
+    state: GalleryState = remember { GalleryState(locale = systemLocaleFormatter()) },
     registry: ComponentRegistry = Material3Components.Basic,
 ) {
     MaterialTheme {
@@ -294,6 +306,19 @@ private fun Stepper(state: GalleryState) {
  * The placeholder is a visible chip rather than the library's default of nothing. A half-stepped
  * example is *supposed* to be missing components, and this is the one screen where seeing which
  * ones is the point -- a gap in the layout would say the same thing far less precisely.
+ *
+ * **The preview scrolls, so the surface is measured with an unbounded height, and vertical layout
+ * that needs a bounded one does not take effect here.** A `Column` whose `justify` spreads its
+ * children reaches `fillMaxHeight()` against an infinite constraint and wraps instead --
+ * `00_complex-layout.json`'s `spaceBetween` and `00_interactive-button.json`'s `center` both look
+ * like `start` in this pane -- and a child granted `weight` down a column measures at zero.
+ * Horizontal layout, which is what most of the corpus exercises, is unaffected.
+ *
+ * This is the deliberate half of a trade. Bounding the preview would make vertical arrangement
+ * behave, at the cost of clipping any surface taller than the pane, and only `List` brings
+ * scrolling of its own. A host embedding `A2uiSurface` in its own `Modifier.verticalScroll` is
+ * also the placement the library documents as usual -- see `ListComponent.kt` -- so what this pane
+ * shows is what that host would see. Read a vertical-arrangement question somewhere bounded.
  */
 @Composable
 private fun SurfacePreview(

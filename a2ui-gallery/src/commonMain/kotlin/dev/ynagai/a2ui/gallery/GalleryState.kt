@@ -65,13 +65,14 @@ public data class ActionLogEntry(
  *
  * @param clock the source of the `timestamp` on every action message. The system clock by default;
  *   a test that asserts on a formatted timestamp passes a fixed one, as `ExampleRenderTest` does.
- * @param locale how the four locale-sensitive functions format. Left at the locale-independent
- *   default, which is what every entry point currently gets: **nothing wires
- *   `systemLocaleFormatter()` in**, so the Gallery does not exercise the platform's own locale
- *   tables on any target -- including Kotlin/JS, where it is the only thing that runs at all.
- * @param urlOpener where an `openUrl` action sends a URL. Left at the no-op default for the same
- *   reason: `rememberPlatformUrlOpener()` is never called, so such an action does nothing here.
- *   Both are constructor parameters so a host -- or the integration suite -- can supply them.
+ * @param locale how the four locale-sensitive functions format. The locale-independent default
+ *   here, so a formatted string asserted in a test does not change with the machine; [GalleryApp]
+ *   passes `systemLocaleFormatter()` instead, which is what the running Gallery uses and the only
+ *   thing that exercises `platformLocaleData` on Kotlin/JS.
+ * @param urlOpener where an `openUrl` action sends a URL. No-op, and **not** wired to
+ *   `rememberPlatformUrlOpener()` anywhere: opening a URL is a capability handed to an agent's
+ *   payload rather than a formatter reading the machine, so an `openUrl` action does nothing in
+ *   the Gallery. A host that wants otherwise passes its own.
  */
 @Stable
 public class GalleryState(

@@ -65,7 +65,15 @@ its JSON message stream and a step-one-message-at-a-time control in the middle, 
 and action log on the right. It is a development tool, and it is **not published**.
 
 It is also where the renderer is exercised on Kotlin/JS. Compose's UI test harness cannot boot Skiko
-there, so JS has no rendering test — the Gallery is the thing that runs.
+there, so JS has no rendering test — the Gallery is the thing that runs. It is likewise the only
+thing that runs the platform locale tables: it passes `systemLocaleFormatter()`, which the library
+itself leaves opt-in. `openUrl` is deliberately not wired, so such an action does nothing here.
+
+One limitation worth knowing before reading a layout off it: the preview scrolls, so a surface is
+measured with an **unbounded height** and vertical layout that needs a bounded one does not take
+effect — a `Column` whose `justify` spreads its children wraps instead. That is the same thing a
+host embedding `A2uiSurface` in its own scroll container sees; check a vertical-arrangement question
+somewhere bounded.
 
 ```bash
 ./gradlew :a2ui-gallery:run                              # desktop

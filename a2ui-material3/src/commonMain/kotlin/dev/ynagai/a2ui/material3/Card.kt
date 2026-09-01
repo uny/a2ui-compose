@@ -30,15 +30,16 @@ import dev.ynagai.a2ui.compose.rememberChildren
  * **A bordered `Box` rather than Material 3's `OutlinedCard`, and that is a workaround.** The two
  * draw the same thing here -- a transparent rounded rectangle with a 1dp outline -- because that is
  * all this component is allowed to be. What is given up is not paint but *touch*: a `Surface` is
- * hit-testable across its whole area and a `Box` is not, which is why the chain below ends in an
- * empty `pointerInput` and why deleting that line is a behaviour change rather than a tidy-up.
- * What `OutlinedCard`
- * brings with it is Material 3's non-interactive `Surface`, and a `Surface` whose children are
- * drawn through [RenderChild] crashes Kotlin/Native: replacing the content of an `A2uiSurface` that
- * sits in a scrolling (unbounded-height) parent segfaults in `AtomicInt.compareAndSet`, with a
- * stack that cannot be unwound. That is the placement this library documents as usual, so it is not
- * an exotic case -- it took down half the specification's own corpus in the Gallery, on macOS and
- * iOS both.
+ * hit-testable across its whole area and a `Box` is only where a child is, which is why the chain
+ * below ends in an empty `pointerInput` -- deleting that line is a behaviour change, not a
+ * tidy-up.
+ *
+ * What `OutlinedCard` brings with it is Material 3's non-interactive `Surface`, and a `Surface`
+ * whose children are drawn through [RenderChild] crashes Kotlin/Native: replacing the content of
+ * an `A2uiSurface` that sits in a scrolling (unbounded-height) parent segfaults in
+ * `AtomicInt.compareAndSet`, with a stack that cannot be unwound. That is the placement this
+ * library documents as usual, so it is not an exotic case -- it took down half the specification's
+ * own corpus in the Gallery, on macOS and iOS both.
  *
  * The four conditions are all required, and each on its own is fine: the same swap with a bounded
  * height, the same `Surface` with a literal child instead of [RenderChild], the same [RenderChild]

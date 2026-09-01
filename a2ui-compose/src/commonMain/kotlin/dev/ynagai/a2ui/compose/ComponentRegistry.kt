@@ -43,9 +43,9 @@ public class ComponentRegistry(renderers: Map<String, ComponentRenderer>) {
      *
      * **One shape to avoid in a renderer you write here: Material 3's non-interactive `Surface`
      * drawing its children through [RenderChild].** On Kotlin/Native -- macOS and iOS, never JVM
-     * or either web target -- replacing that component while it is on screen segfaults inside
-     * `AtomicInt.compareAndSet`, with no unwindable stack: nothing raises, nothing is reported, the
-     * process is simply gone. `a2ui-material3`'s own `CardRenderer` was rebuilt off `OutlinedCard`
+     * or either web target -- a component of that shape *arriving* in an update, replacing whatever
+     * held its id before, segfaults inside `AtomicInt.compareAndSet` with no unwindable stack:
+     * nothing raises, nothing is reported, the process is simply gone. `a2ui-material3`'s own `CardRenderer` was rebuilt off `OutlinedCard`
      * onto a bordered `Box` for exactly this, and its note carries the conditions and the
      * reproductions. A host renderer is now the only way back into it, and a `Modal`'s content is
      * where it would land least visibly, so it is written down here rather than only there.

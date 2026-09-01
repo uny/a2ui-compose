@@ -32,12 +32,16 @@ import kotlin.test.Test
  * old way -- Material 3's `OutlinedCard`, its child through `RenderChild` -- registered over `Card`
  * as an open modal's content segfaults macOS in a bounded host as readily as in a scrolling one, so
  * the `Dialog` is not what keeps this green. The same swap with that card and no modal anywhere, in
- * a fixed 400x600 box, dies too, which puts the fault outside the height condition altogether. What
- * actually leaves `Modal` safe is narrower and worth saying plainly: **no component the catalog
- * draws is built on a `Surface` any more**, [CardRenderer] having been the last one.
+ * a fixed 400x600 box, dies too, which puts the fault outside the height condition altogether.
+ *
+ * What every reproduction has in common is narrower, and worth saying plainly: **the component
+ * *arriving* in the swap is the one built on the `Surface`.** `ModalRenderer`'s own dialog
+ * `Surface` is that shape too and stays green here, because a content swap leaves it in place and
+ * replaces something below it; [CardRenderer] was the one that arrived, and since it stopped being
+ * a `Surface` nothing the catalog draws does.
  *
  * So the two tests below pass for that reason, and this file is a canary that cannot currently
- * fail -- with the shipped catalog there is nothing left to supply the `Surface` condition. It
+ * fail -- with the shipped catalog there is nothing left to arrive as a `Surface`. It
  * earns its place against the day something does: a host registering its own `Surface`-based
  * renderer, which `ModalRenderer`'s note invites, or a renderer here being rebuilt on one. A modal
  * is where that would land first and least visibly. Until then read this as coverage of the modal

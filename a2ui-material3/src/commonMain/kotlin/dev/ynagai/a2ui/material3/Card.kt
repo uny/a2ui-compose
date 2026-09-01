@@ -57,8 +57,14 @@ public val CardRenderer: ComponentRenderer = ComponentRenderer { scope, modifier
     Box(
         modifier
             .leafMargin()
-            .clip(MaterialTheme.shapes.medium)
+            // Border before clip, which is `Surface`'s own order and not an arbitrary one.
+            // `Modifier.border` insets a rounded stroke by half its width, so the outer edge of
+            // the hairline lands exactly on the shape's outline -- the same path a preceding
+            // `clip` would antialias it against, thinning a 1dp line that has nothing to spare.
+            // Clipping after leaves the stroke whole and still clips the content, which is the
+            // only thing the clip is here for.
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
+            .clip(MaterialTheme.shapes.medium)
             // The one thing a bare `Box` does give up, restored by hand. A `Surface` carries an
             // empty `pointerInput` and is therefore *opaque to touches* everywhere it is drawn,
             // including where it is transparent to the eye; a `Box` is hit-testable only where a

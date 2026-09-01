@@ -8,10 +8,16 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -21,8 +27,8 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.A2uiPlaceholderReason
 import dev.ynagai.a2ui.core.protocol.ActionMessage
-import dev.ynagai.a2ui.material3.Material3Components
 import kotlinx.serialization.json.JsonPrimitive
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -35,8 +41,9 @@ import kotlin.test.assertTrue
  * The blueprint asks for these to be made "utilizing the Gallery App's logic", and that is the
  * point of them rather than a formality: each one is a whole-stack assertion -- a payload from the
  * specification's own corpus goes in through [GalleryState], the shipped registry draws it, a
- * gesture goes to the drawn surface, and what comes back is read off the Gallery's own inspection
- * panes. Nothing here reaches into the renderer to arrange a result.
+ * gesture goes to the drawn surface, and what comes back is read off the Gallery -- the data model
+ * and the placeholder chips off the panes a developer reads, the action log off the object those
+ * panes draw from. Nothing here reaches into the renderer to arrange a result.
  *
  * They are separate from [GalleryAppTest], which is about the Gallery's chrome. If one of these
  * fails, the renderer is wrong; if one of those fails, the tool around it is.
@@ -55,7 +62,7 @@ class GalleryIntegrationTest {
         // The Markdown heading rendered as text rather than carried through with its marker.
         onNodeWithText("Hello, Minimal Catalog!").assertIsDisplayed()
         // And drawn whole: the corpus's own claim is that this needs no placeholder at all.
-        assertEquals(emptyList(), state.placeholdersDrawn(), "nothing should be missing")
+        assertEquals(emptyList(), placeholderChipsDrawn(), "nothing should be missing")
     }
 
     // ---- 2. Layout Integrity ----------------------------------------------------------------
@@ -76,17 +83,21 @@ class GalleryIntegrationTest {
         val left = onNodeWithText("Left Content").fetchSemanticsNode().boundsInRoot
         val right = onNodeWithText("Right Content").fetchSemanticsNode().boundsInRoot
 
-        // One assertion, not two: a positive gap already says the left text ends before the right
-        // one begins, and stating both would leave the weaker of them unable to fail on its own.
+        // The main axis: a positive gap says the left text ends before the right one begins, in
+        // that order, with room between them.
         assertTrue(
             right.left - left.right > 0f,
             "`spaceBetween` should leave a gap, in order: left=$left right=$right",
         )
-        // Overlapping vertically is the claim, not sharing a top edge: `align: center` centres two
-        // texts of different variants, so their tops differ by the difference in line height.
+        // The cross axis, and centres rather than mere overlap. Overlap cannot fail on its own --
+        // a row is as tall as its tallest child, so the shorter of two texts lies inside the
+        // taller's bounds under `top` and `bottom` alignment just as much as under `center`, and
+        // the only layout that separates them is the `Column` the assertion above already
+        // catches. Centres differ by half the line-height difference unless `align: center` was
+        // honoured, so this one fails on its own for the reason it names.
         assertTrue(
-            left.top < right.bottom && right.top < left.bottom,
-            "the two should share a row: left=$left right=$right",
+            abs(left.center.y - right.center.y) < 1f,
+            "`align: center` should centre both: left=$left right=$right",
         )
     }
 
@@ -139,7 +150,11 @@ class GalleryIntegrationTest {
         onAllNodesWithText(PARTY_NAME).assertCountEquals(0)
 
         // The first field of the editor column is `event_name_input`, bound to `/event/name`;
-        // `invite_event_name` in the preview card binds to the same path.
+        // `invite_event_name` in the preview card binds to the same path. Pinned by its label
+        // rather than assumed: the count below would also read as two if index 0 were the next
+        // field, `guest_input`, whose own preview `Text` binds `/event/guest` -- so without this
+        // the test proves a field reached a `Text`, not that it reached *that* one.
+        onAllNodes(hasSetTextAction())[0].assertTextContains("Event Name")
         onAllNodes(hasSetTextAction())[0].performTextReplacement(PARTY_NAME)
 
         // Two now: the field itself, and the preview `Text` that was never sent anything.
@@ -197,7 +212,9 @@ class GalleryIntegrationTest {
      * is what selecting the next sample does forty-two times here. That last path is the one that
      * segfaulted Kotlin/Native until `CardRenderer` stopped being built on a Material 3 `Surface`;
      * this test is what walks it for the whole corpus rather than for the one pair
-     * [CardScrollSwapTest][dev.ynagai.a2ui.material3.CardScrollSwapTest] pins.
+     * `CardScrollSwapTest` pins. Named rather than linked: that class lives in `a2ui-material3`'s
+     * own test source set, which is not on this module's compile classpath, so the reference
+     * would not resolve.
      */
     @Test
     fun every_example_loads_one_message_at_a_time_and_draws_whole() = runComposeUiTest {
@@ -212,30 +229,54 @@ class GalleryIntegrationTest {
                 waitForIdle()
             }
             assertNotNull(state.surfaceId, "${example.file}: should leave a renderable surface")
+            // Read off the pane rather than off the renderer. Both assertions above this one are
+            // pure model state -- true with no composition at all -- so without these two the loop
+            // asserts that 43 payloads *decoded*, and would stay green over a blank preview.
+            assertTrue(
+                onNodeWithTag(GalleryTags.PREVIEW).onChildren().fetchSemanticsNodes().isNotEmpty(),
+                "${example.file}: the preview should have drawn something",
+            )
             assertEquals(
                 emptyList(),
-                state.placeholdersDrawn(),
+                placeholderChipsDrawn(),
                 "${example.file}: the registry covers this example, so it should draw whole",
             )
         }
     }
 
     /**
-     * What the preview would have drawn as placeholders.
+     * The placeholder chips the preview actually drew, by the text each one carries.
      *
-     * Recomputed from the renderer rather than collected during composition: a placeholder callback
-     * that wrote to snapshot state would be a composition writing state another part of the
-     * composition reads, which recomposes forever. The Gallery draws a visible chip instead, and a
-     * test that wants the list asks the same question the drawing does.
+     * Read off the drawn tree because that is the only place the whole answer exists. Deriving it
+     * from the surface model instead can only ever reconstruct [A2uiPlaceholderReason.UnknownType]
+     * -- and even that vacuously, since [DrawableExamplesTest] already pins every example's
+     * component types as a subset of the registry's, so a model-derived list is `emptyList()` for
+     * this corpus whatever the renderer does. The other five reasons leave no trace in the model at
+     * all: `MissingComponent` names an id the model does not hold, and `Cycle`, `TooDeep`,
+     * `BudgetExceeded` and `TooManyChildren` are decisions the *descent* makes about components the
+     * model holds happily.
+     *
+     * Collecting from the [dev.ynagai.a2ui.compose.A2uiPlaceholder] callback, as `ExampleRenderTest`
+     * does, is not available here: [GalleryApp] hard-wires its own chip and takes no parameter to
+     * override it. Matching what that chip draws is the same question asked of the same surface.
+     *
+     * Scoped under [GalleryTags.PREVIEW] on purpose -- the message stream beside it renders every
+     * payload as raw JSON, so an unscoped text match would answer about the agent's own strings.
+     *
+     * The strings are `A2uiPlaceholderReason.describe`'s in [GalleryApp]; a rename there should
+     * fail here, which is the point of asserting on what a developer actually reads.
      */
-    private fun GalleryState.placeholdersDrawn(): List<A2uiPlaceholderReason> {
-        val types = Material3Components.Basic.types
-        val surface = surfaceId?.let { renderer.state.surfaces[it] } ?: return emptyList()
-        return surface.components.values.mapNotNull { component ->
-            if (component.component in types) null
-            else A2uiPlaceholderReason.UnknownType(component.id, component.component)
-        }
-    }
+    private fun SemanticsNodeInteractionsProvider.placeholderChipsDrawn(): List<String> =
+        PLACEHOLDER_CHIPS
+            .flatMap { marker ->
+                onAllNodes(
+                    hasText(marker, substring = true) and
+                        hasAnyAncestor(hasTestTag(GalleryTags.PREVIEW)),
+                ).fetchSemanticsNodes()
+            }
+            .mapNotNull { node ->
+                node.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text }
+            }
 
     /** A node's rendered text, joined. The data model pane draws its whole JSON as one node. */
     private fun SemanticsNodeInteraction.textShown(): String =
@@ -275,5 +316,21 @@ class GalleryIntegrationTest {
 
         /** A string no example contains, so its appearance can only be what was typed. */
         const val PARTY_NAME = "Ynagai's Housewarming"
+
+        /**
+         * One marker per [A2uiPlaceholderReason], from the chip `GalleryApp` draws for it.
+         *
+         * All six, not the one a model-derived check could see. Each is the narrowest substring
+         * that is still unique to its chip: `BudgetExceeded` and `TooManyChildren` interpolate a
+         * number *before* the words that identify them, so the phrase has to start after it.
+         */
+        val PLACEHOLDER_CHIPS = listOf(
+            "not yet defined: ",
+            "no renderer for ",
+            "cycle at ",
+            "too deep at ",
+            "-instance budget at ",
+            " children dropped from ",
+        )
     }
 }

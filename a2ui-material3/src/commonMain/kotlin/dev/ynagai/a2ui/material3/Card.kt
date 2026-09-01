@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.RenderChild
@@ -28,7 +29,10 @@ import dev.ynagai.a2ui.compose.rememberChildren
  *
  * **A bordered `Box` rather than Material 3's `OutlinedCard`, and that is a workaround.** The two
  * draw the same thing here -- a transparent rounded rectangle with a 1dp outline -- because that is
- * all this component is allowed to be, so nothing of the card is given up. What `OutlinedCard`
+ * all this component is allowed to be. What is given up is not paint but *touch*: a `Surface` is
+ * hit-testable across its whole area and a `Box` is not, which is why the chain below ends in an
+ * empty `pointerInput` and why deleting that line is a behaviour change rather than a tidy-up.
+ * What `OutlinedCard`
  * brings with it is Material 3's non-interactive `Surface`, and a `Surface` whose children are
  * drawn through [RenderChild] crashes Kotlin/Native: replacing the content of an `A2uiSurface` that
  * sits in a scrolling (unbounded-height) parent segfaults in `AtomicInt.compareAndSet`, with a
@@ -54,7 +58,17 @@ public val CardRenderer: ComponentRenderer = ComponentRenderer { scope, modifier
         modifier
             .leafMargin()
             .clip(MaterialTheme.shapes.medium)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium),
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
+            // The one thing a bare `Box` does give up, restored by hand. A `Surface` carries an
+            // empty `pointerInput` and is therefore *opaque to touches* everywhere it is drawn,
+            // including where it is transparent to the eye; a `Box` is hit-testable only where a
+            // child is. Measured, not assumed: with this line deleted, a tap on the card's own
+            // 16dp padding falls through to whatever the host composed behind the surface, and
+            // with it the tap stops at the card exactly as it did under `OutlinedCard`. Nothing
+            // in the catalog can stack a card over a control -- `Row` and `Column` do not overlap
+            // -- so the payload cannot reach this, but a host that draws `A2uiSurface` over its
+            // own chrome can, and did not have to think about it before.
+            .pointerInput(Unit) {},
     ) {
         Column(Modifier.padding(CARD_PADDING)) {
             children.forEach { scope.RenderChild(it) }

@@ -1,13 +1,12 @@
 package dev.ynagai.a2ui.material3
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.RenderChild
@@ -27,6 +26,23 @@ import dev.ynagai.a2ui.compose.rememberChildren
  * *localised* in the guide's sense -- it keeps the content off the card's own border and is not
  * part of the outer layout, which is what [leafMargin] carries.
  *
+ * **A bordered `Box` rather than Material 3's `OutlinedCard`, and that is a workaround.** The two
+ * draw the same thing here -- a transparent rounded rectangle with a 1dp outline -- because that is
+ * all this component is allowed to be, so nothing of the card is given up. What `OutlinedCard`
+ * brings with it is Material 3's non-interactive `Surface`, and a `Surface` whose children are
+ * drawn through [RenderChild] crashes Kotlin/Native: replacing the content of an `A2uiSurface` that
+ * sits in a scrolling (unbounded-height) parent segfaults in `AtomicInt.compareAndSet`, with a
+ * stack that cannot be unwound. That is the placement this library documents as usual, so it is not
+ * an exotic case -- it took down half the specification's own corpus in the Gallery, on macOS and
+ * iOS both.
+ *
+ * The four conditions are all required, and each on its own is fine: the same swap with a bounded
+ * height, the same `Surface` with a literal child instead of [RenderChild], the same [RenderChild]
+ * in a plain `Box`, and a bare `OutlinedCard` with these colours and no `A2uiSurface` around it all
+ * pass. `Button`'s clickable `Surface` overload passes too, so the blast radius is this component.
+ * JVM and both web targets never reproduced it. Neither half is wrong on its own, which is why this
+ * is a workaround rather than a fix: the defect is below both of them.
+ *
  * The catalog gives a card exactly one `child`, and a payload wanting more is told to wrap them in
  * a `Column`. Nothing here enforces that: the children are iterated, so a payload the schema
  * refuses draws all of what it named rather than silently dropping the tail. `CatalogValidator` is
@@ -34,22 +50,11 @@ import dev.ynagai.a2ui.compose.rememberChildren
  */
 public val CardRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
     val children = scope.rememberChildren("child")
-    OutlinedCard(
-        modifier = modifier.leafMargin(),
-        shape = MaterialTheme.shapes.medium,
-        // Transparent, not the theme's surface colour. `outlinedCardColors` would otherwise paint
-        // the card opaque, and a nested card would then be an invisible rectangle inside an
-        // identically coloured one.
-        //
-        // The content colour is named too, and has to be: the default is `contentColorFor` of the
-        // container, and no theme colour maps from transparent -- so it resolves to `Unspecified`,
-        // which the card then provides as `LocalContentColor` to everything inside it. Inheriting
-        // the surrounding colour instead is also §4's rule of thumb for leaves, applied to the
-        // container that would otherwise overwrite it.
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = Color.Transparent,
-            contentColor = LocalContentColor.current,
-        ),
+    Box(
+        modifier
+            .leafMargin()
+            .clip(MaterialTheme.shapes.medium)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium),
     ) {
         Column(Modifier.padding(CARD_PADDING)) {
             children.forEach { scope.RenderChild(it) }

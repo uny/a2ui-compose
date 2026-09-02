@@ -64,6 +64,16 @@ kotlin {
         namespace = "dev.ynagai.a2ui.core"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
+
+        // Runs `commonTest` on the JVM against the Android variant. Without it the warning the
+        // build prints is literal: **not one test had ever run on the target whose `.aar` is
+        // published.** The suite was green on five targets and silent on the sixth.
+        //
+        // Host tests, not instrumentation: these are the tests that need no screen. The Compose UI
+        // tests stay out -- `composeUiTest` is wired to the other targets, and drawing on Android
+        // needs Robolectric or a device, neither of which this repository has. That gap is real
+        // and is recorded in the README rather than papered over.
+        withHostTest {}
     }
 
     jvm()

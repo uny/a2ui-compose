@@ -41,6 +41,22 @@ The `compileSdk` floor of 37 is not a preference — it is forced by `androidx.c
 Compose Multiplatform pulls in on Android. It becomes `minCompileSdk` in the published AAR metadata,
 so every Android consumer must compile against 37 or later.
 
+### What is tested where
+
+`commonTest` runs on all six targets, Android included — 492 of the suite's assertions run against
+the Android variant on the JVM, which is what `withHostTest {}` buys. Before that they ran on five
+targets and the sixth was silent: not one test had ever executed against the variant whose `.aar`
+is published.
+
+**The Compose UI tests are the exception, and Android is the target that misses them.** They need
+a composition to draw into; Android's host tests have none without Robolectric or an on-device
+instrumentation run, and this repository has neither. So the component renderers in
+`a2ui-material3` — what a `CheckBox` does with a tap, what a `Modal` intercepts — ship in the
+`.aar` with nothing on Android having drawn them. **They are covered on JVM, macOS, iOS and
+wasmJs from the same `commonMain`, which is most of the argument but not all of it.** Kotlin/JS is
+in the same position for a different reason (its test harness cannot boot Skiko) and is covered by
+the Gallery instead; Android has no equivalent, because the Gallery does not build for it.
+
 ## Modules
 
 | Artifact | Contents |

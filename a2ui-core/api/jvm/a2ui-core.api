@@ -32,8 +32,7 @@ public final class dev/ynagai/a2ui/core/function/DateNames {
 }
 
 public final class dev/ynagai/a2ui/core/function/EvaluationContext {
-	public fun <init> (Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/surface/EvaluationScope;Ldev/ynagai/a2ui/core/function/LocaleFormatter;Ldev/ynagai/a2ui/core/function/InvocationContext;Ldev/ynagai/a2ui/core/function/UrlOpener;Ldev/ynagai/a2ui/core/function/EvaluationLimits;Lkotlinx/serialization/json/Json;)V
-	public synthetic fun <init> (Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/surface/EvaluationScope;Ldev/ynagai/a2ui/core/function/LocaleFormatter;Ldev/ynagai/a2ui/core/function/InvocationContext;Ldev/ynagai/a2ui/core/function/UrlOpener;Ldev/ynagai/a2ui/core/function/EvaluationLimits;Lkotlinx/serialization/json/Json;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lkotlinx/serialization/json/JsonElement;)V
 	public final fun getDataModel ()Lkotlinx/serialization/json/JsonElement;
 	public final fun getInvocation ()Ldev/ynagai/a2ui/core/function/InvocationContext;
 	public final fun getJson ()Lkotlinx/serialization/json/Json;
@@ -42,6 +41,11 @@ public final class dev/ynagai/a2ui/core/function/EvaluationContext {
 	public final fun getScope ()Ldev/ynagai/a2ui/core/surface/EvaluationScope;
 	public final fun getUrlOpener ()Ldev/ynagai/a2ui/core/function/UrlOpener;
 	public final fun inScope (Ldev/ynagai/a2ui/core/surface/EvaluationScope;)Ldev/ynagai/a2ui/core/function/EvaluationContext;
+	public final fun withInvocation (Ldev/ynagai/a2ui/core/function/InvocationContext;)Ldev/ynagai/a2ui/core/function/EvaluationContext;
+	public final fun withJson (Lkotlinx/serialization/json/Json;)Ldev/ynagai/a2ui/core/function/EvaluationContext;
+	public final fun withLimits (Ldev/ynagai/a2ui/core/function/EvaluationLimits;)Ldev/ynagai/a2ui/core/function/EvaluationContext;
+	public final fun withLocale (Ldev/ynagai/a2ui/core/function/LocaleFormatter;)Ldev/ynagai/a2ui/core/function/EvaluationContext;
+	public final fun withUrlOpener (Ldev/ynagai/a2ui/core/function/UrlOpener;)Ldev/ynagai/a2ui/core/function/EvaluationContext;
 }
 
 public final class dev/ynagai/a2ui/core/function/EvaluationLimits {

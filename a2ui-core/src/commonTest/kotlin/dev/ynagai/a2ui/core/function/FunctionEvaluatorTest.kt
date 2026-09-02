@@ -25,13 +25,11 @@ internal fun context(
     invocation: InvocationContext = InvocationContext.RENDER,
     urlOpener: UrlOpener? = null,
     limits: EvaluationLimits = EvaluationLimits.DEFAULT,
-): EvaluationContext = EvaluationContext(
-    dataModel = Json.parseToJsonElement(data),
-    scope = scope,
-    invocation = invocation,
-    urlOpener = urlOpener,
-    limits = limits,
-)
+): EvaluationContext = EvaluationContext(Json.parseToJsonElement(data))
+    .inScope(scope)
+    .withInvocation(invocation)
+    .withUrlOpener(urlOpener)
+    .withLimits(limits)
 
 /** Reads a wire-form [FunctionCall] the way a payload would carry it. */
 internal fun call(wire: String): FunctionCall =

@@ -108,15 +108,15 @@ public data class A2uiComponentScope internal constructor(
 
     private fun context(invocation: InvocationContext): EvaluationContext? {
         val model = surface?.dataModel ?: return null
-        return EvaluationContext(
-            dataModel = model,
-            scope = evaluationScope,
-            locale = renderer.locale,
-            invocation = invocation,
-            urlOpener = renderer.urlOpener,
-            limits = renderer.evaluationLimits,
-            json = A2uiJson.strict,
-        )
+        // A chain rather than named arguments: `EvaluationContext`'s constructor is deliberately
+        // not its compatibility surface, so everything past `dataModel` arrives this way. `json`
+        // is not set -- its default is already `A2uiJson.strict`, which is what this passed.
+        return EvaluationContext(model)
+            .inScope(evaluationScope)
+            .withLocale(renderer.locale)
+            .withInvocation(invocation)
+            .withUrlOpener(renderer.urlOpener)
+            .withLimits(renderer.evaluationLimits)
     }
 
     /**

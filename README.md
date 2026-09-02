@@ -65,6 +65,20 @@ the Gallery instead; Android has no equivalent, because the Gallery does not bui
 | `dev.ynagai.a2ui:a2ui-compose` | `A2uiSurface`, `A2uiRenderer`, the component registry, and the bounds that keep an agent's payload from outgrowing a composition. Depends on `compose.runtime` and `compose.ui` — **no design system.** |
 | `dev.ynagai.a2ui:a2ui-material3` | All eighteen of the catalog's components drawn with Material 3 -- every component the specification's forty-three examples name. `Video` and `AudioPlayer` draw a media component's frame and play nothing: there is no player in Compose Multiplatform, and a host with a media stack registers its own renderer for the two. `Tabs` and `Modal` hold state the agent cannot see or set, which is what the guide asks for; a `Modal` intercepts its trigger's taps, so a trigger carrying an `action` does not dispatch it -- and only its *taps*: a keyboard or a screen reader activating the trigger still reaches the button underneath, so it dispatches the action and does not open the dialog, which is the component's one known gap. `checks`, the catalog's renderer-side validation, is honoured: a `Button` whose check fails is disabled and a failing input is captioned with the message. Almost every string on a surface is the agent's own; the five that cannot be (a picker dialog's confirm and cancel, a filter field's label, a modal's close button, a video's frame) come from `LocalA2uiStrings`, English until a host provides otherwise. `Image` draws through a host-provided `A2uiImageLoader`, and a described placeholder without one -- this library fetches nothing itself, and a loader that does is handed the agent's URL unvetted. Every leaf and framed component carries a uniform 8dp margin (the guide's Leaf-Margin Strategy), which `Text`, `Button` and `TextField` did not have before. |
 
+### Locale formatting is opt-in, and the default is a placeholder
+
+`formatNumber`, `formatCurrency`, `formatDate` and `pluralize` run through a `LocaleFormatter`, and
+the one they get unless a host chooses otherwise is `FallbackLocaleFormatter` — which opens its own
+documentation by saying it is not a locale implementation. It renders `USD 1,234.50` rather than a
+symbol, applies the English `n == 1` plural rule whatever the language, and uses English month
+names.
+
+**That is the intended default, not an oversight.** A renderer that read the device by default would
+make one payload render differently in CI than on a desk. But it is chosen silently, so: pass
+`systemLocaleFormatter()` to `A2uiRenderer` for the device's locale, or `localeFormatter(tag)` for a
+fixed one. The corpus reaches those four functions in roughly thirty places, so a host that ships
+without choosing is shipping the placeholder.
+
 The split follows the Core SDK / Framework Adapter separation in the A2UI project's own guidance for
 new client SDKs. Material 3 is a third artifact rather than part of the adapter because a design
 system is a host's choice: a host with its own components takes `a2ui-compose` alone and writes its

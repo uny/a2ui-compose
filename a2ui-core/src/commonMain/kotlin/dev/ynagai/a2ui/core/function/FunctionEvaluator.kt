@@ -160,23 +160,101 @@ public fun interface UrlOpener {
  *
  * [scope] is what makes the same expression mean different things in different rows of a list: it
  * fixes where a relative binding measures from and what `@index` returns.
+ *
+ * **`locale` defaults to a placeholder, and four of the catalog's functions run on it.**
+ * [FallbackLocaleFormatter] opens its own documentation by saying it is not a locale
+ * implementation: `formatCurrency` renders `USD 1,234.50` rather than a symbol, `pluralize`
+ * applies the English `n == 1` rule whatever the language, and `formatDate` uses English month
+ * names. That is the right default -- a library that read the device by default would make one
+ * payload render differently in CI than on a desk -- but it is chosen silently, so it is said
+ * here. [withLocale] is how a caller stops running on it, and `A2uiRenderer`'s `locale` parameter
+ * is how a Compose host does.
+ *
+ * **The constructor is not this class's compatibility surface.** Only `dataModel` is required
+ * there; everything else arrives through a [withLocale]-shaped derivation. That is not
+ * decoration: a public constructor with seven parameters *is* the ABI, so an eighth field could
+ * not be added to it -- with a default or without one, and as a `data class` or not -- without
+ * every consumer compiled against the old descriptor failing with `NoSuchMethodError` rather than
+ * being asked to recompile. Through derivations, a new field adds a new method and breaks
+ * nothing. The cost is that construction reads as a chain rather than as named arguments, and
+ * that is the trade taken.
  */
-public class EvaluationContext(
+public class EvaluationContext private constructor(
     public val dataModel: JsonElement,
-    public val scope: EvaluationScope = EvaluationScope.Root,
-    public val locale: LocaleFormatter = FallbackLocaleFormatter,
-    public val invocation: InvocationContext = InvocationContext.RENDER,
-    public val urlOpener: UrlOpener? = null,
-    public val limits: EvaluationLimits = EvaluationLimits.DEFAULT,
-    public val json: Json = A2uiJson.strict,
+    public val scope: EvaluationScope,
+    public val locale: LocaleFormatter,
+    public val invocation: InvocationContext,
+    public val urlOpener: UrlOpener?,
+    public val limits: EvaluationLimits,
+    public val json: Json,
 ) {
-    /** The same context evaluating in [scope] instead — one row of a list template, typically. */
-    public fun inScope(scope: EvaluationScope): EvaluationContext = EvaluationContext(
+    /**
+     * An evaluation against [dataModel] with every other choice left at its default: the root
+     * scope, the locale-independent formatter, [InvocationContext.RENDER], no [UrlOpener], the
+     * default limits, and this library's strict [Json].
+     */
+    public constructor(dataModel: JsonElement) : this(
+        dataModel = dataModel,
+        scope = EvaluationScope.Root,
+        locale = FallbackLocaleFormatter,
+        invocation = InvocationContext.RENDER,
+        urlOpener = null,
+        limits = EvaluationLimits.DEFAULT,
+        json = A2uiJson.strict,
+    )
+
+    /**
+     * The same context evaluating in [scope] instead -- one row of a list template, typically.
+     *
+     * Named for what it means rather than for the field it sets, unlike the [withLocale] family
+     * below. It is the one derivation with a domain meaning: the others replace a setting, this
+     * one moves where an expression is measured from.
+     */
+    public fun inScope(scope: EvaluationScope): EvaluationContext = with(scope = scope)
+
+    /** The same context formatting through [locale]. @see EvaluationContext */
+    public fun withLocale(locale: LocaleFormatter): EvaluationContext = with(locale = locale)
+
+    /**
+     * The same context evaluating as [invocation].
+     *
+     * The transition a renderer actually makes: properties resolve under
+     * [InvocationContext.RENDER], and running an action's `functionCall` needs
+     * [InvocationContext.USER_ACTION], because `openUrl` refuses to open without one.
+     */
+    public fun withInvocation(invocation: InvocationContext): EvaluationContext =
+        with(invocation = invocation)
+
+    /** The same context opening URLs through [urlOpener]. Null puts it back to refusing. */
+    public fun withUrlOpener(urlOpener: UrlOpener?): EvaluationContext =
+        with(urlOpener = urlOpener, urlOpenerSet = true)
+
+    /** The same context bounded by [limits]. */
+    public fun withLimits(limits: EvaluationLimits): EvaluationContext = with(limits = limits)
+
+    /** The same context decoding through [json]. */
+    public fun withJson(json: Json): EvaluationContext = with(json = json)
+
+    /**
+     * The private copy every derivation goes through.
+     *
+     * [urlOpenerSet] exists because `null` is a meaningful value for [urlOpener] and therefore
+     * cannot double as "unchanged". The other five fields have no such value.
+     */
+    private fun with(
+        scope: EvaluationScope = this.scope,
+        locale: LocaleFormatter = this.locale,
+        invocation: InvocationContext = this.invocation,
+        urlOpener: UrlOpener? = this.urlOpener,
+        urlOpenerSet: Boolean = false,
+        limits: EvaluationLimits = this.limits,
+        json: Json = this.json,
+    ): EvaluationContext = EvaluationContext(
         dataModel = dataModel,
         scope = scope,
         locale = locale,
         invocation = invocation,
-        urlOpener = urlOpener,
+        urlOpener = if (urlOpenerSet) urlOpener else this.urlOpener,
         limits = limits,
         json = json,
     )

@@ -219,6 +219,8 @@ final class dev.ynagai.a2ui.compose/A2uiRendererConfig { // dev.ynagai.a2ui.comp
     final val validationLimits // dev.ynagai.a2ui.compose/A2uiRendererConfig.validationLimits|{}validationLimits[0]
         final fun <get-validationLimits>(): dev.ynagai.a2ui.core.validation/ValidationLimits // dev.ynagai.a2ui.compose/A2uiRendererConfig.validationLimits.<get-validationLimits>|<get-validationLimits>(){}[0]
 
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.compose/A2uiRendererConfig.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.compose/A2uiRendererConfig.hashCode|hashCode(){}[0]
     final fun withCatalogs(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRendererConfig.withCatalogs|withCatalogs(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>){}[0]
     final fun withClock(dev.ynagai.a2ui.compose/A2uiClock): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRendererConfig.withClock|withClock(dev.ynagai.a2ui.compose.A2uiClock){}[0]
     final fun withEvaluationLimits(dev.ynagai.a2ui.core.function/EvaluationLimits): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRendererConfig.withEvaluationLimits|withEvaluationLimits(dev.ynagai.a2ui.core.function.EvaluationLimits){}[0]

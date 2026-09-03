@@ -9,6 +9,7 @@ import dev.ynagai.a2ui.core.surface.RenderLimits
 import dev.ynagai.a2ui.core.validation.ValidationLimits
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertSame
 
 /**
@@ -88,6 +89,32 @@ class A2uiRendererConfigTest {
         val config = A2uiRendererConfig.Default.withCatalogs(given)
         given.clear()
         assertEquals(listOf(BasicCatalog.definition), config.catalogs)
+    }
+
+    @Test
+    fun two_configurations_holding_the_same_settings_are_equal() {
+        // So that `remember(config) { A2uiRenderer(config) }` is a key that holds. Without
+        // `equals`, two separately-derived configurations are always unequal, the key changes every
+        // recomposition, and the renderer -- with every surface in it -- is rebuilt each frame.
+        val opener = UrlOpener { }
+        fun derive() = A2uiRendererConfig.Default
+            .withUrlOpener(opener)
+            .withValidationLimits(ValidationLimits(maxViolations = 3))
+
+        assertEquals(derive(), derive())
+        assertEquals(derive().hashCode(), derive().hashCode())
+
+        // ...and it is the settings doing it, not everything comparing equal.
+        assertNotEquals(derive(), derive().withValidationLimits(ValidationLimits(maxViolations = 4)))
+        assertNotEquals(A2uiRendererConfig.Default, derive())
+
+        // The documented limit: a function interface compares by identity, so two separately
+        // constructed openers do not match however alike they are. A host that wants the key to
+        // hold holds the value still.
+        assertNotEquals(
+            A2uiRendererConfig.Default.withUrlOpener(UrlOpener { }),
+            A2uiRendererConfig.Default.withUrlOpener(UrlOpener { }),
+        )
     }
 
     @Test

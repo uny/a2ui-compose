@@ -177,6 +177,7 @@ public final class dev/ynagai/a2ui/compose/A2uiRenderer {
 public final class dev/ynagai/a2ui/compose/A2uiRendererConfig {
 	public static final field $stable I
 	public static final field Companion Ldev/ynagai/a2ui/compose/A2uiRendererConfig$Companion;
+	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCatalogs ()Ljava/util/List;
 	public final fun getClock ()Ldev/ynagai/a2ui/compose/A2uiClock;
 	public final fun getEvaluationLimits ()Ldev/ynagai/a2ui/core/function/EvaluationLimits;
@@ -184,6 +185,7 @@ public final class dev/ynagai/a2ui/compose/A2uiRendererConfig {
 	public final fun getRenderLimits ()Ldev/ynagai/a2ui/core/surface/RenderLimits;
 	public final fun getUrlOpener ()Ldev/ynagai/a2ui/core/function/UrlOpener;
 	public final fun getValidationLimits ()Ldev/ynagai/a2ui/core/validation/ValidationLimits;
+	public fun hashCode ()I
 	public final fun withCatalogs (Ljava/util/List;)Ldev/ynagai/a2ui/compose/A2uiRendererConfig;
 	public final fun withClock (Ldev/ynagai/a2ui/compose/A2uiClock;)Ldev/ynagai/a2ui/compose/A2uiRendererConfig;
 	public final fun withEvaluationLimits (Ldev/ynagai/a2ui/core/function/EvaluationLimits;)Ldev/ynagai/a2ui/compose/A2uiRendererConfig;

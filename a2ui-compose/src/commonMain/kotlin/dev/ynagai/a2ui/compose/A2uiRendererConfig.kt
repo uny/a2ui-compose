@@ -99,17 +99,17 @@ public class A2uiRendererConfig private constructor(
     /** This configuration timestamping through [clock] instead. */
     public fun withClock(clock: A2uiClock): A2uiRendererConfig = with(clock = clock)
 
-    /** This configuration bounding evaluation by [limits]. */
-    public fun withEvaluationLimits(limits: EvaluationLimits): A2uiRendererConfig =
-        with(evaluationLimits = limits)
+    /** This configuration bounding evaluation by [evaluationLimits] instead. */
+    public fun withEvaluationLimits(evaluationLimits: EvaluationLimits): A2uiRendererConfig =
+        with(evaluationLimits = evaluationLimits)
 
-    /** This configuration bounding validation by [limits]. */
-    public fun withValidationLimits(limits: ValidationLimits): A2uiRendererConfig =
-        with(validationLimits = limits)
+    /** This configuration bounding validation by [validationLimits] instead. */
+    public fun withValidationLimits(validationLimits: ValidationLimits): A2uiRendererConfig =
+        with(validationLimits = validationLimits)
 
-    /** This configuration bounding composition by [limits]. */
-    public fun withRenderLimits(limits: RenderLimits): A2uiRendererConfig =
-        with(renderLimits = limits)
+    /** This configuration bounding composition by [renderLimits] instead. */
+    public fun withRenderLimits(renderLimits: RenderLimits): A2uiRendererConfig =
+        with(renderLimits = renderLimits)
 
     /** The private copy every derivation goes through. No setting here has a meaningful null, so
      * a defaulted parameter says "unchanged" unambiguously. */
@@ -130,6 +130,49 @@ public class A2uiRendererConfig private constructor(
         validationLimits = validationLimits,
         renderLimits = renderLimits,
     )
+
+    /**
+     * Two configurations are equal when all seven settings are.
+     *
+     * Here so a host can key a `remember` on this value. Without it every derivation is a fresh
+     * identity, so the natural Compose spelling
+     *
+     * ```kotlin
+     * val config = A2uiRendererConfig.Default.withUrlOpener(opener)
+     * val renderer = remember(config) { A2uiRenderer(config) }
+     * ```
+     *
+     * would rebuild the renderer on every recomposition -- discarding every surface it holds, every
+     * data-model write, and whatever the user was in the middle of typing.
+     *
+     * **Partial by nature, and knowing where it stops is the point.** [locale], [urlOpener] and
+     * [clock] are function interfaces, whose instances compare by identity: two configurations
+     * derived from `systemLocaleFormatter()` called twice are unequal and stay unequal. A host that
+     * wants the key above to hold must hold those values still, exactly as it must for any lambda
+     * it lets reach a `remember` key. The other four settings compare by value.
+     */
+    override fun equals(other: Any?): Boolean =
+        this === other || (
+            other is A2uiRendererConfig &&
+                catalogs == other.catalogs &&
+                locale == other.locale &&
+                urlOpener == other.urlOpener &&
+                clock == other.clock &&
+                evaluationLimits == other.evaluationLimits &&
+                validationLimits == other.validationLimits &&
+                renderLimits == other.renderLimits
+            )
+
+    override fun hashCode(): Int {
+        var result = catalogs.hashCode()
+        result = 31 * result + locale.hashCode()
+        result = 31 * result + urlOpener.hashCode()
+        result = 31 * result + clock.hashCode()
+        result = 31 * result + evaluationLimits.hashCode()
+        result = 31 * result + validationLimits.hashCode()
+        result = 31 * result + renderLimits.hashCode()
+        return result
+    }
 
     public companion object {
         /**

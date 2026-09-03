@@ -167,8 +167,8 @@ public fun interface UrlOpener {
  * applies the English `n == 1` rule whatever the language, and `formatDate` uses English month
  * names. That is the right default -- a library that read the device by default would make one
  * payload render differently in CI than on a desk -- but it is chosen silently, so it is said
- * here. [withLocale] is how a caller stops running on it, and `A2uiRenderer`'s `locale` parameter
- * is how a Compose host does.
+ * here. [withLocale] is how a caller stops running on it, and `A2uiRendererConfig.withLocale` is
+ * how a Compose host does.
  *
  * **The constructor is not this class's compatibility surface.** Only `dataModel` is required
  * there; everything else arrives through a [withLocale]-shaped derivation. That is not

@@ -35,9 +35,12 @@ class A2uiRendererConfigTest {
     fun each_derivation_changes_one_setting_and_carries_the_rest() {
         val opener = UrlOpener { }
         val clock = A2uiClock { "2026-09-03T00:00:00Z" }
+        // Every one of these differs from what `Default` holds. A fixture equal to the default is
+        // an assertion that cannot fail: the derivation could ignore its argument outright and the
+        // value read back would still match.
         val evaluation = EvaluationLimits(maxResultLength = 7)
-        val validation = ValidationLimits.DEFAULT
-        val render = RenderLimits.DEFAULT
+        val validation = ValidationLimits(maxViolations = 3)
+        val render = RenderLimits(maxInstances = 11)
 
         val config = A2uiRendererConfig.Default
             .withCatalogs(emptyList())
@@ -53,6 +56,11 @@ class A2uiRendererConfigTest {
         assertSame(opener, config.urlOpener)
         assertSame(clock, config.clock)
         assertEquals(evaluation, config.evaluationLimits)
+        // `validation` is set before `withRenderLimits`, so this reads it back *through* a later
+        // derivation: it fails both if `withValidationLimits` ignores its argument and if the copy
+        // helper rebuilds the field from the default instead of carrying it.
+        assertEquals(validation, config.validationLimits)
+        assertEquals(render, config.renderLimits)
 
         // One more on top changes only its own field. A `with` rebuilding from the defaults would
         // pass everything above and fail here -- and would do it by quietly restoring the
@@ -62,6 +70,9 @@ class A2uiRendererConfigTest {
         assertSame(SHOUTING, again.locale)
         assertSame(clock, again.clock)
         assertEquals(evaluation, again.evaluationLimits)
+        assertEquals(validation, again.validationLimits)
+        // The last link of the chain above, so only a derivation on top can show it carries.
+        assertEquals(render, again.renderLimits)
     }
 
     @Test
@@ -85,15 +96,21 @@ class A2uiRendererConfigTest {
                 .withLocale(SHOUTING)
                 .withUrlOpener(opener)
                 .withClock(clock)
-                .withEvaluationLimits(EvaluationLimits(maxResultLength = 7)),
+                .withEvaluationLimits(EvaluationLimits(maxResultLength = 7))
+                .withValidationLimits(ValidationLimits(maxViolations = 3))
+                .withRenderLimits(RenderLimits(maxInstances = 11)),
         )
         assertEquals(emptyList(), renderer.catalogs)
         assertSame(SHOUTING, renderer.locale)
         assertSame(opener, renderer.urlOpener)
         assertSame(clock, renderer.clock)
         assertEquals(7, renderer.evaluationLimits.maxResultLength)
-        assertEquals(ValidationLimits.DEFAULT, renderer.validationLimits)
-        assertEquals(RenderLimits.DEFAULT, renderer.renderLimits)
+        // Non-default on purpose. Asserting `ValidationLimits.DEFAULT` here would hold just as well
+        // for a getter that ignored `config` and returned the default -- and `validationLimits` is
+        // the one of the seven that no other test in the suite drives with a value of its own, so
+        // that getter would have had no live test at all.
+        assertEquals(3, renderer.validationLimits.maxViolations)
+        assertEquals(11, renderer.renderLimits.maxInstances)
     }
 
     @Test

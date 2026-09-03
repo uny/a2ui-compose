@@ -174,6 +174,37 @@ class InputComponentsTest {
         assertEquals(JsonArray(listOf(JsonPrimitive("a"))), renderer.read("/picked"))
     }
 
+    @Test
+    fun a_tap_leaves_the_entries_it_has_no_option_for_where_they_are() = runComposeUiTest {
+        // The catalog types the bound array as a list of strings, but an agent may bind one that
+        // holds anything. Rebuilding the array out of the strings the picker could read would drop
+        // `{"id": 7}` and retype `1` to `"1"` -- handing back a data model of a different shape
+        // than the one that was sent, which is the thing this component refuses to do elsewhere.
+        val renderer = rendererFor(MIXED)
+        setContent { Surface(renderer) }
+        // The string entry still reads as a selection, because it names an option.
+        onNodeWithText("Jazz").assertIsOn()
+        onNodeWithText("Rock").performClick()
+        assertEquals(json("""["jazz", {"id": 7}, 1, "vinyl", "rock"]"""), renderer.read("/mixed"))
+        // And deselecting removes only that entry: the others keep their places and their types.
+        onNodeWithText("Jazz").performClick()
+        assertEquals(json("""[{"id": 7}, 1, "vinyl", "rock"]"""), renderer.read("/mixed"))
+    }
+
+    @Test
+    fun an_exclusive_picker_replaces_only_what_it_has_an_option_for() = runComposeUiTest {
+        // "Replaces whatever was there" means whatever this picker could have put there. An entry
+        // it declares no option for is not a selection it is entitled to answer for, so the array
+        // it writes here is longer than one element -- see [MIXED].
+        val renderer = rendererFor(MIXED_EXCLUSIVE)
+        setContent { Surface(renderer) }
+        onNodeWithText("Rock").performClick()
+        assertEquals(json("""[{"id": 7}, 1, "vinyl", "rock"]"""), renderer.read("/mixed"))
+        // Re-tapping still clears the answer, and still only the answer.
+        onNodeWithText("Rock").performClick()
+        assertEquals(json("""[{"id": 7}, 1, "vinyl"]"""), renderer.read("/mixed"))
+    }
+
     // ---- Slider ---------------------------------------------------------------------------
 
     @Test
@@ -430,6 +461,9 @@ class InputComponentsTest {
         Box(Modifier.size(width, SURFACE_HEIGHT)) { Surface(renderer) }
     }
 
+    /** Expected JSON written as JSON, so a test's assertion reads like the payload it is about. */
+    private fun json(text: String): JsonElement = A2uiJson.strict.parseToJsonElement(text)
+
     private fun A2uiRenderer.read(path: String): JsonElement? =
         state.surfaces.getValue(SURFACE).dataModel.resolve(JsonPointer.parse(path))
 
@@ -469,6 +503,7 @@ class InputComponentsTest {
               "subscribe": false,
               "preference": [],
               "genres": [],
+              "mixed": ["jazz", {"id": 7}, 1, "vinyl"],
               "volume": 20,
               "when": "2026-08-30",
               "who": "Ada",
@@ -543,6 +578,30 @@ class InputComponentsTest {
           {"id":"picker","component":"ChoicePicker","variant":"mutuallyExclusive",
            "value":{"path":"/picked"},
            "options":[{"label":{"path":"/who"},"value":"a"}]}
+        ]"""
+
+        /**
+         * A picker bound to an array the catalog's own typing does not allow.
+         *
+         * `{"id": 7}` cannot be read as a selection at all; `1` and `"vinyl"` can be read but name
+         * no option this picker declares. All three are entries whose `options` and whose bound
+         * array disagree, which is the case the write half has to leave alone rather than rebuild
+         * -- `"vinyl"` in particular, because a picker that owned every *readable* entry rather
+         * than every *declared* one would drop it on the exclusive variant's replacement.
+         */
+        val MIXED = """[
+          {"id":"root","component":"Column","children":["many"]},
+          {"id":"many","component":"ChoicePicker","variant":"multipleSelection",
+           "value":{"path":"/mixed"},
+           "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
+        ]"""
+
+        /** [MIXED] under the variant that replaces the selection rather than toggling within it. */
+        val MIXED_EXCLUSIVE = """[
+          {"id":"root","component":"Column","children":["one"]},
+          {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive",
+           "value":{"path":"/mixed"},
+           "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
         ]"""
 
         val CHIPS = """[

@@ -178,7 +178,15 @@ public data class A2uiComponentScope internal constructor(
         (it as? JsonPrimitive)?.booleanOrNull
     }
 
-    /** Property [name] as a list of strings. */
+    /**
+     * Property [name] as a list of strings.
+     *
+     * **A reading, not a copy.** An entry that is not a primitive is dropped and a number arrives
+     * as its text, so a renderer that writes a list back by rebuilding it from this would delete
+     * the entries it could not read and retype the ones it could -- handing the agent a data model
+     * of a different shape than the one it sent. Read the array through [value] instead when the
+     * array is something this renderer writes.
+     */
     public fun stringList(name: String): List<String>? =
         (value(name) as? JsonArray)?.mapNotNull { it.asText() }
 
@@ -429,7 +437,12 @@ public fun A2uiComponentScope.rememberBoolean(name: String): Boolean? {
     return value
 }
 
-/** Property [name] as a list of strings, recomposing the caller only when it changes. */
+/**
+ * Property [name] as a list of strings, recomposing the caller only when it changes.
+ *
+ * Carries [A2uiComponentScope.stringList]'s caveat: fine for drawing a list, not enough to write
+ * one back.
+ */
 @Composable
 public fun A2uiComponentScope.rememberStringList(name: String): List<String>? {
     val value by remember(this, name) { derivedStateOf { stringList(name) } }

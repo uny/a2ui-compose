@@ -212,7 +212,11 @@ public class EvaluationContext private constructor(
      */
     public fun inScope(scope: EvaluationScope): EvaluationContext = with(scope = scope)
 
-    /** The same context formatting through [locale]. @see EvaluationContext */
+    /**
+     * The same context formatting through [locale].
+     *
+     * @see EvaluationContext for what the default one does, and why it is the default.
+     */
     public fun withLocale(locale: LocaleFormatter): EvaluationContext = with(locale = locale)
 
     /**
@@ -227,7 +231,7 @@ public class EvaluationContext private constructor(
 
     /** The same context opening URLs through [urlOpener]. Null puts it back to refusing. */
     public fun withUrlOpener(urlOpener: UrlOpener?): EvaluationContext =
-        with(urlOpener = urlOpener, urlOpenerSet = true)
+        with(urlOpener = urlOpener)
 
     /** The same context bounded by [limits]. */
     public fun withLimits(limits: EvaluationLimits): EvaluationContext = with(limits = limits)
@@ -238,15 +242,17 @@ public class EvaluationContext private constructor(
     /**
      * The private copy every derivation goes through.
      *
-     * [urlOpenerSet] exists because `null` is a meaningful value for [urlOpener] and therefore
-     * cannot double as "unchanged". The other five fields have no such value.
+     * Each parameter defaults to the field it replaces, which is what makes a derivation carry the
+     * six settings it was not asked about. Note that this handles [urlOpener] too, even though
+     * `null` is a meaningful value for it: a default is applied only to an argument that is
+     * *absent*, which the compiler decides per call site, so `with(urlOpener = null)` withdraws the
+     * opener while `with(locale = x)` keeps it. A sentinel flag for that field would be dead code.
      */
     private fun with(
         scope: EvaluationScope = this.scope,
         locale: LocaleFormatter = this.locale,
         invocation: InvocationContext = this.invocation,
         urlOpener: UrlOpener? = this.urlOpener,
-        urlOpenerSet: Boolean = false,
         limits: EvaluationLimits = this.limits,
         json: Json = this.json,
     ): EvaluationContext = EvaluationContext(
@@ -254,7 +260,7 @@ public class EvaluationContext private constructor(
         scope = scope,
         locale = locale,
         invocation = invocation,
-        urlOpener = if (urlOpenerSet) urlOpener else this.urlOpener,
+        urlOpener = urlOpener,
         limits = limits,
         json = json,
     )

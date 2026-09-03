@@ -307,14 +307,15 @@ class A2uiComponentScopeTest {
     @Test
     fun the_renderers_locale_is_what_a_formatting_function_runs_on() {
         // The scope builds its `EvaluationContext` by derivation now, and `.withLocale(...)` is one
-        // link in that chain. Nothing else in the suite passes a non-default `locale` to a
-        // renderer, so deleting that link left every test green -- a host that asked for
+        // link in that chain. `A2uiRendererConfigTest` pins that a non-default locale reaches
+        // `renderer.locale`; nothing but this pins that it reaches a *formatting function*, so
+        // deleting that link leaves every other test green -- a host that asked for
         // `systemLocaleFormatter()` would have silently kept formatting through the placeholder.
-        val renderer = A2uiRenderer(A2uiRendererConfig.Default
-            .withLocale(SHOUTING)
-            .withClock({ FIXED_TIMESTAMP }),
-        )
-            .also { it.applyAll(MESSAGES) }
+        val renderer = A2uiRenderer(
+            A2uiRendererConfig.Default
+                .withLocale(SHOUTING)
+                .withClock { FIXED_TIMESTAMP },
+        ).also { it.applyAll(MESSAGES) }
         assertEquals("MONEY:1234.5/JPY", scopeFor("money", renderer).string("text"))
     }
 

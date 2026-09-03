@@ -33,9 +33,7 @@ class ExampleRenderTest {
         val drawable = EXAMPLES.filter { it.isDrawableBy(Material3Components.Basic.types) }
         assertTrue(drawable.isNotEmpty(), "the corpus should hold examples this registry covers")
         for (example in drawable) {
-            val renderer = A2uiRenderer(A2uiRendererConfig.Default
-            .withClock({ CLOCK }),
-        )
+            val renderer = A2uiRenderer(A2uiRendererConfig.Default.withClock { CLOCK })
             renderer.applyAll(example.decoded)
             val surfaces = renderer.state.surfaces.filterValues { it.isRenderable }.keys.toList()
             assertEquals(

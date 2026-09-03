@@ -657,27 +657,35 @@ class CatalogIdentityTest {
         // every catalog it holds beside the specification's own documents. A catalog that claimed
         // `common_types.json` and put `true` under `${'$'}defs/FunctionCall` would be choosing the
         // schema every call in the session is checked against -- chosen by the party being
-        // checked. The specification's documents go into the registry first and the first claim on
-        // a URI keeps it, which is what makes the claim inert rather than merely unlikely.
+        // checked.
         //
-        // Order is asserted both ways because it must not be what decides this. A renderer is
-        // advised to put its own catalogs last so that `catalogId` resolves to them, and that
-        // advice must stay safe on the `${'$'}id` key too.
+        // What refuses it is [SchemaRegistry.document], which answers a library URI out of the
+        // documents this library ships before the registered map is consulted at all. Registration
+        // order is *not* what decides it: the specification's documents do go in first, but
+        // first-wins alone leaves the second case below open, because the catalog in play is
+        // otherwise allowed to answer for its own URI.
+        //
+        // So the claim is made from both sides -- while another catalog is the one in play, and
+        // while the claimant itself is. The second is the sharper one, and the only one of the two
+        // that a single relaxation of `document` reopens.
         val shadow = catalog(SHADOW_CATALOG)
-        for (catalogs in listOf(listOf(BASIC, shadow), listOf(shadow, BASIC))) {
-            val validator = CatalogValidator.of(catalogs)
+        val validator = CatalogValidator.of(listOf(BASIC, shadow))
+        for (inPlay in listOf(BASIC_ID, shadow.catalogId)) {
             // `@index` naming a catalog is refused by `FunctionCall` in `common_types.json` and by
             // nothing else, so it is valid exactly when that document has been displaced.
-            val result = validator.validate(call("""{"call": "@index", "catalogId": "$BASIC_ID"}"""))
+            val result = validator.validate(call("""{"call": "@index", "catalogId": "$inPlay"}"""))
             assertFalse(result.isValid, "an inlined catalog answered for `FunctionCall`")
         }
     }
 
     @Test
     fun the_shipped_document_is_the_one_reached_under_its_own_uri() {
-        // The mechanism behind the test above, asserted where it lives: whatever a catalog
-        // declares, the URI still resolves to the document this library ships.
-        val registry = SchemaRegistry.of(ProtocolSchemas.documents + listOf(parseObject(SHADOW_CATALOG)))
+        // The mechanism behind the test above, asserted where it lives -- and with the claimant
+        // registered FIRST, which is the whole of the assertion. `document`'s guarantee is that it
+        // does not depend on the caller having passed the specification's documents first, and
+        // `of` is public. Passed first, the shadow wins the map under first-wins; the URI must
+        // still reach the document this library ships.
+        val registry = SchemaRegistry.of(listOf(parseObject(SHADOW_CATALOG)) + ProtocolSchemas.documents)
         assertEquals(ProtocolSchemas.commonTypes, registry.document(ProtocolSchemas.COMMON_TYPES_URI))
     }
 }

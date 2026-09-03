@@ -318,8 +318,9 @@ private fun JsonElement.selectionValue(): String? = (this as? JsonPrimitive)?.co
  * nothing can clear. No `derivedStateOf` either, unlike every other accessor in this file --
  * `options[].value` is a plain string in the catalog and never a binding, so there is no data model
  * to subscribe to, and the enclosing `remember` is keyed on the scope, which
- * [A2uiComponent][dev.ynagai.a2ui.compose.A2uiComponentScope] rebuilds whenever the agent sends a
- * component whose properties differ.
+ * [A2uiComponent][dev.ynagai.a2ui.compose.A2uiComponent] rebuilds whenever the agent sends a
+ * component whose properties differ -- `properties` is part of `Component`'s equality, and the
+ * scope is remembered under it.
  */
 private fun A2uiComponentScope.declaredValues(): Set<String> =
     (property("options") as? JsonArray).orEmpty().mapNotNullTo(mutableSetOf()) { entry ->

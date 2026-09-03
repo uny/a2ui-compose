@@ -1,5 +1,8 @@
 package dev.ynagai.a2ui.compose
 
+import dev.ynagai.a2ui.core.function.EvaluationLimits
+import dev.ynagai.a2ui.core.function.FallbackLocaleFormatter
+import dev.ynagai.a2ui.core.function.LocaleFormatter
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.Action
 import dev.ynagai.a2ui.core.protocol.ActionMessage
@@ -289,6 +292,32 @@ class A2uiComponentScopeTest {
         assertEquals(emptyList(), scope.children("children"))
     }
 
+    @Test
+    fun the_renderers_locale_is_what_a_formatting_function_runs_on() {
+        // The scope builds its `EvaluationContext` by derivation now, and `.withLocale(...)` is one
+        // link in that chain. Nothing else in the suite passes a non-default `locale` to a
+        // renderer, so deleting that link left every test green -- a host that asked for
+        // `systemLocaleFormatter()` would have silently kept formatting through the placeholder.
+        val renderer = A2uiRenderer(locale = SHOUTING, clock = { FIXED_TIMESTAMP })
+            .also { it.applyAll(MESSAGES) }
+        assertEquals("MONEY:1234.5/JPY", scopeFor("money", renderer).string("text"))
+    }
+
+    @Test
+    fun the_renderers_evaluation_limits_are_what_bounds_a_payload() {
+        // `.withLimits(...)` is the same kind of link, and bounding a hostile payload is what it
+        // carries. `maxResultLength = 1` refuses a result the default bound admits, so this fails
+        // if the renderer's limits stop reaching the evaluator.
+        val bounded = A2uiRenderer(
+            clock = { FIXED_TIMESTAMP },
+            evaluationLimits = EvaluationLimits(maxResultLength = 1),
+        ).also { it.applyAll(MESSAGES) }
+        assertNull(scopeFor("money", bounded).string("text"))
+        // ...and it is the bound doing it, not the payload being broken: the same component
+        // resolves under the default limits.
+        assertNotNull(scopeFor("money", renderer()).string("text"))
+    }
+
     private fun renderer(): A2uiRenderer =
         A2uiRenderer(clock = { FIXED_TIMESTAMP }).also { it.applyAll(MESSAGES) }
 
@@ -308,6 +337,19 @@ class A2uiComponentScopeTest {
     private companion object {
         const val SURFACE = "s"
 
+        /**
+         * A formatter whose output no other formatter produces, so a test can tell whether this
+         * one is the one that ran. It is not a locale implementation and does not pretend to be.
+         */
+        val SHOUTING = object : LocaleFormatter by FallbackLocaleFormatter {
+            override fun formatCurrency(
+                value: Double,
+                currency: String,
+                decimals: Int?,
+                grouping: Boolean,
+            ): String = "MONEY:$value/$currency"
+        }
+
         /** The whole surface's budget: these tests are about what a scope resolves, not bounds. */
         val BUDGET = RenderLimits.DEFAULT.maxInstances
         const val FIXED_TIMESTAMP = "2026-08-27T00:00:00Z"
@@ -322,7 +364,8 @@ class A2uiComponentScopeTest {
               {"id":"bound","component":"Text","text":{"path":"/user/name"}},
               {"id":"list","component":"List","children":{"componentId":"row","path":"/items"}},
               {"id":"row","component":"Text","text":{"path":"label"}},
-              {"id":"button","component":"Button","child":"title","action":{"event":{"name":"noop"}}}
+              {"id":"button","component":"Button","child":"title","action":{"event":{"name":"noop"}}},
+              {"id":"money","component":"Text","text":{"call":"formatCurrency","args":{"value":1234.5,"currency":"JPY"}}}
             ]}}
             """.trimIndent(),
             """

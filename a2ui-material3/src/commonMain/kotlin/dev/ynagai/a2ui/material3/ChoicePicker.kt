@@ -111,7 +111,11 @@ public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer { scope, 
                 // silently answer for something else the agent is keeping in the same list.
                 exclusive -> {
                     val kept = bound.filterNot { it.selectionValue() in ownValues }
-                    if (selected == listOf(value)) kept else kept + JsonPrimitive(value)
+                    // `all`, not `== listOf(value)`: an agent may have bound `["rock", "rock"]`,
+                    // and a radio drawn as selected has to clear when it is tapped however many
+                    // times its answer appears in the array.
+                    val onlyThis = selected.isNotEmpty() && selected.all { it == value }
+                    if (onlyThis) kept else kept + JsonPrimitive(value)
                 }
                 // Every match, not the first: `List.minus` drops one occurrence, which would leave
                 // a duplicated selection looking deselected while still sitting in the model.

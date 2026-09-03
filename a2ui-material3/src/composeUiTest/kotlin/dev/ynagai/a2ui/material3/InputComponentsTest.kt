@@ -205,6 +205,19 @@ class InputComponentsTest {
         assertEquals(json("""[{"id": 7}, 1, "vinyl"]"""), renderer.read("/mixed"))
     }
 
+    @Test
+    fun a_duplicated_answer_still_clears_on_a_re_tap() = runComposeUiTest {
+        // A radio drawn as selected has to clear when it is tapped, and `["rock", "rock"]` is a
+        // selection this picker would never have written but may well be handed. Comparing the
+        // selection against a one-element list would miss it and collapse the duplicate into a
+        // single "rock" instead -- leaving the control selected on the tap meant to unselect it.
+        val renderer = rendererFor(DUPES)
+        setContent { Surface(renderer) }
+        onNodeWithText("Rock").assertIsSelected()
+        onNodeWithText("Rock").performClick()
+        assertEquals(json("[]"), renderer.read("/dupes"))
+    }
+
     // ---- Slider ---------------------------------------------------------------------------
 
     @Test
@@ -504,6 +517,7 @@ class InputComponentsTest {
               "preference": [],
               "genres": [],
               "mixed": ["jazz", {"id": 7}, 1, "vinyl"],
+              "dupes": ["rock", "rock"],
               "volume": 20,
               "when": "2026-08-30",
               "who": "Ada",
@@ -601,6 +615,14 @@ class InputComponentsTest {
           {"id":"root","component":"Column","children":["one"]},
           {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive",
            "value":{"path":"/mixed"},
+           "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
+        ]"""
+
+        /** An exclusive picker whose one answer the agent wrote down twice. */
+        val DUPES = """[
+          {"id":"root","component":"Column","children":["one"]},
+          {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive",
+           "value":{"path":"/dupes"},
            "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
         ]"""
 

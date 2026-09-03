@@ -336,9 +336,8 @@ class A2uiComponentScopeTest {
     }
 
     private fun renderer(): A2uiRenderer =
-        A2uiRenderer(A2uiRendererConfig.Default
-            .withClock({ FIXED_TIMESTAMP }),
-        ).also { it.applyAll(MESSAGES) }
+        A2uiRenderer(A2uiRendererConfig.Default.withClock { FIXED_TIMESTAMP })
+            .also { it.applyAll(MESSAGES) }
 
     private fun scopeFor(
         componentId: String,

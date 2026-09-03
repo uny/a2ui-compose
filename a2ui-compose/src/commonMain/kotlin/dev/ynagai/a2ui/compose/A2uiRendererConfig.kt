@@ -37,13 +37,7 @@ import dev.ynagai.a2ui.core.validation.ValidationLimits
  */
 @Immutable
 public class A2uiRendererConfig private constructor(
-    /**
-     * The catalogs this renderer can resolve.
-     *
-     * A component naming one that is absent renders as a placeholder rather than raising, because
-     * the specification requires missing references to degrade rather than fail.
-     */
-    public val catalogs: List<CatalogDefinition>,
+    catalogs: List<CatalogDefinition>,
     /**
      * How the four locale-sensitive functions format.
      *
@@ -70,6 +64,20 @@ public class A2uiRendererConfig private constructor(
     /** What bounds one surface's composition. */
     public val renderLimits: RenderLimits,
 ) {
+    /**
+     * The catalogs this renderer can resolve.
+     *
+     * A component naming one that is absent renders as a placeholder rather than raising, because
+     * the specification requires missing references to degrade rather than fail.
+     *
+     * Copied, not aliased. `@Immutable` promises Compose that this value never changes after
+     * construction, and a caller who kept a reference to the `MutableList` they passed to
+     * [withCatalogs] could otherwise break that promise from outside -- on Kotlin/JS, where
+     * `listOf` is a mutable `ArrayList` at runtime and [Default] is one process-wide instance,
+     * from outside *every* renderer at once.
+     */
+    public val catalogs: List<CatalogDefinition> = catalogs.toList()
+
     /** This configuration resolving components against [catalogs] instead. */
     public fun withCatalogs(catalogs: List<CatalogDefinition>): A2uiRendererConfig =
         with(catalogs = catalogs)

@@ -22,10 +22,13 @@ import kotlin.test.assertSame
  * was not asked about, which is the classic failure of a hand-written copy and is invisible until
  * a payload formats in the wrong locale or an action loses its `UrlOpener`.
  *
- * So every case below changes one thing and asserts the other six survived. **Every value a
- * derivation is handed here differs from the value the one-argument constructor installs** --
- * otherwise "carried" and "reset to the default" are the same observation, and a derivation that
- * dropped its argument would pass. [MARKER] and [TIGHT] exist for that reason and for no other.
+ * So every case below changes one thing and asserts the other six survived. **Where a case asserts
+ * that a setting was carried, the value it carries differs from the one the one-argument
+ * constructor installs** -- otherwise "carried" and "reset to the default" are the same
+ * observation, and a derivation that dropped its argument would pass. [MARKER] and [TIGHT] exist
+ * for that reason and for no other. A derivation handed the default on purpose (moving back to
+ * [EvaluationScope.Root], or back to [InvocationContext.RENDER]) is fine; what it must not then do
+ * is stand as the evidence that that same field survived.
  */
 class EvaluationContextTest {
     @Test
@@ -109,10 +112,13 @@ class EvaluationContextTest {
     @Test
     fun a_derivation_that_does_not_mention_the_opener_keeps_it() {
         // The other five derivations must leave `urlOpener` where it is. A copy-paste that made one
-        // of them write the field would take the capability away silently.
+        // of them write the field would take the capability away silently -- `withInvocation`
+        // most consequentially, since moving to USER_ACTION is exactly the step that gives an
+        // action the authority `openUrl` demands, and it needs the opener still in hand.
         val opener = UrlOpener { }
         val configured = EvaluationContext(MODEL).withUrlOpener(opener)
         assertSame(opener, configured.withLocale(MARKER).urlOpener)
+        assertSame(opener, configured.withInvocation(InvocationContext.USER_ACTION).urlOpener)
         assertSame(opener, configured.withLimits(TIGHT).urlOpener)
         assertSame(opener, configured.withJson(Json { prettyPrint = true }).urlOpener)
         assertSame(opener, configured.inScope(EvaluationScope.Root).urlOpener)

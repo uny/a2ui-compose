@@ -284,7 +284,10 @@ class A2uiRenderBudgetTest {
         items: Int = 0,
         limits: RenderLimits = RenderLimits.DEFAULT,
     ): A2uiRenderer =
-        A2uiRenderer(clock = { "2026-08-27T00:00:00Z" }, renderLimits = limits).also { renderer ->
+        A2uiRenderer(A2uiRendererConfig.Default
+            .withClock({ "2026-08-27T00:00:00Z" })
+            .withRenderLimits(limits),
+        ).also { renderer ->
             val rows = (0 until items).joinToString(",") { row ->
                 val cells = (0 until items).joinToString(",") { """{"v":"c$row-$it"}""" }
                 """{"label":"row$row","cells":[$cells]}"""

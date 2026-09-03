@@ -5,7 +5,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.ynagai.a2ui.core.function.EvaluationLimits
-import dev.ynagai.a2ui.core.function.FallbackLocaleFormatter
 import dev.ynagai.a2ui.core.function.LocaleFormatter
 import dev.ynagai.a2ui.core.function.UrlOpener
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
@@ -56,27 +55,41 @@ public fun interface A2uiClock {
  * [A2uiComponentScope]'s property accessors, which wrap each resolved value in a `derivedStateOf`
  * so a component recomposes only when the value it actually asked for changes.
  *
- * @param catalogs the catalogs this renderer can resolve. A component naming one that is absent
- *   renders as a placeholder rather than an error, because the specification requires missing
- *   references to degrade rather than fail.
- * @param locale how the four locale-sensitive functions format. The default is locale-independent
- *   and English-shaped; `systemLocaleFormatter()` reads the device's locale and
- *   `localeFormatter(tag)` takes a fixed one. Opt-in on purpose -- a renderer that reads the
- *   device by default makes the same payload render differently in CI than on a desk.
- * @param urlOpener where `openUrl` sends a URL. The default does nothing, since a library should
- *   not navigate its host's window uninvited; `rememberPlatformUrlOpener()` is the platform's own.
+ * @param config every setting this renderer reads, as one value. Held together rather than spread
+ *   across defaulted constructor parameters so that the constructor is not this class's
+ *   compatibility surface -- see [A2uiRendererConfig], which is where the reasoning is. The seven
+ *   settings are still readable straight off the renderer, so `renderer.locale` still means what
+ *   it did.
+ * @param initialState a seed for the renderer's own state. Deliberately not part of [config]: it
+ *   is not a setting, and a config carrying one would invite two renderers to share it and then
+ *   disagree about whose state it was.
  */
 @Stable
 public class A2uiRenderer(
-    public val catalogs: List<CatalogDefinition> = listOf(BasicCatalog.definition),
-    public val locale: LocaleFormatter = FallbackLocaleFormatter,
-    public val urlOpener: UrlOpener = UrlOpener { },
-    public val clock: A2uiClock = A2uiClock.System,
-    public val evaluationLimits: EvaluationLimits = EvaluationLimits.DEFAULT,
-    public val validationLimits: ValidationLimits = ValidationLimits.DEFAULT,
-    public val renderLimits: RenderLimits = RenderLimits.DEFAULT,
+    public val config: A2uiRendererConfig = A2uiRendererConfig.Default,
     initialState: RendererState = RendererState(),
 ) {
+    /** @see A2uiRendererConfig.catalogs */
+    public val catalogs: List<CatalogDefinition> get() = config.catalogs
+
+    /** @see A2uiRendererConfig.locale */
+    public val locale: LocaleFormatter get() = config.locale
+
+    /** @see A2uiRendererConfig.urlOpener */
+    public val urlOpener: UrlOpener get() = config.urlOpener
+
+    /** @see A2uiRendererConfig.clock */
+    public val clock: A2uiClock get() = config.clock
+
+    /** @see A2uiRendererConfig.evaluationLimits */
+    public val evaluationLimits: EvaluationLimits get() = config.evaluationLimits
+
+    /** @see A2uiRendererConfig.validationLimits */
+    public val validationLimits: ValidationLimits get() = config.validationLimits
+
+    /** @see A2uiRendererConfig.renderLimits */
+    public val renderLimits: RenderLimits get() = config.renderLimits
+
     /** Every surface this renderer holds. Reading it in a composable subscribes to changes. */
     public var state: RendererState by mutableStateOf(initialState)
         private set

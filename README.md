@@ -74,10 +74,22 @@ symbol, applies the English `n == 1` plural rule whatever the language, and uses
 names.
 
 **That is the intended default, not an oversight.** A renderer that read the device by default would
-make one payload render differently in CI than on a desk. But it is chosen silently, so: pass
-`systemLocaleFormatter()` to `A2uiRenderer` for the device's locale, or `localeFormatter(tag)` for a
-fixed one. The corpus reaches those four functions in roughly thirty places, so a host that ships
-without choosing is shipping the placeholder.
+make one payload render differently in CI than on a desk. But it is chosen silently, so choose:
+
+```kotlin
+val renderer = remember {
+    A2uiRenderer(A2uiRendererConfig.Default.withLocale(systemLocaleFormatter()))
+}
+```
+
+`localeFormatter(tag)` takes a fixed locale instead. The corpus reaches those four functions in
+roughly thirty places, so a host that ships without choosing is shipping the placeholder.
+
+Every other renderer setting is on the same object. `A2uiRendererConfig` exists so that the
+renderer's constructor is not its compatibility surface: seven defaulted constructor parameters
+read well and cannot be extended, because a caller naming one binds to the synthetic defaults
+constructor — parameter list plus bitmask — and an eighth setting would break every consumer
+compiled against the old one. A new setting adds a `withX` to the config and breaks nothing.
 
 The split follows the Core SDK / Framework Adapter separation in the A2UI project's own guidance for
 new client SDKs. Material 3 is a third artifact rather than part of the adapter because a design

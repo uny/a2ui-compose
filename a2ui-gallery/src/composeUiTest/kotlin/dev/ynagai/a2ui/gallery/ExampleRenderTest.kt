@@ -7,6 +7,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import dev.ynagai.a2ui.compose.A2uiPlaceholder
 import dev.ynagai.a2ui.compose.A2uiPlaceholderReason
 import dev.ynagai.a2ui.compose.A2uiRenderer
+import dev.ynagai.a2ui.compose.A2uiRendererConfig
 import dev.ynagai.a2ui.compose.A2uiSurface
 import dev.ynagai.a2ui.material3.Material3Components
 import kotlin.test.Test
@@ -32,7 +33,7 @@ class ExampleRenderTest {
         val drawable = EXAMPLES.filter { it.isDrawableBy(Material3Components.Basic.types) }
         assertTrue(drawable.isNotEmpty(), "the corpus should hold examples this registry covers")
         for (example in drawable) {
-            val renderer = A2uiRenderer(clock = { CLOCK })
+            val renderer = A2uiRenderer(A2uiRendererConfig.Default.withClock { CLOCK })
             renderer.applyAll(example.decoded)
             val surfaces = renderer.state.surfaces.filterValues { it.isRenderable }.keys.toList()
             assertEquals(

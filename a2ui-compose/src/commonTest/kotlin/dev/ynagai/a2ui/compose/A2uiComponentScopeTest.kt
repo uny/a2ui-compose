@@ -157,7 +157,10 @@ class A2uiComponentScopeTest {
         // pins `dispatch`'s choice of USER_ACTION: swap that for RENDER and the evaluator throws
         // before the opener is reached, leaving `opened` empty.
         val opened = mutableListOf<String>()
-        val renderer = A2uiRenderer(clock = { FIXED_TIMESTAMP }, urlOpener = { opened += it })
+        val renderer = A2uiRenderer(A2uiRendererConfig.Default
+            .withClock({ FIXED_TIMESTAMP })
+            .withUrlOpener({ opened += it }),
+        )
             .also { it.applyAll(MESSAGES) }
         val scope = scopeFor("button", renderer)
         val action = A2uiJson.strict.decodeFromString(
@@ -200,7 +203,9 @@ class A2uiComponentScopeTest {
         // `createSurface` may carry no `catalogId` at all, and a component may name one itself.
         // Deciding the resolver from the surface default alone dropped every child of a component
         // whose own catalog this renderer does hold -- a silently childless tree, not an error.
-        val renderer = A2uiRenderer(clock = { FIXED_TIMESTAMP })
+        val renderer = A2uiRenderer(A2uiRendererConfig.Default
+            .withClock({ FIXED_TIMESTAMP }),
+        )
         renderer.applyAll(
             listOf(
                 """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE"}}""",
@@ -253,7 +258,10 @@ class A2uiComponentScopeTest {
         // field got its own evaluator and so its own "one open per expression" budget, and this
         // payload opened three windows from a single tap.
         val opened = mutableListOf<String>()
-        val renderer = A2uiRenderer(clock = { FIXED_TIMESTAMP }, urlOpener = { opened += it })
+        val renderer = A2uiRenderer(A2uiRendererConfig.Default
+            .withClock({ FIXED_TIMESTAMP })
+            .withUrlOpener({ opened += it }),
+        )
             .also { it.applyAll(MESSAGES) }
         val sent = mutableListOf<RendererToAgentMessage>()
         val scope = scopeFor("button", renderer, onMessage = { sent += it })
@@ -279,7 +287,11 @@ class A2uiComponentScopeTest {
         // No fallback resolver that reads `child` and `children`: those names are the basic
         // catalog's, and guessing them would silently drop `Modal.trigger` and the child inside
         // each `Tabs.tabs` entry even within that catalog.
-        val renderer = A2uiRenderer(catalogs = emptyList(), clock = { FIXED_TIMESTAMP })
+        val renderer = A2uiRenderer(
+            A2uiRendererConfig.Default
+                .withCatalogs(emptyList())
+                .withClock { FIXED_TIMESTAMP },
+        )
         renderer.applyAll(MESSAGES)
         val scope = A2uiComponentScope(
             renderer = renderer,
@@ -295,11 +307,15 @@ class A2uiComponentScopeTest {
     @Test
     fun the_renderers_locale_is_what_a_formatting_function_runs_on() {
         // The scope builds its `EvaluationContext` by derivation now, and `.withLocale(...)` is one
-        // link in that chain. Nothing else in the suite passes a non-default `locale` to a
-        // renderer, so deleting that link left every test green -- a host that asked for
+        // link in that chain. `A2uiRendererConfigTest` pins that a non-default locale reaches
+        // `renderer.locale`; nothing but this pins that it reaches a *formatting function*, so
+        // deleting that link leaves every other test green -- a host that asked for
         // `systemLocaleFormatter()` would have silently kept formatting through the placeholder.
-        val renderer = A2uiRenderer(locale = SHOUTING, clock = { FIXED_TIMESTAMP })
-            .also { it.applyAll(MESSAGES) }
+        val renderer = A2uiRenderer(
+            A2uiRendererConfig.Default
+                .withLocale(SHOUTING)
+                .withClock { FIXED_TIMESTAMP },
+        ).also { it.applyAll(MESSAGES) }
         assertEquals("MONEY:1234.5/JPY", scopeFor("money", renderer).string("text"))
     }
 
@@ -309,8 +325,9 @@ class A2uiComponentScopeTest {
         // carries. `maxResultLength = 1` refuses a result the default bound admits, so this fails
         // if the renderer's limits stop reaching the evaluator.
         val bounded = A2uiRenderer(
-            clock = { FIXED_TIMESTAMP },
-            evaluationLimits = EvaluationLimits(maxResultLength = 1),
+            A2uiRendererConfig.Default
+                .withClock { FIXED_TIMESTAMP }
+                .withEvaluationLimits(EvaluationLimits(maxResultLength = 1)),
         ).also { it.applyAll(MESSAGES) }
         assertNull(scopeFor("money", bounded).string("text"))
         // ...and it is the bound doing it, not the payload being broken: the same component
@@ -319,7 +336,8 @@ class A2uiComponentScopeTest {
     }
 
     private fun renderer(): A2uiRenderer =
-        A2uiRenderer(clock = { FIXED_TIMESTAMP }).also { it.applyAll(MESSAGES) }
+        A2uiRenderer(A2uiRendererConfig.Default.withClock { FIXED_TIMESTAMP })
+            .also { it.applyAll(MESSAGES) }
 
     private fun scopeFor(
         componentId: String,

@@ -238,7 +238,9 @@ class A2uiScopeStabilityTest {
     // A `val`, not a `get()`: read inside `setContent`, a fresh renderer per recomposition would
     // change the `remember` key by itself and the test would pass or fail for the wrong reason.
     private val renderer: A2uiRenderer =
-        A2uiRenderer(clock = { "2026-08-27T00:00:00Z" }).also {
+        A2uiRenderer(A2uiRendererConfig.Default
+            .withClock({ "2026-08-27T00:00:00Z" }),
+        ).also {
             it.applyAll(
                 listOf(
                     """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
@@ -257,7 +259,9 @@ class A2uiScopeStabilityTest {
 
     /** Two renderable surfaces at once, for the retained-scope test above. */
     private val twoSurfaces: A2uiRenderer =
-        A2uiRenderer(clock = { "2026-08-27T00:00:00Z" }).also {
+        A2uiRenderer(A2uiRendererConfig.Default
+            .withClock({ "2026-08-27T00:00:00Z" }),
+        ).also {
             it.applyAll(
                 listOf("a", "b").flatMap { id ->
                     listOf(

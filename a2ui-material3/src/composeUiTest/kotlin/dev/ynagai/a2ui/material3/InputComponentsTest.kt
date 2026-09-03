@@ -174,6 +174,109 @@ class InputComponentsTest {
         assertEquals(JsonArray(listOf(JsonPrimitive("a"))), renderer.read("/picked"))
     }
 
+    @Test
+    fun a_tap_leaves_the_entries_it_has_no_option_for_where_they_are() = runComposeUiTest {
+        // The catalog types the bound array as a list of strings, but an agent may bind one that
+        // holds anything. Rebuilding the array out of the strings the picker could read would drop
+        // `{"id": 7}` and retype `1` to `"1"` -- handing back a data model of a different shape
+        // than the one that was sent, which is the thing this component refuses to do elsewhere.
+        val renderer = rendererFor(MIXED)
+        setContent { Surface(renderer) }
+        // The string entry still reads as a selection, because it names an option.
+        onNodeWithText("Jazz").assertIsOn()
+        onNodeWithText("Rock").performClick()
+        assertEquals(json("""["jazz", {"id": 7}, 1, "vinyl", "rock"]"""), renderer.read("/mixed"))
+        // And deselecting removes only that entry: the others keep their places and their types.
+        onNodeWithText("Jazz").performClick()
+        assertEquals(json("""[{"id": 7}, 1, "vinyl", "rock"]"""), renderer.read("/mixed"))
+    }
+
+    @Test
+    fun an_exclusive_picker_replaces_only_what_it_has_an_option_for() = runComposeUiTest {
+        // "Replaces whatever was there" means whatever this picker could have put there. An entry
+        // it declares no option for is not a selection it is entitled to answer for, so the array
+        // it writes here is longer than one element -- see [MIXED].
+        val renderer = rendererFor(MIXED_EXCLUSIVE)
+        setContent { Surface(renderer) }
+        onNodeWithText("Rock").performClick()
+        assertEquals(json("""[{"id": 7}, 1, "vinyl", "rock"]"""), renderer.read("/mixed"))
+        // Re-tapping still clears the answer, and still only the answer.
+        onNodeWithText("Rock").performClick()
+        assertEquals(json("""[{"id": 7}, 1, "vinyl"]"""), renderer.read("/mixed"))
+    }
+
+    @Test
+    fun a_duplicated_answer_still_clears_on_a_re_tap() = runComposeUiTest {
+        // A radio drawn as selected has to clear when it is tapped, and `["rock", "rock"]` is a
+        // selection this picker would never have written but may well be handed. Comparing the
+        // selection against a one-element list would miss it and collapse the duplicate into a
+        // single "rock" instead -- leaving the control selected on the tap meant to unselect it.
+        val renderer = rendererFor(DUPES)
+        setContent { Surface(renderer) }
+        onNodeWithText("Rock").assertIsSelected()
+        onNodeWithText("Rock").performClick()
+        assertEquals(json("[]"), renderer.read("/dupes"))
+    }
+
+    @Test
+    fun an_option_whose_label_has_not_resolved_is_still_the_pickers_own() = runComposeUiTest {
+        // What the picker owns is what the payload declares, not what it can currently draw. An
+        // option whose bound `label` has not resolved is dropped from the drawn list -- and taking
+        // ownership from that list makes the standing answer a stranger's entry for exactly as long
+        // as the label is missing, so the exclusive branch keeps it and writes a second answer
+        // beside it. Nothing later clears either: every tap recomputes the same set. `/nope` is
+        // absent from the data model on purpose, which is also what progressive rendering looks
+        // like on the first frame.
+        val renderer = rendererFor(UNRESOLVED_LABEL)
+        setContent { Surface(renderer) }
+        onNodeWithText("Jazz").performClick()
+        assertEquals(json("""["jazz"]"""), renderer.read("/hidden"))
+    }
+
+    @Test
+    fun a_duplicated_selection_clears_every_occurrence_under_multiple_selection() = runComposeUiTest {
+        // The `List.minus` half of the fix. `DUPES` guards the exclusive `all {}` path only, so
+        // without this the deselect branch could go back to dropping one occurrence and the suite
+        // would stay green while a checkbox drew itself off with its answer still in the model.
+        val renderer = rendererFor(DUPES_MULTI)
+        setContent { Surface(renderer) }
+        onNodeWithText("Rock").assertIsOn()
+        onNodeWithText("Rock").performClick()
+        assertEquals(json("[]"), renderer.read("/dupes"))
+        onNodeWithText("Rock").assertIsOff()
+    }
+
+    @Test
+    fun a_filter_does_not_narrow_what_an_exclusive_picker_replaces() = runComposeUiTest {
+        // The filter is this renderer's own state, so it may not change which entries the picker
+        // owns -- and the exclusive branch is where that shows: an answer the filter is hiding has
+        // to be replaced like any other, or the radio group ends up holding two answers.
+        mainClock.autoAdvance = false
+        val renderer = rendererFor(FILTERED_EXCLUSIVE)
+        setContent { Surface(renderer) }
+        onNode(hasSetTextAction()).performTextReplacement("roc")
+        mainClock.advanceTimeByFrame()
+        onAllNodes(hasTextExactly("Jazz")).assertCountEquals(0)
+        onNodeWithText("Rock").performClick()
+        assertEquals(json("""["rock"]"""), renderer.read("/filtered"))
+    }
+
+    @Test
+    fun a_number_naming_an_option_is_the_pickers_own_and_answers_as_a_string() = runComposeUiTest {
+        // The lenient read, pinned in both directions. `1` names the option `"1"`, so it draws
+        // selected rather than sitting there as a stranger's entry -- and once the user deselects
+        // and reselects it, the picker answers with the value it declared, which is a string. That
+        // is the picker answering for its own option, not the retype the class KDoc refuses; the
+        // distinction is only a decision if a test holds it.
+        val renderer = rendererFor(NUMERIC_MATCH)
+        setContent { Surface(renderer) }
+        onNodeWithText("One").assertIsOn()
+        onNodeWithText("One").performClick()
+        assertEquals(json("[]"), renderer.read("/numeric"))
+        onNodeWithText("One").performClick()
+        assertEquals(json("""["1"]"""), renderer.read("/numeric"))
+    }
+
     // ---- Slider ---------------------------------------------------------------------------
 
     @Test
@@ -430,6 +533,9 @@ class InputComponentsTest {
         Box(Modifier.size(width, SURFACE_HEIGHT)) { Surface(renderer) }
     }
 
+    /** Expected JSON written as JSON, so a test's assertion reads like the payload it is about. */
+    private fun json(text: String): JsonElement = A2uiJson.strict.parseToJsonElement(text)
+
     private fun A2uiRenderer.read(path: String): JsonElement? =
         state.surfaces.getValue(SURFACE).dataModel.resolve(JsonPointer.parse(path))
 
@@ -469,6 +575,11 @@ class InputComponentsTest {
               "subscribe": false,
               "preference": [],
               "genres": [],
+              "mixed": ["jazz", {"id": 7}, 1, "vinyl"],
+              "dupes": ["rock", "rock"],
+              "hidden": ["rock"],
+              "filtered": ["jazz"],
+              "numeric": [1],
               "volume": 20,
               "when": "2026-08-30",
               "who": "Ada",
@@ -543,6 +654,70 @@ class InputComponentsTest {
           {"id":"picker","component":"ChoicePicker","variant":"mutuallyExclusive",
            "value":{"path":"/picked"},
            "options":[{"label":{"path":"/who"},"value":"a"}]}
+        ]"""
+
+        /**
+         * A picker bound to an array the catalog's own typing does not allow.
+         *
+         * `{"id": 7}` cannot be read as a selection at all; `1` and `"vinyl"` can be read but name
+         * no option this picker declares. All three are entries whose `options` and whose bound
+         * array disagree, which is the case the write half has to leave alone rather than rebuild
+         * -- `"vinyl"` in particular, because a picker that owned every *readable* entry rather
+         * than every *declared* one would drop it on the exclusive variant's replacement.
+         */
+        val MIXED = """[
+          {"id":"root","component":"Column","children":["many"]},
+          {"id":"many","component":"ChoicePicker","variant":"multipleSelection",
+           "value":{"path":"/mixed"},
+           "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
+        ]"""
+
+        /** [MIXED] under the variant that replaces the selection rather than toggling within it. */
+        val MIXED_EXCLUSIVE = """[
+          {"id":"root","component":"Column","children":["one"]},
+          {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive",
+           "value":{"path":"/mixed"},
+           "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
+        ]"""
+
+        /** Duplicates under the variant that toggles within the selection rather than replacing it. */
+        val DUPES_MULTI = """[
+          {"id":"root","component":"Column","children":["many"]},
+          {"id":"many","component":"ChoicePicker","variant":"multipleSelection",
+           "value":{"path":"/dupes"},
+           "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
+        ]"""
+
+        /** An exclusive picker with a filter box, and an answer the filter can hide. */
+        val FILTERED_EXCLUSIVE = """[
+          {"id":"root","component":"Column","children":["one"]},
+          {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive","filterable":true,
+           "value":{"path":"/filtered"},
+           "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
+        ]"""
+
+        /** A picker whose declared option value is the text of a number the data model holds. */
+        val NUMERIC_MATCH = """[
+          {"id":"root","component":"Column","children":["many"]},
+          {"id":"many","component":"ChoicePicker","variant":"multipleSelection",
+           "value":{"path":"/numeric"},
+           "options":[{"label":"One","value":"1"},{"label":"Jazz","value":"jazz"}]}
+        ]"""
+
+        /** An exclusive picker one of whose option labels has not resolved yet. */
+        val UNRESOLVED_LABEL = """[
+          {"id":"root","component":"Column","children":["one"]},
+          {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive",
+           "value":{"path":"/hidden"},
+           "options":[{"label":{"path":"/nope"},"value":"rock"},{"label":"Jazz","value":"jazz"}]}
+        ]"""
+
+        /** An exclusive picker whose one answer the agent wrote down twice. */
+        val DUPES = """[
+          {"id":"root","component":"Column","children":["one"]},
+          {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive",
+           "value":{"path":"/dupes"},
+           "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
         ]"""
 
         val CHIPS = """[

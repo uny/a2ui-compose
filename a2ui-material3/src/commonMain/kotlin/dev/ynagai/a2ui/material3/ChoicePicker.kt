@@ -32,9 +32,9 @@ import dev.ynagai.a2ui.compose.firstMessage
 import dev.ynagai.a2ui.compose.rememberBoolean
 import dev.ynagai.a2ui.compose.rememberCheckFailures
 import dev.ynagai.a2ui.compose.rememberString
-import dev.ynagai.a2ui.compose.rememberStringList
 import dev.ynagai.a2ui.core.surface.JsonPointer
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -50,9 +50,19 @@ import kotlinx.serialization.json.contentOrNull
  * chips form takes its selection rule from `variant` alone rather than from a second guess.
  *
  * **Always a list, even when only one thing can be selected.** The catalog types `value` as a
- * `DynamicStringList` under both variants, so `mutuallyExclusive` writes a one-element array
- * rather than a bare string -- a renderer that "simplified" it would hand the agent back a data
+ * `DynamicStringList` under both variants, so `mutuallyExclusive` writes its answer as an array
+ * rather than as a bare string -- a renderer that "simplified" it would hand the agent back a data
  * model of a different shape than the one it sent.
+ *
+ * **And the write is a splice, not a replacement,** which is the same sentence read the other way.
+ * The catalog types the bound array as a list of strings, but nothing stops an agent from binding
+ * one that holds an object, a number, or a string this picker has no option for. None of those is
+ * a selection this picker can represent, so it neither reads one as selected nor writes over it: a
+ * tap removes or appends only entries matching a declared `options[].value`, and every other entry
+ * keeps its place and its JSON type. Rebuilding the array out of the strings it could read would
+ * retype `[1, 2]` to `["1", "2"]` and drop `{"id": 7}` outright -- exactly the shape change the
+ * paragraph above refuses. Under `mutuallyExclusive` that means the array it writes is one element
+ * long only when the array it read had nothing else in it.
  *
  * `filterable` filters what is drawn and never what is selected. A selection the filter is
  * currently hiding stays in the data model, because the filter is this renderer's own UI state and
@@ -67,9 +77,16 @@ public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer { scope, 
     val variant = scope.rememberString("variant")
     val displayStyle = scope.rememberString("displayStyle")
     val filterable = scope.rememberBoolean("filterable")
-    val selected = scope.rememberStringList("value").orEmpty()
+    val bound = scope.rememberSelection()
     val target = remember(scope) { scope.binding("value") }
     val options = scope.rememberOptions()
+    val ownValues = scope.rememberDeclaredValues()
+    // A set, not a list: [Rows] and [Chips] test membership once per drawn option, and the bound
+    // array is the one agent-chosen property `MAX_OPTIONS` does not bound -- so a list would make
+    // the per-frame cost the product of the two. Nothing below needs its order or its duplicates.
+    val selected = remember(bound, ownValues) {
+        bound.mapNotNullTo(mutableSetOf()) { entry -> entry.selectionValue()?.takeIf { it in ownValues } }
+    }
     val failure = scope.rememberCheckFailures().firstMessage()
 
     // This renderer's own state, not the agent's: the filter is a way of looking at the options
@@ -84,16 +101,28 @@ public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer { scope, 
     val onSelect: (String) -> Unit = { value ->
         val pointer: JsonPointer? = target
         if (pointer != null) {
-            val next = when {
+            val next: List<JsonElement> = when {
                 // "Toggle selections in the data model upon user interaction." Toggling under
                 // `mutuallyExclusive` means the tapped option replaces whatever was there, and
                 // re-tapping the selected one clears it -- which is how a radio group with no
                 // required answer behaves, and the only way the user can get back to none.
-                exclusive -> if (selected == listOf(value)) emptyList() else listOf(value)
-                value in selected -> selected - value
-                else -> selected + value
+                // "Whatever was there" is the selection and not the whole array: an entry this
+                // picker has no option for is not a selection, and replacing a selection must not
+                // silently answer for something else the agent is keeping in the same list.
+                exclusive -> {
+                    val kept = bound.filterNot { it.selectionValue() in ownValues }
+                    // `all`, not `== listOf(value)`: an agent may have bound `["rock", "rock"]`,
+                    // and a radio drawn as selected has to clear when it is tapped however many
+                    // times its answer appears in the array.
+                    val onlyThis = selected.isNotEmpty() && selected.all { it == value }
+                    if (onlyThis) kept else kept + JsonPrimitive(value)
+                }
+                // Every match, not the first: `List.minus` drops one occurrence, which would leave
+                // a duplicated selection looking deselected while still sitting in the model.
+                value in selected -> bound.filterNot { it.selectionValue() == value }
+                else -> bound + JsonPrimitive(value)
             }
-            scope.write(pointer, JsonArray(next.map(::JsonPrimitive)))
+            scope.write(pointer, JsonArray(next))
         }
     }
 
@@ -153,7 +182,7 @@ private data class Choice(val label: String, val value: String)
 @Composable
 private fun Rows(
     options: List<Choice>,
-    selected: List<String>,
+    selected: Set<String>,
     exclusive: Boolean,
     enabled: Boolean,
     onSelect: (String) -> Unit,
@@ -200,7 +229,7 @@ private fun Rows(
 @Composable
 private fun Chips(
     options: List<Choice>,
-    selected: List<String>,
+    selected: Set<String>,
     enabled: Boolean,
     onSelect: (String) -> Unit,
 ) {
@@ -218,6 +247,91 @@ private fun Chips(
         }
     }
 }
+
+/**
+ * The bound `value` array as it stands in the data model, entries and all.
+ *
+ * Read as JSON rather than through
+ * [rememberStringList][dev.ynagai.a2ui.compose.rememberStringList], because this renderer writes
+ * the array back and a list of strings is not enough to write back *the same array*.
+ * [ChoicePickerRenderer] splices into what it finds here, so an entry it never touches keeps the
+ * very `JsonElement` the agent put there.
+ *
+ * A `value` that is absent, unreadable, or bound to something that is not an array reads as empty
+ * -- the same degradation the typed accessors give, and a picker with nothing selected is what an
+ * empty array draws anyway. Note what that costs on the write half, which is not a splice at all:
+ * [binding][dev.ynagai.a2ui.compose.A2uiComponentScope.binding] still resolves the path, so a picker
+ * bound to an object or a string stays enabled, and
+ * the first tap replaces whatever is there with a one-element array. The catalog types `value` as a
+ * `DynamicStringList` and nothing validates the data model against it, so this is the payload
+ * already outside the contract -- but it is a replacement, not the preservation the rest of this
+ * file argues for.
+ *
+ * `derivedStateOf` for the reason every accessor in this file uses one: `value` is a data binding,
+ * so a list keyed on the unresolved property would never see a write land.
+ */
+@Composable
+private fun A2uiComponentScope.rememberSelection(): JsonArray {
+    val selection by remember(this) {
+        derivedStateOf { value("value") as? JsonArray ?: JsonArray(emptyList()) }
+    }
+    return selection
+}
+
+/**
+ * One array entry read as the text an option's `value` could match.
+ *
+ * The catalog types `options[].value` as a string, so only a primitive can name a selection and an
+ * object, an array or a `null` reads as null here. A number reads as its text, which is the
+ * leniency the specification asks for when a payload and its catalog disagree about a scalar --
+ * the same reading [number][dev.ynagai.a2ui.compose.A2uiComponentScope.number] gives a scalar
+ * property, and refusing it would draw `[1]` unselected against an option declaring `"1"` and then
+ * append a second entry beside it.
+ *
+ * **The coercion is a read, and an entry it does not match keeps its type for as long as this
+ * picker never owns it.** What it does not promise is a type that survives being *selected*: an
+ * entry whose text names a declared option is this picker's own answer, so deselecting it removes
+ * it and selecting it again writes the option's `value` -- a string. `[1]` under an option `"1"`
+ * comes back `["1"]` after that round trip. That is the picker answering for a value it declared,
+ * not the retype the class KDoc refuses, which is about entries it was never entitled to touch.
+ */
+private fun JsonElement.selectionValue(): String? = (this as? JsonPrimitive)?.contentOrNull
+
+/**
+ * Every value this picker declares an option for.
+ *
+ * What it draws as selected, and the only entries [ChoicePickerRenderer] rewrites -- so this is the
+ * set that decides which entries of the bound array are its own answer and which belong to whoever
+ * else is writing to that array.
+ *
+ * **Read off the raw property rather than from [rememberOptions], because that list is what the
+ * picker can *draw*.** An option whose bound `label` has not resolved yet is dropped from it, and so
+ * is everything past [MAX_OPTIONS] -- neither of which is a statement about what the payload
+ * declares. Ownership taken from the drawable list makes a standing answer stop being this picker's
+ * own for as long as its label is missing, and then `mutuallyExclusive` keeps that answer beside the
+ * new one: two answers in a field that permits one, and no later tap can clear either, because every
+ * tap recomputes the same set. The filter is the same mistake in its third form, which is why this
+ * reads neither `shown` nor `options`.
+ *
+ * No [MAX_OPTIONS] bound, because the cap exists to bound *composition* rather than reading: the
+ * array is already in memory by the time this runs, and truncating here is what strands an answer
+ * nothing can clear. No `derivedStateOf` either, unlike every other accessor in this file --
+ * `options[].value` is a plain string in the catalog and never a binding, so there is no data model
+ * to subscribe to, and the enclosing `remember` is keyed on the scope, which
+ * [A2uiComponent][dev.ynagai.a2ui.compose.A2uiComponent] rebuilds whenever the agent sends a
+ * component whose properties differ -- `properties` is part of `Component`'s equality, and the
+ * scope is remembered under it.
+ */
+private fun A2uiComponentScope.declaredValues(): Set<String> =
+    (property("options") as? JsonArray).orEmpty().mapNotNullTo(mutableSetOf()) { entry ->
+        ((entry as? JsonObject)?.get("value") as? JsonPrimitive)
+            ?.takeIf { it.isString }?.contentOrNull
+    }
+
+/** [declaredValues], recomputed only when the scope is rebuilt onto different properties. */
+@Composable
+private fun A2uiComponentScope.rememberDeclaredValues(): Set<String> =
+    remember(this) { declaredValues() }
 
 /**
  * The `options` array, with each `label` resolved, recomputed when a resolved label changes.

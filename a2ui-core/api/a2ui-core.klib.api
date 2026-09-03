@@ -794,7 +794,7 @@ final class dev.ynagai.a2ui.core.function/DateNames { // dev.ynagai.a2ui.core.fu
 }
 
 final class dev.ynagai.a2ui.core.function/EvaluationContext { // dev.ynagai.a2ui.core.function/EvaluationContext|null[0]
-    constructor <init>(kotlinx.serialization.json/JsonElement, dev.ynagai.a2ui.core.surface/EvaluationScope = ..., dev.ynagai.a2ui.core.function/LocaleFormatter = ..., dev.ynagai.a2ui.core.function/InvocationContext = ..., dev.ynagai.a2ui.core.function/UrlOpener? = ..., dev.ynagai.a2ui.core.function/EvaluationLimits = ..., kotlinx.serialization.json/Json = ...) // dev.ynagai.a2ui.core.function/EvaluationContext.<init>|<init>(kotlinx.serialization.json.JsonElement;dev.ynagai.a2ui.core.surface.EvaluationScope;dev.ynagai.a2ui.core.function.LocaleFormatter;dev.ynagai.a2ui.core.function.InvocationContext;dev.ynagai.a2ui.core.function.UrlOpener?;dev.ynagai.a2ui.core.function.EvaluationLimits;kotlinx.serialization.json.Json){}[0]
+    constructor <init>(kotlinx.serialization.json/JsonElement) // dev.ynagai.a2ui.core.function/EvaluationContext.<init>|<init>(kotlinx.serialization.json.JsonElement){}[0]
 
     final val dataModel // dev.ynagai.a2ui.core.function/EvaluationContext.dataModel|{}dataModel[0]
         final fun <get-dataModel>(): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.function/EvaluationContext.dataModel.<get-dataModel>|<get-dataModel>(){}[0]
@@ -812,6 +812,11 @@ final class dev.ynagai.a2ui.core.function/EvaluationContext { // dev.ynagai.a2ui
         final fun <get-urlOpener>(): dev.ynagai.a2ui.core.function/UrlOpener? // dev.ynagai.a2ui.core.function/EvaluationContext.urlOpener.<get-urlOpener>|<get-urlOpener>(){}[0]
 
     final fun inScope(dev.ynagai.a2ui.core.surface/EvaluationScope): dev.ynagai.a2ui.core.function/EvaluationContext // dev.ynagai.a2ui.core.function/EvaluationContext.inScope|inScope(dev.ynagai.a2ui.core.surface.EvaluationScope){}[0]
+    final fun withInvocation(dev.ynagai.a2ui.core.function/InvocationContext): dev.ynagai.a2ui.core.function/EvaluationContext // dev.ynagai.a2ui.core.function/EvaluationContext.withInvocation|withInvocation(dev.ynagai.a2ui.core.function.InvocationContext){}[0]
+    final fun withJson(kotlinx.serialization.json/Json): dev.ynagai.a2ui.core.function/EvaluationContext // dev.ynagai.a2ui.core.function/EvaluationContext.withJson|withJson(kotlinx.serialization.json.Json){}[0]
+    final fun withLimits(dev.ynagai.a2ui.core.function/EvaluationLimits): dev.ynagai.a2ui.core.function/EvaluationContext // dev.ynagai.a2ui.core.function/EvaluationContext.withLimits|withLimits(dev.ynagai.a2ui.core.function.EvaluationLimits){}[0]
+    final fun withLocale(dev.ynagai.a2ui.core.function/LocaleFormatter): dev.ynagai.a2ui.core.function/EvaluationContext // dev.ynagai.a2ui.core.function/EvaluationContext.withLocale|withLocale(dev.ynagai.a2ui.core.function.LocaleFormatter){}[0]
+    final fun withUrlOpener(dev.ynagai.a2ui.core.function/UrlOpener?): dev.ynagai.a2ui.core.function/EvaluationContext // dev.ynagai.a2ui.core.function/EvaluationContext.withUrlOpener|withUrlOpener(dev.ynagai.a2ui.core.function.UrlOpener?){}[0]
 }
 
 final class dev.ynagai.a2ui.core.function/EvaluationLimits { // dev.ynagai.a2ui.core.function/EvaluationLimits|null[0]

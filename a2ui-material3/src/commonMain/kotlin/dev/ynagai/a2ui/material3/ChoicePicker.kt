@@ -80,12 +80,12 @@ public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer { scope, 
     val bound = scope.rememberSelection()
     val target = remember(scope) { scope.binding("value") }
     val options = scope.rememberOptions()
-    // The values this picker owns: what it draws as selected, and the only entries it rewrites.
-    // Taken from `options` rather than from `shown`, because the filter is a way of looking at the
-    // list and never a claim about what the data model holds.
-    val ownValues = remember(options) { options.mapTo(mutableSetOf()) { it.value } }
+    val ownValues = scope.rememberDeclaredValues()
+    // A set, not a list: [Rows] and [Chips] test membership once per drawn option, and the bound
+    // array is the one agent-chosen property `MAX_OPTIONS` does not bound -- so a list would make
+    // the per-frame cost the product of the two. Nothing below needs its order or its duplicates.
     val selected = remember(bound, ownValues) {
-        bound.mapNotNull { entry -> entry.selectionValue()?.takeIf { it in ownValues } }
+        bound.mapNotNullTo(mutableSetOf()) { entry -> entry.selectionValue()?.takeIf { it in ownValues } }
     }
     val failure = scope.rememberCheckFailures().firstMessage()
 
@@ -182,7 +182,7 @@ private data class Choice(val label: String, val value: String)
 @Composable
 private fun Rows(
     options: List<Choice>,
-    selected: List<String>,
+    selected: Set<String>,
     exclusive: Boolean,
     enabled: Boolean,
     onSelect: (String) -> Unit,
@@ -229,7 +229,7 @@ private fun Rows(
 @Composable
 private fun Chips(
     options: List<Choice>,
-    selected: List<String>,
+    selected: Set<String>,
     enabled: Boolean,
     onSelect: (String) -> Unit,
 ) {
@@ -259,7 +259,13 @@ private fun Chips(
  *
  * A `value` that is absent, unreadable, or bound to something that is not an array reads as empty
  * -- the same degradation the typed accessors give, and a picker with nothing selected is what an
- * empty array draws anyway.
+ * empty array draws anyway. Note what that costs on the write half, which is not a splice at all:
+ * [binding][dev.ynagai.a2ui.compose.A2uiComponentScope.binding] still resolves the path, so a picker
+ * bound to an object or a string stays enabled, and
+ * the first tap replaces whatever is there with a one-element array. The catalog types `value` as a
+ * `DynamicStringList` and nothing validates the data model against it, so this is the payload
+ * already outside the contract -- but it is a replacement, not the preservation the rest of this
+ * file argues for.
  *
  * `derivedStateOf` for the reason every accessor in this file uses one: `value` is a data binding,
  * so a list keyed on the unresolved property would never see a write land.
@@ -278,9 +284,53 @@ private fun A2uiComponentScope.rememberSelection(): JsonArray {
  * The catalog types `options[].value` as a string, so only a primitive can name a selection and an
  * object, an array or a `null` reads as null here. A number reads as its text, which is the
  * leniency the specification asks for when a payload and its catalog disagree about a scalar --
- * and it is a read only: the entry is still written back as the number it was.
+ * the same reading [number][dev.ynagai.a2ui.compose.A2uiComponentScope.number] gives a scalar
+ * property, and refusing it would draw `[1]` unselected against an option declaring `"1"` and then
+ * append a second entry beside it.
+ *
+ * **The coercion is a read, and an entry it does not match keeps its type for as long as this
+ * picker never owns it.** What it does not promise is a type that survives being *selected*: an
+ * entry whose text names a declared option is this picker's own answer, so deselecting it removes
+ * it and selecting it again writes the option's `value` -- a string. `[1]` under an option `"1"`
+ * comes back `["1"]` after that round trip. That is the picker answering for a value it declared,
+ * not the retype the class KDoc refuses, which is about entries it was never entitled to touch.
  */
 private fun JsonElement.selectionValue(): String? = (this as? JsonPrimitive)?.contentOrNull
+
+/**
+ * Every value this picker declares an option for.
+ *
+ * What it draws as selected, and the only entries [ChoicePickerRenderer] rewrites -- so this is the
+ * set that decides which entries of the bound array are its own answer and which belong to whoever
+ * else is writing to that array.
+ *
+ * **Read off the raw property rather than from [rememberOptions], because that list is what the
+ * picker can *draw*.** An option whose bound `label` has not resolved yet is dropped from it, and so
+ * is everything past [MAX_OPTIONS] -- neither of which is a statement about what the payload
+ * declares. Ownership taken from the drawable list makes a standing answer stop being this picker's
+ * own for as long as its label is missing, and then `mutuallyExclusive` keeps that answer beside the
+ * new one: two answers in a field that permits one, and no later tap can clear either, because every
+ * tap recomputes the same set. The filter is the same mistake in its third form, which is why this
+ * reads neither `shown` nor `options`.
+ *
+ * No [MAX_OPTIONS] bound, because the cap exists to bound *composition* rather than reading: the
+ * array is already in memory by the time this runs, and truncating here is what strands an answer
+ * nothing can clear. No `derivedStateOf` either, unlike every other accessor in this file --
+ * `options[].value` is a plain string in the catalog and never a binding, so there is no data model
+ * to subscribe to, and the enclosing `remember` is keyed on the scope, which
+ * [A2uiComponent][dev.ynagai.a2ui.compose.A2uiComponentScope] rebuilds whenever the agent sends a
+ * component whose properties differ.
+ */
+private fun A2uiComponentScope.declaredValues(): Set<String> =
+    (property("options") as? JsonArray).orEmpty().mapNotNullTo(mutableSetOf()) { entry ->
+        ((entry as? JsonObject)?.get("value") as? JsonPrimitive)
+            ?.takeIf { it.isString }?.contentOrNull
+    }
+
+/** [declaredValues], recomputed only when the scope is rebuilt onto different properties. */
+@Composable
+private fun A2uiComponentScope.rememberDeclaredValues(): Set<String> =
+    remember(this) { declaredValues() }
 
 /**
  * The `options` array, with each `label` resolved, recomputed when a resolved label changes.

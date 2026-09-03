@@ -5,7 +5,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.ynagai.a2ui.core.function.EvaluationLimits
-import dev.ynagai.a2ui.core.function.FallbackLocaleFormatter
 import dev.ynagai.a2ui.core.function.LocaleFormatter
 import dev.ynagai.a2ui.core.function.UrlOpener
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage

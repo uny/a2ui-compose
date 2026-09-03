@@ -553,6 +553,23 @@ private const val NO_ID_CATALOG = """
 }
 """
 
+/**
+ * A catalog whose JSON Schema `${'$'}id` is the name of a document this library ships.
+ *
+ * The `catalogId` is innocuous, so nothing about the catalog's *name* contests anything -- the
+ * claim is made by the schema identifier alone, which `catalog_definition.json` neither requires
+ * nor constrains. `FunctionCall: true` is the payload: a schema that accepts everything.
+ */
+private const val SHADOW_CATALOG = """
+{
+  "catalogId": "urn:agent:inlined",
+  "protocolVersion": "1.0",
+  "${'$'}id": "https://a2ui.org/specification/v1_0/common_types.json",
+  "${'$'}defs": {"anyComponent": true, "anyFunction": true, "FunctionCall": true},
+  "components": {}
+}
+"""
+
 /** A catalog whose `catalogId` is the name of a document this library ships. */
 private const val IMPOSTOR_CATALOG = """
 {
@@ -631,5 +648,36 @@ class CatalogIdentityTest {
         val reached = registry.document(ProtocolSchemas.COMMON_TYPES_URI)
         assertEquals(ProtocolSchemas.commonTypes, reached)
         assertEquals("https://a2ui.org/specification/v1_0/common_types.json", impostor.catalogId)
+    }
+
+    @Test
+    fun an_inlined_catalog_cannot_answer_for_a_protocol_document_by_claiming_its_id() {
+        // The other half of the same door, and the one that would be a total bypass: `${'$'}id` is a
+        // free string a catalog carries through from the wire, and `CatalogValidator` registers
+        // every catalog it holds beside the specification's own documents. A catalog that claimed
+        // `common_types.json` and put `true` under `${'$'}defs/FunctionCall` would be choosing the
+        // schema every call in the session is checked against -- chosen by the party being
+        // checked. The specification's documents go into the registry first and the first claim on
+        // a URI keeps it, which is what makes the claim inert rather than merely unlikely.
+        //
+        // Order is asserted both ways because it must not be what decides this. A renderer is
+        // advised to put its own catalogs last so that `catalogId` resolves to them, and that
+        // advice must stay safe on the `${'$'}id` key too.
+        val shadow = catalog(SHADOW_CATALOG)
+        for (catalogs in listOf(listOf(BASIC, shadow), listOf(shadow, BASIC))) {
+            val validator = CatalogValidator.of(catalogs)
+            // `@index` naming a catalog is refused by `FunctionCall` in `common_types.json` and by
+            // nothing else, so it is valid exactly when that document has been displaced.
+            val result = validator.validate(call("""{"call": "@index", "catalogId": "$BASIC_ID"}"""))
+            assertFalse(result.isValid, "an inlined catalog answered for `FunctionCall`")
+        }
+    }
+
+    @Test
+    fun the_shipped_document_is_the_one_reached_under_its_own_uri() {
+        // The mechanism behind the test above, asserted where it lives: whatever a catalog
+        // declares, the URI still resolves to the document this library ships.
+        val registry = SchemaRegistry.of(ProtocolSchemas.documents + listOf(parseObject(SHADOW_CATALOG)))
+        assertEquals(ProtocolSchemas.commonTypes, registry.document(ProtocolSchemas.COMMON_TYPES_URI))
     }
 }

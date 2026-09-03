@@ -158,12 +158,13 @@ public final class dev/ynagai/a2ui/compose/A2uiPlaceholderReason$UnknownType : d
 public final class dev/ynagai/a2ui/compose/A2uiRenderer {
 	public static final field $stable I
 	public fun <init> ()V
-	public fun <init> (Ljava/util/List;Ldev/ynagai/a2ui/core/function/LocaleFormatter;Ldev/ynagai/a2ui/core/function/UrlOpener;Ldev/ynagai/a2ui/compose/A2uiClock;Ldev/ynagai/a2ui/core/function/EvaluationLimits;Ldev/ynagai/a2ui/core/validation/ValidationLimits;Ldev/ynagai/a2ui/core/surface/RenderLimits;Ldev/ynagai/a2ui/core/surface/RendererState;)V
-	public synthetic fun <init> (Ljava/util/List;Ldev/ynagai/a2ui/core/function/LocaleFormatter;Ldev/ynagai/a2ui/core/function/UrlOpener;Ldev/ynagai/a2ui/compose/A2uiClock;Ldev/ynagai/a2ui/core/function/EvaluationLimits;Ldev/ynagai/a2ui/core/validation/ValidationLimits;Ldev/ynagai/a2ui/core/surface/RenderLimits;Ldev/ynagai/a2ui/core/surface/RendererState;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ldev/ynagai/a2ui/compose/A2uiRendererConfig;Ldev/ynagai/a2ui/core/surface/RendererState;)V
+	public synthetic fun <init> (Ldev/ynagai/a2ui/compose/A2uiRendererConfig;Ldev/ynagai/a2ui/core/surface/RendererState;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun apply (Ldev/ynagai/a2ui/core/protocol/AgentToRendererMessage;)Ljava/util/List;
 	public final fun applyAll (Ljava/lang/Iterable;)Ljava/util/List;
 	public final fun getCatalogs ()Ljava/util/List;
 	public final fun getClock ()Ldev/ynagai/a2ui/compose/A2uiClock;
+	public final fun getConfig ()Ldev/ynagai/a2ui/compose/A2uiRendererConfig;
 	public final fun getEvaluationLimits ()Ldev/ynagai/a2ui/core/function/EvaluationLimits;
 	public final fun getLocale ()Ldev/ynagai/a2ui/core/function/LocaleFormatter;
 	public final fun getRenderLimits ()Ldev/ynagai/a2ui/core/surface/RenderLimits;
@@ -171,6 +172,29 @@ public final class dev/ynagai/a2ui/compose/A2uiRenderer {
 	public final fun getUrlOpener ()Ldev/ynagai/a2ui/core/function/UrlOpener;
 	public final fun getValidationLimits ()Ldev/ynagai/a2ui/core/validation/ValidationLimits;
 	public final fun write (Ljava/lang/String;Ldev/ynagai/a2ui/core/surface/JsonPointer;Lkotlinx/serialization/json/JsonElement;)V
+}
+
+public final class dev/ynagai/a2ui/compose/A2uiRendererConfig {
+	public static final field $stable I
+	public static final field Companion Ldev/ynagai/a2ui/compose/A2uiRendererConfig$Companion;
+	public final fun getCatalogs ()Ljava/util/List;
+	public final fun getClock ()Ldev/ynagai/a2ui/compose/A2uiClock;
+	public final fun getEvaluationLimits ()Ldev/ynagai/a2ui/core/function/EvaluationLimits;
+	public final fun getLocale ()Ldev/ynagai/a2ui/core/function/LocaleFormatter;
+	public final fun getRenderLimits ()Ldev/ynagai/a2ui/core/surface/RenderLimits;
+	public final fun getUrlOpener ()Ldev/ynagai/a2ui/core/function/UrlOpener;
+	public final fun getValidationLimits ()Ldev/ynagai/a2ui/core/validation/ValidationLimits;
+	public final fun withCatalogs (Ljava/util/List;)Ldev/ynagai/a2ui/compose/A2uiRendererConfig;
+	public final fun withClock (Ldev/ynagai/a2ui/compose/A2uiClock;)Ldev/ynagai/a2ui/compose/A2uiRendererConfig;
+	public final fun withEvaluationLimits (Ldev/ynagai/a2ui/core/function/EvaluationLimits;)Ldev/ynagai/a2ui/compose/A2uiRendererConfig;
+	public final fun withLocale (Ldev/ynagai/a2ui/core/function/LocaleFormatter;)Ldev/ynagai/a2ui/compose/A2uiRendererConfig;
+	public final fun withRenderLimits (Ldev/ynagai/a2ui/core/surface/RenderLimits;)Ldev/ynagai/a2ui/compose/A2uiRendererConfig;
+	public final fun withUrlOpener (Ldev/ynagai/a2ui/core/function/UrlOpener;)Ldev/ynagai/a2ui/compose/A2uiRendererConfig;
+	public final fun withValidationLimits (Ldev/ynagai/a2ui/core/validation/ValidationLimits;)Ldev/ynagai/a2ui/compose/A2uiRendererConfig;
+}
+
+public final class dev/ynagai/a2ui/compose/A2uiRendererConfig$Companion {
+	public final fun getDefault ()Ldev/ynagai/a2ui/compose/A2uiRendererConfig;
 }
 
 public final class dev/ynagai/a2ui/compose/A2uiSurfaceKt {

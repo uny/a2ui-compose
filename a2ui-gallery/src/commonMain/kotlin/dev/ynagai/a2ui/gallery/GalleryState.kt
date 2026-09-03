@@ -9,6 +9,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.mutableStateListOf
 import dev.ynagai.a2ui.compose.A2uiClock
 import dev.ynagai.a2ui.compose.A2uiRenderer
+import dev.ynagai.a2ui.compose.A2uiRendererConfig
 import dev.ynagai.a2ui.core.function.LocaleFormatter
 import dev.ynagai.a2ui.core.function.FallbackLocaleFormatter
 import dev.ynagai.a2ui.core.function.UrlOpener
@@ -177,8 +178,9 @@ public class GalleryState(
         GalleryJson.encodeToString<JsonElement>(example.raw[index])
 
     private fun newRenderer() = A2uiRenderer(
-        locale = locale,
-        urlOpener = urlOpener,
-        clock = clock,
+        A2uiRendererConfig.Default
+            .withLocale(locale)
+            .withUrlOpener(urlOpener)
+            .withClock(clock),
     )
 }

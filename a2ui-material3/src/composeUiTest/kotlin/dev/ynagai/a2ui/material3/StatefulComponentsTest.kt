@@ -34,6 +34,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.A2uiRenderer
+import dev.ynagai.a2ui.compose.A2uiRendererConfig
 import dev.ynagai.a2ui.compose.A2uiSurface
 import dev.ynagai.a2ui.compose.BasicCatalog
 import dev.ynagai.a2ui.core.protocol.A2uiJson
@@ -347,7 +348,9 @@ class StatefulComponentsTest {
         A2uiImageLoader { url, _, _: ContentScale, _: Modifier -> into += url }
 
     private fun rendererFor(components: String): A2uiRenderer =
-        A2uiRenderer(clock = { CLOCK }).also { renderer ->
+        A2uiRenderer(A2uiRendererConfig.Default
+            .withClock({ CLOCK }),
+        ).also { renderer ->
             renderer.applyAll(
                 listOf(
                     """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",

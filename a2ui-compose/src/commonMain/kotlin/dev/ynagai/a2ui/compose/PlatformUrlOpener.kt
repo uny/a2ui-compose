@@ -8,7 +8,9 @@ import dev.ynagai.a2ui.core.function.UrlOpener
  *
  * ```kotlin
  * val opener = rememberPlatformUrlOpener()
- * val renderer = remember { A2uiRenderer(urlOpener = opener) }
+ * val renderer = remember {
+ *     A2uiRenderer(A2uiRendererConfig.Default.withUrlOpener(opener))
+ * }
  * ```
  *
  * A composable rather than a plain function because of Android: an `Intent` needs a `Context`, and

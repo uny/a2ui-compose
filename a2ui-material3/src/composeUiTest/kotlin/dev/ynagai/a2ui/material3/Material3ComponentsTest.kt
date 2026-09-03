@@ -28,6 +28,7 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import dev.ynagai.a2ui.compose.A2uiPlaceholder
 import dev.ynagai.a2ui.compose.A2uiPlaceholderReason
 import dev.ynagai.a2ui.compose.A2uiRenderer
+import dev.ynagai.a2ui.compose.A2uiRendererConfig
 import dev.ynagai.a2ui.compose.A2uiSurface
 import dev.ynagai.a2ui.compose.BasicCatalog
 import dev.ynagai.a2ui.compose.ComponentRenderer
@@ -572,7 +573,9 @@ class Material3ComponentsTest {
     }
 
     private fun rendererFor(components: String): A2uiRenderer =
-        A2uiRenderer(clock = { "2026-08-28T00:00:00Z" }).also { renderer ->
+        A2uiRenderer(A2uiRendererConfig.Default
+            .withClock({ "2026-08-28T00:00:00Z" }),
+        ).also { renderer ->
             renderer.applyAll(
                 listOf(
                     """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",

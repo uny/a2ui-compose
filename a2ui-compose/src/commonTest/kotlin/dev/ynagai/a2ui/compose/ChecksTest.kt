@@ -141,7 +141,9 @@ class ChecksTest {
     }
 
     private fun scopeFor(componentId: String): A2uiComponentScope {
-        val renderer = A2uiRenderer(clock = { "2026-08-30T00:00:00Z" }).also { it.applyAll(MESSAGES) }
+        val renderer = A2uiRenderer(A2uiRendererConfig.Default
+            .withClock({ "2026-08-30T00:00:00Z" }),
+        ).also { it.applyAll(MESSAGES) }
         return A2uiComponentScope(
             renderer = renderer,
             surfaceId = SURFACE,

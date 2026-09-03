@@ -48,7 +48,9 @@ class A2uiDepthBoundTest {
         }
 
     private fun rendererFor(components: String): A2uiRenderer =
-        A2uiRenderer(clock = { "2026-08-27T00:00:00Z" }).also { renderer ->
+        A2uiRenderer(A2uiRendererConfig.Default
+            .withClock({ "2026-08-27T00:00:00Z" }),
+        ).also { renderer ->
             renderer.applyAll(
                 listOf(
                     """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",

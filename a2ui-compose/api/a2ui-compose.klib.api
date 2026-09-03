@@ -176,12 +176,14 @@ final class dev.ynagai.a2ui.compose/A2uiComponentScope { // dev.ynagai.a2ui.comp
 }
 
 final class dev.ynagai.a2ui.compose/A2uiRenderer { // dev.ynagai.a2ui.compose/A2uiRenderer|null[0]
-    constructor <init>(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition> = ..., dev.ynagai.a2ui.core.function/LocaleFormatter = ..., dev.ynagai.a2ui.core.function/UrlOpener = ..., dev.ynagai.a2ui.compose/A2uiClock = ..., dev.ynagai.a2ui.core.function/EvaluationLimits = ..., dev.ynagai.a2ui.core.validation/ValidationLimits = ..., dev.ynagai.a2ui.core.surface/RenderLimits = ..., dev.ynagai.a2ui.core.surface/RendererState = ...) // dev.ynagai.a2ui.compose/A2uiRenderer.<init>|<init>(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>;dev.ynagai.a2ui.core.function.LocaleFormatter;dev.ynagai.a2ui.core.function.UrlOpener;dev.ynagai.a2ui.compose.A2uiClock;dev.ynagai.a2ui.core.function.EvaluationLimits;dev.ynagai.a2ui.core.validation.ValidationLimits;dev.ynagai.a2ui.core.surface.RenderLimits;dev.ynagai.a2ui.core.surface.RendererState){}[0]
+    constructor <init>(dev.ynagai.a2ui.compose/A2uiRendererConfig = ..., dev.ynagai.a2ui.core.surface/RendererState = ...) // dev.ynagai.a2ui.compose/A2uiRenderer.<init>|<init>(dev.ynagai.a2ui.compose.A2uiRendererConfig;dev.ynagai.a2ui.core.surface.RendererState){}[0]
 
     final val catalogs // dev.ynagai.a2ui.compose/A2uiRenderer.catalogs|{}catalogs[0]
         final fun <get-catalogs>(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition> // dev.ynagai.a2ui.compose/A2uiRenderer.catalogs.<get-catalogs>|<get-catalogs>(){}[0]
     final val clock // dev.ynagai.a2ui.compose/A2uiRenderer.clock|{}clock[0]
         final fun <get-clock>(): dev.ynagai.a2ui.compose/A2uiClock // dev.ynagai.a2ui.compose/A2uiRenderer.clock.<get-clock>|<get-clock>(){}[0]
+    final val config // dev.ynagai.a2ui.compose/A2uiRenderer.config|{}config[0]
+        final fun <get-config>(): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRenderer.config.<get-config>|<get-config>(){}[0]
     final val evaluationLimits // dev.ynagai.a2ui.compose/A2uiRenderer.evaluationLimits|{}evaluationLimits[0]
         final fun <get-evaluationLimits>(): dev.ynagai.a2ui.core.function/EvaluationLimits // dev.ynagai.a2ui.compose/A2uiRenderer.evaluationLimits.<get-evaluationLimits>|<get-evaluationLimits>(){}[0]
     final val locale // dev.ynagai.a2ui.compose/A2uiRenderer.locale|{}locale[0]
@@ -199,6 +201,36 @@ final class dev.ynagai.a2ui.compose/A2uiRenderer { // dev.ynagai.a2ui.compose/A2
     final fun apply(dev.ynagai.a2ui.core.protocol/AgentToRendererMessage): kotlin.collections/List<dev.ynagai.a2ui.core.surface/RendererEffect> // dev.ynagai.a2ui.compose/A2uiRenderer.apply|apply(dev.ynagai.a2ui.core.protocol.AgentToRendererMessage){}[0]
     final fun applyAll(kotlin.collections/Iterable<dev.ynagai.a2ui.core.protocol/AgentToRendererMessage>): kotlin.collections/List<dev.ynagai.a2ui.core.surface/RendererEffect> // dev.ynagai.a2ui.compose/A2uiRenderer.applyAll|applyAll(kotlin.collections.Iterable<dev.ynagai.a2ui.core.protocol.AgentToRendererMessage>){}[0]
     final fun write(kotlin/String, dev.ynagai.a2ui.core.surface/JsonPointer, kotlinx.serialization.json/JsonElement) // dev.ynagai.a2ui.compose/A2uiRenderer.write|write(kotlin.String;dev.ynagai.a2ui.core.surface.JsonPointer;kotlinx.serialization.json.JsonElement){}[0]
+}
+
+final class dev.ynagai.a2ui.compose/A2uiRendererConfig { // dev.ynagai.a2ui.compose/A2uiRendererConfig|null[0]
+    final val catalogs // dev.ynagai.a2ui.compose/A2uiRendererConfig.catalogs|{}catalogs[0]
+        final fun <get-catalogs>(): kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition> // dev.ynagai.a2ui.compose/A2uiRendererConfig.catalogs.<get-catalogs>|<get-catalogs>(){}[0]
+    final val clock // dev.ynagai.a2ui.compose/A2uiRendererConfig.clock|{}clock[0]
+        final fun <get-clock>(): dev.ynagai.a2ui.compose/A2uiClock // dev.ynagai.a2ui.compose/A2uiRendererConfig.clock.<get-clock>|<get-clock>(){}[0]
+    final val evaluationLimits // dev.ynagai.a2ui.compose/A2uiRendererConfig.evaluationLimits|{}evaluationLimits[0]
+        final fun <get-evaluationLimits>(): dev.ynagai.a2ui.core.function/EvaluationLimits // dev.ynagai.a2ui.compose/A2uiRendererConfig.evaluationLimits.<get-evaluationLimits>|<get-evaluationLimits>(){}[0]
+    final val locale // dev.ynagai.a2ui.compose/A2uiRendererConfig.locale|{}locale[0]
+        final fun <get-locale>(): dev.ynagai.a2ui.core.function/LocaleFormatter // dev.ynagai.a2ui.compose/A2uiRendererConfig.locale.<get-locale>|<get-locale>(){}[0]
+    final val renderLimits // dev.ynagai.a2ui.compose/A2uiRendererConfig.renderLimits|{}renderLimits[0]
+        final fun <get-renderLimits>(): dev.ynagai.a2ui.core.surface/RenderLimits // dev.ynagai.a2ui.compose/A2uiRendererConfig.renderLimits.<get-renderLimits>|<get-renderLimits>(){}[0]
+    final val urlOpener // dev.ynagai.a2ui.compose/A2uiRendererConfig.urlOpener|{}urlOpener[0]
+        final fun <get-urlOpener>(): dev.ynagai.a2ui.core.function/UrlOpener // dev.ynagai.a2ui.compose/A2uiRendererConfig.urlOpener.<get-urlOpener>|<get-urlOpener>(){}[0]
+    final val validationLimits // dev.ynagai.a2ui.compose/A2uiRendererConfig.validationLimits|{}validationLimits[0]
+        final fun <get-validationLimits>(): dev.ynagai.a2ui.core.validation/ValidationLimits // dev.ynagai.a2ui.compose/A2uiRendererConfig.validationLimits.<get-validationLimits>|<get-validationLimits>(){}[0]
+
+    final fun withCatalogs(kotlin.collections/List<dev.ynagai.a2ui.core.protocol/CatalogDefinition>): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRendererConfig.withCatalogs|withCatalogs(kotlin.collections.List<dev.ynagai.a2ui.core.protocol.CatalogDefinition>){}[0]
+    final fun withClock(dev.ynagai.a2ui.compose/A2uiClock): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRendererConfig.withClock|withClock(dev.ynagai.a2ui.compose.A2uiClock){}[0]
+    final fun withEvaluationLimits(dev.ynagai.a2ui.core.function/EvaluationLimits): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRendererConfig.withEvaluationLimits|withEvaluationLimits(dev.ynagai.a2ui.core.function.EvaluationLimits){}[0]
+    final fun withLocale(dev.ynagai.a2ui.core.function/LocaleFormatter): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRendererConfig.withLocale|withLocale(dev.ynagai.a2ui.core.function.LocaleFormatter){}[0]
+    final fun withRenderLimits(dev.ynagai.a2ui.core.surface/RenderLimits): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRendererConfig.withRenderLimits|withRenderLimits(dev.ynagai.a2ui.core.surface.RenderLimits){}[0]
+    final fun withUrlOpener(dev.ynagai.a2ui.core.function/UrlOpener): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRendererConfig.withUrlOpener|withUrlOpener(dev.ynagai.a2ui.core.function.UrlOpener){}[0]
+    final fun withValidationLimits(dev.ynagai.a2ui.core.validation/ValidationLimits): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRendererConfig.withValidationLimits|withValidationLimits(dev.ynagai.a2ui.core.validation.ValidationLimits){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.compose/A2uiRendererConfig.Companion|null[0]
+        final val Default // dev.ynagai.a2ui.compose/A2uiRendererConfig.Companion.Default|{}Default[0]
+            final fun <get-Default>(): dev.ynagai.a2ui.compose/A2uiRendererConfig // dev.ynagai.a2ui.compose/A2uiRendererConfig.Companion.Default.<get-Default>|<get-Default>(){}[0]
+    }
 }
 
 final class dev.ynagai.a2ui.compose/ComponentRegistry { // dev.ynagai.a2ui.compose/ComponentRegistry|null[0]
@@ -244,6 +276,7 @@ final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRenderer$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRenderer$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiRenderer$stableprop[0]
+final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRendererConfig$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRendererConfig$stableprop|#static{}dev_ynagai_a2ui_compose_A2uiRendererConfig$stableprop[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_BasicCatalog$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_BasicCatalog$stableprop|#static{}dev_ynagai_a2ui_compose_BasicCatalog$stableprop[0]
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_ComponentRegistry$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_ComponentRegistry$stableprop|#static{}dev_ynagai_a2ui_compose_ComponentRegistry$stableprop[0]
 
@@ -271,6 +304,7 @@ final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop_getter|dev_ynagai_a2ui_compose_A2uiPlaceholderReason_TooManyChildren$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop_getter|dev_ynagai_a2ui_compose_A2uiPlaceholderReason_UnknownType$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRenderer$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRenderer$stableprop_getter|dev_ynagai_a2ui_compose_A2uiRenderer$stableprop_getter(){}[0]
+final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRendererConfig$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_A2uiRendererConfig$stableprop_getter|dev_ynagai_a2ui_compose_A2uiRendererConfig$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_BasicCatalog$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_BasicCatalog$stableprop_getter|dev_ynagai_a2ui_compose_BasicCatalog$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_ComponentRegistry$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_ComponentRegistry$stableprop_getter|dev_ynagai_a2ui_compose_ComponentRegistry$stableprop_getter(){}[0]
 final fun dev.ynagai.a2ui.compose/rememberPlatformUrlOpener(androidx.compose.runtime/Composer?, kotlin/Int): dev.ynagai.a2ui.core.function/UrlOpener // dev.ynagai.a2ui.compose/rememberPlatformUrlOpener|rememberPlatformUrlOpener(androidx.compose.runtime.Composer?;kotlin.Int){}[0]

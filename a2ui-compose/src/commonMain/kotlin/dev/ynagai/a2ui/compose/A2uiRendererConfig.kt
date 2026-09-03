@@ -71,10 +71,17 @@ public class A2uiRendererConfig private constructor(
      * the specification requires missing references to degrade rather than fail.
      *
      * Copied, not aliased. `@Immutable` promises Compose that this value never changes after
-     * construction, and a caller who kept a reference to the `MutableList` they passed to
-     * [withCatalogs] could otherwise break that promise from outside -- on Kotlin/JS, where
-     * `listOf` is a mutable `ArrayList` at runtime and [Default] is one process-wide instance,
-     * from outside *every* renderer at once.
+     * construction, and a caller who kept a reference to the `MutableList` they handed to
+     * [withCatalogs] could otherwise break that promise by emptying it afterwards. The copy ends
+     * that, and its reach is exactly that far: a list passed to [withCatalogs] becomes the derived
+     * configuration's, never [Default]'s.
+     *
+     * It does **not** make the list unmodifiable, and cannot: `toList()` of a single element is
+     * `listOf`, which on Kotlin/JS is an `ArrayList` at runtime, so a host that casts what it is
+     * handed back to `MutableList` can still edit it -- and doing so to [Default]'s own list would
+     * reach every renderer built from the default afterwards. That is the type system being
+     * deliberately defeated rather than a promise being broken quietly, which is why it is written
+     * down here rather than defended against.
      */
     public val catalogs: List<CatalogDefinition> = catalogs.toList()
 

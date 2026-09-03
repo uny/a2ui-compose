@@ -76,6 +76,21 @@ class A2uiRendererConfigTest {
     }
 
     @Test
+    fun a_configuration_does_not_alias_the_catalog_list_it_was_given() {
+        // `@Immutable` says this value's properties do not change after construction, and without
+        // the copy in the primary constructor the caller keeps the ability to break that: drop the
+        // `.toList()` and `config.catalogs` comes back empty here.
+        //
+        // What this does *not* pin is the cast -- `toList()` of one element is `listOf`, an
+        // `ArrayList` on Kotlin/JS -- because defeating the type system deliberately is not a
+        // promise the class can keep. See the property's own documentation.
+        val given = mutableListOf(BasicCatalog.definition)
+        val config = A2uiRendererConfig.Default.withCatalogs(given)
+        given.clear()
+        assertEquals(listOf(BasicCatalog.definition), config.catalogs)
+    }
+
+    @Test
     fun a_derivation_leaves_the_configuration_it_came_from_alone() {
         val derived = A2uiRendererConfig.Default.withCatalogs(emptyList())
         assertEquals(listOf(BasicCatalog.definition), A2uiRendererConfig.Default.catalogs)

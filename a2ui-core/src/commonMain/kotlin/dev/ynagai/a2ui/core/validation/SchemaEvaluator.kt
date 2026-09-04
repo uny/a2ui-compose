@@ -848,7 +848,8 @@ private fun JsonObject.declaredPatterns(): Set<String> =
  * pattern cannot be handed to [Regex]: `\p{XID_Start}` does not exist on Kotlin/Native or
  * Kotlin/Wasm and is not reachable from common code on the JVM, so compiling it would throw on two
  * targets and quietly answer differently on the others. It is recognised by text and answered by
- * [isUnicodeIdentifier], whose KDoc states plainly where the approximation is wrong.
+ * [isUnicodeIdentifier], which answers it from the derived property tables rather than from a
+ * regex engine, and therefore identically on every target.
  *
  * Any other pattern returns null rather than being compiled. Compiling an agent-supplied pattern
  * here would put a backtracking engine on a path that runs once per property of every object in a

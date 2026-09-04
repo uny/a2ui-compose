@@ -292,7 +292,7 @@ class CatalogValidatorTest {
         assertTrue(result.isValid, result.violations.toString())
     }
 
-    // --- extension keys (UAX #31, approximated) --------------------------------------------------
+    // --- extension keys (UAX #31) ----------------------------------------------------------------
 
     @Test
     fun accepts_extension_keys_that_are_unicode_identifiers() {
@@ -323,7 +323,7 @@ class CatalogValidatorTest {
     fun applies_the_uax31_pattern_rather_than_reporting_it_unsupported() {
         // The pattern `common_types.json` writes is `\p{XID_Start}`, which `Regex` cannot compile
         // on two of this library's five targets. Reaching a verdict at all is the assertion here;
-        // that the verdict is an approximation is documented on `isUnicodeIdentifier`.
+        // that the verdict is the one UAX #31 defines is `Uax31Test`'s.
         val result = checkComponent(
             """{"id": "t", "component": "Text", "text": "x",
                 "metadata": {"extensions": {"ok_key": 1}}}""",

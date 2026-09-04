@@ -247,4 +247,89 @@ class CatalogChildResolverTest {
         assertEquals(emptyList(), found, "a pattern-covered property was read as a child")
     }
 
+    @Test
+    fun finds_the_children_of_a_component_that_overrides_to_a_catalog_named_after_the_placeholder() {
+        // The reservation withholds a *name*, not the catalog -- `CatalogIdentityTest` pins that
+        // for the checker. This is the same rule for the resolver, and it is the case the two
+        // disagreed on: a held catalog whose `catalogId` is the name `catalog.json` resolves to is
+        // refused by `SchemaRegistry.document` unless it is the catalog *bound*, so an override to
+        // it found no definition while the surface's own default was bound instead. The component
+        // checked out valid and rendered with its children dropped, silently -- which is the
+        // failure this whole class exists to prevent.
+        val source = """
+        {
+          "catalogId": "https://a2ui.org/specification/v1_0/catalog.json",
+          "components": {
+            "Column": {
+              "type": "object",
+              "properties": {
+                "component": {"const": "Column"},
+                "children": {
+                  "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/ChildList"
+                }
+              }
+            }
+          }
+        }
+        """.trimIndent()
+        val named = A2uiJson.strict.decodeFromString(CatalogDefinition.serializer(), source)
+        val resolver = CatalogChildResolver.of(
+            listOf(named, CATALOG),
+            surfaceDefault = CATALOG.catalogId,
+        )
+        val found = resolver.childrenOf(
+            A2uiJson.strict.decodeFromString(
+                Component.serializer(),
+                """{"id": "col", "component": "Column", "children": ["a", "b"],
+                    "catalogId": "${named.catalogId}"}""",
+            ),
+        )
+        assertEquals(listOf(ChildReference.Fixed("children", listOf("a", "b"))), found)
+    }
+
+    @Test
+    fun reads_an_overriding_catalogs_placeholder_ref_off_that_catalog_rather_than_the_surfaces() {
+        // The same binding, in the spelling that has nothing to do with the reservation. Both
+        // catalogs reach their child property through `catalog.json` -- the placeholder meaning
+        // "whichever catalog is in play" -- but declare a *different* property behind it. For a
+        // component that overrides the surface's default, the catalog in play is the one it named;
+        // resolving against the surface default's registry read the surface catalog's property
+        // name off the overriding catalog's component, which is a wrong tree rather than a missing
+        // one, and it is `body` that would be reported here.
+        fun catalog(id: String, property: String) = A2uiJson.strict.decodeFromString(
+            CatalogDefinition.serializer(),
+            """
+            {
+              "catalogId": "$id",
+              "components": {
+                "Panel": {"${'$'}ref": "catalog.json#/${'$'}defs/panelShape"}
+              },
+              "${'$'}defs": {
+                "panelShape": {
+                  "type": "object",
+                  "properties": {
+                    "component": {"const": "Panel"},
+                    "$property": {
+                      "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/Child"
+                    }
+                  }
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+        val surface = catalog("urn:test:surface", "body")
+        val override = catalog("urn:test:override", "content")
+        val found = CatalogChildResolver.of(
+            listOf(surface, override),
+            surfaceDefault = surface.catalogId,
+        ).childrenOf(
+            A2uiJson.strict.decodeFromString(
+                Component.serializer(),
+                """{"id": "p", "component": "Panel", "content": "c1", "body": "c2",
+                    "catalogId": "urn:test:override"}""",
+            ),
+        )
+        assertEquals(listOf(ChildReference.Single("content", "c1")), found, found.toString())
+    }
 }

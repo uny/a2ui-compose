@@ -14,6 +14,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -570,6 +571,45 @@ private const val SHADOW_CATALOG = """
 }
 """
 
+/**
+ * A catalog that names itself after the `catalog.json` placeholder, by `catalogId`.
+ *
+ * The URI is the one `common_types.json` and `agent_to_renderer.json` join `catalog.json` to. No
+ * document publishes it -- that is the point of a placeholder -- so it was a free name in the
+ * registry, and a catalog taking it answered `agent_to_renderer.json`'s
+ * `{"${'$'}ref": "catalog.json#/${'$'}defs/anyComponent"}` for every message. `anyComponent`
+ * accepting any object is the payload: it makes an unresolvable-reference rejection into an
+ * acceptance.
+ */
+private const val PLACEHOLDER_CATALOG_ID_CATALOG = """
+{
+  "catalogId": "https://a2ui.org/specification/v1_0/catalog.json",
+  "protocolVersion": "1.0",
+  "${'$'}defs": {"anyComponent": {"type": "object", "additionalProperties": true}},
+  "components": {}
+}
+"""
+
+/** The same claim on the placeholder, spelled with `${'$'}id` instead. */
+private const val PLACEHOLDER_ID_CATALOG = """
+{
+  "catalogId": "urn:agent:inlined",
+  "protocolVersion": "1.0",
+  "${'$'}id": "https://a2ui.org/specification/v1_0/catalog.json",
+  "${'$'}defs": {"anyComponent": {"type": "object", "additionalProperties": true}},
+  "components": {}
+}
+"""
+
+/** The URI a bare `catalog.json` reference resolves to from the specification's own documents. */
+private const val PLACEHOLDER_URI = "https://a2ui.org/specification/v1_0/catalog.json"
+
+/** A component of a type no catalog defines, carrying a property no catalog declares. */
+private const val UNDECLARED_COMPONENT_MESSAGE = """
+{"version": "v1.0", "createSurface": {"surfaceId": "s",
+ "components": [{"id": "root", "component": "TotallyMadeUp", "bogusProp": 1}]}}
+"""
+
 /** A catalog whose `catalogId` is the name of a document this library ships. */
 private const val IMPOSTOR_CATALOG = """
 {
@@ -687,5 +727,97 @@ class CatalogIdentityTest {
         // still reach the document this library ships.
         val registry = SchemaRegistry.of(listOf(parseObject(SHADOW_CATALOG)) + ProtocolSchemas.documents)
         assertEquals(ProtocolSchemas.commonTypes, registry.document(ProtocolSchemas.COMMON_TYPES_URI))
+    }
+
+    @Test
+    fun an_inlined_catalog_cannot_capture_the_catalog_placeholder() {
+        // The third spelling of #8's attack, and the one that needed no shipped document to
+        // displace: `catalog.json` is a placeholder filename nobody publishes, so the URI it
+        // resolves to was a name the registry would hand to whoever asked first. Both keys could
+        // ask -- `${'$'}id` in the first pass, `catalogId` in the second -- and neither is
+        // constrained by anything but `"type": "string"`.
+        //
+        // What is asserted is the fail-closed guarantee `validateMessage` documents: with no
+        // catalog bound to the placeholder, a message carrying a component must fail on an
+        // unresolvable reference. The component below names a type no catalog defines and carries
+        // a property none declares, so accepting it can only mean the agent's own `anyComponent`
+        // answered.
+        val message = Json.parseToJsonElement(UNDECLARED_COMPONENT_MESSAGE)
+        for (source in listOf(PLACEHOLDER_CATALOG_ID_CATALOG, PLACEHOLDER_ID_CATALOG)) {
+            val validator = CatalogValidator.of(listOf(catalog(source)))
+            // Unbound, and bound to a catalog this renderer does not hold -- which `registryFor`
+            // answers with the unbound registry, so it reaches the same placeholder.
+            for (bound in listOf(null, "urn:not-held")) {
+                val result = validator.validateMessage(message, catalogId = bound)
+                assertFalse(
+                    result.isValid,
+                    "an inlined catalog answered for the `catalog.json` placeholder (bound: $bound)",
+                )
+            }
+        }
+    }
+
+    @Test
+    fun the_placeholder_uri_is_reachable_by_no_registration() {
+        // The mechanism, asserted where it lives, and from both sides of `of`'s two passes. The
+        // catalog is passed alone and first, so neither first-wins nor the caller's ordering is
+        // what refuses it.
+        for (source in listOf(PLACEHOLDER_CATALOG_ID_CATALOG, PLACEHOLDER_ID_CATALOG)) {
+            val registry = SchemaRegistry.of(listOf(parseObject(source)) + ProtocolSchemas.documents)
+            assertNull(registry.document(PLACEHOLDER_URI), "a namesake answered for the placeholder")
+        }
+    }
+
+    @Test
+    fun a_catalog_named_after_the_placeholder_is_still_checked_against_when_it_is_the_one_in_play() {
+        // The reservation withholds a *name*, not the catalog. Named explicitly, this one is in
+        // play and answers the placeholder as any catalog does -- and it is the agent's own
+        // schema being applied to the agent's own payload, which is what naming it asks for.
+        val hostile = catalog(PLACEHOLDER_CATALOG_ID_CATALOG)
+        val result = CatalogValidator.of(listOf(hostile))
+            .validateMessage(
+                Json.parseToJsonElement(UNDECLARED_COMPONENT_MESSAGE),
+                catalogId = hostile.catalogId,
+            )
+        assertTrue(result.isValid, result.violations.toString())
+    }
+
+    @Test
+    fun a_document_that_never_writes_the_placeholder_reserves_nothing_on_its_behalf() {
+        // The reservation withholds names from catalogs, so taking more than the shipped
+        // references actually join to costs someone a name they were entitled to. The meta-schema
+        // stand-in is the case: `catalog_definition.json` refers to it, but it refers to nothing,
+        // so `https://json-schema.org/draft/2020-12/catalog.json` is not the placeholder's to keep.
+        val innocent = "https://json-schema.org/draft/2020-12/catalog.json"
+        val source = PLACEHOLDER_ID_CATALOG.replace(PLACEHOLDER_URI, innocent)
+        val registry = SchemaRegistry.of(ProtocolSchemas.documents + listOf(parseObject(source)))
+        assertEquals(parseObject(source), registry.document(innocent))
+    }
+
+    @Test
+    fun a_catalog_whose_id_merely_ends_in_the_placeholder_filename_is_reached_as_itself() {
+        // The reservation is on the URI the placeholder resolves to, not on the filename. The
+        // published basic catalog's own `${'$'}id` is `.../catalogs/basic/catalog.json`, so
+        // reserving the name would have made the shipped catalog unreachable.
+        val basic = parseObject(CatalogFixtures.BASIC)
+        val id = (basic["\$id"] as JsonPrimitive).content
+        assertTrue(id.endsWith("/catalog.json"), "the fixture no longer exercises this: $id")
+        val registry = SchemaRegistry.of(ProtocolSchemas.documents + listOf(basic))
+        assertEquals(basic, registry.document(id))
+    }
+
+    @Test
+    fun reserves_exactly_the_names_the_shipped_references_join_to() {
+        // The set is derived from the shipped documents, so nothing else pins what is in it, and
+        // it is wrong in both directions: over-reserving withholds a name from a catalog entitled
+        // to it, under-reserving is #39 again.
+        assertEquals(setOf(PLACEHOLDER_URI), ProtocolSchemas.catalogPlaceholderUris)
+        // The premise, asserted too. Both documents that write a bare `catalog.json` sit in the
+        // same directory, so the set is this one URI whether the traversal finds one of them or
+        // both -- and `agent_to_renderer.json`'s sits one array hop deeper than
+        // `common_types.json`'s, so a traversal that stopped finding it would look identical here.
+        for (document in listOf(ProtocolSchemas.commonTypes, ProtocolSchemas.agentToRenderer)) {
+            assertContains(document.toString(), "\"$CATALOG_PLACEHOLDER#")
+        }
     }
 }

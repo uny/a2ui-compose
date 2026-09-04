@@ -27,7 +27,7 @@ import kotlinx.serialization.json.JsonPrimitive
  * the schema is as agent-controlled as the payload once a catalog may be inlined.
  */
 public class CatalogChildResolver private constructor(
-    private val registry: SchemaRegistry,
+    private val registries: Map<String?, SchemaRegistry>,
     private val surfaceDefault: String?,
     private val limits: ValidationLimits,
 ) : ChildResolver {
@@ -37,19 +37,44 @@ public class CatalogChildResolver private constructor(
      *   a shortened list is a container drawn with children missing and nothing said about it.
      */
     override fun childrenOf(component: Component): List<ChildReference> {
-        val definition = definitionFor(component) ?: return emptyList()
+        val named = component.catalogId ?: surfaceDefault ?: return emptyList()
+        val registry = registryFor(named)
+        val definition = definitionFor(component, named, registry) ?: return emptyList()
         val encoded = A2uiJson.strict.encodeToJsonElement(Component.serializer(), component)
         val found = mutableListOf<ChildReference>()
-        Walk(found).run(definition.schema, definition.location, encoded, Path.ROOT, depth = 0)
+        Walk(found, registry).run(definition.schema, definition.location, encoded, Path.ROOT, depth = 0)
         return found
     }
 
-    private fun definitionFor(component: Component): SchemaRegistry.Resolved? {
+    /**
+     * The registry with [named] bound to [CATALOG_PLACEHOLDER], as [CatalogValidator.registryFor]
+     * binds it -- one per catalog rather than one for the surface's.
+     *
+     * A component may override the surface's catalog, and the catalog it names is then the one *in
+     * play* for it: `catalog.json` inside that catalog's own schema means that catalog, and the
+     * name it is reachable by is the name it published. Resolving an override against the surface
+     * default's registry got both wrong, and the second one silently: a held catalog whose
+     * `catalogId` is a name [ProtocolSchemas.catalogPlaceholderUris] reserves is refused by
+     * [SchemaRegistry.document] unless it is the catalog bound, so [definitionFor] found nothing
+     * and the component rendered with its children dropped -- while [CatalogValidator], which does
+     * bind the catalog a component names, reported that same component valid.
+     *
+     * A catalog this resolver does not hold falls back to the unbound registry, where the name
+     * resolves to nothing and [definitionFor] refuses, which is the behaviour that was there
+     * before: reporting the unknown catalog is [CatalogValidator]'s job, not this one's.
+     */
+    private fun registryFor(named: String): SchemaRegistry =
+        registries[named] ?: registries.getValue(null)
+
+    private fun definitionFor(
+        component: Component,
+        named: String,
+        registry: SchemaRegistry,
+    ): SchemaRegistry.Resolved? {
         // A component may override the surface's catalog, and then its children are that catalog's
         // business rather than this one's. Naming a catalog nothing holds does *not* fall back to
         // the surface default: the fallback would read one catalog's property names off another's
         // component of the same name, which is a wrong tree rather than a missing one.
-        val named = component.catalogId ?: surfaceDefault ?: return null
         val uri = when {
             registry.document(named) != null -> named
             else -> return null
@@ -64,7 +89,10 @@ public class CatalogChildResolver private constructor(
      * and for the same reason: a catalog's references are cyclic, and a component's schema reaches
      * `anyComponent` through its own children.
      */
-    private inner class Walk(private val out: MutableList<ChildReference>) {
+    private inner class Walk(
+        private val out: MutableList<ChildReference>,
+        private val registry: SchemaRegistry,
+    ) {
         private var steps = 0
         private val active = mutableSetOf<Pair<SchemaLocation, String>>()
 
@@ -241,16 +269,24 @@ public class CatalogChildResolver private constructor(
                 A2uiJson.strict.encodeToJsonElement(CatalogDefinition.serializer(), catalog)
                     as JsonObject
             }
-            val activeIndex = catalogs.indexOfFirst { it.catalogId == surfaceDefault }
+            val byCatalogId = catalogs.withIndex()
+                .associate { (index, catalog) -> catalog.catalogId to documents[index] }
+            // One registry per catalog a component may name, plus the unbound one, exactly as
+            // [CatalogValidator] holds them and for the same two reasons. Bound, because without
+            // it the placeholder falls through to the map and an inlined catalog publishing an
+            // `$id` of `.../v1_0/catalog.json` answers `catalog.json#/$defs/anyFunction` for a
+            // surface bound to another catalog -- the hole `SchemaRegistry` closes only when it is
+            // told which catalog is live. Per catalog rather than per surface, because a component
+            // may override the surface's default and is then that catalog's business; see
+            // [registryFor]. Built once: a registry is a map over already-parsed documents, and
+            // [childrenOf] runs per component.
             return CatalogChildResolver(
-                registry = SchemaRegistry.of(
-                    documents = ProtocolSchemas.documents + documents,
-                    // Bound here too. Without it the placeholder falls through to the map, and an
-                    // inlined catalog publishing `$id` of `.../v1_0/catalog.json` answers
-                    // `catalog.json#/$defs/anyFunction` for a surface bound to another catalog --
-                    // the hole `SchemaRegistry` closes only when it is told which catalog is live.
-                    activeCatalog = documents.getOrNull(activeIndex),
-                ),
+                registries = (byCatalogId.keys + null).associateWith { catalogId ->
+                    SchemaRegistry.of(
+                        documents = ProtocolSchemas.documents + documents,
+                        activeCatalog = catalogId?.let(byCatalogId::get),
+                    )
+                },
                 surfaceDefault = surfaceDefault,
                 limits = limits,
             )

@@ -783,6 +783,18 @@ class CatalogIdentityTest {
     }
 
     @Test
+    fun a_document_that_never_writes_the_placeholder_reserves_nothing_on_its_behalf() {
+        // The reservation withholds names from catalogs, so taking more than the shipped
+        // references actually join to costs someone a name they were entitled to. The meta-schema
+        // stand-in is the case: `catalog_definition.json` refers to it, but it refers to nothing,
+        // so `https://json-schema.org/draft/2020-12/catalog.json` is not the placeholder's to keep.
+        val innocent = "https://json-schema.org/draft/2020-12/catalog.json"
+        val source = PLACEHOLDER_ID_CATALOG.replace(PLACEHOLDER_URI, innocent)
+        val registry = SchemaRegistry.of(ProtocolSchemas.documents + listOf(parseObject(source)))
+        assertEquals(parseObject(source), registry.document(innocent))
+    }
+
+    @Test
     fun a_catalog_whose_id_merely_ends_in_the_placeholder_filename_is_reached_as_itself() {
         // The reservation is on the URI the placeholder resolves to, not on the filename. The
         // published basic catalog's own `${'$'}id` is `.../catalogs/basic/catalog.json`, so

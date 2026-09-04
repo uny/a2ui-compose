@@ -2,7 +2,10 @@ package dev.ynagai.a2ui.core.validation
 
 import dev.ynagai.a2ui.core.protocol.ProtocolSchemaSources
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * The specification's own schema documents, embedded in the library.
@@ -104,16 +107,36 @@ public object ProtocolSchemas {
      * `https://a2ui.org/specification/v1_0/catalog.json` -- is a name no shipped document claims
      * and the registry would otherwise let anyone have.
      *
-     * So these names are reserved, and no registration may take one. Derived from [libraryUris]
-     * rather than written out, because what has to be reserved is exactly what those documents'
-     * own references join to. Only a bare `catalog.json` is affected: a catalog whose `$id` ends
-     * in the same filename under any other directory -- the published basic catalog does -- is
-     * registered and reachable as itself.
+     * So these names are reserved, and no registration may take one. Read out of the documents
+     * rather than written down, because what has to be reserved is exactly what a reference in one
+     * of them joins to -- no more. A document that never writes the placeholder reserves nothing:
+     * [metaSchemaStandIn] does not, and reserving on its behalf would withhold
+     * `https://json-schema.org/draft/2020-12/catalog.json` from a catalog entitled to it.
+     *
+     * Only a bare `catalog.json` is affected: a catalog whose `$id` ends in the same filename
+     * under any other directory -- the published basic catalog does -- is registered and reachable
+     * as itself.
      */
     internal val catalogPlaceholderUris: Set<String> by lazy {
-        libraryUris.mapTo(mutableSetOf()) { uri ->
-            "${uri.substringBeforeLast('/')}/$CATALOG_PLACEHOLDER"
+        libraryDocuments.mapNotNullTo(mutableSetOf()) { (uri, document) ->
+            if (document.refersToCatalogPlaceholder()) {
+                "${uri.substringBeforeLast('/')}/$CATALOG_PLACEHOLDER"
+            } else {
+                null
+            }
         }
+    }
+
+    /** Whether any `$ref` in this subtree names [CATALOG_PLACEHOLDER] with no path before it. */
+    private fun JsonElement.refersToCatalogPlaceholder(): Boolean = when (this) {
+        is JsonObject -> entries.any { (key, value) ->
+            val names = key == "\$ref" &&
+                (value as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)
+                    ?.content?.substringBefore('#') == CATALOG_PLACEHOLDER
+            names || value.refersToCatalogPlaceholder()
+        }
+        is JsonArray -> any { it.refersToCatalogPlaceholder() }
+        else -> false
     }
 
     /** Where a `FunctionCall` is checked from: `common_types.json#/$defs/FunctionCall`. */

@@ -805,4 +805,19 @@ class CatalogIdentityTest {
         val registry = SchemaRegistry.of(ProtocolSchemas.documents + listOf(basic))
         assertEquals(basic, registry.document(id))
     }
+
+    @Test
+    fun reserves_exactly_the_names_the_shipped_references_join_to() {
+        // The set is derived from the shipped documents, so nothing else pins what is in it, and
+        // it is wrong in both directions: over-reserving withholds a name from a catalog entitled
+        // to it, under-reserving is #39 again.
+        assertEquals(setOf(PLACEHOLDER_URI), ProtocolSchemas.catalogPlaceholderUris)
+        // The premise, asserted too. Both documents that write a bare `catalog.json` sit in the
+        // same directory, so the set is this one URI whether the traversal finds one of them or
+        // both -- and `agent_to_renderer.json`'s sits one array hop deeper than
+        // `common_types.json`'s, so a traversal that stopped finding it would look identical here.
+        for (document in listOf(ProtocolSchemas.commonTypes, ProtocolSchemas.agentToRenderer)) {
+            assertContains(document.toString(), "\"$CATALOG_PLACEHOLDER#")
+        }
+    }
 }

@@ -85,9 +85,15 @@ public class SchemaRegistry private constructor(
         // on the caller having passed the specification's documents first. `of` is public.
         uri in ProtocolSchemas.libraryUris -> ProtocolSchemas.libraryDocuments[uri]
         uri == activeCatalogUri -> activeCatalog ?: documents[uri]
-        // Second of the two layers that close #39. `of` refuses the registration; this refuses the
-        // answer, so neither relaxation alone reopens it, and neither depends on the other having
-        // run -- `of` is public and a registry may be built by anyone.
+        // Second of the two layers that close #39, and deliberately redundant with the first:
+        // `of` refuses the registration, this refuses the answer, and removing either one alone
+        // leaves the tests green while removing both fails them. That is measured, not assumed.
+        //
+        // Redundant, though, is all it is -- the constructor is private and `of` is the only way
+        // in, so a registry whose map holds a reserved name cannot be built through this API and
+        // this branch changes no answer today. It is here for the edit that relaxes `of`, which
+        // no test would otherwise catch. Do not read it as the layer that makes `of`'s filter
+        // optional, and do not delete either one on the grounds that the other covers it.
         uri in ProtocolSchemas.catalogPlaceholderUris -> null
         else -> documents[uri]
     }
@@ -122,10 +128,14 @@ public class SchemaRegistry private constructor(
     private fun resolveDocumentUri(uriPart: String, baseUri: String): String {
         // The placeholder written bare is answered before the map is consulted. It is a filename
         // rather than a URI, so a document standing at the URI it would resolve to must not be
-        // able to take the binding away from the catalog that is actually in play. Nothing can
-        // stand there any more -- that name is reserved at registration and refused again by
-        // [document] -- and this order is kept regardless, so the binding does not depend on the
-        // reservation to reach the right catalog.
+        // able to take the binding away from the catalog that is actually in play.
+        //
+        // This line is load-bearing on its own, and the reservation does not make it redundant.
+        // What the reservation withholds is the *name*: no registration may take it, and
+        // [document] refuses it -- but only below `uri == activeCatalogUri`, so the catalog in
+        // play does still answer there when the name it published is that URI. Drop this
+        // short-circuit and the placeholder would reach such a catalog only by the fallback
+        // below, and would reach a *different* bound catalog not at all.
         if (uriPart == CATALOG_PLACEHOLDER && activeCatalogUri != null) return activeCatalogUri
         val absolute = if (uriPart.contains("://")) uriPart else joinRelative(uriPart, baseUri)
         if (absolute in documents) return absolute

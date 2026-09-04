@@ -94,6 +94,28 @@ public object ProtocolSchemas {
     /** The URIs [libraryDocuments] covers. */
     internal val libraryUris: Set<String> get() = libraryDocuments.keys
 
+    /**
+     * The URIs a bare `catalog.json` reference resolves to from a document this library ships.
+     *
+     * [CATALOG_PLACEHOLDER] is a filename, not a document: nobody publishes it, and the basic
+     * catalog's own `$id` is `.../catalogs/basic/catalog.json`. But `$ref` resolution has to join
+     * it against the document that carries it before it can tell, and the result -- for
+     * `common_types.json` and `agent_to_renderer.json` alike,
+     * `https://a2ui.org/specification/v1_0/catalog.json` -- is a name no shipped document claims
+     * and the registry would otherwise let anyone have.
+     *
+     * So these names are reserved, and no registration may take one. Derived from [libraryUris]
+     * rather than written out, because what has to be reserved is exactly what those documents'
+     * own references join to. Only a bare `catalog.json` is affected: a catalog whose `$id` ends
+     * in the same filename under any other directory -- the published basic catalog does -- is
+     * registered and reachable as itself.
+     */
+    internal val catalogPlaceholderUris: Set<String> by lazy {
+        libraryUris.mapTo(mutableSetOf()) { uri ->
+            "${uri.substringBeforeLast('/')}/$CATALOG_PLACEHOLDER"
+        }
+    }
+
     /** Where a `FunctionCall` is checked from: `common_types.json#/$defs/FunctionCall`. */
     public val functionCall: SchemaLocation =
         SchemaLocation(COMMON_TYPES_URI, "/\$defs/FunctionCall")

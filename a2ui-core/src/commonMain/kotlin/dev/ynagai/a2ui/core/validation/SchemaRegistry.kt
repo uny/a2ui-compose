@@ -67,6 +67,13 @@ public class SchemaRegistry private constructor(
      * resolves through here and must reach the catalog the caller *named* rather than whichever
      * namesake happened to register first.
      *
+     * Below both, the name the placeholder joins to answers for nothing at all. It is a filename
+     * the specification never binds to a document, so a registration standing at that URI is a
+     * catalog answering a reference meant for whichever catalog is *in play* -- and when none is,
+     * the reference has to stay unresolvable, because that is the fail-closed guarantee
+     * [CatalogValidator.validateMessage] documents. Reaching this means the catalog in play did
+     * not claim the URI, so the only thing left to reach is a namesake.
+     *
      * A catalog that claims a library URI therefore reaches neither branch as itself: the
      * placeholder binds to that URI, the library document answers, and the pointer into it fails
      * to resolve. That is reported as an unresolvable reference, which is the truth. It also means
@@ -78,6 +85,10 @@ public class SchemaRegistry private constructor(
         // on the caller having passed the specification's documents first. `of` is public.
         uri in ProtocolSchemas.libraryUris -> ProtocolSchemas.libraryDocuments[uri]
         uri == activeCatalogUri -> activeCatalog ?: documents[uri]
+        // Second of the two layers that close #39. `of` refuses the registration; this refuses the
+        // answer, so neither relaxation alone reopens it, and neither depends on the other having
+        // run -- `of` is public and a registry may be built by anyone.
+        uri in ProtocolSchemas.catalogPlaceholderUris -> null
         else -> documents[uri]
     }
 
@@ -110,9 +121,11 @@ public class SchemaRegistry private constructor(
 
     private fun resolveDocumentUri(uriPart: String, baseUri: String): String {
         // The placeholder written bare is answered before the map is consulted. It is a filename
-        // rather than a URI, so a document that registered itself under the URI it would resolve to
-        // -- which an inlined catalog may do, `$id` being a free string on a catalog -- must not be
-        // able to take the binding away from the catalog that is actually in play.
+        // rather than a URI, so a document standing at the URI it would resolve to must not be
+        // able to take the binding away from the catalog that is actually in play. Nothing can
+        // stand there any more -- that name is reserved at registration and refused again by
+        // [document] -- and this order is kept regardless, so the binding does not depend on the
+        // reservation to reach the right catalog.
         if (uriPart == CATALOG_PLACEHOLDER && activeCatalogUri != null) return activeCatalogUri
         val absolute = if (uriPart.contains("://")) uriPart else joinRelative(uriPart, baseUri)
         if (absolute in documents) return absolute
@@ -149,6 +162,12 @@ public class SchemaRegistry private constructor(
          * A registry over [documents], each keyed by its own `$id`, with the FIRST to claim a
          * URI keeping it.
          *
+         * Neither key may take a name [CATALOG_PLACEHOLDER] resolves to. `catalogId` is subject to
+         * the reservation exactly as `$id` is: the two passes differ in which one wins a contested
+         * name, and a name the placeholder joins to is contested by construction, since the only
+         * document entitled to answer there is whichever catalog is in play. See
+         * [ProtocolSchemas.catalogPlaceholderUris].
+         *
          * [activeCatalog] is bound to [CATALOG_PLACEHOLDER] and answers for its own URI directly,
          * so it does not depend on winning that race -- it is appended last, and under first-wins
          * it would otherwise lose every collision. Passing it separately rather than inferring
@@ -168,6 +187,7 @@ public class SchemaRegistry private constructor(
             val all = mutableMapOf<String, JsonObject>()
             for (document in ordered) {
                 val id = document.declaredId() ?: continue
+                if (id in ProtocolSchemas.catalogPlaceholderUris) continue
                 if (id !in all) all[id] = document
             }
             // A second pass, and after the first for a reason. `catalogId` is the name a component
@@ -183,6 +203,7 @@ public class SchemaRegistry private constructor(
             // this pass second is what guarantees `$id` always wins the name.
             for (document in ordered) {
                 val catalogId = document.declaredCatalogId() ?: continue
+                if (catalogId in ProtocolSchemas.catalogPlaceholderUris) continue
                 if (catalogId !in all) all[catalogId] = document
             }
             // The name the active catalog is reachable by. Its `$id` when it declares one, which

@@ -165,7 +165,7 @@ class Uax31Test {
             TABLE_FINGERPRINT,
             fingerprint(startFingerprint, continueFingerprint),
             "the tables no longer hold the code points they held. If the Unicode database was " +
-                "deliberately replaced, this is the value to record in `TABLE_FINGERPRINT`",
+                "deliberately replaced, record the ACTUAL value below in `TABLE_FINGERPRINT`",
         )
     }
 
@@ -220,7 +220,8 @@ class Uax31Test {
          * catches it. Recorded rather than derived on purpose: a value recomputed from the same
          * tables it checks would agree with anything.
          *
-         * Regenerate by replacing the database and taking the value the failure message prints.
+         * Regenerate by replacing the database and taking the *actual* value the failure prints --
+         * `assertEquals` reports expected and actual both, and the expected one is this constant.
          */
         const val TABLE_FINGERPRINT = "aa165066:3bf8e27c"
     }

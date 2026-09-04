@@ -18,13 +18,29 @@ private data class CodePointRange(val start: Int, val end: Int)
  * the one that would keep vouching for a file that has moved on. `unicode/README.md` already names
  * itself as the row to update when the database is replaced, so this makes the value it records
  * load-bearing instead of decorative.
+ *
+ * The row is located by the filename and the digest is then taken from within that row, rather than
+ * by one pattern matching the whole row shape. Counting the columns between the two would make the
+ * table's layout load-bearing for the build -- adding a "Notes" column would report the row as
+ * absent -- and matching the digest anywhere in the file would let a second table answer for the
+ * first. Exactly one row may name [file]: with `find` on the whole document, a README that grew a
+ * "previous versions" table would silently verify against whichever row came first.
  */
-private fun expectedDigest(readme: String, file: String): String =
-    Regex("""\|\s*`${Regex.escape(file)}`\s*\|[^|\n]*\|[^|\n]*\|\s*`([0-9a-f]{64})`\s*\|""")
-        .find(readme)
-        ?.groupValues
-        ?.get(1)
-        ?: error("`unicode/README.md` has no `| \\`$file\\` | ... | <sha-256> |` row. See that file.")
+private fun expectedDigest(readme: String, file: String): String {
+    val rows = readme.lineSequence()
+        .filter { it.trimStart().startsWith("|") && it.contains("`$file`") }
+        .toList()
+    require(rows.size == 1) {
+        "`unicode/README.md` names `$file` in ${rows.size} table rows; exactly one must record " +
+            "its SHA-256, or the build cannot tell which digest is the current one."
+    }
+    // Case-insensitive because `shasum` and `sha256sum` emit lowercase while Windows' `certutil`
+    // and `Get-FileHash` emit uppercase; a digest that is right but shouted should not read to the
+    // maintainer as a row that is missing.
+    val digest = Regex("""`([0-9a-fA-F]{64})`""").find(rows.single())?.groupValues?.get(1)
+        ?: error("the `unicode/README.md` row for `$file` records no backticked 64-digit SHA-256.")
+    return digest.lowercase()
+}
 
 /** [bytes] as lowercase hex, which is the form `unicode/README.md` and `shasum -a 256` both use. */
 private fun hex(bytes: ByteArray): String =

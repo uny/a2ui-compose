@@ -3,7 +3,14 @@
 This file is copied verbatim from the Unicode Character Database and is the input to the
 `generateXidTables` Gradle task, which derives the `XID_Start` and `XID_Continue` code point ranges
 and embeds them as Kotlin source. It is not edited here: to move to a newer Unicode version,
-replace the file, update the table below, and update the code point count `Uax31Test` asserts.
+replace the file, update the table below, and update the two code point counts `Uax31Test` asserts.
+
+The SHA-256 in that table is **checked by the build**, not merely recorded: `generateXidTables`
+hashes the file and refuses to run when the two disagree. Nothing downstream could tell a corrupted
+database from a real one -- the parser accepts any well-formed range, and the task's
+`XID_Continue ⊇ XID_Start` assertion only catches ranges that went *missing* -- so a file that
+gained a line would widen the identifier rule and leave the suite green. Replacing the file without
+updating the row is therefore a named build failure rather than a silently different validator.
 
 A2UI v1.0 requires every catalog entity identifier and every extension key to match
 `^[\p{XID_Start}_][\p{XID_Continue}]*$` (`docs/a2ui_protocol.md`). Neither half of that is

@@ -2,12 +2,33 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskProvider
+import java.security.MessageDigest
 
 /** The largest code point Unicode assigns, and therefore the widest a parsed range may be. */
 private const val MAX_CODE_POINT = 0x10FFFF
 
 /** A parsed `DerivedCoreProperties.txt` line: the inclusive code point range it covers. */
 private data class CodePointRange(val start: Int, val end: Int)
+
+/**
+ * The SHA-256 `unicode/README.md` records for [file], as lowercase hex.
+ *
+ * Read out of the README's own table rather than passed in from the build script, for the reason
+ * the version regex below gives: a digest named in a second place is a second place to update, and
+ * the one that would keep vouching for a file that has moved on. `unicode/README.md` already names
+ * itself as the row to update when the database is replaced, so this makes the value it records
+ * load-bearing instead of decorative.
+ */
+private fun expectedDigest(readme: String, file: String): String =
+    Regex("""\|\s*`${Regex.escape(file)}`\s*\|[^|\n]*\|[^|\n]*\|\s*`([0-9a-f]{64})`\s*\|""")
+        .find(readme)
+        ?.groupValues
+        ?.get(1)
+        ?: error("`unicode/README.md` has no `| \\`$file\\` | ... | <sha-256> |` row. See that file.")
+
+/** [bytes] as lowercase hex, which is the form `unicode/README.md` and `shasum -a 256` both use. */
+private fun hex(bytes: ByteArray): String =
+    bytes.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
 /**
  * Every range `DerivedCoreProperties.txt` assigns [property], in ascending order and coalesced.
@@ -120,6 +141,24 @@ fun Project.generateXidTables(
     doLast {
         val source = unicodeDir.file(file).asFile
         require(source.isFile) { "`$file` is not in `${unicodeDir.asFile}`. See `unicode/README.md`." }
+        // The digest is checked before a byte of the file is interpreted. Nothing downstream can
+        // tell a corrupted database from a real one: `parseProperty` accepts any well-formed range,
+        // and the `XID_Continue` superset check below only catches ranges that went *missing*, so a
+        // file that gained a line would widen the identifier rule and leave the suite green. This is
+        // the control that makes `unicode/README.md`'s recorded SHA-256 mean something -- and it is
+        // what turns a CRLF-rewritten checkout into a named build failure rather than a silently
+        // different table (see the `a2ui-core/unicode/**` rule in `.gitattributes`).
+        val readme = unicodeDir.file("README.md").asFile
+        require(readme.isFile) { "`README.md` is not in `${unicodeDir.asFile}`; it records the digest." }
+        val expected = expectedDigest(readme.readText(), file)
+        val actual = hex(MessageDigest.getInstance("SHA-256").digest(source.readBytes()))
+        require(actual == expected) {
+            "`$file` does not match the SHA-256 `unicode/README.md` records for it.\n" +
+                "  expected $expected\n" +
+                "  actual   $actual\n" +
+                "Either the file was replaced without updating the README row, or the checkout " +
+                "rewrote its line endings."
+        }
         val text = source.readText()
         // The version comes out of the file's own first line -- `# DerivedCoreProperties-17.0.0.txt`
         // -- rather than being passed in. A version named in a build script is a second place to
@@ -190,7 +229,11 @@ private fun literalOf(text: String): String {
         // Break after the last space in the window, so a token is never cut in half. A window with
         // no space at all -- which the encoding cannot produce, but a future one might -- falls
         // back to the hard limit rather than looping forever on no progress.
-        val boundary = if (limit == text.length) limit else text.lastIndexOf(' ', limit).takeIf { it > start }?.plus(1) ?: limit
+        val boundary = if (limit == text.length) {
+            limit
+        } else {
+            text.lastIndexOf(' ', limit).takeIf { it > start }?.plus(1) ?: limit
+        }
         chunks += text.substring(start, boundary)
         start = boundary
     }

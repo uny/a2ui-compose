@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 /**
  * The identifier rule against the derived property tables, not against an approximation.
@@ -110,24 +111,40 @@ class Uax31Test {
     // --- invariants a decoding bug would break -------------------------------------------------
 
     @Test
-    fun every_start_character_is_also_a_continue_character() {
+    fun both_tables_hold_exactly_the_code_points_the_database_assigns() {
         // `XID_Continue` is a superset of `XID_Start` by definition. A decoder that lost a range,
         // shifted one by a code point, or read the two tables from one property would break this
         // somewhere across the whole assigned range, while still answering plausibly for ASCII.
+        //
+        // The superset relation alone is not enough, and asserting only it is how this file was
+        // wrong before: it constrains `XID_Continue` from *below*, so every continue-only range --
+        // the combining marks, the digits, the connectors, roughly 3,300 code points that no
+        // `XID_Start` character vouches for -- was pinned at six characters and no more. Dropping
+        // `093E..094F` from the generator was measured to leave all eleven tests here green while
+        // every Devanagari vowel sign stopped continuing an identifier: the exact "refused only in
+        // scripts whose writers are not the author" failure `isUnicodeIdentifier` claims to fix.
+        // So both cardinalities are asserted, and both directions are closed.
         var starts = 0
+        var continues = 0
         for (codePoint in 0..0x10FFFF) {
-            val leading = isUnicodeIdentifier(codePointString(codePoint))
-            if (!leading) continue
+            val character = codePointString(codePoint)
+            val leads = isUnicodeIdentifier(character)
+            val continued = isUnicodeIdentifier("a$character")
+            if (continued) continues++
+            if (!leads) continue
             starts++
-            assertTrue(
-                isUnicodeIdentifier("a" + codePointString(codePoint)),
-                "U+${codePoint.toString(16).uppercase()} leads an identifier but cannot continue one",
-            )
+            // Built only on failure. `assertTrue`'s message parameter is a `String`, not a lambda,
+            // so formatting it inline would run ~146,000 times per target on the passing path.
+            if (!continued) {
+                fail("U+${codePoint.toString(16).uppercase()} leads an identifier but cannot continue one")
+            }
         }
-        // The count is the tables' own, plus `_`, which the pattern admits by hand. Asserting it
-        // is what keeps this test from passing on an empty table: every loop body above is
-        // skipped when nothing is a start character, and the test then asserts nothing at all.
+        // The counts are the database's own -- `XID_Start` plus `_`, which the pattern admits by
+        // hand, and `XID_Continue`, which already holds `_`. Asserting them is what keeps this test
+        // from passing on an empty table: every loop body above is skipped when nothing is an
+        // identifier character, and the test then asserts nothing at all.
         assertEquals(XID_START_CODE_POINTS + 1, starts)
+        assertEquals(XID_CONTINUE_CODE_POINTS, continues)
     }
 
     @Test
@@ -156,5 +173,14 @@ class Uax31Test {
          * point: a table regenerated from a new revision should not slip in unnoticed.
          */
         const val XID_START_CODE_POINTS = 145_893
+
+        /**
+         * How many code points the same file assigns `XID_Continue`, counted the same way.
+         *
+         * Both counts are asserted, not just this one's superset relation to the other. See
+         * [both_tables_hold_exactly_the_code_points_the_database_assigns] for what the missing
+         * half let through.
+         */
+        const val XID_CONTINUE_CODE_POINTS = 149_221
     }
 }

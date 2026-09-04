@@ -52,6 +52,19 @@ val generateConformanceCases = embedSpecDocuments(
     directory = "v1_0/cases",
 )
 
+/**
+ * The `XID_Start` / `XID_Continue` tables the specification's identifier rule is defined against.
+ *
+ * Generated rather than approximated: `\p{XID_Start}` is not a property `Regex` supports on
+ * Kotlin/Native or Kotlin/Wasm, and the `java.lang.Character` methods that would answer it are not
+ * reachable from common code. See `unicode/README.md` for the database revision.
+ */
+val xidTables = generateXidTables(
+    taskName = "generateXidTables",
+    packageName = "dev.ynagai.a2ui.core.validation",
+    objectName = "XidTableSources",
+)
+
 kotlin {
     explicitApi()
 
@@ -126,6 +139,7 @@ kotlin {
 
         commonMain {
             kotlin.srcDir(generateProtocolSchemas)
+            kotlin.srcDir(xidTables)
         }
         commonTest {
             kotlin.srcDir(generateCatalogFixtures)

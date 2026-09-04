@@ -59,9 +59,15 @@ public class CatalogChildResolver private constructor(
      * and the component rendered with its children dropped -- while [CatalogValidator], which does
      * bind the catalog a component names, reported that same component valid.
      *
-     * A catalog this resolver does not hold falls back to the unbound registry, where the name
-     * resolves to nothing and [definitionFor] refuses, which is the behaviour that was there
-     * before: reporting the unknown catalog is [CatalogValidator]'s job, not this one's.
+     * A name no held catalog published as its `catalogId` falls back to the unbound registry,
+     * where nothing answers for it and [definitionFor] refuses. With one exception, which predates
+     * the per-catalog registries and is not fixed by them: a name that is some held catalog's
+     * JSON Schema `$id` *is* registered -- [SchemaRegistry.of]'s first pass keys on `$id` -- so
+     * that catalog answers, and its children are read with `catalog.json` bound to nothing. The
+     * checker calls the same name [CatalogResolution.Unknown], because it keys on `catalogId`
+     * alone. Reporting an unknown catalog is [CatalogValidator]'s job rather than this one's, so
+     * the disagreement costs a component nothing it was entitled to -- but the two do not agree
+     * about what is held, and that is worth knowing before either is changed.
      */
     private fun registryFor(named: String): SchemaRegistry =
         registries[named] ?: registries.getValue(null)

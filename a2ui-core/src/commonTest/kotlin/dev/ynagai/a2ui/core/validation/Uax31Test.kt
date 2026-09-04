@@ -120,19 +120,34 @@ class Uax31Test {
         // wrong before: it constrains `XID_Continue` from *below*, so every continue-only range --
         // the combining marks, the digits, the connectors, roughly 3,300 code points that no
         // `XID_Start` character vouches for -- was pinned at six characters and no more. Dropping
-        // `093E..094F` from the generator was measured to leave all eleven tests here green while
-        // every Devanagari vowel sign stopped continuing an identifier: the exact "refused only in
+        // `093E..094F` from the generator was measured to leave every test here green while every
+        // Devanagari vowel sign stopped continuing an identifier: the exact "refused only in
         // scripts whose writers are not the author" failure `isUnicodeIdentifier` claims to fix.
-        // So both cardinalities are asserted, and both directions are closed.
+        //
+        // Cardinality is not enough either, and that is the subtler half. A count constrains how
+        // many code points a table holds, never which -- so a range that *moves* passes it. Shifting
+        // `200C..200D` to `200B..200C` was measured to hold both counts at their exact expected
+        // values while U+200B ZERO WIDTH SPACE became a valid identifier character and U+200D ZERO
+        // WIDTH JOINER stopped being one. Two invisible characters trading places inside a
+        // validation boundary, behind a green run, is the worst version of this bug, so membership
+        // is pinned directly: an order-sensitive fingerprint over every accepted code point, which
+        // no shift, swap or substitution survives. `Int` is 32-bit two's complement and wraps
+        // identically on all six targets, so the value below is the same everywhere.
         var starts = 0
         var continues = 0
+        var startFingerprint = 0
+        var continueFingerprint = 0
         for (codePoint in 0..0x10FFFF) {
             val character = codePointString(codePoint)
             val leads = isUnicodeIdentifier(character)
             val continued = isUnicodeIdentifier("a$character")
-            if (continued) continues++
+            if (continued) {
+                continues++
+                continueFingerprint = continueFingerprint * 31 + codePoint
+            }
             if (!leads) continue
             starts++
+            startFingerprint = startFingerprint * 31 + codePoint
             // Built only on failure. `assertTrue`'s message parameter is a `String`, not a lambda,
             // so formatting it inline would run ~146,000 times per target on the passing path.
             if (!continued) {
@@ -142,9 +157,22 @@ class Uax31Test {
         // The counts are the database's own -- `XID_Start` plus `_`, which the pattern admits by
         // hand, and `XID_Continue`, which already holds `_`. Asserting them is what keeps this test
         // from passing on an empty table: every loop body above is skipped when nothing is an
-        // identifier character, and the test then asserts nothing at all.
+        // identifier character, and the test then asserts nothing at all. They are also the two
+        // numbers a human can check against the database by hand, which the fingerprint is not.
         assertEquals(XID_START_CODE_POINTS + 1, starts)
         assertEquals(XID_CONTINUE_CODE_POINTS, continues)
+        assertEquals(
+            TABLE_FINGERPRINT,
+            fingerprint(startFingerprint, continueFingerprint),
+            "the tables no longer hold the code points they held. If the Unicode database was " +
+                "deliberately replaced, this is the value to record in `TABLE_FINGERPRINT`",
+        )
+    }
+
+    /** [start] and [continues] as the one string [TABLE_FINGERPRINT] records, unsigned and hex. */
+    private fun fingerprint(start: Int, continues: Int): String {
+        fun hex(value: Int) = (value.toLong() and 0xFFFFFFFFL).toString(16).padStart(8, '0')
+        return "${hex(start)}:${hex(continues)}"
     }
 
     @Test
@@ -182,5 +210,18 @@ class Uax31Test {
          * half let through.
          */
         const val XID_CONTINUE_CODE_POINTS = 149_221
+
+        /**
+         * An order-sensitive fingerprint over every code point the two tables accept.
+         *
+         * The counts above say how many; this says which. A range that moves without changing
+         * size -- `200C..200D` becoming `200B..200C`, say -- satisfies both counts and the
+         * superset relation while silently trading one character for another, and only this
+         * catches it. Recorded rather than derived on purpose: a value recomputed from the same
+         * tables it checks would agree with anything.
+         *
+         * Regenerate by replacing the database and taking the value the failure message prints.
+         */
+        const val TABLE_FINGERPRINT = "aa165066:3bf8e27c"
     }
 }

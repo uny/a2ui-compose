@@ -259,6 +259,13 @@ public class CatalogChildResolver private constructor(
          * rather than raising: the walk this feeds is what draws a partially arrived surface, and
          * the specification requires it to render placeholders rather than to stop. Reporting the
          * unknown catalog is [CatalogValidator]'s job.
+         *
+         * **Two catalogs sharing a `catalogId` resolve to the LAST one given**, which is what
+         * [CatalogValidator.of] documents for the same input. It used to be the first here, and
+         * the disagreement was the quiet kind: the checker read one catalog's schema and this read
+         * the other's property names off the same component, so a child could be checked against a
+         * definition it was never found under. A renderer should still refuse the duplicate before
+         * either sees it -- agreeing is not the same as being right.
          */
         public fun of(
             catalogs: List<CatalogDefinition>,

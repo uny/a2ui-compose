@@ -5,3 +5,9 @@
 a2ui-core/spec/**       text eol=lf
 a2ui-compose/spec/**    text eol=lf
 a2ui-gallery/spec/**    text eol=lf
+
+# The vendored Unicode Character Database is the input the `XID_Start` / `XID_Continue` tables are
+# derived from, and `a2ui-core/unicode/README.md` records its SHA-256. Without this, a checkout with
+# `core.autocrlf=true` rewrites it to CRLF, the recorded digest stops matching a file nobody edited,
+# and `generateXidTables` fails on a working tree that is byte-correct in the index.
+a2ui-core/unicode/**    text eol=lf

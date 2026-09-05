@@ -197,6 +197,14 @@ public data class ComponentDefinition(
  * leave [dev.ynagai.a2ui.core.validation.CatalogValidator.of] and
  * [dev.ynagai.a2ui.core.validation.CompositionValidator] — both of which take definitions
  * directly — holding catalogs no wire catalog could be.
+ *
+ * That invariant is established at construction, which is all a constructor can do: **the maps
+ * passed to it must not be retained and mutated by the caller.** [components], [functions] and
+ * [schemaKeywords] are held as given rather than copied, so a caller that keeps a
+ * `MutableMap` it passed in and writes to it afterwards puts names into this catalog that the
+ * check never saw, and the serializer will then emit them. Pass a map this type can own — a
+ * literal, a `buildMap`, or `toMap()` on anything still reachable from the caller. Decoded
+ * catalogs are unaffected: the serializer builds their maps and hands over the only reference.
  */
 @Serializable(with = CatalogDefinitionSerializer::class)
 public data class CatalogDefinition(
@@ -210,7 +218,7 @@ public data class CatalogDefinition(
     public val schemaKeywords: Map<String, JsonElement> = emptyMap(),
 ) {
     init {
-        checkEntityNames(components, functions)
+        checkEntityNames(components, functions, schemaKeywords)
     }
 
     /** [protocolVersion] with the schema default applied. */

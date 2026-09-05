@@ -4,6 +4,8 @@ import dev.ynagai.a2ui.core.validation.isUnicodeIdentifier
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Checks a catalog's entity names against the rule the specification states in prose.
@@ -30,7 +32,18 @@ import kotlinx.serialization.json.JsonObject
 internal fun checkEntityNames(
     components: Map<String, ComponentDefinition>,
     functions: Map<String, FunctionDefinition>,
+    schemaKeywords: Map<String, JsonElement> = emptyMap(),
 ) {
+    // A definition may reach its properties through the catalog's own `$defs` rather than declare
+    // them inline, and `schemaKeywords` carries that `$defs` precisely so those references still
+    // resolve. Walking only the definitions would leave `{"$defs":{"Base":{"properties":
+    // {"bad-name":…}}},"components":{"Text":{"$ref":"#/$defs/Base"}}}` accepted, with `bad-name`
+    // a live component property. The upstream harness has this gap too -- it walks `components`
+    // and `functions` alone -- so closing it is deliberately stricter than the reference
+    // implementation, and stricter only about names the prose rule already forbids.
+    (schemaKeywords[DEFS] as? JsonObject)?.let { defs ->
+        checkPropertyNames(buildJsonObject { put(DEFS, defs) }, "the catalog's `$DEFS`")
+    }
     components.forEach { (name, definition) ->
         // Rule 4 of the same section, and enforced here for the same reason as rules 1-3: a
         // catalog may not redefine the surface's implicit root. `catalog_definition.json` does
@@ -149,10 +162,13 @@ private const val PROPERTIES: String = "properties"
 private val SCHEMA_MAPS: Set<String> = setOf(
     PROPERTIES,
     "patternProperties",
-    "\$defs",
+    DEFS,
     "definitions",
     "dependentSchemas",
 )
+
+/** Where a catalog keeps the subschemas its definitions reference rather than inline. */
+private const val DEFS: String = "\$defs"
 
 /** The prefix `a2ui_protocol.md`'s System Namespace Rule reserves. */
 private const val SYSTEM_FUNCTION_PREFIX: String = "@"

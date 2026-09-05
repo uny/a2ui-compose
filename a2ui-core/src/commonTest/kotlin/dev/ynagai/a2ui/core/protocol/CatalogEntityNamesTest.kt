@@ -189,6 +189,40 @@ class CatalogEntityNamesTest {
     }
 
     @Test
+    fun a_property_name_reached_only_through_the_catalogs_own_defs_is_checked() {
+        // A definition may reach its properties by `$ref` into the catalog's `$defs` instead of
+        // declaring them inline, and `schemaKeywords` carries that `$defs` so the reference still
+        // resolves. Was: only the definitions were walked, so moving the name one level out was
+        // enough to get it past the rule. The upstream harness still accepts this, deliberately.
+        val source = """
+            {
+              "catalogId": "example.com:testing",
+              "${'$'}defs": {"Base": {"properties": {"bad-name": {"type": "string"}}}},
+              "components": {"Text": {"${'$'}ref": "#/${'$'}defs/Base"}}
+            }
+        """.trimIndent()
+        val failure = assertFailsWith<A2uiFormatException> {
+            json.decodeFromString<CatalogDefinition>(source)
+        }
+        assertTrue(
+            failure.message.orEmpty().contains("bad-name"),
+            "refused for the wrong reason: ${failure.message}",
+        )
+        // The `$defs` entry names are not themselves entity names, exactly as inside a definition.
+        val named = """
+            {
+              "catalogId": "example.com:testing",
+              "${'$'}defs": {"not-an-identifier": {"properties": {"ok": {"type": "string"}}}},
+              "components": {"Text": {"type": "object"}}
+            }
+        """.trimIndent()
+        assertEquals(
+            setOf("Text"),
+            json.decodeFromString<CatalogDefinition>(named).components.keys,
+        )
+    }
+
+    @Test
     fun an_entry_named_after_an_instance_keyword_is_walked_in_every_name_map() {
         // `properties` is not the only map whose keys are names their author chose. A `$defs`
         // entry or a `patternProperties` branch may be named `default` too, and the carve-out

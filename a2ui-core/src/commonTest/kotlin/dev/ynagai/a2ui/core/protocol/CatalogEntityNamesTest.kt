@@ -225,21 +225,108 @@ class CatalogEntityNamesTest {
     @Test
     fun an_entry_named_after_an_instance_keyword_is_walked_in_every_name_map() {
         // `properties` is not the only map whose keys are names their author chose. A `$defs`
-        // entry or a `patternProperties` branch may be named `default` too, and the carve-out
-        // must not follow the word into any of them. Was: fixing this for `properties` alone
-        // left the same false negative one keyword to the side.
-        listOf("const", "default", "enum", "examples").forEach { name ->
-            val viaDefs =
-                """{"${'$'}defs":{"$name":{"properties":{"bad-name":{"type":"string"}}}},"${'$'}ref":"#/${'$'}defs/$name"}"""
-            assertFailsWith<A2uiFormatException>("a `${'$'}defs` entry named `$name` hid its subschema") {
-                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(viaDefs))
-            }
-            val viaPattern =
-                """{"patternProperties":{"$name":{"properties":{"bad-name":{"type":"string"}}}}}"""
-            assertFailsWith<A2uiFormatException>("a `patternProperties` branch named `$name` hid its subschema") {
-                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(viaPattern))
+        // entry, a `patternProperties` branch or a `dependencies` trigger may be named `default`
+        // too, and the carve-out must not follow the word into any of them. Was: fixing this for
+        // `properties` alone left the same false negative one keyword to the side.
+        //
+        // Every map is listed, not a sample of them. The test that stood here walked two of the
+        // five and stayed green while `dependencies` -- absent from the set entirely -- hid a
+        // name; a list that samples cannot report the member that is missing.
+        NAME_MAPS.forEach { keyword ->
+            listOf("const", "default", "enum", "examples").forEach { name ->
+                val body =
+                    """{"$keyword":{"$name":{"properties":{"bad-name":{"type":"string"}}}}}"""
+                val failure = assertFailsWith<A2uiFormatException>(
+                    "a `$keyword` entry named `$name` hid its subschema",
+                ) {
+                    json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+                }
+                // Which name it refused, not merely that it refused: a future change that ran a
+                // `patternProperties` regex through the identifier check would throw here too,
+                // and this test would pass while the false negative it guards was back.
+                assertTrue(
+                    failure.message.orEmpty().contains("bad-name"),
+                    "`$keyword`/`$name` was refused for the wrong reason: ${failure.message}",
+                )
             }
         }
+    }
+
+    @Test
+    fun an_entry_named_after_a_schema_keyword_is_a_name_in_every_name_map() {
+        // The opposite direction, and the same list. An author may call a `$defs` entry or a
+        // `dependencies` trigger `properties`; what sits under it is that entry's subschema, and
+        // its keywords are keywords. Was: `dependencies` was read as a schema, so the entry name
+        // `properties` was taken for the keyword and `$ref` beneath it run through the identifier
+        // check -- refusing a catalog that breaks no rule.
+        NAME_MAPS.forEach { keyword ->
+            val body = """{"$keyword":{"properties":{"${'$'}ref":"#/${'$'}defs/S"}}}"""
+            val decoded = json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            assertEquals(setOf("Text"), decoded.components.keys, "`$keyword` should have been kept")
+        }
+    }
+
+    @Test
+    fun a_draft_07_dependencies_entry_may_hold_required_names_rather_than_a_subschema() {
+        // `dependencies` is the one name map whose entry is not always a schema: draft-07 lets it
+        // hold an array of property names instead. The walk bottoms out on the strings in it, as
+        // on any other array, so admitting the keyword must not start refusing that form.
+        val body = """{"type":"object","dependencies":{"a":["b","c"]}}"""
+        val decoded = json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+        assertEquals(setOf("Text"), decoded.components.keys)
+    }
+
+    @Test
+    fun a_schema_keyword_the_catalog_carries_is_walked_whatever_shape_it_arrived_in() {
+        // `CatalogDefinitionSerializer` selects the carried keywords by key name and never by
+        // shape -- `rejectUnknownKeys` checks names alone -- so `$id` and `$schema`, which JSON
+        // Schema says are strings, may in fact arrive holding an object, and `$defs` may arrive
+        // holding an array. A `$ref` is a JSON pointer and reaches any of them.
+        //
+        // Was: only `$defs` was read, and only where it had been an object, so all three of those
+        // regions were unwalked and `$ref`-reachable. Moving the name from `$defs` to `$id`, or
+        // wrapping it in a one-element array, was enough to get it past the rule.
+        listOf(
+            """"${'$'}id": {"properties": {"bad-name": {"type": "string"}}}""" to "#/${'$'}id",
+            """"${'$'}schema": {"properties": {"bad-name": {"type": "string"}}}""" to "#/${'$'}schema",
+            """"${'$'}defs": [{"properties": {"bad-name": {"type": "string"}}}]""" to "#/${'$'}defs/0",
+        ).forEach { (carried, reference) ->
+            val source = """
+                {
+                  "catalogId": "example.com:testing",
+                  $carried,
+                  "components": {"Text": {"${'$'}ref": "$reference"}}
+                }
+            """.trimIndent()
+            val failure = assertFailsWith<A2uiFormatException>("`$carried` went unwalked") {
+                json.decodeFromString<CatalogDefinition>(source)
+            }
+            assertTrue(
+                failure.message.orEmpty().contains("bad-name"),
+                "`$carried` was refused for the wrong reason: ${failure.message}",
+            )
+        }
+    }
+
+    @Test
+    fun the_shapes_those_keywords_normally_hold_are_left_alone() {
+        // Walking the carried keywords uniformly must cost nothing on the strings they hold when
+        // a catalog is written the way JSON Schema says to write it; the walk bottoms out on a
+        // primitive. Without this, the test above would pass just as well for a check that
+        // refused every catalog carrying an `$id`.
+        val source = """
+            {
+              "catalogId": "example.com:testing",
+              "${'$'}id": "https://example.com/catalog.json",
+              "${'$'}schema": "https://json-schema.org/draft/2020-12/schema",
+              "${'$'}defs": {"Base": {"properties": {"ok": {"type": "string"}}}},
+              "components": {"Text": {"${'$'}ref": "#/${'$'}defs/Base"}}
+            }
+        """.trimIndent()
+        assertEquals(
+            setOf("Text"),
+            json.decodeFromString<CatalogDefinition>(source).components.keys,
+        )
     }
 
     @Test
@@ -372,6 +459,22 @@ class CatalogEntityNamesTest {
     }
 
     // --- fixtures ---------------------------------------------------------------------------
+
+    /**
+     * The keywords whose keys are names their author chose, minus `properties` itself.
+     *
+     * `properties` has its own pair of tests above, because its keys are the only ones the naming
+     * rule governs. The rest are here to be walked as the schemas they are, and this list is the
+     * whole of them rather than a sample: the bug that shipped was a *missing* member, which a
+     * sample cannot report.
+     */
+    private val NAME_MAPS = listOf(
+        "patternProperties",
+        "${'$'}defs",
+        "definitions",
+        "dependentSchemas",
+        "dependencies",
+    )
 
     private fun catalog(
         component: String = "Text",

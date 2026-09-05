@@ -515,10 +515,11 @@ class CatalogEntityNamesTest {
      * `properties` has its own pair of tests above, because its keys are the only ones the naming
      * rule governs. The rest are here to be walked as the schemas they are.
      *
-     * Derived from [SCHEMA_MAPS] rather than retyped, so the list cannot drift from the set it is
-     * meant to cover. The bug that shipped was a *missing* member; a hand-written list reports a
-     * member deleted from the set and stays green on one added to it, which is the same blind spot
-     * one keyword to the side.
+     * Derived from [SCHEMA_MAPS] rather than retyped, so a keyword added to the set is covered
+     * here without anyone remembering to widen a list. That is one direction only: the derived
+     * list shrinks with the set, so a keyword *dropped* from it silently drops out of these tests
+     * too. [the_closed_set_of_name_maps_is_pinned_and_not_merely_iterated] is the other direction,
+     * and the two are only a guard together.
      */
     private val NAME_MAPS = (SCHEMA_MAPS - PROPERTIES).toList()
 

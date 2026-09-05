@@ -187,8 +187,11 @@ internal const val PROPERTIES: String = "properties"
  * bottoms out on the strings in it as it does on any other array.
  *
  * `internal` rather than private so `CatalogEntityNamesTest` can iterate this set rather than
- * retype it. A hand-written copy reports a member deleted from here and stays green on one added,
- * so the test guarding against a missing member would have had the same gap as the code.
+ * retype it -- a retyped copy stays green on a member added here, and so would cover a seventh
+ * keyword with nothing. Iterating alone is only half of it: a derived list also shrinks when a
+ * member is *dropped*, which is how the bug this set was widened for would reopen unnoticed. The
+ * other half is `the_closed_set_of_name_maps_is_pinned_and_not_merely_iterated`, which pins the
+ * membership below. Change either and that test must be changed too, on purpose.
  */
 internal val SCHEMA_MAPS: Set<String> = setOf(
     PROPERTIES,

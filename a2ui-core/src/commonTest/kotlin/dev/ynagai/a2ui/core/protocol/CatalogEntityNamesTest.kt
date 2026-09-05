@@ -189,6 +189,26 @@ class CatalogEntityNamesTest {
     }
 
     @Test
+    fun an_entry_named_after_an_instance_keyword_is_walked_in_every_name_map() {
+        // `properties` is not the only map whose keys are names their author chose. A `$defs`
+        // entry or a `patternProperties` branch may be named `default` too, and the carve-out
+        // must not follow the word into any of them. Was: fixing this for `properties` alone
+        // left the same false negative one keyword to the side.
+        listOf("const", "default", "enum", "examples").forEach { name ->
+            val viaDefs =
+                """{"${'$'}defs":{"$name":{"properties":{"bad-name":{"type":"string"}}}},"${'$'}ref":"#/${'$'}defs/$name"}"""
+            assertFailsWith<A2uiFormatException>("a `${'$'}defs` entry named `$name` hid its subschema") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(viaDefs))
+            }
+            val viaPattern =
+                """{"patternProperties":{"$name":{"properties":{"bad-name":{"type":"string"}}}}}"""
+            assertFailsWith<A2uiFormatException>("a `patternProperties` branch named `$name` hid its subschema") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(viaPattern))
+            }
+        }
+    }
+
+    @Test
     fun a_property_named_after_a_schema_keyword_is_a_name_and_not_that_keyword() {
         // The same confusion in the opposite direction. A component may declare a property called
         // `properties`; its subschema's keywords are keywords, not entity names. Was: the walk

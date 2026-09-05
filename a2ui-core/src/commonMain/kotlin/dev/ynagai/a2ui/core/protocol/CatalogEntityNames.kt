@@ -82,11 +82,17 @@ internal fun checkEntityNames(
  * carries a JSON object that happens to use those two words, and no property name at all. The
  * upstream harness descends into them anyway and would refuse such a catalog; this does not.
  * Skipping them cannot hide a real violation, because no subschema is reachable through them --
- * but that is only true of those words in *keyword* position. A property may be *named* `default`,
- * and its value is then an ordinary subschema. So a `properties` map is never re-read as a schema:
- * its keys are names and its values are subschemas, and each is enqueued as one. Reading the map
- * as though it were a schema is what makes a property named `default` swallow its own subtree, and
- * a property named `properties` have its subschema's keywords mistaken for names.
+ * but that is only true of those words in *keyword* position. An entry may be *named* `default`,
+ * and its value is then an ordinary subschema.
+ *
+ * So the walk distinguishes the two objects JSON Schema is built from. In a *schema*, a key is a
+ * keyword. In one of [SCHEMA_MAPS], a key is a **name** its author chose and the value beneath it
+ * is a schema; such a map is therefore never popped as a schema, and its entries are enqueued one
+ * by one. Reading a name map as though it were a schema is what let an entry named `default`
+ * swallow its own subtree, and an entry named `properties` have its subschema's keywords mistaken
+ * for names. Note that this enumerates only the keywords whose value is a *map of names* -- a
+ * closed set of five -- and not the far larger, open set of keywords that may hold a subschema,
+ * which is what the blindness above exists to avoid having to track.
  *
  * Iterative rather than recursive. A definition is as deeply nested as whoever wrote it chose,
  * an inlined catalog is agent-controlled, and Kotlin/Native aborts the process on stack overflow
@@ -99,13 +105,14 @@ private fun checkPropertyNames(schema: JsonObject, owner: String) {
         when (val element = pending.removeLast()) {
             is JsonObject -> element.forEach { (key, value) ->
                 if (key in INSTANCE_KEYWORDS) return@forEach
-                if (key == PROPERTIES && value is JsonObject) {
-                    // The map's keys are the names the rule is about and its values are the
-                    // subschemas they carry. Enqueue the values, never the map: a key here is a
-                    // name, so matching it against the keywords above would read `default` as a
-                    // keyword and `properties` as one more `properties`.
-                    value.forEach { (propertyName, subschema) ->
-                        requireIdentifier(propertyName, "property name in $owner")
+                if (key in SCHEMA_MAPS && value is JsonObject) {
+                    // Enqueue the entries, never the map: a key here is a name its author chose,
+                    // so popping the map as a schema would read an entry named `default` as the
+                    // keyword and one named `properties` as another name map. Only under
+                    // `properties` is that name an entity name the rule governs -- a `$defs`
+                    // entry name and a `patternProperties` regex are neither.
+                    value.forEach { (name, subschema) ->
+                        if (key == PROPERTIES) requireIdentifier(name, "property name in $owner")
                         pending.addLast(subschema)
                     }
                     return@forEach
@@ -130,6 +137,22 @@ private fun requireIdentifier(name: String, what: String) {
 
 /** The keyword whose keys are the names the rule is about. */
 private const val PROPERTIES: String = "properties"
+
+/**
+ * The keywords whose value is a map from *names* to subschemas rather than a schema.
+ *
+ * JSON Schema 2020-12 has exactly these five, so unlike the set of keywords that may hold a
+ * subschema this one does not grow with the specification. Only [PROPERTIES] holds names the
+ * naming rule governs; the rest are here so that their entries are walked as the schemas they
+ * are, without their author-chosen keys being read as keywords or as entity names.
+ */
+private val SCHEMA_MAPS: Set<String> = setOf(
+    PROPERTIES,
+    "patternProperties",
+    "\$defs",
+    "definitions",
+    "dependentSchemas",
+)
 
 /** The prefix `a2ui_protocol.md`'s System Namespace Rule reserves. */
 private const val SYSTEM_FUNCTION_PREFIX: String = "@"

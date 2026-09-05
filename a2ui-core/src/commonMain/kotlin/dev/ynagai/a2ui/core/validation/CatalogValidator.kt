@@ -69,9 +69,10 @@ public class CatalogValidator private constructor(
      * `@index` is checked without resolving a catalog, because no catalog defines it: it is the
      * one system function v1.0 has, and `common_types.json` composes it into `FunctionCall`
      * alongside the catalog's own. A call that names any other `@`-prefixed function is *not*
-     * treated as a system function — the specification reserves no namespace around `@index` — so
-     * it goes through catalog resolution and fails there, which is where the message the agent
-     * needs comes from.
+     * treated as a system function: the specification reserves the whole `@` namespace but fills
+     * it with `@index` alone, and bars catalogs from defining into it. So such a call goes
+     * through catalog resolution and fails there, which is where the message the agent needs
+     * comes from.
      */
     public fun validate(
         call: FunctionCall,

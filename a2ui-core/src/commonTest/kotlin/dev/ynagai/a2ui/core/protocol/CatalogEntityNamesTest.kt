@@ -267,6 +267,25 @@ class CatalogEntityNamesTest {
     }
 
     @Test
+    fun an_entry_name_in_a_name_map_is_not_an_entity_name_in_any_of_them() {
+        // The negative half of the pair, and it has to walk the same whole list. Only `properties`
+        // holds names the rule governs; a `$defs` entry name, a `patternProperties` regex and a
+        // `dependencies` trigger are none of them, and refusing one would reject a catalog that
+        // breaks no rule. Was: `keys_that_are_not_property_names_are_left_alone` sampled two of
+        // the maps, so the mutation `if (key == PROPERTIES || key == "dependencies")` left the
+        // suite green while `{"dependencies": {"x-legacy": …}}` was newly refused.
+        NAME_MAPS.forEach { keyword ->
+            val body = """{"$keyword":{"x-legacy":{"type":"string"}}}"""
+            val decoded = json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            assertEquals(
+                setOf("Text"),
+                decoded.components.keys,
+                "a `$keyword` entry name is not an entity name and should have been kept",
+            )
+        }
+    }
+
+    @Test
     fun a_draft_07_dependencies_entry_may_hold_required_names_rather_than_a_subschema() {
         // `dependencies` is the one name map whose entry is not always a schema: draft-07 lets it
         // hold an array of property names instead. The walk bottoms out on the strings in it, as
@@ -286,9 +305,17 @@ class CatalogEntityNamesTest {
         // Was: only `$defs` was read, and only where it had been an object, so all three of those
         // regions were unwalked and `$ref`-reachable. Moving the name from `$defs` to `$id`, or
         // wrapping it in a one-element array, was enough to get it past the rule.
+        //
+        // Both shapes are crossed against all three keywords rather than tested on the diagonal:
+        // with only `$id`-as-object and `$defs`-as-array listed, a walk that read objects
+        // everywhere but arrays under `$defs` alone would pass, and `{"$id": [ … ]}` would still
+        // slip through.
         listOf(
             """"${'$'}id": {"properties": {"bad-name": {"type": "string"}}}""" to "#/${'$'}id",
             """"${'$'}schema": {"properties": {"bad-name": {"type": "string"}}}""" to "#/${'$'}schema",
+            """"${'$'}defs": {"B": {"properties": {"bad-name": {"type": "string"}}}}""" to "#/${'$'}defs/B",
+            """"${'$'}id": [{"properties": {"bad-name": {"type": "string"}}}]""" to "#/${'$'}id/0",
+            """"${'$'}schema": [{"properties": {"bad-name": {"type": "string"}}}]""" to "#/${'$'}schema/0",
             """"${'$'}defs": [{"properties": {"bad-name": {"type": "string"}}}]""" to "#/${'$'}defs/0",
         ).forEach { (carried, reference) ->
             val source = """
@@ -464,17 +491,14 @@ class CatalogEntityNamesTest {
      * The keywords whose keys are names their author chose, minus `properties` itself.
      *
      * `properties` has its own pair of tests above, because its keys are the only ones the naming
-     * rule governs. The rest are here to be walked as the schemas they are, and this list is the
-     * whole of them rather than a sample: the bug that shipped was a *missing* member, which a
-     * sample cannot report.
+     * rule governs. The rest are here to be walked as the schemas they are.
+     *
+     * Derived from [SCHEMA_MAPS] rather than retyped, so the list cannot drift from the set it is
+     * meant to cover. The bug that shipped was a *missing* member; a hand-written list reports a
+     * member deleted from the set and stays green on one added to it, which is the same blind spot
+     * one keyword to the side.
      */
-    private val NAME_MAPS = listOf(
-        "patternProperties",
-        "${'$'}defs",
-        "definitions",
-        "dependentSchemas",
-        "dependencies",
-    )
+    private val NAME_MAPS = (SCHEMA_MAPS - PROPERTIES).toList()
 
     private fun catalog(
         component: String = "Text",

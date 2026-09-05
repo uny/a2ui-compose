@@ -46,10 +46,20 @@ internal fun checkEntityNames(
     // name and never by shape -- `rejectUnknownKeys` checks names alone. So `$id` and `$schema`,
     // which JSON Schema says are strings, may in fact hold an object, and `$defs` may hold an
     // array. Reading `$defs` alone, and only where it had been an object, left all three of those
-    // regions unwalked and `$ref`-reachable; walking the map uniformly leaves none, and costs
-    // nothing on the strings these keywords normally hold, which the walk bottoms out on.
+    // regions unwalked and `$ref`-reachable; walking the map uniformly reaches every one of them,
+    // and costs nothing on the strings these keywords normally hold, which the walk bottoms out
+    // on.
+    //
+    // What this does *not* reach is the instance carve-out below: a region under `const`,
+    // `default`, `enum` or `examples` is skipped wherever it sits, so `{"$id":{"default":{
+    // "properties":{"bad-name":…}}}}` is still accepted for a `$ref` of `#/$id/default`. That is
+    // the carve-out's own gap -- `#/$defs/Base/default` has it too, and has since the carve-out
+    // was written -- not this walk's, and closing it means making the walk position-aware.
     schemaKeywords.forEach { (keyword, value) ->
-        checkPropertyNames(buildJsonObject { put(keyword, value) }, "the catalog's `$keyword`")
+        checkPropertyNames(
+            buildJsonObject { put(keyword, value) },
+            "the catalog's `${keyword.take(ERROR_EXCERPT)}`",
+        )
     }
     components.forEach { (name, definition) ->
         // Rule 4 of the same section, and enforced here for the same reason as rules 1-3: a
@@ -156,7 +166,7 @@ private fun requireIdentifier(name: String, what: String) {
 }
 
 /** The keyword whose keys are the names the rule is about. */
-private const val PROPERTIES: String = "properties"
+internal const val PROPERTIES: String = "properties"
 
 /**
  * The keywords whose value is a map from *names* to subschemas rather than a schema.
@@ -175,8 +185,12 @@ private const val PROPERTIES: String = "properties"
  * accepted, and `{"dependencies":{"properties":{"$ref":…}}}` refused for a `$ref` that is not a
  * name. Its entry may hold an array of required property names rather than a subschema; the walk
  * bottoms out on the strings in it as it does on any other array.
+ *
+ * `internal` rather than private so `CatalogEntityNamesTest` can iterate this set rather than
+ * retype it. A hand-written copy reports a member deleted from here and stays green on one added,
+ * so the test guarding against a missing member would have had the same gap as the code.
  */
-private val SCHEMA_MAPS: Set<String> = setOf(
+internal val SCHEMA_MAPS: Set<String> = setOf(
     PROPERTIES,
     "patternProperties",
     DEFS,

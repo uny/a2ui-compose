@@ -267,6 +267,28 @@ class CatalogEntityNamesTest {
     }
 
     @Test
+    fun the_closed_set_of_name_maps_is_pinned_and_not_merely_iterated() {
+        // [NAME_MAPS] is derived from [SCHEMA_MAPS], so a keyword added to the set is walked by
+        // the tests above without anyone remembering to widen a list. Derivation alone, though,
+        // makes those tests agree with whatever the set happens to say: delete `dependencies`
+        // from it and they shrink to four and stay green, which is the bug this PR fixed. This
+        // is the half that notices a deletion. The set is closed, so changing it is a decision
+        // and should have to be made twice.
+        assertEquals(
+            setOf(
+                "properties",
+                "patternProperties",
+                "${'$'}defs",
+                "definitions",
+                "dependentSchemas",
+                "dependencies",
+            ),
+            SCHEMA_MAPS,
+            "the name maps are a closed set; adding or dropping one is a decision, not an edit",
+        )
+    }
+
+    @Test
     fun an_entry_name_in_a_name_map_is_not_an_entity_name_in_any_of_them() {
         // The negative half of the pair, and it has to walk the same whole list. Only `properties`
         // holds names the rule governs; a `$defs` entry name, a `patternProperties` regex and a

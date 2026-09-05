@@ -190,6 +190,13 @@ public data class ComponentDefinition(
  * [schemaKeywords] carries `$schema`, `$id`, and `$defs` through unread. A definition may
  * reference `#/$defs/...`, so dropping them would leave a re-encoded catalog — an inline one
  * carried in [RendererCapabilitiesV1.inlineCatalogs], say — with unresolvable references.
+ *
+ * The specification's "Catalog Entity Naming Rules" are an invariant of this type rather than of
+ * its serializer, and [checkEntityNames] is where they are stated. A catalog reaches a checker
+ * three ways and only one of them decodes, so a rule enforced on the way in from the wire would
+ * leave [dev.ynagai.a2ui.core.validation.CatalogValidator.of] and
+ * [dev.ynagai.a2ui.core.validation.CompositionValidator] — both of which take definitions
+ * directly — holding catalogs no wire catalog could be.
  */
 @Serializable(with = CatalogDefinitionSerializer::class)
 public data class CatalogDefinition(
@@ -202,6 +209,10 @@ public data class CatalogDefinition(
     public val functions: Map<String, FunctionDefinition> = emptyMap(),
     public val schemaKeywords: Map<String, JsonElement> = emptyMap(),
 ) {
+    init {
+        checkEntityNames(components, functions)
+    }
+
     /** [protocolVersion] with the schema default applied. */
     public val effectiveProtocolVersion: String
         get() = protocolVersion ?: DEFAULT_PROTOCOL_VERSION
@@ -399,16 +410,6 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
             description = obj.optionalString("description", "CatalogDefinition"),
             instructions = obj.optionalString("instructions", "CatalogDefinition"),
             components = obj.optionalObject("components", "CatalogDefinition").orEmpty()
-                .onEach { (name, _) ->
-                    // `components.propertyNames` forbids the reserved container outright: a
-                    // catalog may not redefine the surface's implicit root.
-                    if (name == Surface.COMPONENT) {
-                        throw A2uiFormatException(
-                            "CatalogDefinition: `${Surface.COMPONENT}` is reserved and cannot be " +
-                                "defined by a catalog.",
-                        )
-                    }
-                }
                 .mapValues { (_, element) ->
                     json.decodeFromJsonElement(ComponentDefinitionSerializer, element)
                 },

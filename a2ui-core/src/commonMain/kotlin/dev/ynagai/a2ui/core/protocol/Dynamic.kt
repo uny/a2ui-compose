@@ -54,10 +54,16 @@ public data class FunctionCall(
     /**
      * True when this call names a system function, which no catalog defines.
      *
-     * v1.0 defines exactly one — `@index` — and reserves no `@` namespace around it:
-     * `FunctionCall` is a `oneOf` over a catalog function and `IndexSystemFunction`, whose `call`
-     * is the constant `@index`. So any other `@`-prefixed name is a catalog function that no
-     * catalog defines, and must fail catalog resolution rather than skip it.
+     * The `@` namespace is reserved -- `a2ui_protocol.md`'s System Namespace Rule gives it to
+     * system context evaluations and bars catalogs from defining into it, which is why
+     * [checkEntityNames] refuses such a definition. But v1.0 *populates* it with exactly one
+     * name: `FunctionCall` is a `oneOf` over a catalog function and `IndexSystemFunction`, whose
+     * `call` is the constant `@index`.
+     *
+     * So a reserved prefix is not a system function. Any other `@`-prefixed name is a call on
+     * nothing — no catalog may define it and no system function answers to it — and it must fail
+     * catalog resolution rather than skip it, because that is where the message saying so comes
+     * from.
      */
     public val isSystemFunction: Boolean get() = call == INDEX
 

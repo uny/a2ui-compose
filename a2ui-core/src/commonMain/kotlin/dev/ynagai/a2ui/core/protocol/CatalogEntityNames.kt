@@ -81,7 +81,12 @@ internal fun checkEntityNames(
  * hold *instances*, not subschemas -- a component whose `default` is `{"properties": {"x-y": 1}}`
  * carries a JSON object that happens to use those two words, and no property name at all. The
  * upstream harness descends into them anyway and would refuse such a catalog; this does not.
- * Skipping them cannot hide a real violation, because no subschema is reachable through them.
+ * Skipping them cannot hide a real violation, because no subschema is reachable through them --
+ * but that is only true of those words in *keyword* position. A property may be *named* `default`,
+ * and its value is then an ordinary subschema. So a `properties` map is never re-read as a schema:
+ * its keys are names and its values are subschemas, and each is enqueued as one. Reading the map
+ * as though it were a schema is what makes a property named `default` swallow its own subtree, and
+ * a property named `properties` have its subschema's keywords mistaken for names.
  *
  * Iterative rather than recursive. A definition is as deeply nested as whoever wrote it chose,
  * an inlined catalog is agent-controlled, and Kotlin/Native aborts the process on stack overflow
@@ -95,7 +100,15 @@ private fun checkPropertyNames(schema: JsonObject, owner: String) {
             is JsonObject -> element.forEach { (key, value) ->
                 if (key in INSTANCE_KEYWORDS) return@forEach
                 if (key == PROPERTIES && value is JsonObject) {
-                    value.keys.forEach { requireIdentifier(it, "property name in $owner") }
+                    // The map's keys are the names the rule is about and its values are the
+                    // subschemas they carry. Enqueue the values, never the map: a key here is a
+                    // name, so matching it against the keywords above would read `default` as a
+                    // keyword and `properties` as one more `properties`.
+                    value.forEach { (propertyName, subschema) ->
+                        requireIdentifier(propertyName, "property name in $owner")
+                        pending.addLast(subschema)
+                    }
+                    return@forEach
                 }
                 pending.addLast(value)
             }

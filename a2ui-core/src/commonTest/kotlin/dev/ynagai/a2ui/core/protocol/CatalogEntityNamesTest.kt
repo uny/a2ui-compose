@@ -169,6 +169,56 @@ class CatalogEntityNamesTest {
         }
     }
 
+    @Test
+    fun a_property_named_after_an_instance_keyword_still_has_its_subschema_walked() {
+        // The carve-out above is about those four words in *keyword* position. A property may be
+        // named `default`, and its value is then an ordinary subschema -- so the exemption must
+        // not follow the word into a `properties` map. Was: the walk read the map as a schema, so
+        // the key `default` matched the exemption and the whole subtree under it went unchecked,
+        // which is the one thing the carve-out's rationale claims cannot happen.
+        listOf("const", "default", "enum", "examples").forEach { name ->
+            val body = """{"properties":{"$name":{"type":"object","properties":{"bad-name":{"type":"string"}}}}}"""
+            val failure = assertFailsWith<A2uiFormatException>("a property named `$name` hid its subschema") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            }
+            assertTrue(
+                failure.message.orEmpty().contains("bad-name"),
+                "`$name` was refused for the wrong reason: ${failure.message}",
+            )
+        }
+    }
+
+    @Test
+    fun a_property_named_after_a_schema_keyword_is_a_name_and_not_that_keyword() {
+        // The same confusion in the opposite direction. A component may declare a property called
+        // `properties`; its subschema's keywords are keywords, not entity names. Was: the walk
+        // re-read the map as a schema, saw `properties` a second time, and ran `$ref` and
+        // `x-vendor` through the identifier check -- refusing a catalog that breaks no rule and
+        // that the specification's own harness accepts.
+        listOf(
+            """{"type":"object","properties":{"properties":{"${'$'}ref":"#/${'$'}defs/S"}}}""",
+            """{"type":"object","properties":{"properties":{"type":"object","x-vendor":1}}}""",
+        ).forEach { body ->
+            val decoded = json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            assertEquals(setOf("Text"), decoded.components.keys, "`$body` should have been kept")
+        }
+    }
+
+    @Test
+    fun a_name_too_long_to_quote_is_truncated_in_the_message() {
+        // The excerpt exists because an inlined catalog's keys are agent-chosen and reach a
+        // renderer's log through this message. Nothing else in the suite is long enough to notice
+        // if the truncation were dropped.
+        val name = "x".repeat(200) + "-not-an-identifier"
+        val failure = assertFailsWith<A2uiFormatException> {
+            json.decodeFromString<CatalogDefinition>(catalog(component = name))
+        }
+        assertTrue(
+            !failure.message.orEmpty().contains(name),
+            "the whole name was quoted rather than an excerpt: ${failure.message}",
+        )
+    }
+
     // --- every way a catalog reaches a checker ---------------------------------------------
 
     @Test

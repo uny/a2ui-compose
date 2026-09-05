@@ -103,7 +103,9 @@ class SchemaConformanceTest {
     @Test
     fun `only the index system function is a system function`() {
         // common_types.json: FunctionCall.oneOf = [catalog function, IndexSystemFunction], whose
-        // `call` is the constant "@index". No `@` namespace is reserved around it.
+        // `call` is the constant "@index". The `@` namespace *is* reserved -- no catalog may
+        // define into it -- but v1.0 populates it with `@index` alone, so a reserved prefix is
+        // not a system function and every other `@` name is a call on nothing.
         assertEquals(true, FunctionCall(FunctionCall.INDEX).isSystemFunction)
         assertEquals(false, FunctionCall("@notDefined").isSystemFunction)
         assertEquals(false, FunctionCall("@").isSystemFunction)

@@ -11,18 +11,38 @@
  * It declares every target the library publishes. Resolution is per-target, so a variant that was
  * published wrong, or not published at all, fails here and nowhere else.
  */
+import java.util.Properties
+
 plugins {
-    kotlin("multiplatform") version "2.4.10"
-    id("com.android.kotlin.multiplatform.library") version "9.3.2"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.4.10"
-    id("org.jetbrains.compose") version "1.12.0"
+    // From the producer's own version catalog, read across the build boundary in
+    // `settings.gradle.kts`. A consumer pinned to a different Kotlin than the library was built
+    // with is not a consumer this gate should be testing.
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.kmp.library)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose.multiplatform)
 }
+
+/**
+ * The version under test, passed in by the release workflow as `-Pa2uiVersion`.
+ *
+ * With no property it falls back to the producer's own `VERSION_NAME`, read across the build
+ * boundary rather than copied. A literal default here would keep naming `0.1.0-SNAPSHOT` after the
+ * producer moved on, and because `mavenLocal()` still holds that older snapshot the by-hand run
+ * would go green against artifacts that are not the ones just published.
+ */
+val a2uiVersion: String =
+    (findProperty("a2uiVersion") as String?)?.takeIf { it.isNotBlank() }
+        ?: Properties()
+            .apply { file("../gradle.properties").inputStream().use { load(it) } }
+            .getProperty("VERSION_NAME")
+        ?: error("No -Pa2uiVersion, and VERSION_NAME is not set in ../gradle.properties")
 
 kotlin {
     android {
         namespace = "dev.ynagai.a2ui.smoketest"
-        compileSdk = 37
-        minSdk = 24
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
     }
 
     jvm()
@@ -38,12 +58,9 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            // The version under test, passed in by the release workflow. It defaults to the
-            // snapshot so the check is runnable by hand after a `publishToMavenLocal`.
-            val a2ui = (findProperty("a2uiVersion") as String?) ?: "0.1.0-SNAPSHOT"
-            implementation("dev.ynagai.a2ui:a2ui-core:$a2ui")
-            implementation("dev.ynagai.a2ui:a2ui-compose:$a2ui")
-            implementation("dev.ynagai.a2ui:a2ui-material3:$a2ui")
+            implementation("dev.ynagai.a2ui:a2ui-core:$a2uiVersion")
+            implementation("dev.ynagai.a2ui:a2ui-compose:$a2uiVersion")
+            implementation("dev.ynagai.a2ui:a2ui-material3:$a2uiVersion")
         }
     }
 }

@@ -5,7 +5,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 
 /**
  * Checks a catalog's entity names against the rule the specification states in prose.
@@ -34,15 +33,33 @@ internal fun checkEntityNames(
     functions: Map<String, FunctionDefinition>,
     schemaKeywords: Map<String, JsonElement> = emptyMap(),
 ) {
-    // A definition may reach its properties through the catalog's own `$defs` rather than declare
-    // them inline, and `schemaKeywords` carries that `$defs` precisely so those references still
-    // resolve. Walking only the definitions would leave `{"$defs":{"Base":{"properties":
-    // {"bad-name":…}}},"components":{"Text":{"$ref":"#/$defs/Base"}}}` accepted, with `bad-name`
-    // a live component property. The upstream harness has this gap too -- it walks `components`
-    // and `functions` alone -- so closing it is deliberately stricter than the reference
-    // implementation, and stricter only about names the prose rule already forbids.
-    (schemaKeywords[DEFS] as? JsonObject)?.let { defs ->
-        checkPropertyNames(buildJsonObject { put(DEFS, defs) }, "the catalog's `$DEFS`")
+    // A definition may reach its properties through a keyword the catalog carries rather than
+    // declare them inline, and `schemaKeywords` is what carries them. Walking only the definitions
+    // would leave `{"$defs":{"Base":{"properties":{"bad-name":…}}},"components":{"Text":
+    // {"$ref":"#/$defs/Base"}}}` accepted, with `bad-name` a live component property. The upstream
+    // harness has this gap too -- it walks `components` and `functions` alone -- so closing it is
+    // deliberately stricter than the reference implementation, and stricter only about names the
+    // prose rule already forbids.
+    //
+    // Every carried keyword is walked, and each whatever shape it arrived in. `$ref` is a JSON
+    // pointer, so it reaches any of them, while `CatalogDefinitionSerializer` selects them by key
+    // name and never by shape -- `rejectUnknownKeys` checks names alone. So `$id` and `$schema`,
+    // which JSON Schema says are strings, may in fact hold an object, and `$defs` may hold an
+    // array. Reading `$defs` alone, and only where it had been an object, left all three of those
+    // regions unwalked and `$ref`-reachable; walking the map uniformly reaches every one of them,
+    // and costs nothing on the strings these keywords normally hold, which the walk bottoms out
+    // on.
+    //
+    // What this does *not* reach is the instance carve-out below: a region under `const`,
+    // `default`, `enum` or `examples` is skipped wherever it sits, so `{"$id":{"default":{
+    // "properties":{"bad-name":…}}}}` is still accepted for a `$ref` of `#/$id/default`. That is
+    // the carve-out's own gap -- `#/$defs/Base/default` has it too, and has since the carve-out
+    // was written -- not this walk's, and closing it means making the walk position-aware.
+    schemaKeywords.forEach { (keyword, value) ->
+        checkPropertyNames(
+            buildJsonObject { put(keyword, value) },
+            "the catalog's `${keyword.take(ERROR_EXCERPT)}`",
+        )
     }
     components.forEach { (name, definition) ->
         // Rule 4 of the same section, and enforced here for the same reason as rules 1-3: a
@@ -104,7 +121,7 @@ internal fun checkEntityNames(
  * by one. Reading a name map as though it were a schema is what let an entry named `default`
  * swallow its own subtree, and an entry named `properties` have its subschema's keywords mistaken
  * for names. Note that this enumerates only the keywords whose value is a *map of names* -- a
- * closed set of five -- and not the far larger, open set of keywords that may hold a subschema,
+ * closed set of six -- and not the far larger, open set of keywords that may hold a subschema,
  * which is what the blindness above exists to avoid having to track.
  *
  * Iterative rather than recursive. A definition is as deeply nested as whoever wrote it chose,
@@ -149,22 +166,40 @@ private fun requireIdentifier(name: String, what: String) {
 }
 
 /** The keyword whose keys are the names the rule is about. */
-private const val PROPERTIES: String = "properties"
+internal const val PROPERTIES: String = "properties"
 
 /**
  * The keywords whose value is a map from *names* to subschemas rather than a schema.
  *
- * JSON Schema 2020-12 has exactly these five, so unlike the set of keywords that may hold a
- * subschema this one does not grow with the specification. Only [PROPERTIES] holds names the
- * naming rule governs; the rest are here so that their entries are walked as the schemas they
- * are, without their author-chosen keys being read as keywords or as entity names.
+ * Unlike the set of keywords that may hold a subschema, this one is closed. JSON Schema 2020-12
+ * has four -- [PROPERTIES], `patternProperties`, [DEFS] and `dependentSchemas` -- and the earlier
+ * drafts a catalog may still be written against spell the last two `definitions` and
+ * `dependencies`. Only [PROPERTIES] holds names the naming rule governs; the rest are here so
+ * that their entries are walked as the schemas they are, without their author-chosen keys being
+ * read as keywords or as entity names.
+ *
+ * `dependencies` earns its place by the failure its absence caused, which is the one the other
+ * five are here to prevent: it is draft-07's `dependentSchemas`, its subschemas apply directly
+ * with no `$ref` needed, and while it was missing an entry *named* `default` was read as the
+ * instance keyword -- so `{"dependencies":{"default":{"properties":{"bad-name":…}}}}` was
+ * accepted, and `{"dependencies":{"properties":{"$ref":…}}}` refused for a `$ref` that is not a
+ * name. Its entry may hold an array of required property names rather than a subschema; the walk
+ * bottoms out on the strings in it as it does on any other array.
+ *
+ * `internal` rather than private so `CatalogEntityNamesTest` can iterate this set rather than
+ * retype it -- a retyped copy stays green on a member added here, and so would cover a seventh
+ * keyword with nothing. Iterating alone is only half of it: a derived list also shrinks when a
+ * member is *dropped*, which is how the bug this set was widened for would reopen unnoticed. The
+ * other half is `the_closed_set_of_name_maps_is_pinned_and_not_merely_iterated`, which pins the
+ * membership below. Change either and that test must be changed too, on purpose.
  */
-private val SCHEMA_MAPS: Set<String> = setOf(
+internal val SCHEMA_MAPS: Set<String> = setOf(
     PROPERTIES,
     "patternProperties",
     DEFS,
     "definitions",
     "dependentSchemas",
+    "dependencies",
 )
 
 /** Where a catalog keeps the subschemas its definitions reference rather than inline. */

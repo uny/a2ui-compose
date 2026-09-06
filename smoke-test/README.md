@@ -76,7 +76,10 @@ mv ~/.m2/repository/dev/ynagai/a2ui/a2ui-core-wasm-js /tmp/
 mv /tmp/a2ui-core-wasm-js ~/.m2/repository/dev/ynagai/a2ui/
 ```
 
-`Could not find dev.ynagai.a2ui:a2ui-core-wasm-js:0.1.0-SNAPSHOT`.
+`Could not find dev.ynagai.a2ui:a2ui-core-wasm-js:0.1.0-SNAPSHOT`. This keeps working after
+`0.1.0` is on Central because `dev.ynagai.a2ui` is bound to `mavenLocal()` by `exclusiveContent`
+and is not looked up anywhere else -- otherwise the fallback would answer and the control would
+stop biting.
 
 **Only the metadata variant broken**, every platform variant left intact -- the half a
 per-target-only gate cannot see, and the reason the task name above changed:

@@ -100,8 +100,14 @@ kotlin {
  *
  * `signAllPublications` rather than a conditional: an unsigned artifact is rejected by the
  * portal's validation, so making it depend on a key being present would turn a missing secret
- * into a failure at the end of a release run instead of the start of one. `publishToMavenLocal`
- * is exempted by the plugin, so the consumer smoke test needs no key.
+ * into a failure at the end of a release run instead of the start of one.
+ *
+ * The exemption is for a `-SNAPSHOT` version, **not** for a local publish -- so at a release
+ * version `publishToMavenLocal` signs too, and needs the key. Measured with no key present:
+ * `-PVERSION_NAME=0.1.0-reviewprobe` fails with `signAndroidPublication FAILED / No configured
+ * signatory`, while the same command at `0.1.0-reviewprobe-SNAPSHOT` succeeds with every `sign*`
+ * task SKIPPED. `release.yml` therefore passes the signing secrets to its local-publish step as
+ * well, which is also what makes the fail-early property above true rather than aspirational.
  *
  * The javadoc jar is a real one. Central requires the artifact either way, and the KDoc in this
  * library carries the reasoning behind its own rules -- why the catalog walk descends where it

@@ -27,12 +27,32 @@ copy of `gradle-wrapper.jar` is a second thing to keep pinned:
 ```bash
 ./gradlew publishToMavenLocal
 ./gradlew -p smoke-test \
-  compileKotlinMetadata compileKotlinJvm compileKotlinJs compileKotlinWasmJs \
+  compileCommonMainKotlinMetadata compileKotlinJvm compileKotlinJs compileKotlinWasmJs \
   compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinMacosArm64 \
   compileAndroidMain
 ```
 
-`-Pa2uiVersion=<version>` selects what to resolve; it defaults to `0.1.0-SNAPSHOT`.
+Needs an Android SDK (`ANDROID_HOME`, or `sdk.dir` in `smoke-test/local.properties`) and, for the
+three Apple targets, macOS.
+
+`-Pa2uiVersion=<version>` selects what to resolve; with no property it reads `VERSION_NAME` from
+the producer's `../gradle.properties`, so it cannot go on naming a version the producer has left
+behind.
+
+`compileCommonMainKotlinMetadata`, not `compileKotlinMetadata`: the latter is a task that exists
+but is disabled under the hierarchical source-set model, so naming it compiled nothing. See the
+second control below.
+
+## What it does not check
+
+Compile classpaths only, on a build with no tests and no `run`. So it does **not** see a defect
+confined to a *runtime* variant -- `a2ui-core` declares `implementation(kotlinx-coroutines-core)`,
+which reaches a consumer's runtime classpath and not its compile classpath, and an omission there
+passes this gate on JVM and Android and fails first in a consumer's `NoClassDefFoundError`. Nor
+does it run AGP's `checkAarMetadata`, so a `minCompileSdk` raised past a consumer's `compileSdk`
+is not caught here either. And the module and target lists are enumerated by hand in this build:
+*removing* a published target fails loudly, but *adding* one is simply not covered until someone
+adds it here too.
 
 ## Where it runs
 
@@ -41,7 +61,9 @@ consumer cannot resolve fails the release before anything reaches the portal.
 
 ## Checking that it still bites
 
-A guard that cannot fail is not a guard. Remove one published variant and it must stop:
+A guard that cannot fail is not a guard. Two controls, both re-measured on 2026-09-06.
+
+**One published platform variant removed** -- the per-target half:
 
 ```bash
 mv ~/.m2/repository/dev/ynagai/a2ui/a2ui-core-wasm-js /tmp/
@@ -49,4 +71,19 @@ mv ~/.m2/repository/dev/ynagai/a2ui/a2ui-core-wasm-js /tmp/
 mv /tmp/a2ui-core-wasm-js ~/.m2/repository/dev/ynagai/a2ui/
 ```
 
-Measured on 2026-09-06: `Could not find dev.ynagai.a2ui:a2ui-core-wasm-js:0.1.0-SNAPSHOT`.
+`Could not find dev.ynagai.a2ui:a2ui-core-wasm-js:0.1.0-SNAPSHOT`.
+
+**Only the metadata variant broken**, every platform variant left intact -- the half a
+per-target-only gate cannot see, and the reason the task name above changed:
+
+```bash
+mv ~/.m2/repository/dev/ynagai/a2ui/a2ui-core/0.1.0-SNAPSHOT/a2ui-core-0.1.0-SNAPSHOT.jar /tmp/
+./gradlew -p smoke-test compileCommonMainKotlinMetadata --rerun-tasks   # must fail
+./gradlew -p smoke-test compileKotlinMetadata --rerun-tasks             # the old name: SKIPPED, green
+mv /tmp/a2ui-core-0.1.0-SNAPSHOT.jar ~/.m2/repository/dev/ynagai/a2ui/a2ui-core/0.1.0-SNAPSHOT/
+```
+
+`compileCommonMainKotlinMetadata` fails in `transformCommonMainDependenciesMetadata` with
+`Could not find dev.ynagai.a2ui:a2ui-core:0.1.0-SNAPSHOT`; `compileKotlinMetadata` reports
+`SKIPPED` and exits 0. A consumer writing `commonMain` against that publication could not have
+compiled, and the gate as first written would have passed it.

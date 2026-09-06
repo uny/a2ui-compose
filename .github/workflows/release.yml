@@ -55,10 +55,12 @@ jobs:
       - name: Publish to the local repository
         run: ./gradlew publishToMavenLocal -PVERSION_NAME=${{ steps.version.outputs.value }} --stacktrace
 
+      # `-p`, so the separate build runs under this repository's wrapper rather than carrying a
+      # second copy of `gradle-wrapper.jar` to keep pinned. It is still a separate build: its own
+      # `settings.gradle.kts` is what makes the dependency resolve by coordinate.
       - name: Resolve it as a consumer would
-        working-directory: smoke-test
         run: |
-          ./gradlew \
+          ./gradlew -p smoke-test \
             compileKotlinMetadata compileKotlinJvm compileKotlinJs compileKotlinWasmJs \
             compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinMacosArm64 \
             compileAndroidMain \

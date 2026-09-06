@@ -21,9 +21,12 @@ that does not carry it.
 
 ## Running it by hand
 
+From the repository root, with its wrapper -- this build has none of its own, because a second
+copy of `gradle-wrapper.jar` is a second thing to keep pinned:
+
 ```bash
-./gradlew publishToMavenLocal                       # in the repository root
-cd smoke-test && ./gradlew \
+./gradlew publishToMavenLocal
+./gradlew -p smoke-test \
   compileKotlinMetadata compileKotlinJvm compileKotlinJs compileKotlinWasmJs \
   compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinMacosArm64 \
   compileAndroidMain
@@ -42,7 +45,7 @@ A guard that cannot fail is not a guard. Remove one published variant and it mus
 
 ```bash
 mv ~/.m2/repository/dev/ynagai/a2ui/a2ui-core-wasm-js /tmp/
-cd smoke-test && ./gradlew compileKotlinWasmJs --rerun-tasks   # must fail to resolve
+./gradlew -p smoke-test compileKotlinWasmJs --rerun-tasks      # must fail to resolve
 mv /tmp/a2ui-core-wasm-js ~/.m2/repository/dev/ynagai/a2ui/
 ```
 

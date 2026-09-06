@@ -26,6 +26,24 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 90
 
+    # A human, between the tag and the secrets.
+    #
+    # Charset-checking the tag closes the injection path, but not this one: the job checks out the
+    # tagged commit and runs *its* Gradle scripts, so anyone who can push a `v*` tag can point it
+    # at an unreviewed commit whose `settings.gradle.kts` reads `signingInMemoryKey` out of the
+    # environment. No amount of quoting helps -- the build script is the payload. An environment
+    # with required reviewers is what holds the secrets back until someone approves the run, and
+    # it is the right gate for a step that is irreversible: Central never re-uploads and never
+    # deletes, so a bad `0.1.0` is not fixed, it is abandoned.
+    #
+    # Job-scoped rather than step-scoped because that is the only scope GitHub offers, and it is
+    # the one we want anyway: approval comes before the build, not after 35 minutes of it.
+    #
+    # The environment itself is a repository setting, not this file. Until `maven-central` exists
+    # under Settings -> Environments with at least one required reviewer, this line names an
+    # environment that gates nothing.
+    environment: maven-central
+
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

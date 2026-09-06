@@ -191,14 +191,31 @@ private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>
                     if (value is JsonArray) value.forEach { pending.addLast(it) }
                     else pending.addLast(value)
                 keyword in SUBSCHEMA_LIST -> (value as? JsonArray)?.forEach { pending.addLast(it) }
-                keyword in SCHEMA_MAPS -> (value as? JsonObject)?.forEach { (name, subschema) ->
-                    // A key here is a name its author chose, not a keyword. Only under
-                    // `properties` is it a name the rule governs -- a `$defs` entry name, a
-                    // `patternProperties` regex and a `dependencies` trigger are none of them.
-                    if (keyword == PROPERTIES) requireIdentifier(name, "property name in $owner")
-                    // A draft-07 `dependencies` entry may hold an array of required property
-                    // names rather than a subschema; it is not an object, so the pop discards it.
-                    pending.addLast(subschema)
+                keyword in SCHEMA_MAPS -> {
+                    // Refused rather than skipped, for the reason [checkCarriedKeywords] gives
+                    // and with a sharper edge here. Every draft makes these keywords objects, so
+                    // an array is malformed -- but `JsonObject.pointer` indexes an array by its
+                    // integer token, and `$defs` is a step a `$ref` may name. Skipping the map
+                    // left `{"$defs":[{"properties":{"bad-name":…}}]}` unwalked while
+                    // `#/components/Text/$defs/0` still resolved to it and was still evaluated,
+                    // which is the pairing this whole pass exists to hold.
+                    val entries = value as? JsonObject ?: throw A2uiFormatException(
+                        "CatalogDefinition: `${keyword.take(ERROR_EXCERPT)}` in $owner must be " +
+                            "an object mapping names to subschemas; an array here is a region a " +
+                            "`\$ref` can index but no rule has been applied to.",
+                    )
+                    entries.forEach { (name, subschema) ->
+                        // A key here is a name its author chose, not a keyword. Only under
+                        // `properties` is it a name the rule governs -- a `$defs` entry name, a
+                        // `patternProperties` regex and a `dependencies` trigger are none of them.
+                        if (keyword == PROPERTIES) {
+                            requireIdentifier(name, "property name in $owner")
+                        }
+                        // A draft-07 `dependencies` entry may hold an array of required property
+                        // names rather than a subschema; it is not an object, so the pop discards
+                        // it. That is the *entry*, not the map, and stays a skip.
+                        pending.addLast(subschema)
+                    }
                 }
                 // Annotations, vendor extensions and instance values. Not schemas, so not walked,
                 // and -- since a `$ref` may no longer be aimed into them -- not reachable either.

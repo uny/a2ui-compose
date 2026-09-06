@@ -480,6 +480,36 @@ class CatalogEntityNamesTest {
     }
 
     @Test
+    fun a_name_map_that_is_an_array_is_refused_rather_than_skipped() {
+        // The one place the depth widening could have reopened what it was widened inside of.
+        // `JsonObject.pointer` indexes an array by an integer token, and `$defs` is a step a
+        // `$ref` may now name -- so an array-valued `$defs` that the walk merely *skipped* would
+        // leave `#/components/Text/$defs/0` resolving to a region no rule ran over, which is
+        // exactly the pairing this pass exists to hold. Measured before the fix: the catalog
+        // below loaded, and the reference resolved to `{"properties":{"bad-name":{}}}`.
+        SCHEMA_MAPS.forEach { keyword ->
+            val body = """{"type":"object","$keyword":[{"properties":{"bad-name":{}}}]}"""
+            val failure = assertFailsWith<A2uiFormatException>("`$keyword` as an array was kept") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            }
+            assertTrue(
+                failure.message.orEmpty().contains("must be an object"),
+                "`$keyword` was refused for the wrong reason: ${failure.message}",
+            )
+        }
+        val indexed = """{"type":"object","${'$'}defs":[{"properties":{"bad-name":{}}}],""" +
+            """"allOf":[{"${'$'}ref":"#/components/Text/${'$'}defs/0"}]}"""
+        assertFailsWith<A2uiFormatException>("an indexable region was reachable by a pointer") {
+            json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(indexed))
+        }
+        // The *entry* of a draft-07 `dependencies` may still be an array of required property
+        // names. That is a value, not a name map, and stays accepted.
+        val required = """{"type":"object","dependencies":{"ok":["alsoOk"]}}"""
+        val kept = json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(required))
+        assertEquals(setOf("Text"), kept.components.keys)
+    }
+
+    @Test
     fun an_escaped_pointer_segment_does_not_buy_a_step() {
         // The depth restriction counts `/`-separated segments in the reference text, while
         // `SchemaRegistry` resolves the fragment as a JSON Pointer -- so the two only agree

@@ -1,6 +1,7 @@
 package dev.ynagai.a2ui.core.protocol
 
 import dev.ynagai.a2ui.core.validation.CatalogFixtures
+import dev.ynagai.a2ui.core.validation.pointer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -9,6 +10,8 @@ import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -384,6 +387,22 @@ class CatalogEntityNamesTest {
                 json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
             }
         }
+        // A `$ref` that is not a string at all, which is a separate branch from a target that
+        // names the wrong thing: the `keyword == REF` arm consumes the value, so a shape that
+        // slipped past would be neither walked nor refused -- `bad-name` below would be a live
+        // property of a catalog that loaded. Every other `$ref` in this suite is a string, so
+        // without these three the branch is exercised by nothing and `?: return` ships green.
+        val shapes = listOf("""{"properties":{"bad-name":{}}}""", "1", """["#/components/Text"]""")
+        shapes.forEach { ref ->
+            val body = """{"type":"object","allOf":[{"${'$'}ref":$ref}]}"""
+            val failure = assertFailsWith<A2uiFormatException>("`$ref` should have been refused") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            }
+            assertTrue(
+                failure.message.orEmpty().contains("must be a string"),
+                "`$ref` was refused for the wrong reason: ${failure.message}",
+            )
+        }
     }
 
     @Test
@@ -396,9 +415,49 @@ class CatalogEntityNamesTest {
         // subtree to the evaluator, so `bad-name` was a live property of a catalog that loaded.
         val body = """{"x-shared":{"default":{"properties":{"bad-name":{}}}},""" +
             """"allOf":[{"${'$'}ref":"#/components/Text/x-shared/default"}]}"""
-        assertFailsWith<A2uiFormatException>("a pointer into an unwalked region was permitted") {
+        val failure = assertFailsWith<A2uiFormatException>(
+            "a pointer into an unwalked region was permitted",
+        ) {
             json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
         }
+        // Which of the two halves refused it matters. Asserting only the exception type would
+        // keep this test green if the walk were re-blinded: `bad-name` would then be reached
+        // again and refused by the identifier check, while the reference restriction this test
+        // exists to guard had gone.
+        assertTrue(
+            failure.message.orEmpty().contains("not a permitted"),
+            "refused by the walk rather than by the reference rule: ${failure.message}",
+        )
+    }
+
+    @Test
+    fun an_escaped_pointer_segment_does_not_buy_a_step() {
+        // The depth restriction counts `/`-separated segments in the reference text, while
+        // `SchemaRegistry` resolves the fragment as a JSON Pointer -- so the two only agree
+        // while `pointer` splits on `/` BEFORE decoding `~1`. In that order `~1` produces a
+        // literal `/` inside one already-tokenised step, and `#/components/Text~1metadata` is a
+        // lookup for a component *named* `Text/metadata`, which `requireIdentifier` can never
+        // admit. Decode-then-split would make the same string five steps and hand a `$ref` the
+        // vendor region the walk deliberately skips.
+        //
+        // The reference is permitted here on purpose: it is `[^/]+` and names nothing, and that
+        // is the whole point. What this pins is the other half -- that it resolves to null --
+        // which lives in `SchemaRegistry.kt`, where nothing else would fail if the order changed.
+        val escaped = "#/components/Text~1metadata~1extensions~1vendor"
+        val vendor = """"metadata":{"extensions":{"vendor":{"properties":{"bad-name":{}}}}}"""
+        val body = """{"type":"object",$vendor,"allOf":[{"${'$'}ref":"$escaped"}]}"""
+        val source = catalogWithComponentBody(body)
+        val decoded = json.decodeFromString<CatalogDefinition>(source)
+        val document = json.parseToJsonElement(source) as JsonObject
+        assertEquals(setOf("Text"), decoded.components.keys)
+        assertNull(
+            document.pointer(escaped.removePrefix("#")),
+            "an escaped segment reached a region the walk does not enter",
+        )
+        // The control, without which the assertion above passes for a pointer that simply names
+        // nothing: the same region IS reachable when the steps are written unescaped -- and that
+        // spelling is the one `requirePermittedReference` refuses.
+        assertNotNull(document.pointer("/components/Text/metadata/extensions/vendor"))
     }
 
     @Test

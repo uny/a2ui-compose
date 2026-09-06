@@ -87,8 +87,12 @@ internal fun checkEntityNames(
  * may arrive holding anything at all.
  *
  * Shapes are refused rather than skipped. An `as?` that yields null is a check that does not run,
- * and a region no check ran over is exactly what a `$ref` used to be aimed at -- which is also
- * why the keys of `$defs` are held to rule 2 here rather than left to the schema evaluator.
+ * and a region no check ran over is exactly what a `$ref` used to be aimed at.
+ *
+ * The *keys* of `$defs` are a different matter and are deliberately not held to rule 2 here: unlike
+ * the naming rule, that one `catalog_definition.json` does encode, as `additionalProperties: false`
+ * on `$defs` -- so the schema evaluator already reaches it and this pass would only be deciding a
+ * compatibility question ahead of it. See the comment on the walk below.
  */
 private fun checkCarriedKeywords(schemaKeywords: Map<String, JsonElement>) {
     schemaKeywords.forEach { (keyword, value) ->
@@ -193,17 +197,27 @@ private fun checkSchema(root: JsonElement, owner: String) {
 /**
  * Rule 3, "Restricted `$ref` Targets".
  *
- * A local target must name a top-level component or function; an external one must name a
- * definition in `common_types.json`. This is the rule that lets [checkSchema] decline to walk a
- * region: what is not a schema position cannot be turned into one by a pointer.
+ * A local target must name a top-level component, function or `$defs` entry of this catalog; an
+ * external one must name a `$defs` entry of `common_types.json`. This is the rule that lets
+ * [checkSchema] decline to walk a region: what is not a schema position cannot be turned into one
+ * by a pointer.
  *
  * The prose narrows external targets further, to eleven named `common_types.json` schemas, and
  * that half is deliberately not enforced: **the specification's own `basic.json` violates it**,
  * referencing `Child`, `DataBinding` and `FunctionCall`, none of which are on the list, while
  * `testing.json` writes the relative `common_types.json#/$defs/…` rather than the absolute URL
  * the prose gives. Enforcing the list literally would refuse the catalogs the specification
- * ships. Restricting the *document* is what the security property needs; restricting which of
- * its definitions may be named is a conformance question for upstream.
+ * ships.
+ *
+ * What is restricted is therefore the *depth* of the pointer, not the document it names. The
+ * external form matches on the filename alone, and the name a document is registered under can be
+ * its `catalogId` -- a free agent-supplied string -- so a second inlined catalog claiming
+ * `catalogId: "https://…/common_types.json"` will answer a reference spelled that way. That is
+ * schema substitution between two catalogs the same agent supplied, not an escape from this pass:
+ * both went through [checkEntityNames], and `SchemaEvaluator`'s `pattern` trust gate keys on
+ * `ProtocolSchemas.libraryUris`, which no such name is in. Anchoring the external form to
+ * `ProtocolSchemas.COMMON_TYPES_URI` would close it, at the cost of refusing spellings that
+ * resolve correctly today.
  */
 private fun requirePermittedReference(target: JsonElement, owner: String) {
     val reference = (target as? JsonPrimitive)?.takeIf { it.isString }?.content
@@ -217,9 +231,11 @@ private fun requirePermittedReference(target: JsonElement, owner: String) {
     if (!permitted) {
         throw A2uiFormatException(
             "CatalogDefinition: `${reference.take(ERROR_EXCERPT)}` in $owner is not a permitted " +
-                "`$REF` target; the specification restricts a local one to the catalog's " +
-                "top-level components and functions (`#/components/Text`, `#/functions/required`)" +
-                " and an external one to `common_types.json#/\$defs/…`.",
+                "`$REF` target; the specification restricts a local one to a top-level " +
+                "component, function or `$DEFS` entry of this catalog (`#/components/Text`, " +
+                "`#/functions/required`, `#/$DEFS/anyComponent`, optionally spelled " +
+                "`catalog.json#/…`) and an external one to `common_types.json#/$DEFS/…`. A " +
+                "pointer may not name anything *inside* one of those.",
         )
     }
 }

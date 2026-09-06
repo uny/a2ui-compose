@@ -20,8 +20,15 @@ permissions:
 # `uny/autograph` additionally sets `queue: max`, because it publishes with
 # `automaticRelease = true` and a dropped pending run there is a release that silently never
 # happens. This workflow stops at the upload and the portal holds each deployment separately, so a
-# queued run that is cancelled costs a re-push of the tag rather than a lost release. Left at the
-# default until that changes.
+# dropped run costs less here. Left at the default until that changes -- but know what the default
+# does: `single` holds ONE pending run and cancels it when a third tag arrives, so pushing
+# `v0.1.0`, `v0.1.1`, `v0.1.2` in quick succession drops `v0.1.1` entirely, and a cancelled run
+# sends no failure notification.
+#
+# Recovering that is a re-run of the cancelled run from the Actions UI, NOT a re-push of the tag:
+# `git push` of a tag the remote already has reports "Everything up-to-date" and delivers no
+# event, so nothing restarts. `workflow_dispatch` is absent (see above), so the UI is the only
+# door.
 concurrency:
   group: release
   cancel-in-progress: false

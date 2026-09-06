@@ -218,7 +218,7 @@ public data class CatalogDefinition(
     public val schemaKeywords: Map<String, JsonElement> = emptyMap(),
 ) {
     init {
-        checkEntityNames(components, functions, schemaKeywords)
+        checkEntityNames(catalogId, components, functions, schemaKeywords)
     }
 
     /** [protocolVersion] with the schema default applied. */

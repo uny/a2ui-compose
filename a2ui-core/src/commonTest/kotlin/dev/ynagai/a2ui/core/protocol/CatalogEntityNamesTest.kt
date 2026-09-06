@@ -431,6 +431,55 @@ class CatalogEntityNamesTest {
     }
 
     @Test
+    fun a_reference_may_name_this_catalogs_own_document_and_a_definitions_own_defs() {
+        // Two spellings that name exactly what `#/…` names, and were refused for their address
+        // rather than their target. Both are permitted because the walk entered the region:
+        // a definition-local `$defs` is one of `SCHEMA_MAPS`, and a catalog's own `$id` or
+        // `catalogId` is the name `SchemaRegistry` registers it under, so the pointer resolves to
+        // the same subschema either way.
+        val absolute = "https://example.com/c.json#/components/Text"
+        val ownDocument = """
+            {
+              "catalogId": "example.com:testing",
+              "${'$'}id": "https://example.com/c.json",
+              "components": {
+                "Text": {"type": "object"},
+                "Box": {"type":"object","allOf":[{"${'$'}ref":"$absolute"}]}
+              }
+            }
+        """.trimIndent()
+        assertEquals(
+            setOf("Text", "Box"),
+            json.decodeFromString<CatalogDefinition>(ownDocument).components.keys,
+        )
+        val byCatalogId = ownDocument.replace(absolute, "example.com:testing#/components/Text")
+        assertEquals(
+            setOf("Text", "Box"),
+            json.decodeFromString<CatalogDefinition>(byCatalogId).components.keys,
+        )
+        // Rule 2 bars the catalog-level `$defs` from holding shared helpers, which leaves a
+        // definition-local one the only place for them.
+        val localDefs = """{"type":"object","${'$'}defs":{"Pad":{"type":"string"}},""" +
+            """"properties":{"padding":{"${'$'}ref":"#/components/Text/${'$'}defs/Pad"}}}"""
+        val withLocalDefs = json.decodeFromString<CatalogDefinition>(
+            catalogWithComponentBody(localDefs),
+        )
+        assertEquals(setOf("Text"), withLocalDefs.components.keys)
+        // The widening is one step and only under `$defs`. Naming another document's definition,
+        // or any other second step, stays refused -- otherwise the depth rule buys nothing.
+        listOf(
+            "#/components/Text/properties/ok",
+            "#/components/Text/${'$'}defs/Pad/properties/ok",
+            "https://other.example/c.json#/components/Text",
+        ).forEach { reference ->
+            val body = """{"type":"object","allOf":[{"${'$'}ref":"$reference"}]}"""
+            assertFailsWith<A2uiFormatException>("`$reference` should have been refused") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            }
+        }
+    }
+
+    @Test
     fun an_escaped_pointer_segment_does_not_buy_a_step() {
         // The depth restriction counts `/`-separated segments in the reference text, while
         // `SchemaRegistry` resolves the fragment as a JSON Pointer -- so the two only agree

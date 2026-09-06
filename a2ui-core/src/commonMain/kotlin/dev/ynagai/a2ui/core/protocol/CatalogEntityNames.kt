@@ -34,11 +34,22 @@ import kotlinx.serialization.json.JsonPrimitive
  * the renderer would then be checking everything else against.
  */
 internal fun checkEntityNames(
+    catalogId: String,
     components: Map<String, ComponentDefinition>,
     functions: Map<String, FunctionDefinition>,
     schemaKeywords: Map<String, JsonElement> = emptyMap(),
 ) {
-    checkCarriedKeywords(schemaKeywords)
+    // The names this catalog is reachable by, so a reference that spells the document out in full
+    // is read as the local reference it is. `SchemaRegistry` registers a catalog under its `$id`
+    // and, where it declares none, under its `catalogId` -- so both are self, and a self-reference
+    // written either way resolves to exactly what `#/…` would. Computed once and passed down
+    // rather than derived at each site: a set that omitted `catalogId` in one place and not
+    // another would accept a reference from a component and refuse the same one from `$defs`.
+    val selfNames = setOfNotNull(
+        catalogId.takeIf { it.isNotEmpty() },
+        (schemaKeywords[ID] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+    )
+    checkCarriedKeywords(schemaKeywords, selfNames)
     components.forEach { (name, definition) ->
         // Rule 4 of the naming section, and enforced here for the same reason as rules 1-3: a
         // catalog may not redefine the surface's implicit root. `catalog_definition.json` does
@@ -51,7 +62,7 @@ internal fun checkEntityNames(
             )
         }
         requireIdentifier(name, "component name")
-        checkSchema(definition.schema, "component `${name.take(ERROR_EXCERPT)}`")
+        checkSchema(definition.schema, "component `${name.take(ERROR_EXCERPT)}`", selfNames)
     }
     functions.forEach { (name, definition) ->
         // The `@` namespace is reserved before UAX #31 is consulted, because the reason differs
@@ -73,7 +84,7 @@ internal fun checkEntityNames(
             )
         }
         requireIdentifier(name, "function name")
-        checkSchema(definition.schema.raw, "function `${name.take(ERROR_EXCERPT)}`")
+        checkSchema(definition.schema.raw, "function `${name.take(ERROR_EXCERPT)}`", selfNames)
     }
 }
 
@@ -94,7 +105,10 @@ internal fun checkEntityNames(
  * on `$defs` -- so the schema evaluator already reaches it and this pass would only be deciding a
  * compatibility question ahead of it. See the comment on the walk below.
  */
-private fun checkCarriedKeywords(schemaKeywords: Map<String, JsonElement>) {
+private fun checkCarriedKeywords(
+    schemaKeywords: Map<String, JsonElement>,
+    selfNames: Set<String>,
+) {
     schemaKeywords.forEach { (keyword, value) ->
         val quoted = keyword.take(ERROR_EXCERPT)
         if (keyword != DEFS) {
@@ -117,7 +131,7 @@ private fun checkCarriedKeywords(schemaKeywords: Map<String, JsonElement>) {
         // refusing them decides a compatibility question about third-party inline catalogs that
         // is not this check's to decide.
         defs.forEach { (name, subschema) ->
-            checkSchema(subschema, "the catalog's `$DEFS/${name.take(ERROR_EXCERPT)}`")
+            checkSchema(subschema, "the catalog's `$DEFS/${name.take(ERROR_EXCERPT)}`", selfNames)
         }
     }
 }
@@ -160,7 +174,7 @@ private fun checkCarriedKeywords(schemaKeywords: Map<String, JsonElement>) {
  * an inlined catalog is agent-controlled, and Kotlin/Native aborts the process on stack overflow
  * rather than raising something a caller could catch.
  */
-private fun checkSchema(root: JsonElement, owner: String) {
+private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>) {
     val pending = ArrayDeque<JsonElement>()
     pending.addLast(root)
     while (pending.isNotEmpty()) {
@@ -169,7 +183,7 @@ private fun checkSchema(root: JsonElement, owner: String) {
         val schema = pending.removeLast() as? JsonObject ?: continue
         schema.forEach { (keyword, value) ->
             when {
-                keyword == REF -> requirePermittedReference(value, owner)
+                keyword == REF -> requirePermittedReference(value, owner, selfNames)
                 keyword in SUBSCHEMA -> pending.addLast(value)
                 keyword == ITEMS ->
                     // 2020-12 gives `items` a single schema; draft-07 also let it hold the
@@ -197,8 +211,10 @@ private fun checkSchema(root: JsonElement, owner: String) {
 /**
  * Rule 3, "Restricted `$ref` Targets".
  *
- * A local target must name a top-level component, function or `$defs` entry of this catalog; an
- * external one must name a `$defs` entry of `common_types.json`. This is the rule that lets
+ * A local target must name a top-level component, function or `$defs` entry of this catalog, or a
+ * `$defs` entry of one of those; an external one must name a `$defs` entry of `common_types.json`.
+ * The document may be left implicit (`#/…`), written as the placeholder `catalog.json#/…`, or
+ * spelled out in full with this catalog's own `$id` or `catalogId`. This is the rule that lets
  * [checkSchema] decline to walk a region: what is not a schema position cannot be turned into one
  * by a pointer.
  *
@@ -219,23 +235,31 @@ private fun checkSchema(root: JsonElement, owner: String) {
  * `ProtocolSchemas.COMMON_TYPES_URI` would close it, at the cost of refusing spellings that
  * resolve correctly today.
  */
-private fun requirePermittedReference(target: JsonElement, owner: String) {
+private fun requirePermittedReference(target: JsonElement, owner: String, selfNames: Set<String>) {
     val reference = (target as? JsonPrimitive)?.takeIf { it.isString }?.content
         ?: throw A2uiFormatException(
             "CatalogDefinition: a `$REF` in $owner must be a string.",
         )
+    // A reference that names this catalog's own document is a local one wearing a full address,
+    // so the prefix is dropped before the shape is judged rather than a second pattern being
+    // written for it. `catalog.json` is handled inside [LOCAL_REFERENCE] because it is a name
+    // every catalog may write, not one this catalog happens to have.
+    val local = selfNames.firstOrNull { reference.startsWith("$it#") }
+        ?.let { reference.removePrefix(it) }
+        ?: reference
     // Both patterns are tried rather than dispatched on a leading `#`: `catalog.json#/$defs/X`
     // is a local target wearing a document name, and testing it as an external one refused it.
     val permitted =
-        LOCAL_REFERENCE.matches(reference) || COMMON_TYPES_REFERENCE.matches(reference)
+        LOCAL_REFERENCE.matches(local) || COMMON_TYPES_REFERENCE.matches(reference)
     if (!permitted) {
         throw A2uiFormatException(
             "CatalogDefinition: `${reference.take(ERROR_EXCERPT)}` in $owner is not a permitted " +
                 "`$REF` target; the specification restricts a local one to a top-level " +
                 "component, function or `$DEFS` entry of this catalog (`#/components/Text`, " +
-                "`#/functions/required`, `#/$DEFS/anyComponent`, optionally spelled " +
-                "`catalog.json#/…`) and an external one to `common_types.json#/$DEFS/…`. A " +
-                "pointer may not name anything *inside* one of those.",
+                "`#/functions/required`, `#/$DEFS/anyComponent`) or a `$DEFS` entry of one of " +
+                "those (`#/components/Text/$DEFS/Pad`), and an external one to " +
+                "`common_types.json#/$DEFS/…`. The document may be left implicit, written as " +
+                "`catalog.json#/…`, or spelled out with this catalog's own `$ID` or `catalogId`.",
         )
     }
 }
@@ -313,8 +337,11 @@ private const val DEFS: String = "\$defs"
 
 private const val REF: String = "\$ref"
 
+private const val ID: String = "\$id"
+
 /**
- * A top-level definition of this catalog, and nothing inside one.
+ * A top-level definition of this catalog, and -- one step further -- a definition's own
+ * `$defs` entry. Nothing else inside one.
  *
  * `catalog.json` is how a document names the *active* catalog -- `common_types.json` itself
  * refers to `catalog.json#/$defs/anyFunction` -- so a catalog may write either spelling for its
@@ -325,9 +352,20 @@ private const val REF: String = "\$ref"
  * checked, while `#/components/Text/metadata/extensions/vendor` names a region it deliberately
  * did not. `$defs` is admitted alongside them because every entry under it is walked as a schema
  * whatever it is called, so naming one is no different from naming a component.
+ *
+ * A definition's own `$defs` is admitted for that same reason and no other: `$defs` is one of
+ * [SCHEMA_MAPS], so `#/components/Card/$defs/Pad` names a subschema this walk entered and checked,
+ * exactly as `#/components/Card` does. Rule 2 bars a catalog from factoring shared subschemas into
+ * the catalog-level `$defs`, which leaves a definition-local one the only place to put them, so
+ * refusing this spelling would refuse the shape the rule pushes an author towards. It is the only
+ * second step permitted -- `#/components/Card/properties/pad` is still a region-naming pointer and
+ * is still refused.
  */
 private val LOCAL_REFERENCE: Regex =
-    Regex("^(?:catalog\\.json)?#/(?:components|functions|\\\$defs)/[^/]+$")
+    Regex(
+        "^(?:catalog\\.json)?#/(?:components|functions|\\\$defs)/[^/]+" +
+            "(?:/\\\$defs/[^/]+)?$",
+    )
 
 /** `common_types.json#/$defs/<name>`, however the catalog spells the document's location. */
 private val COMMON_TYPES_REFERENCE: Regex =

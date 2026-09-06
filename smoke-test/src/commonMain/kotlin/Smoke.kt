@@ -30,12 +30,17 @@ internal fun registry(): ComponentRegistry = Material3Components.Basic
 /**
  * Writes a renderer, which is the thing a host actually does with this library.
  *
- * Here to exercise the `api` scopes rather than for what it draws. `Modifier` and `@Composable`
- * are named by nothing else in this file, and this build declares no Compose dependency of its
- * own -- they can only arrive through `a2ui-compose`'s `api(compose.runtime)` and
- * `api(compose.ui)`. Scoped `implementation` those would reach a consumer's runtime classpath but
- * not its compile classpath, this file would stop compiling, and the gate would say so; without
- * it, that downgrade published green and broke on the first host to write a renderer.
+ * This build declares no Compose dependency of its own, so `Modifier` and `@Composable` reach
+ * this file only across the published metadata -- which is the property being checked: that a
+ * host can name the types in `ComponentRenderer`'s signature having resolved these coordinates
+ * and nothing else.
+ *
+ * It does **not** pin `a2ui-compose`'s `api(compose.runtime)` / `api(compose.ui)` specifically,
+ * and the first draft of this comment claimed it did. Measured: downgrade both to
+ * `implementation`, publish, and the gate stays green, because `a2ui-material3`'s
+ * `api(compose.material3)` puts the same two on the compile classpath transitively. Guarding
+ * those two scopes on their own would take a consumer that resolves `a2ui-compose` without
+ * `a2ui-material3`, which this build is not.
  */
 @Suppress("unused")
 internal fun renderer(): ComponentRenderer = object : ComponentRenderer {

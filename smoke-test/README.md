@@ -50,7 +50,12 @@ confined to a *runtime* variant -- `a2ui-core` declares `implementation(kotlinx-
 which reaches a consumer's runtime classpath and not its compile classpath, and an omission there
 passes this gate on JVM and Android and fails first in a consumer's `NoClassDefFoundError`. Nor
 does it run AGP's `checkAarMetadata`, so a `minCompileSdk` raised past a consumer's `compileSdk`
-is not caught here either. And the module and target lists are enumerated by hand in this build:
+is not caught here either.
+
+It also does not pin each module's `api` scopes individually. It depends on all three, so a type
+reachable through more than one of them stays reachable when one downgrades it -- measured:
+moving `a2ui-compose`'s `api(compose.runtime)` / `api(compose.ui)` to `implementation` leaves the
+gate green, because `a2ui-material3`'s `api(compose.material3)` supplies both transitively. And the module and target lists are enumerated by hand in this build:
 *removing* a published target fails loudly, but *adding* one is simply not covered until someone
 adds it here too.
 

@@ -33,10 +33,15 @@ plugins {
  */
 val a2uiVersion: String =
     (findProperty("a2uiVersion") as String?)?.takeIf { it.isNotBlank() }
-        ?: Properties()
-            .apply { file("../gradle.properties").inputStream().use { load(it) } }
-            .getProperty("VERSION_NAME")
-        ?: error("No -Pa2uiVersion, and VERSION_NAME is not set in ../gradle.properties")
+        ?: file("../gradle.properties")
+            .takeIf { it.isFile }
+            ?.let { properties -> Properties().apply { properties.inputStream().use(::load) } }
+            ?.getProperty("VERSION_NAME")
+        ?: error(
+            "No -Pa2uiVersion, and no VERSION_NAME in ../gradle.properties. This build reads the " +
+                "producer's version from the repository it sits in; run it from there, or pass " +
+                "-Pa2uiVersion=<version>.",
+        )
 
 kotlin {
     android {

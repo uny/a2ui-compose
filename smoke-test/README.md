@@ -61,7 +61,7 @@ adds it here too.
 
 ## Where it runs
 
-`release.yml`, between `publishToMavenLocal` and the upload to Central — so a publication that a
+`cd.yml`, between `publishToMavenLocal` and the upload to Central — so a publication that a
 consumer cannot resolve fails the release before anything reaches the portal.
 
 ## Checking that it still bites

@@ -1,4 +1,4 @@
-name: release
+name: CD
 
 # A tag, and nothing else. `workflow_dispatch` is deliberately absent: the version this publishes
 # is read from the tag, so a manual run would have to invent one, and a coordinate published under
@@ -13,6 +13,19 @@ on:
 permissions:
   contents: read
 
+# Two tags pushed close together must not publish concurrently. `cancel-in-progress: false`
+# protects the *running* release: by the time a second tag arrives the first may already have
+# uploaded, and Central neither re-uploads nor deletes, so there is nothing to roll back to.
+#
+# `uny/autograph` additionally sets `queue: max`, because it publishes with
+# `automaticRelease = true` and a dropped pending run there is a release that silently never
+# happens. This workflow stops at the upload and the portal holds each deployment separately, so a
+# queued run that is cancelled costs a re-push of the tag rather than a lost release. Left at the
+# default until that changes.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 # Actions pinned to a commit, matching `build.yml`. To move one deliberately:
 #
 #   gh api repos/<owner>/<repo>/commits/<tag> --jq .sha
@@ -26,6 +39,13 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 90
 
+    # `release`, the name `uny/autograph` and `uny/koog-firebase` already use, and where their
+    # Maven Central and GPG secrets already live. The name is not cosmetic: an `environment:` that
+    # names one which does not exist gates nothing, and a secret set on a *different* environment
+    # is simply absent here. Matching the convention means one set of names to remember across
+    # three libraries, and it is why the secret names below are `GPG_*` rather than the plugin's
+    # own property names.
+    #
     # A human, between the tag and the secrets.
     #
     # Charset-checking the tag closes the injection path, but not this one: the job checks out the
@@ -39,10 +59,11 @@ jobs:
     # Job-scoped rather than step-scoped because that is the only scope GitHub offers, and it is
     # the one we want anyway: approval comes before the build, not after 35 minutes of it.
     #
-    # The environment itself is a repository setting, not this file. Until `maven-central` exists
-    # under Settings -> Environments with at least one required reviewer, this line names an
-    # environment that gates nothing.
-    environment: maven-central
+    # The environment itself is a repository setting, not this file. Until `release` exists under
+    # Settings -> Environments with at least one required reviewer, this line names an environment
+    # that gates nothing -- which is the state `uny/koog-firebase` is in today: a `release`
+    # environment carrying the secrets, with no protection rules on it at all.
+    environment: release
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -76,6 +97,50 @@ jobs:
           esac
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
+      # Every secret this job needs, checked before the build rather than at the step that uses
+      # it. Two of these fail in ways worth pre-empting:
+      #
+      #  - A missing secret is the empty string, not an error. `signingInMemoryKeyId` empty fails
+      #    with `The key ID must be in a valid form (eg 00B5050F or 0x00B5050F), given value:` --
+      #    a message about the key's *shape* for a secret that was never set, arriving after the
+      #    full suite has run.
+      #  - Gradle takes the short 8-hex key id only. Measured on 2026-09-06 against a throwaway
+      #    key: the 8-hex form and *omitting the property entirely* both sign; the 16-hex long id,
+      #    the 40-hex fingerprint and the empty string all fail the `sign*Publication` tasks.
+      #    `gpg --list-secret-keys --keyid-format SHORT` prints the form that works.
+      - name: Check the release credentials are present
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          missing=
+          for name in MAVEN_CENTRAL_USERNAME MAVEN_CENTRAL_PASSWORD GPG_KEY_ID GPG_PRIVATE_KEY GPG_PASSPHRASE; do
+            eval "value=\$$name"
+            [ -n "$value" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Not set on the 'release' environment:$missing" >&2
+            exit 1
+          fi
+          case "$GPG_KEY_ID" in
+            [0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f] | \
+            0x[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f] ) ;;
+            * )
+              echo "::error::GPG_KEY_ID must be the short 8-hex key id (gpg --list-secret-keys --keyid-format SHORT), not a long id or a fingerprint." >&2
+              exit 1
+              ;;
+          esac
+          case "$GPG_PRIVATE_KEY" in
+            *"BEGIN PGP PRIVATE KEY BLOCK"* ) ;;
+            * )
+              echo "::error::GPG_PRIVATE_KEY must be the ASCII-armored private key, header and footer included (gpg --export-secret-keys --armor <SHORT_KEY_ID>)." >&2
+              exit 1
+              ;;
+          esac
+
       # The full suite before anything leaves the machine. A release is the one build where
       # "the tests passed on the PR" is not enough: the tag may point at a merge the PR never had.
       - name: Verify
@@ -102,9 +167,9 @@ jobs:
       - name: Publish to the local repository
         env:
           VERSION: ${{ steps.version.outputs.value }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.GPG_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_PASSPHRASE }}
         run: ./gradlew publishToMavenLocal -PVERSION_NAME="$VERSION" --stacktrace
 
       # `-p`, so the separate build runs under this repository's wrapper rather than carrying a
@@ -138,9 +203,9 @@ jobs:
           VERSION: ${{ steps.version.outputs.value }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.GPG_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_PASSPHRASE }}
         run: ./gradlew publishToMavenCentral -PVERSION_NAME="$VERSION" --stacktrace
 
       - name: Upload reports

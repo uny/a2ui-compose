@@ -115,6 +115,14 @@ jobs:
       #    key: the 8-hex form and *omitting the property entirely* both sign; the 16-hex long id,
       #    the 40-hex fingerprint and the empty string all fail the `sign*Publication` tasks.
       #    `gpg --list-secret-keys --keyid-format SHORT` prints the form that works.
+      #
+      # `GPG_PASSPHRASE` is required here deliberately, and this check is stricter than the
+      # toolchain: the plugin resolves `signingInMemoryKeyPassword` as `.orElse("").get()` (0.37.0
+      # bytecode), so an unprotected key signs fine with the property empty or absent. Requiring it
+      # encodes a policy rather than a technical need -- this repository signs with a
+      # passphrase-protected key, so an empty `GPG_PASSPHRASE` means a secret nobody set, not a key
+      # that needs none. If that key is ever replaced with an unprotected one, drop the name from
+      # the loop below; the failure otherwise reads as a missing secret.
       - name: Check the release credentials are present
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}

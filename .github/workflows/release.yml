@@ -1,0 +1,152 @@
+name: release
+
+# A tag, and nothing else. `workflow_dispatch` is deliberately absent: the version this publishes
+# is read from the tag, so a manual run would have to invent one, and a coordinate published under
+# a version no tag points at is not reproducible from the repository.
+on:
+  push:
+    tags: ['v*']
+
+# Read-only, as in `build.yml` and for the same reason. Nothing here writes to the repository --
+# the credentials this job needs are the portal's and the signing key's, and both arrive as
+# secrets rather than through the token.
+permissions:
+  contents: read
+
+# Actions pinned to a commit, matching `build.yml`. To move one deliberately:
+#
+#   gh api repos/<owner>/<repo>/commits/<tag> --jq .sha
+#
+jobs:
+  publish:
+    # macOS, because the Apple targets are silently *skipped* on Linux --
+    # `kotlin.native.ignoreDisabledTargets=true` turns them off rather than failing -- and a
+    # release that skipped them would upload a catalogue of variants with three missing and no
+    # error to say so.
+    runs-on: macos-15
+    timeout-minutes: 90
+
+    # A human, between the tag and the secrets.
+    #
+    # Charset-checking the tag closes the injection path, but not this one: the job checks out the
+    # tagged commit and runs *its* Gradle scripts, so anyone who can push a `v*` tag can point it
+    # at an unreviewed commit whose `settings.gradle.kts` reads `signingInMemoryKey` out of the
+    # environment. No amount of quoting helps -- the build script is the payload. An environment
+    # with required reviewers is what holds the secrets back until someone approves the run, and
+    # it is the right gate for a step that is irreversible: Central never re-uploads and never
+    # deletes, so a bad `0.1.0` is not fixed, it is abandoned.
+    #
+    # Job-scoped rather than step-scoped because that is the only scope GitHub offers, and it is
+    # the one we want anyway: approval comes before the build, not after 35 minutes of it.
+    #
+    # The environment itself is a repository setting, not this file. Until `maven-central` exists
+    # under Settings -> Environments with at least one required reviewer, this line names an
+    # environment that gates nothing.
+    environment: maven-central
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # The tag is the version. `v0.1.0` publishes `0.1.0`; nothing else decides it.
+      #
+      # Checked against a charset before it is used, because a tag name is attacker-shaped input:
+      # `git check-ref-format` forbids space and control characters but permits `$ ( ) ; | & ' "`
+      # and a backtick, so `v1.0.0;$(...)` is a pushable tag that matches the `v*` filter above.
+      # Every use below quotes the value as well -- this is the belt to that pair of braces --
+      # and the charset is also what a Central coordinate may contain, so a tag that fails here
+      # would not have produced a usable version anyway.
+      - name: Read the version from the tag
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          case "$version" in
+            "" | *[!0-9A-Za-z.-]* )
+              echo "Refusing tag '$GITHUB_REF_NAME': a version must be non-empty [0-9A-Za-z.-]" >&2
+              exit 1
+              ;;
+          esac
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      # The full suite before anything leaves the machine. A release is the one build where
+      # "the tests passed on the PR" is not enough: the tag may point at a merge the PR never had.
+      - name: Verify
+        run: ./gradlew build checkLegacyAbi --stacktrace
+
+      # Publish locally first, and consume it. This is the gate -- see `smoke-test/README.md`.
+      # Publishing to Maven Central is irreversible: a version is never re-uploaded and never
+      # deleted, so a broken publication is fixed only by burning the number. The smoke test is
+      # what stops that reaching the portal.
+      #
+      # The signing key is needed *here*, not only at the upload. `signAllPublications()` is
+      # exempt for a `-SNAPSHOT` version, not for a local publish: at a release version the
+      # `sign*Publication` tasks run under `publishToMavenLocal` too, and without a signatory
+      # they fail. Measured on 2026-09-06 at tip efc2ba5, no key present:
+      #
+      #   $ ./gradlew :a2ui-core:publishToMavenLocal -PVERSION_NAME=0.1.0-reviewprobe
+      #   > Task :a2ui-core:signAndroidPublication FAILED
+      #   > No configured signatory
+      #
+      # and the same command at `0.1.0-reviewprobe-SNAPSHOT` succeeds with every `sign*` task
+      # SKIPPED -- which is why publishing snapshots by hand never showed this. Passing the key
+      # here is also what makes the KDoc in the three modules true: a missing or malformed secret
+      # now fails before the 35-minute mark rather than at the upload.
+      - name: Publish to the local repository
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
+        run: ./gradlew publishToMavenLocal -PVERSION_NAME="$VERSION" --stacktrace
+
+      # `-p`, so the separate build runs under this repository's wrapper rather than carrying a
+      # second copy of `gradle-wrapper.jar` to keep pinned. It is still a separate build: its own
+      # `settings.gradle.kts` is what makes the dependency resolve by coordinate.
+      #
+      # `compileCommonMainKotlinMetadata`, not `compileKotlinMetadata`. The latter exists as a
+      # task but is disabled under the hierarchical source-set model and can never run -- measured
+      # at tip efc2ba5, and `--rerun-tasks` does not force it:
+      #
+      #   > Task :compileKotlinMetadata SKIPPED
+      #   Skipping task ':compileKotlinMetadata' as task onlyIf 'Task satisfies onlyIf spec' is false.
+      #
+      # Naming it compiled nothing, so the metadata variant -- the one a consumer's own
+      # `commonMain` resolves -- was the single published variant this gate did not cover.
+      - name: Resolve it as a consumer would
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          ./gradlew -p smoke-test \
+            compileCommonMainKotlinMetadata compileKotlinJvm compileKotlinJs compileKotlinWasmJs \
+            compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinMacosArm64 \
+            compileAndroidMain \
+            -Pa2uiVersion="$VERSION" --stacktrace
+
+      # Uploads and validates; it does not release. The last step is a button in the Central
+      # Portal, held by the person whose account it is -- which is the right place for it while
+      # `publishAndReleaseToMavenCentral` exists and this is the first version to go out.
+      - name: Upload to Maven Central
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
+        run: ./gradlew publishToMavenCentral -PVERSION_NAME="$VERSION" --stacktrace
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reports-release
+          path: '**/build/reports/**'
+          retention-days: 7

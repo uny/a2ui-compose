@@ -134,7 +134,7 @@ jobs:
               ;;
           esac
           case "$GPG_PRIVATE_KEY" in
-            *"BEGIN PGP PRIVATE KEY BLOCK"* ) ;;
+            *"BEGIN PGP PRIVATE KEY BLOCK"*"END PGP PRIVATE KEY BLOCK"* ) ;;
             * )
               echo "::error::GPG_PRIVATE_KEY must be the ASCII-armored private key, header and footer included (gpg --export-secret-keys --armor <SHORT_KEY_ID>)." >&2
               exit 1

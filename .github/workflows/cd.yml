@@ -27,8 +27,10 @@ permissions:
 #
 # Recovering that is a re-run of the cancelled run from the Actions UI, NOT a re-push of the tag:
 # `git push` of a tag the remote already has reports "Everything up-to-date" and delivers no
-# event, so nothing restarts. `workflow_dispatch` is absent (see above), so the UI is the only
-# door.
+# event, so nothing restarts. If the run is past its retention window and no longer re-runnable,
+# `git push --delete origin <tag>` and push it again -- deleting first is what makes the second
+# push a new event. What does not work is the plain re-push, and `workflow_dispatch` is absent
+# (see above), so those two are the whole list.
 concurrency:
   group: release
   cancel-in-progress: false

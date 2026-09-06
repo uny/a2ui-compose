@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.compose.multiplatform) apply false
     alias(libs.plugins.android.kmp.library) apply false
     alias(libs.plugins.maven.publish) apply false
+    alias(libs.plugins.dokka) apply false
 }
 
 allprojects {

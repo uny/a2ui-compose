@@ -1,0 +1,85 @@
+name: release
+
+# A tag, and nothing else. `workflow_dispatch` is deliberately absent: the version this publishes
+# is read from the tag, so a manual run would have to invent one, and a coordinate published under
+# a version no tag points at is not reproducible from the repository.
+on:
+  push:
+    tags: ['v*']
+
+# Read-only, as in `build.yml` and for the same reason. Nothing here writes to the repository --
+# the credentials this job needs are the portal's and the signing key's, and both arrive as
+# secrets rather than through the token.
+permissions:
+  contents: read
+
+# Actions pinned to a commit, matching `build.yml`. To move one deliberately:
+#
+#   gh api repos/<owner>/<repo>/commits/<tag> --jq .sha
+#
+jobs:
+  publish:
+    # macOS, because the Apple targets are silently *skipped* on Linux --
+    # `kotlin.native.ignoreDisabledTargets=true` turns them off rather than failing -- and a
+    # release that skipped them would upload a catalogue of variants with three missing and no
+    # error to say so.
+    runs-on: macos-15
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # The tag is the version. `v0.1.0` publishes `0.1.0`; nothing else decides it.
+      - name: Read the version from the tag
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # The full suite before anything leaves the machine. A release is the one build where
+      # "the tests passed on the PR" is not enough: the tag may point at a merge the PR never had.
+      - name: Verify
+        run: ./gradlew build checkLegacyAbi --stacktrace
+
+      # Publish locally first, and consume it. This is the gate -- see `smoke-test/README.md`.
+      # Publishing to Maven Central is irreversible: a version is never re-uploaded and never
+      # deleted, so a broken publication is fixed only by burning the number. The smoke test is
+      # what stops that reaching the portal.
+      - name: Publish to the local repository
+        run: ./gradlew publishToMavenLocal -PVERSION_NAME=${{ steps.version.outputs.value }} --stacktrace
+
+      - name: Resolve it as a consumer would
+        working-directory: smoke-test
+        run: |
+          ./gradlew \
+            compileKotlinMetadata compileKotlinJvm compileKotlinJs compileKotlinWasmJs \
+            compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinMacosArm64 \
+            compileAndroidMain \
+            -Pa2uiVersion=${{ steps.version.outputs.value }} --stacktrace
+
+      # Uploads and validates; it does not release. The last step is a button in the Central
+      # Portal, held by the person whose account it is -- which is the right place for it while
+      # `publishAndReleaseToMavenCentral` exists and this is the first version to go out.
+      - name: Upload to Maven Central
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
+        run: ./gradlew publishToMavenCentral -PVERSION_NAME=${{ steps.version.outputs.value }} --stacktrace
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reports-release
+          path: '**/build/reports/**'
+          retention-days: 7

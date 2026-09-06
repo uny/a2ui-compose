@@ -1,6 +1,7 @@
 package dev.ynagai.a2ui.core.protocol
 
 import dev.ynagai.a2ui.core.validation.CatalogFixtures
+import dev.ynagai.a2ui.core.validation.pointer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -9,6 +10,8 @@ import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -318,64 +321,299 @@ class CatalogEntityNamesTest {
     }
 
     @Test
-    fun a_schema_keyword_the_catalog_carries_is_walked_whatever_shape_it_arrived_in() {
+    fun a_carried_keyword_that_is_not_the_shape_it_must_be_is_refused() {
         // `CatalogDefinitionSerializer` selects the carried keywords by key name and never by
-        // shape -- `rejectUnknownKeys` checks names alone -- so `$id` and `$schema`, which JSON
-        // Schema says are strings, may in fact arrive holding an object, and `$defs` may arrive
-        // holding an array. A `$ref` is a JSON pointer and reaches any of them.
+        // shape -- `rejectUnknownKeys` checks names alone -- so `$id` and `$schema`, which
+        // `catalog_definition.json` types as strings, may arrive holding an object or an array,
+        // and `$defs` may arrive holding an array.
         //
-        // Was: only `$defs` was read, and only where it had been an object, so all three of those
-        // regions were unwalked and `$ref`-reachable. Moving the name from `$defs` to `$id`, or
-        // wrapping it in a one-element array, was enough to get it past the rule.
-        //
-        // Both shapes are crossed against all three keywords rather than tested on the diagonal:
-        // with only `$id`-as-object and `$defs`-as-array listed, a walk that read objects
-        // everywhere but arrays under `$defs` alone would pass, and `{"$id": [ … ]}` would still
-        // slip through.
+        // Was: only `$defs` was read, and only where it had been an object, so all three regions
+        // went unwalked and `$ref`-reachable. Then they were walked whatever shape they held,
+        // which reached the names but left the shapes standing. Now the shape itself is refused:
+        // a region that is not the thing it claims to be has no business in the catalog, and
+        // saying so once beats reporting whatever happened to be found inside it.
         listOf(
-            """"${'$'}id": {"properties": {"bad-name": {"type": "string"}}}""" to "#/${'$'}id",
-            """"${'$'}schema": {"properties": {"bad-name": {"type": "string"}}}""" to "#/${'$'}schema",
-            """"${'$'}defs": {"B": {"properties": {"bad-name": {"type": "string"}}}}""" to "#/${'$'}defs/B",
-            """"${'$'}id": [{"properties": {"bad-name": {"type": "string"}}}]""" to "#/${'$'}id/0",
-            """"${'$'}schema": [{"properties": {"bad-name": {"type": "string"}}}]""" to "#/${'$'}schema/0",
-            """"${'$'}defs": [{"properties": {"bad-name": {"type": "string"}}}]""" to "#/${'$'}defs/0",
-        ).forEach { (carried, reference) ->
-            val source = """
-                {
-                  "catalogId": "example.com:testing",
-                  $carried,
-                  "components": {"Text": {"${'$'}ref": "$reference"}}
-                }
-            """.trimIndent()
-            val failure = assertFailsWith<A2uiFormatException>("`$carried` went unwalked") {
-                json.decodeFromString<CatalogDefinition>(source)
+            """"${'$'}id": {"properties": {"bad-name": {}}}""",
+            """"${'$'}id": [{"properties": {"bad-name": {}}}]""",
+            """"${'$'}schema": {"properties": {"bad-name": {}}}""",
+            """"${'$'}schema": [{"properties": {"bad-name": {}}}]""",
+        ).forEach { carried ->
+            val failure = assertFailsWith<A2uiFormatException>("`$carried` was accepted") {
+                json.decodeFromString<CatalogDefinition>(catalogCarrying(carried))
             }
             assertTrue(
-                failure.message.orEmpty().contains("bad-name"),
+                failure.message.orEmpty().contains("must be a string"),
                 "`$carried` was refused for the wrong reason: ${failure.message}",
+            )
+        }
+        val failure = assertFailsWith<A2uiFormatException> {
+            json.decodeFromString<CatalogDefinition>(
+                catalogCarrying(""""${'$'}defs": [{"properties": {"bad-name": {}}}]"""),
+            )
+        }
+        assertTrue(
+            failure.message.orEmpty().contains("must be an object"),
+            "an array-valued `${'$'}defs` was refused for the wrong reason: ${failure.message}",
+        )
+    }
+
+    @Test
+    fun a_reference_may_name_a_top_level_definition_and_nothing_inside_one() {
+        // The restriction that lets the walk decline to enter a region: what is not a schema
+        // position cannot be turned into one by a pointer. `#/components/Text` names a schema
+        // this walk checked; `#/components/Text/metadata/...` names a region it did not.
+        listOf(
+            "#/components/Text",
+            "#/functions/openUrl",
+            "#/${'$'}defs/anyComponent",
+            "catalog.json#/${'$'}defs/anyComponent",
+            "common_types.json#/${'$'}defs/DynamicString",
+            "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/Action",
+        ).forEach { reference ->
+            val body = """{"type":"object","allOf":[{"${'$'}ref":"$reference"}]}"""
+            val decoded = json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            assertEquals(setOf("Text"), decoded.components.keys, "`$reference` should be permitted")
+        }
+        listOf(
+            "#/components/Text/metadata/extensions/vendor",
+            "#/components/Text/properties/ok",
+            "#/${'$'}defs/anyComponent/properties/ok",
+            "#/x",
+            "https://evil.example/schema.json#/${'$'}defs/A",
+            "common_types.json#/${'$'}defs/A/B",
+        ).forEach { reference ->
+            val body = """{"type":"object","allOf":[{"${'$'}ref":"$reference"}]}"""
+            assertFailsWith<A2uiFormatException>("`$reference` should have been refused") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            }
+        }
+        // A `$ref` that is not a string at all, which is a separate branch from a target that
+        // names the wrong thing: the `keyword == REF` arm consumes the value, so a shape that
+        // slipped past would be neither walked nor refused -- `bad-name` below would be a live
+        // property of a catalog that loaded. Every other `$ref` in this suite is a string, so
+        // without these three the branch is exercised by nothing and `?: return` ships green.
+        val shapes = listOf("""{"properties":{"bad-name":{}}}""", "1", """["#/components/Text"]""")
+        shapes.forEach { ref ->
+            val body = """{"type":"object","allOf":[{"${'$'}ref":$ref}]}"""
+            val failure = assertFailsWith<A2uiFormatException>("`$ref` should have been refused") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            }
+            assertTrue(
+                failure.message.orEmpty().contains("must be a string"),
+                "`$ref` was refused for the wrong reason: ${failure.message}",
             )
         }
     }
 
     @Test
-    fun the_shapes_those_keywords_normally_hold_are_left_alone() {
-        // Walking the carried keywords uniformly must cost nothing on the strings they hold when
-        // a catalog is written the way JSON Schema says to write it; the walk bottoms out on a
-        // primitive. Without this, the test above would pass just as well for a check that
-        // refused every catalog carrying an `$id`.
-        val source = """
+    fun a_region_the_walk_does_not_enter_cannot_be_reached_by_a_pointer() {
+        // The two halves are only correct together. Declining to walk vendor data is what stops a
+        // catalog being refused for the JSON a vendor put in its own extension block; the
+        // reference restriction is what stops that same region being aimed at and evaluated as a
+        // schema. Was, with a blind walk and an unrestricted pointer: an entry named `default`
+        // under an unknown keyword hid its subtree from the walk, and a `$ref` then handed the
+        // subtree to the evaluator, so `bad-name` was a live property of a catalog that loaded.
+        val body = """{"x-shared":{"default":{"properties":{"bad-name":{}}}},""" +
+            """"allOf":[{"${'$'}ref":"#/components/Text/x-shared/default"}]}"""
+        val failure = assertFailsWith<A2uiFormatException>(
+            "a pointer into an unwalked region was permitted",
+        ) {
+            json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+        }
+        // Which of the two halves refused it matters. Asserting only the exception type would
+        // keep this test green if the walk were re-blinded: `bad-name` would then be reached
+        // again and refused by the identifier check, while the reference restriction this test
+        // exists to guard had gone.
+        assertTrue(
+            failure.message.orEmpty().contains("not a permitted"),
+            "refused by the walk rather than by the reference rule: ${failure.message}",
+        )
+    }
+
+    @Test
+    fun a_reference_may_name_this_catalogs_own_document_and_a_definitions_own_defs() {
+        // Two spellings that name exactly what `#/…` names, and were refused for their address
+        // rather than their target. Both are permitted because the walk entered the region:
+        // a definition-local `$defs` is one of `SCHEMA_MAPS`, and a catalog's own `$id` or
+        // `catalogId` is the name `SchemaRegistry` registers it under, so the pointer resolves to
+        // the same subschema either way.
+        val absolute = "https://example.com/c.json#/components/Text"
+        val ownDocument = """
             {
               "catalogId": "example.com:testing",
-              "${'$'}id": "https://example.com/catalog.json",
-              "${'$'}schema": "https://json-schema.org/draft/2020-12/schema",
-              "${'$'}defs": {"Base": {"properties": {"ok": {"type": "string"}}}},
-              "components": {"Text": {"${'$'}ref": "#/${'$'}defs/Base"}}
+              "${'$'}id": "https://example.com/c.json",
+              "components": {
+                "Text": {"type": "object"},
+                "Box": {"type":"object","allOf":[{"${'$'}ref":"$absolute"}]}
+              }
             }
         """.trimIndent()
         assertEquals(
-            setOf("Text"),
-            json.decodeFromString<CatalogDefinition>(source).components.keys,
+            setOf("Text", "Box"),
+            json.decodeFromString<CatalogDefinition>(ownDocument).components.keys,
         )
+        val byCatalogId = ownDocument.replace(absolute, "example.com:testing#/components/Text")
+        assertEquals(
+            setOf("Text", "Box"),
+            json.decodeFromString<CatalogDefinition>(byCatalogId).components.keys,
+        )
+        // Rule 2 bars the catalog-level `$defs` from holding shared helpers, which leaves a
+        // definition-local one the only place for them.
+        val localDefs = """{"type":"object","${'$'}defs":{"Pad":{"type":"string"}},""" +
+            """"properties":{"padding":{"${'$'}ref":"#/components/Text/${'$'}defs/Pad"}}}"""
+        val withLocalDefs = json.decodeFromString<CatalogDefinition>(
+            catalogWithComponentBody(localDefs),
+        )
+        assertEquals(setOf("Text"), withLocalDefs.components.keys)
+        // The widening is one step and only under `$defs`. Naming another document's definition,
+        // or any other second step, stays refused -- otherwise the depth rule buys nothing.
+        listOf(
+            "#/components/Text/properties/ok",
+            "#/components/Text/${'$'}defs/Pad/properties/ok",
+            "https://other.example/c.json#/components/Text",
+        ).forEach { reference ->
+            val body = """{"type":"object","allOf":[{"${'$'}ref":"$reference"}]}"""
+            assertFailsWith<A2uiFormatException>("`$reference` should have been refused") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            }
+        }
+    }
+
+    @Test
+    fun a_name_map_that_is_an_array_is_refused_rather_than_skipped() {
+        // The one place the depth widening could have reopened what it was widened inside of.
+        // `JsonObject.pointer` indexes an array by an integer token, and `$defs` is a step a
+        // `$ref` may now name -- so an array-valued `$defs` that the walk merely *skipped* would
+        // leave `#/components/Text/$defs/0` resolving to a region no rule ran over, which is
+        // exactly the pairing this pass exists to hold. Measured before the fix: the catalog
+        // below loaded, and the reference resolved to `{"properties":{"bad-name":{}}}`.
+        SCHEMA_MAPS.forEach { keyword ->
+            val body = """{"type":"object","$keyword":[{"properties":{"bad-name":{}}}]}"""
+            val failure = assertFailsWith<A2uiFormatException>("`$keyword` as an array was kept") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            }
+            assertTrue(
+                failure.message.orEmpty().contains("must be an object"),
+                "`$keyword` was refused for the wrong reason: ${failure.message}",
+            )
+        }
+        val indexed = """{"type":"object","${'$'}defs":[{"properties":{"bad-name":{}}}],""" +
+            """"allOf":[{"${'$'}ref":"#/components/Text/${'$'}defs/0"}]}"""
+        assertFailsWith<A2uiFormatException>("an indexable region was reachable by a pointer") {
+            json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(indexed))
+        }
+        // The *entry* of a draft-07 `dependencies` may still be an array of required property
+        // names. That is a value, not a name map, and stays accepted.
+        val required = """{"type":"object","dependencies":{"ok":["alsoOk"]}}"""
+        val kept = json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(required))
+        assertEquals(setOf("Text"), kept.components.keys)
+    }
+
+    @Test
+    fun an_escaped_pointer_segment_does_not_buy_a_step() {
+        // The depth restriction counts `/`-separated segments in the reference text, while
+        // `SchemaRegistry` resolves the fragment as a JSON Pointer -- so the two only agree
+        // while `pointer` splits on `/` BEFORE decoding `~1`. In that order `~1` produces a
+        // literal `/` inside one already-tokenised step, and `#/components/Text~1metadata` is a
+        // lookup for a component *named* `Text/metadata`, which `requireIdentifier` can never
+        // admit. Decode-then-split would make the same string five steps and hand a `$ref` the
+        // vendor region the walk deliberately skips.
+        //
+        // The reference is permitted here on purpose: it is `[^/]+` and names nothing, and that
+        // is the whole point. What this pins is the other half -- that it resolves to null --
+        // which lives in `SchemaRegistry.kt`, where nothing else would fail if the order changed.
+        val escaped = "#/components/Text~1metadata~1extensions~1vendor"
+        val vendor = """"metadata":{"extensions":{"vendor":{"properties":{"bad-name":{}}}}}"""
+        val body = """{"type":"object",$vendor,"allOf":[{"${'$'}ref":"$escaped"}]}"""
+        val source = catalogWithComponentBody(body)
+        val decoded = json.decodeFromString<CatalogDefinition>(source)
+        val document = json.parseToJsonElement(source) as JsonObject
+        assertEquals(setOf("Text"), decoded.components.keys)
+        assertNull(
+            document.pointer(escaped.removePrefix("#")),
+            "an escaped segment reached a region the walk does not enter",
+        )
+        // The control, without which the assertion above passes for a pointer that simply names
+        // nothing: the same region IS reachable when the steps are written unescaped -- and that
+        // spelling is the one `requirePermittedReference` refuses.
+        assertNotNull(document.pointer("/components/Text/metadata/extensions/vendor"))
+    }
+
+    @Test
+    fun the_vendor_json_a_component_carries_is_data_and_is_not_read_as_a_schema() {
+        // `ComponentDefinitionSerializer` sets `schema` to the whole component object, so
+        // `metadata` -- whose `extensions` hold arbitrary vendor JSON -- used to be walked as
+        // though it were a schema. A vendor payload that happened to contain the word
+        // `properties` and a hyphenated key then refused a catalog that breaks no rule.
+        listOf(
+            """{"type":"object","metadata":{"extensions":{"v":{"properties":{"bad-name":1}}}}}""",
+            """{"type":"object","x-vendor":{"properties":{"bad-name":1}}}""",
+            """{"type":"object","x-vendor":{"default":{"properties":{"bad-name":1}}}}""",
+        ).forEach { body ->
+            val decoded = json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            assertEquals(setOf("Text"), decoded.components.keys, "`$body` should have been kept")
+        }
+    }
+
+    @Test
+    fun a_property_name_is_checked_in_every_position_a_subschema_lives() {
+        // The walk descends by an enumeration now, so a keyword missing from it is a position no
+        // rule is applied to. The enumeration is iterated rather than sampled, and pinned below,
+        // for the reason the name maps are: a member no test exercises is a member that can be
+        // dropped without the suite noticing.
+        SUBSCHEMA.forEach { keyword ->
+            val body = """{"type":"object","$keyword":{"properties":{"bad-name":{}}}}"""
+            val failure = assertFailsWith<A2uiFormatException>("`$keyword` was not walked") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            }
+            assertTrue(
+                failure.message.orEmpty().contains("bad-name"),
+                "`$keyword` was refused for the wrong reason: ${failure.message}",
+            )
+        }
+        (SUBSCHEMA_LIST + ITEMS).forEach { keyword ->
+            val body = """{"type":"object","$keyword":[{"properties":{"bad-name":{}}}]}"""
+            val failure = assertFailsWith<A2uiFormatException>("`$keyword` was not walked") {
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            }
+            assertTrue(
+                failure.message.orEmpty().contains("bad-name"),
+                "`$keyword` was refused for the wrong reason: ${failure.message}",
+            )
+        }
+        // `items` carries both forms: 2020-12's single schema, and draft-07's tuple array above.
+        assertFailsWith<A2uiFormatException>("the 2020-12 form of `items` was not walked") {
+            json.decodeFromString<CatalogDefinition>(
+                catalogWithComponentBody("""{"items":{"properties":{"bad-name":{}}}}"""),
+            )
+        }
+    }
+
+    @Test
+    fun the_subschema_positions_are_pinned_and_not_merely_iterated() {
+        // The other half of the pair above, for the reason
+        // [the_closed_set_of_name_maps_is_pinned_and_not_merely_iterated] gives: a derived list
+        // shrinks with the set it derives from, so a position dropped from the walk drops out of
+        // the test that guards it. Unlike the name maps this set is *not* closed -- a later draft
+        // may add a position -- so widening it is expected; doing so silently is not.
+        assertEquals(
+            setOf(
+                "additionalItems",
+                "additionalProperties",
+                "contains",
+                "contentSchema",
+                "else",
+                "if",
+                "not",
+                "propertyNames",
+                "then",
+                "unevaluatedItems",
+                "unevaluatedProperties",
+            ),
+            SUBSCHEMA,
+            "a position added or dropped here changes what the naming rule reaches",
+        )
+        assertEquals(setOf("allOf", "anyOf", "oneOf", "prefixItems"), SUBSCHEMA_LIST)
     }
 
     @Test
@@ -548,6 +786,14 @@ class CatalogEntityNamesTest {
               "returnType": "void"
             }
           }
+        }
+    """.trimIndent()
+
+    private fun catalogCarrying(carried: String): String = """
+        {
+          "catalogId": "example.com:testing",
+          $carried,
+          "components": {"Text": {"type": "object"}}
         }
     """.trimIndent()
 

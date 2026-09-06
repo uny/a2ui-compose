@@ -4,10 +4,10 @@ import dev.ynagai.a2ui.core.validation.isUnicodeIdentifier
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
- * Checks a catalog's entity names against the rule the specification states in prose.
+ * Checks a catalog against the structural rules the specification states only in prose.
  *
  * `a2ui_protocol.md`'s "Catalog Entity Naming Rules" makes component names, function names, and
  * argument/property names MUST-conform to UAX #31, and gives the canonical regex
@@ -16,6 +16,11 @@ import kotlinx.serialization.json.buildJsonObject
  * carries no `propertyNames` at all. So the schema evaluator cannot reach the rule, and the
  * specification's own harness does not try -- `test/run_tests.py`'s `validate_catalogs_identifiers`
  * is a separate pass, outside the JSON Schema validation. This is that pass.
+ *
+ * It also enforces rule 3 of "Catalog Schema Rules and Conventions", which restricts `$ref`, not
+ * because that is a naming rule but because it is what makes the name rule *checkable*: without
+ * it a name cannot be checked where it stands, only where it is reachable from -- see
+ * [checkSchema].
  *
  * It runs from [CatalogDefinition]'s `init` rather than from its serializer, because a catalog
  * reaches a checker three ways and only one of them decodes: `CatalogValidator.of` and
@@ -29,40 +34,24 @@ import kotlinx.serialization.json.buildJsonObject
  * the renderer would then be checking everything else against.
  */
 internal fun checkEntityNames(
+    catalogId: String,
     components: Map<String, ComponentDefinition>,
     functions: Map<String, FunctionDefinition>,
     schemaKeywords: Map<String, JsonElement> = emptyMap(),
 ) {
-    // A definition may reach its properties through a keyword the catalog carries rather than
-    // declare them inline, and `schemaKeywords` is what carries them. Walking only the definitions
-    // would leave `{"$defs":{"Base":{"properties":{"bad-name":…}}},"components":{"Text":
-    // {"$ref":"#/$defs/Base"}}}` accepted, with `bad-name` a live component property. The upstream
-    // harness has this gap too -- it walks `components` and `functions` alone -- so closing it is
-    // deliberately stricter than the reference implementation, and stricter only about names the
-    // prose rule already forbids.
-    //
-    // Every carried keyword is walked, and each whatever shape it arrived in. `$ref` is a JSON
-    // pointer, so it reaches any of them, while `CatalogDefinitionSerializer` selects them by key
-    // name and never by shape -- `rejectUnknownKeys` checks names alone. So `$id` and `$schema`,
-    // which JSON Schema says are strings, may in fact hold an object, and `$defs` may hold an
-    // array. Reading `$defs` alone, and only where it had been an object, left all three of those
-    // regions unwalked and `$ref`-reachable; walking the map uniformly reaches every one of them,
-    // and costs nothing on the strings these keywords normally hold, which the walk bottoms out
-    // on.
-    //
-    // What this does *not* reach is the instance carve-out below: a region under `const`,
-    // `default`, `enum` or `examples` is skipped wherever it sits, so `{"$id":{"default":{
-    // "properties":{"bad-name":…}}}}` is still accepted for a `$ref` of `#/$id/default`. That is
-    // the carve-out's own gap -- `#/$defs/Base/default` has it too, and has since the carve-out
-    // was written -- not this walk's, and closing it means making the walk position-aware.
-    schemaKeywords.forEach { (keyword, value) ->
-        checkPropertyNames(
-            buildJsonObject { put(keyword, value) },
-            "the catalog's `${keyword.take(ERROR_EXCERPT)}`",
-        )
-    }
+    // The names this catalog is reachable by, so a reference that spells the document out in full
+    // is read as the local reference it is. `SchemaRegistry` registers a catalog under its `$id`
+    // and, where it declares none, under its `catalogId` -- so both are self, and a self-reference
+    // written either way resolves to exactly what `#/…` would. Computed once and passed down
+    // rather than derived at each site: a set that omitted `catalogId` in one place and not
+    // another would accept a reference from a component and refuse the same one from `$defs`.
+    val selfNames = setOfNotNull(
+        catalogId.takeIf { it.isNotEmpty() },
+        (schemaKeywords[ID] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+    )
+    checkCarriedKeywords(schemaKeywords, selfNames)
     components.forEach { (name, definition) ->
-        // Rule 4 of the same section, and enforced here for the same reason as rules 1-3: a
+        // Rule 4 of the naming section, and enforced here for the same reason as rules 1-3: a
         // catalog may not redefine the surface's implicit root. `catalog_definition.json` does
         // encode this one, as `components.propertyNames`, but the schema is not consulted on the
         // path a definition built in Kotlin takes.
@@ -73,7 +62,7 @@ internal fun checkEntityNames(
             )
         }
         requireIdentifier(name, "component name")
-        checkPropertyNames(definition.schema, "component `${name.take(ERROR_EXCERPT)}`")
+        checkSchema(definition.schema, "component `${name.take(ERROR_EXCERPT)}`", selfNames)
     }
     functions.forEach { (name, definition) ->
         // The `@` namespace is reserved before UAX #31 is consulted, because the reason differs
@@ -95,63 +84,200 @@ internal fun checkEntityNames(
             )
         }
         requireIdentifier(name, "function name")
-        checkPropertyNames(definition.schema.raw, "function `${name.take(ERROR_EXCERPT)}`")
+        checkSchema(definition.schema.raw, "function `${name.take(ERROR_EXCERPT)}`", selfNames)
     }
 }
 
 /**
- * Every key of every `properties` object anywhere under [schema].
+ * The three keywords `CatalogDefinitionSerializer` carries through unread.
  *
- * The walk is blind to where in JSON Schema it is, as the upstream harness's is: a property name
- * is a property name whether it sits under `allOf`, inside `items`, in a `then` branch, or in a
- * `$defs` entry the definition composes, and enumerating the keywords that may hold a subschema
- * would have to be revised for every keyword the specification later admits.
+ * `$schema` and `$id` are strings in `catalog_definition.json`, and `$defs` is an object whose
+ * only permitted keys are `anyComponent` and `anyFunction` -- rule 2 of "Catalog Schema Rules and
+ * Conventions" prohibits custom definitions there outright. None of that is checked on the way in:
+ * the serializer selects these by key *name* and `rejectUnknownKeys` checks names alone, so each
+ * may arrive holding anything at all.
  *
- * With one exception, which is not a matter of taste. `const`, `default`, `enum` and `examples`
- * hold *instances*, not subschemas -- a component whose `default` is `{"properties": {"x-y": 1}}`
- * carries a JSON object that happens to use those two words, and no property name at all. The
- * upstream harness descends into them anyway and would refuse such a catalog; this does not.
- * Skipping them cannot hide a real violation, because no subschema is reachable through them --
- * but that is only true of those words in *keyword* position. An entry may be *named* `default`,
- * and its value is then an ordinary subschema.
+ * Shapes are refused rather than skipped. An `as?` that yields null is a check that does not run,
+ * and a region no check ran over is exactly what a `$ref` used to be aimed at.
  *
- * So the walk distinguishes the two objects JSON Schema is built from. In a *schema*, a key is a
- * keyword. In one of [SCHEMA_MAPS], a key is a **name** its author chose and the value beneath it
- * is a schema; such a map is therefore never popped as a schema, and its entries are enqueued one
- * by one. Reading a name map as though it were a schema is what let an entry named `default`
- * swallow its own subtree, and an entry named `properties` have its subschema's keywords mistaken
- * for names. Note that this enumerates only the keywords whose value is a *map of names* -- a
- * closed set of six -- and not the far larger, open set of keywords that may hold a subschema,
- * which is what the blindness above exists to avoid having to track.
+ * The *keys* of `$defs` are a different matter and are deliberately not held to rule 2 here: unlike
+ * the naming rule, that one `catalog_definition.json` does encode, as `additionalProperties: false`
+ * on `$defs` -- so the schema evaluator already reaches it and this pass would only be deciding a
+ * compatibility question ahead of it. See the comment on the walk below.
+ */
+private fun checkCarriedKeywords(
+    schemaKeywords: Map<String, JsonElement>,
+    selfNames: Set<String>,
+) {
+    schemaKeywords.forEach { (keyword, value) ->
+        val quoted = keyword.take(ERROR_EXCERPT)
+        if (keyword != DEFS) {
+            if (value !is JsonPrimitive || !value.isString) {
+                throw A2uiFormatException(
+                    "CatalogDefinition: `$quoted` must be a string; `catalog_definition.json` " +
+                        "types it so, and an object or an array here is a region a `\$ref` can " +
+                        "reach but no rule has been applied to.",
+                )
+            }
+            return@forEach
+        }
+        val defs = value as? JsonObject ?: throw A2uiFormatException(
+            "CatalogDefinition: `$DEFS` must be an object mapping names to subschemas.",
+        )
+        // Every entry is walked, whatever it is called. The specification's "No Custom `$defs` or
+        // Helpers" rule permits only `anyComponent` and `anyFunction` here, and refusing the rest
+        // outright was tried and reverted: the security property comes from the reference
+        // restriction, not from this rule -- an entry nothing may point at is inert -- while
+        // refusing them decides a compatibility question about third-party inline catalogs that
+        // is not this check's to decide.
+        defs.forEach { (name, subschema) ->
+            checkSchema(subschema, "the catalog's `$DEFS/${name.take(ERROR_EXCERPT)}`", selfNames)
+        }
+    }
+}
+
+/**
+ * Every property name declared anywhere under [root], and every `$ref` it takes.
+ *
+ * The walk descends only where JSON Schema puts a subschema. That is a reversal: it used to be
+ * blind, treating every object it reached as a schema, on the reasoning that enumerating the
+ * keywords which may hold a subschema would need revising for every keyword the specification
+ * later admits. The reasoning was sound and the consequence was not, because a blind walk cannot
+ * be right in both directions at once:
+ *
+ *  - It entered data. `ComponentDefinitionSerializer` sets `schema` to the *whole* component
+ *    object, so `metadata.extensions.<vendor>` -- arbitrary vendor JSON -- was read as a schema,
+ *    and a vendor payload that happened to contain `{"properties": {"bad-name": 1}}` refused a
+ *    catalog that breaks no rule.
+ *  - The carve-out that compensated for that -- skipping `const`, `default`, `enum` and
+ *    `examples` by *name*, wherever they appeared -- then hid subtrees. Under any keyword the
+ *    walk did not know, an entry named `default` swallowed everything below it, so
+ *    `{"x-shared":{"default":{"properties":{"bad-name":…}}}}` was accepted.
+ *
+ * Position awareness settles both: data is never entered, and the carve-out becomes unnecessary
+ * rather than merely narrower, because `const`, `default`, `enum` and `examples` are simply not
+ * places a subschema lives.
+ *
+ * What makes that safe is the reference restriction below. A blind walk was, in one respect,
+ * doing real work: this renderer's `SchemaRegistry` resolves a `$ref` by JSON Pointer without
+ * asking whether the target stood in a schema position, and `SchemaEvaluator` then evaluates
+ * whatever it finds. Ceasing to walk vendor data would therefore have traded a false positive
+ * for a false negative -- `{"$ref": "#/components/Text/metadata/extensions/vendor"}` -- had the
+ * pointer not been restricted in the same change. It is the pair that is correct, not either
+ * half.
+ *
+ * Only names a catalog *declares* are checked, which is the distinction the suite already draws:
+ * a `required` entry, a `dependentSchemas` trigger and a `$defs` entry name all *refer* to
+ * something, and refusing them would reject catalogs that break no rule.
  *
  * Iterative rather than recursive. A definition is as deeply nested as whoever wrote it chose,
  * an inlined catalog is agent-controlled, and Kotlin/Native aborts the process on stack overflow
  * rather than raising something a caller could catch.
  */
-private fun checkPropertyNames(schema: JsonObject, owner: String) {
+private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>) {
     val pending = ArrayDeque<JsonElement>()
-    pending.addLast(schema)
+    pending.addLast(root)
     while (pending.isNotEmpty()) {
-        when (val element = pending.removeLast()) {
-            is JsonObject -> element.forEach { (key, value) ->
-                if (key in INSTANCE_KEYWORDS) return@forEach
-                if (key in SCHEMA_MAPS && value is JsonObject) {
-                    // Enqueue the entries, never the map: a key here is a name its author chose,
-                    // so popping the map as a schema would read an entry named `default` as the
-                    // keyword and one named `properties` as another name map. Only under
-                    // `properties` is that name an entity name the rule governs -- a `$defs`
-                    // entry name and a `patternProperties` regex are neither.
-                    value.forEach { (name, subschema) ->
-                        if (key == PROPERTIES) requireIdentifier(name, "property name in $owner")
+        // A schema is an object or a boolean. Anything else in a schema position is malformed,
+        // and there is nothing under it to walk -- the evaluator ignores it too.
+        val schema = pending.removeLast() as? JsonObject ?: continue
+        schema.forEach { (keyword, value) ->
+            when {
+                keyword == REF -> requirePermittedReference(value, owner, selfNames)
+                keyword in SUBSCHEMA -> pending.addLast(value)
+                keyword == ITEMS ->
+                    // 2020-12 gives `items` a single schema; draft-07 also let it hold the
+                    // tuple form, an array of them. Both are still written.
+                    if (value is JsonArray) value.forEach { pending.addLast(it) }
+                    else pending.addLast(value)
+                keyword in SUBSCHEMA_LIST -> (value as? JsonArray)?.forEach { pending.addLast(it) }
+                keyword in SCHEMA_MAPS -> {
+                    // Refused rather than skipped, for the reason [checkCarriedKeywords] gives
+                    // and with a sharper edge here. Every draft makes these keywords objects, so
+                    // an array is malformed -- but `JsonObject.pointer` indexes an array by its
+                    // integer token, and `$defs` is a step a `$ref` may name. Skipping the map
+                    // left `{"$defs":[{"properties":{"bad-name":…}}]}` unwalked while
+                    // `#/components/Text/$defs/0` still resolved to it and was still evaluated,
+                    // which is the pairing this whole pass exists to hold.
+                    val entries = value as? JsonObject ?: throw A2uiFormatException(
+                        "CatalogDefinition: `${keyword.take(ERROR_EXCERPT)}` in $owner must be " +
+                            "an object mapping names to subschemas; an array here is a region a " +
+                            "`\$ref` can index but no rule has been applied to.",
+                    )
+                    entries.forEach { (name, subschema) ->
+                        // A key here is a name its author chose, not a keyword. Only under
+                        // `properties` is it a name the rule governs -- a `$defs` entry name, a
+                        // `patternProperties` regex and a `dependencies` trigger are none of them.
+                        if (keyword == PROPERTIES) {
+                            requireIdentifier(name, "property name in $owner")
+                        }
+                        // A draft-07 `dependencies` entry may hold an array of required property
+                        // names rather than a subschema; it is not an object, so the pop discards
+                        // it. That is the *entry*, not the map, and stays a skip.
                         pending.addLast(subschema)
                     }
-                    return@forEach
                 }
-                pending.addLast(value)
+                // Annotations, vendor extensions and instance values. Not schemas, so not walked,
+                // and -- since a `$ref` may no longer be aimed into them -- not reachable either.
+                else -> Unit
             }
-            is JsonArray -> element.forEach { pending.addLast(it) }
-            else -> Unit
         }
+    }
+}
+
+/**
+ * Rule 3, "Restricted `$ref` Targets".
+ *
+ * A local target must name a top-level component, function or `$defs` entry of this catalog, or a
+ * `$defs` entry of one of those; an external one must name a `$defs` entry of `common_types.json`.
+ * The document may be left implicit (`#/…`), written as the placeholder `catalog.json#/…`, or
+ * spelled out in full with this catalog's own `$id` or `catalogId`. This is the rule that lets
+ * [checkSchema] decline to walk a region: what is not a schema position cannot be turned into one
+ * by a pointer.
+ *
+ * The prose narrows external targets further, to eleven named `common_types.json` schemas, and
+ * that half is deliberately not enforced: **the specification's own `basic.json` violates it**,
+ * referencing `Child`, `DataBinding` and `FunctionCall`, none of which are on the list, while
+ * `testing.json` writes the relative `common_types.json#/$defs/…` rather than the absolute URL
+ * the prose gives. Enforcing the list literally would refuse the catalogs the specification
+ * ships.
+ *
+ * What is restricted is therefore the *depth* of the pointer, not the document it names. The
+ * external form matches on the filename alone, and the name a document is registered under can be
+ * its `catalogId` -- a free agent-supplied string -- so a second inlined catalog claiming
+ * `catalogId: "https://…/common_types.json"` will answer a reference spelled that way. That is
+ * schema substitution between two catalogs the same agent supplied, not an escape from this pass:
+ * both went through [checkEntityNames], and `SchemaEvaluator`'s `pattern` trust gate keys on
+ * `ProtocolSchemas.libraryUris`, which no such name is in. Anchoring the external form to
+ * `ProtocolSchemas.COMMON_TYPES_URI` would close it, at the cost of refusing spellings that
+ * resolve correctly today.
+ */
+private fun requirePermittedReference(target: JsonElement, owner: String, selfNames: Set<String>) {
+    val reference = (target as? JsonPrimitive)?.takeIf { it.isString }?.content
+        ?: throw A2uiFormatException(
+            "CatalogDefinition: a `$REF` in $owner must be a string.",
+        )
+    // A reference that names this catalog's own document is a local one wearing a full address,
+    // so the prefix is dropped before the shape is judged rather than a second pattern being
+    // written for it. `catalog.json` is handled inside [LOCAL_REFERENCE] because it is a name
+    // every catalog may write, not one this catalog happens to have.
+    val local = selfNames.firstOrNull { reference.startsWith("$it#") }
+        ?.let { reference.removePrefix(it) }
+        ?: reference
+    // Both patterns are tried rather than dispatched on a leading `#`: `catalog.json#/$defs/X`
+    // is a local target wearing a document name, and testing it as an external one refused it.
+    val permitted =
+        LOCAL_REFERENCE.matches(local) || COMMON_TYPES_REFERENCE.matches(reference)
+    if (!permitted) {
+        throw A2uiFormatException(
+            "CatalogDefinition: `${reference.take(ERROR_EXCERPT)}` in $owner is not a permitted " +
+                "`$REF` target; the specification restricts a local one to a top-level " +
+                "component, function or `$DEFS` entry of this catalog (`#/components/Text`, " +
+                "`#/functions/required`, `#/$DEFS/anyComponent`) or a `$DEFS` entry of one of " +
+                "those (`#/components/Text/$DEFS/Pad`), and an external one to " +
+                "`common_types.json#/$DEFS/…`. The document may be left implicit, written as " +
+                "`catalog.json#/…`, or spelled out with this catalog's own `$ID` or `catalogId`.",
+        )
     }
 }
 
@@ -178,20 +304,12 @@ internal const val PROPERTIES: String = "properties"
  * that their entries are walked as the schemas they are, without their author-chosen keys being
  * read as keywords or as entity names.
  *
- * `dependencies` earns its place by the failure its absence caused, which is the one the other
- * five are here to prevent: it is draft-07's `dependentSchemas`, its subschemas apply directly
- * with no `$ref` needed, and while it was missing an entry *named* `default` was read as the
- * instance keyword -- so `{"dependencies":{"default":{"properties":{"bad-name":…}}}}` was
- * accepted, and `{"dependencies":{"properties":{"$ref":…}}}` refused for a `$ref` that is not a
- * name. Its entry may hold an array of required property names rather than a subschema; the walk
- * bottoms out on the strings in it as it does on any other array.
- *
  * `internal` rather than private so `CatalogEntityNamesTest` can iterate this set rather than
  * retype it -- a retyped copy stays green on a member added here, and so would cover a seventh
  * keyword with nothing. Iterating alone is only half of it: a derived list also shrinks when a
  * member is *dropped*, which is how the bug this set was widened for would reopen unnoticed. The
  * other half is `the_closed_set_of_name_maps_is_pinned_and_not_merely_iterated`, which pins the
- * membership below. Change either and that test must be changed too, on purpose.
+ * membership. Change either and that test must be changed too, on purpose.
  */
 internal val SCHEMA_MAPS: Set<String> = setOf(
     PROPERTIES,
@@ -202,14 +320,76 @@ internal val SCHEMA_MAPS: Set<String> = setOf(
     "dependencies",
 )
 
+/**
+ * The keywords whose value is a single subschema.
+ *
+ * `additionalItems` is draft-07's tail-of-tuple schema, kept for the same reason `definitions`
+ * and `dependencies` are in [SCHEMA_MAPS]: catalogs written against the earlier drafts still use
+ * it, and a position the walk does not know is a position it does not check. `contentSchema` is
+ * an annotation the evaluator does not apply, but its value is still a schema and may still
+ * declare property names.
+ */
+internal val SUBSCHEMA: Set<String> = setOf(
+    "additionalItems",
+    "additionalProperties",
+    "contains",
+    "contentSchema",
+    "else",
+    "if",
+    "not",
+    "propertyNames",
+    "then",
+    "unevaluatedItems",
+    "unevaluatedProperties",
+)
+
+/** The keywords whose value is an array of subschemas. */
+internal val SUBSCHEMA_LIST: Set<String> = setOf("allOf", "anyOf", "oneOf", "prefixItems")
+
+/** A schema in 2020-12, an array of them in draft-07's tuple form. */
+internal const val ITEMS: String = "items"
+
 /** Where a catalog keeps the subschemas its definitions reference rather than inline. */
 private const val DEFS: String = "\$defs"
 
+private const val REF: String = "\$ref"
+
+private const val ID: String = "\$id"
+
+/**
+ * A top-level definition of this catalog, and -- one step further -- a definition's own
+ * `$defs` entry. Nothing else inside one.
+ *
+ * `catalog.json` is how a document names the *active* catalog -- `common_types.json` itself
+ * refers to `catalog.json#/$defs/anyFunction` -- so a catalog may write either spelling for its
+ * own definitions.
+ *
+ * The depth is the whole point, and is what the prose's rule 3 is protecting even though it
+ * enumerates only `components` and `functions`: `#/components/Text` names a schema this walk
+ * checked, while `#/components/Text/metadata/extensions/vendor` names a region it deliberately
+ * did not. `$defs` is admitted alongside them because every entry under it is walked as a schema
+ * whatever it is called, so naming one is no different from naming a component.
+ *
+ * A definition's own `$defs` is admitted for that same reason and no other: `$defs` is one of
+ * [SCHEMA_MAPS], so `#/components/Card/$defs/Pad` names a subschema this walk entered and checked,
+ * exactly as `#/components/Card` does. Rule 2 bars a catalog from factoring shared subschemas into
+ * the catalog-level `$defs`, which leaves a definition-local one the only place to put them, so
+ * refusing this spelling would refuse the shape the rule pushes an author towards. It is the only
+ * second step permitted -- `#/components/Card/properties/pad` is still a region-naming pointer and
+ * is still refused.
+ */
+private val LOCAL_REFERENCE: Regex =
+    Regex(
+        "^(?:catalog\\.json)?#/(?:components|functions|\\\$defs)/[^/]+" +
+            "(?:/\\\$defs/[^/]+)?$",
+    )
+
+/** `common_types.json#/$defs/<name>`, however the catalog spells the document's location. */
+private val COMMON_TYPES_REFERENCE: Regex =
+    Regex("^(?:[^#]*/)?common_types\\.json#/\\\$defs/[^/]+$")
+
 /** The prefix `a2ui_protocol.md`'s System Namespace Rule reserves. */
 private const val SYSTEM_FUNCTION_PREFIX: String = "@"
-
-/** JSON Schema keywords whose values are instances, and so hold no property names. */
-private val INSTANCE_KEYWORDS: Set<String> = setOf("const", "default", "enum", "examples")
 
 /** How much of a name an error message quotes; a catalog chooses its own key lengths. */
 private const val ERROR_EXCERPT: Int = 64

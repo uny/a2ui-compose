@@ -115,7 +115,7 @@ class CatalogDefinitionTest {
     @Test
     fun `an allOf-shaped function definition exposes its branches instead of a call name`() {
         val decoded = json.decodeFromString<CatalogDefinition>(
-            """{"catalogId":"c","functions":{"f":{"type":"object","allOf":[{"${'$'}ref":"#/x"}],"returnType":"boolean"}}}""",
+            """{"catalogId":"c","functions":{"f":{"type":"object","allOf":[{"${'$'}ref":"#/functions/g"}],"returnType":"boolean"}}}""",
         )
         val function = decoded.functions.getValue("f")
         assertNull(function.schema.callName)

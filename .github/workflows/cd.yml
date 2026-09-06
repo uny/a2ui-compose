@@ -127,7 +127,7 @@ jobs:
           fi
           case "$GPG_KEY_ID" in
             [0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f] | \
-            0x[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f] ) ;;
+            0[xX][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f] ) ;;
             * )
               echo "::error::GPG_KEY_ID must be the short 8-hex key id (gpg --list-secret-keys --keyid-format SHORT), not a long id or a fingerprint." >&2
               exit 1

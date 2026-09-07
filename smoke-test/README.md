@@ -70,11 +70,13 @@ exercised before a tag exists — `cd.yml` itself cannot run until one does, and
 re-uploads nor deletes, so the first release is a poor place for a step's first execution.
 
 Both point the consumer at the repository the publish just wrote, but by different means, and the
-difference is the interesting part. `cd.yml` passes no `-Dmaven.repo.local` at all: publish and
-consumer both use the default `~/.m2`, which is the same repository only because a GitHub-hosted
-runner starts with an empty one. `release-dry-run.yml` passes the property to both steps, so the
-consumer provably resolves what *that run* published rather than whatever `~/.m2` happens to hold —
-which is what makes it safe to run somewhere warm. Either way `settings.gradle.kts` binds
+difference is what each can promise. `cd.yml` passes no `-Dmaven.repo.local` at all: publish and
+consumer both fall through to the default `~/.m2`, so it is the same repository either way — what
+a fresh GitHub-hosted runner adds is that the repository holds *nothing else*. On a warm one it
+would: a stale `0.1.0` left from an earlier run could answer for a variant this publish failed to
+write, and the gate would pass on artifacts this run never produced. `release-dry-run.yml` names a
+directory under the runner's temp instead, which nothing else can have written to, so it resolves
+what *that run* published wherever it runs. Either way `settings.gradle.kts` binds
 `dev.ynagai.a2ui` to `mavenLocal()` exclusively, so nothing else can answer for the group under
 test.
 

@@ -204,15 +204,17 @@ jobs:
         if: always()
         env:
           VERSION: ${{ steps.version.outputs.value }}
+          VERSION_OUTCOME: ${{ steps.version.outcome }}
         run: |
           {
-            # `always()`, so this also runs when the version step refused its input and wrote no
-            # output -- at which point `VERSION` is the empty string and a bare heading would read
-            # "for v".
+            # `always()`, so this also runs when no version was ever recorded -- the step refused
+            # its input, or never ran because checkout or setup failed. `VERSION` is the empty
+            # string in both cases and a bare heading would read "for v", so report the step's
+            # outcome rather than guessing which of the two it was.
             if [ -n "$VERSION" ]; then
               echo "### Release dry run for v${VERSION}"
             else
-              echo '### Release dry run — refused before anything ran'
+              echo "### Release dry run — no version was read (\`Read the version\`: ${VERSION_OUTCOME})"
             fi
             echo
             echo 'Nothing left this runner: no Maven Central upload, no tag, no release.'

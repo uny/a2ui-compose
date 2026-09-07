@@ -1,0 +1,210 @@
+name: Release dry run
+
+# `cd.yml`'s publish path, on demand, with the Maven Central upload replaced by a publish to a
+# directory under the runner's temp.
+#
+# `cd.yml` runs only on a `v*` tag, so every guard it carries would otherwise first execute during
+# a real release -- and a release is the one build where "it has never run" is expensive: Central
+# never re-uploads and never deletes, so a version that fails halfway is abandoned rather than
+# fixed. This is where those steps get to fail cheaply.
+#
+# What it proves: the version is a usable coordinate, every module's publication assembles, signs,
+# and lands in a repository; a consumer resolves all three artifacts from that repository on every
+# published target; and every deployed file carries a detached signature.
+#
+# What it cannot prove: that Central accepts the result. Nothing is uploaded, so Central's own
+# validation -- the required POM fields, the staging bundle, whether the signing key's public half
+# is on a keyserver -- never runs. Measured with `--dry-run` on this tree, `publishToMavenCentral`
+# additionally runs `prepareMavenCentralPublishing` and the `...ToMavenCentralRepository` tasks,
+# none of which this exercises. A green run here is "the build is ready to try", not "the release
+# will succeed".
+#
+# Deliberately absent: `environment: release`, every `secrets.*` that `cd.yml` reads, and any tag,
+# release, or remote publish step. The only credential is the automatic `github.token` below,
+# scoped to `contents: read`. So this workflow cannot upload to Central and cannot write to the
+# repository.
+#
+# It *can* sign, with a key generated inside the job. That is a smaller claim than it sounds: the
+# key lives for one run and its public half is never distributed, so a signature made with it is
+# one Central could not verify even if something did upload it -- and nothing here can. The
+# property worth protecting was never "holds no key" but "holds no *secret* and publishes to no
+# *remote*", and a throwaway key adds neither. Do not swap it for a repository secret to make the
+# signing "more realistic"; that trades the whole safety argument for nothing.
+#
+# Why a key at all: `signAllPublications()` is unconditional, and measured on this tree a release
+# version without a key does not skip signing quietly -- `publishToMavenLocal` fails with
+# `No configured signatory`. The alternatives are making that call conditional, which puts a switch
+# in the release path whose failure mode is publishing unsigned, or generating a key here.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to rehearse, with or without the leading v (e.g. 0.1.0 or v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Shares no group with `cd.yml`: a rehearsal must never queue behind, or ahead of, a real release.
+concurrency:
+  group: release-dry-run-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dry-run:
+    # macOS, for the reason `build.yml` and `cd.yml` both give: on Linux the Apple targets are
+    # silently skipped rather than failed, so a rehearsal there would publish a catalogue with
+    # three variants missing and report success.
+    runs-on: macos-15
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      # The same charset `cd.yml` applies to a tag, applied to free text from whoever dispatches
+      # this -- so a version that would be refused there is refused here, rather than rehearsing a
+      # release that cannot happen. The value reaches the shell as an environment variable rather
+      # than as a `${{ }}` expression pasted into a command line: interpolated directly, a value
+      # like `0.1.0"; some-command; "` would run.
+      #
+      # `${VERSION#v}` before anything else, so `0.1.0` and `v0.1.0` both work. Everything around a
+      # release speaks in `v0.1.0`, which is what a maintainer will reach for here.
+      - name: Read the version
+        id: version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          version="${VERSION#v}"
+          case "$version" in
+            "" | *[!0-9A-Za-z.-]* )
+              echo "::error::Refusing '$VERSION': a version must be non-empty [0-9A-Za-z.-]" >&2
+              exit 1
+              ;;
+          esac
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify
+        run: ./gradlew build checkLegacyAbi --stacktrace
+
+      # `cd.yml`'s "Publish to the local repository" step, aimed at a directory the later steps can
+      # inspect and nothing else can have written to. `~/.m2` would work on a fresh runner and hide
+      # a failure on a warm one, and the whole point of the consumer step below is that it resolves
+      # what *this* run published.
+      #
+      # GNUPGHOME sits under RUNNER_TEMP rather than a `mktemp -d`, because gpg-agent's socket path
+      # has a ~104-character limit and a long temp path crosses it. That failure reads as "can't
+      # connect to the gpg-agent", which does not sound like a path-length problem.
+      - name: Publish every module to a local repository
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          export GNUPGHOME="${RUNNER_TEMP}/dry-run-gnupg"
+          mkdir -p "$GNUPGHOME"
+          chmod 700 "$GNUPGHOME"
+          gpg --batch --pinentry-mode loopback --passphrase '' \
+            --quick-generate-key "A2UI Dry Run <dryrun@example.invalid>" rsa3072 sign never
+
+          ORG_GRADLE_PROJECT_signingInMemoryKey=$(
+            gpg --batch --pinentry-mode loopback --passphrase '' \
+              --armor --export-secret-keys dryrun@example.invalid
+          )
+          export ORG_GRADLE_PROJECT_signingInMemoryKey
+          # The runner masks `secrets.*`, and this key is not one, so nothing would redact it if a
+          # later `--debug` echoed it. The key is throwaway and no dump path reaches it today, but
+          # the shape of this step is what gets copied into one holding a real key. Per line,
+          # because `::add-mask::` reads one line: masking the whole variable in one call would
+          # register only the `-----BEGIN...` header and leave every byte that matters in the clear.
+          while IFS= read -r key_line; do
+            [ -n "$key_line" ] && echo "::add-mask::${key_line}"
+          done <<< "$ORG_GRADLE_PROJECT_signingInMemoryKey"
+
+          ./gradlew publishToMavenLocal -PVERSION_NAME="$VERSION" \
+            -Dmaven.repo.local="${RUNNER_TEMP}/dry-run-m2" --stacktrace
+
+      # The gate `cd.yml` runs before its upload, pointed at the same directory. `mavenLocal()` in
+      # `smoke-test/settings.gradle.kts` honours `-Dmaven.repo.local`, and it is `exclusiveContent`
+      # -bound to `dev.ynagai.a2ui`, so nothing else can answer for the group under test. Measured
+      # on this tree: with the redirect, all eight compilations resolve; without it, the same
+      # command fails with `Could not find dev.ynagai.a2ui:a2ui-core:<version>`.
+      - name: Resolve it as a consumer would
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          ./gradlew -p smoke-test \
+            compileCommonMainKotlinMetadata compileKotlinJvm compileKotlinJs compileKotlinWasmJs \
+            compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinMacosArm64 \
+            compileAndroidMain \
+            -Pa2uiVersion="$VERSION" -Dmaven.repo.local="${RUNNER_TEMP}/dry-run-m2" --stacktrace
+
+      # Central requires a detached signature for every deployed file, and a local repository takes
+      # unsigned artifacts without complaint. The publish above would fail if a publication
+      # *declared* an `.asc` it could not produce -- but if `signAllPublications()` were removed or
+      # made conditional, nothing would be declared, the publish would succeed, and the consumer
+      # step would pass. That break reaches a release; this is what stops it.
+      #
+      # The POM count comes first because everything after it looks for an *absence*, and a check
+      # like that reports success just as cheerfully when it is looking at nothing. `-e` is on by
+      # default here but `-o pipefail` is not, so inside `find … | wc -l` the status is `wc`'s and
+      # find's exit on a missing directory is discarded. Both ways of looking at nothing -- an
+      # absent tree and a present but empty one -- are caught by the count.
+      #
+      # Checked in both directions on this tree before being written down: as published, every file
+      # has a sibling `.asc`; with one `.asc` removed, this step names that file and exits 1.
+      - name: Check every published file is signed
+        run: |
+          repo="${RUNNER_TEMP}/dry-run-m2"
+          published=$(find "$repo" -name '*.pom' | wc -l | tr -d ' ')
+          if [ "$published" -eq 0 ]; then
+            echo "::error::no POMs under $repo — the publish did not land there, so the check below would pass without inspecting anything" >&2
+            exit 1
+          fi
+          echo "Inspecting $published published POMs."
+
+          unsigned=$(find "$repo" -type f \
+            ! -name '*.asc' ! -name '*.md5' ! -name '*.sha1' ! -name '*.sha256' ! -name '*.sha512' \
+            ! -name 'maven-metadata*' \
+            -exec sh -c '[ -f "$1.asc" ] || echo "$1"' _ {} \;)
+          if [ -n "$unsigned" ]; then
+            echo "::error::published files carry no detached signature; Maven Central requires one per deployed file" >&2
+            echo "$unsigned"
+            exit 1
+          fi
+          echo "Every published file carries a .asc."
+
+      - name: Summarise
+        if: always()
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          {
+            echo "### Release dry run for v${VERSION}"
+            echo
+            echo 'Nothing left this runner: no Maven Central upload, no tag, no release.'
+            echo
+            echo "- ref: \`${{ github.sha }}\`"
+            echo '- signed with a throwaway key generated in this job, whose public half is'
+            echo '  nowhere — a signature Central could not verify even if something uploaded it.'
+            echo
+            echo 'Not covered: Central'"'"'s own validation. The required POM fields, the staging'
+            echo 'bundle, and whether the release key is on a keyserver are only exercised by a'
+            echo 'real upload.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reports-dry-run
+          path: '**/build/reports/**'
+          retention-days: 7

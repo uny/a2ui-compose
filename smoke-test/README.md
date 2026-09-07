@@ -64,6 +64,15 @@ adds it here too.
 `cd.yml`, between `publishToMavenLocal` and the upload to Central — so a publication that a
 consumer cannot resolve fails the release before anything reaches the portal.
 
+`release-dry-run.yml` runs the same pair on demand, against a repository under the runner's temp
+rather than `~/.m2`, signed with a key generated in the job. That is where the release path gets
+exercised before a tag exists — `cd.yml` itself cannot run until one does, and Central neither
+re-uploads nor deletes, so the first release is a poor place for a step's first execution.
+
+Both point the consumer at the same repository the publish just wrote, with `-Dmaven.repo.local`.
+`mavenLocal()` honours that property, and `settings.gradle.kts` binds `dev.ynagai.a2ui` to
+`mavenLocal()` exclusively, so nothing else can answer for the group under test.
+
 ## Checking that it still bites
 
 A guard that cannot fail is not a guard. Two controls, both re-measured on 2026-09-06.

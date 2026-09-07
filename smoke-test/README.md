@@ -69,9 +69,14 @@ rather than `~/.m2`, signed with a key generated in the job. That is where the r
 exercised before a tag exists — `cd.yml` itself cannot run until one does, and Central neither
 re-uploads nor deletes, so the first release is a poor place for a step's first execution.
 
-Both point the consumer at the same repository the publish just wrote, with `-Dmaven.repo.local`.
-`mavenLocal()` honours that property, and `settings.gradle.kts` binds `dev.ynagai.a2ui` to
-`mavenLocal()` exclusively, so nothing else can answer for the group under test.
+Both point the consumer at the repository the publish just wrote, but by different means, and the
+difference is the interesting part. `cd.yml` passes no `-Dmaven.repo.local` at all: publish and
+consumer both use the default `~/.m2`, which is the same repository only because a GitHub-hosted
+runner starts with an empty one. `release-dry-run.yml` passes the property to both steps, so the
+consumer provably resolves what *that run* published rather than whatever `~/.m2` happens to hold —
+which is what makes it safe to run somewhere warm. Either way `settings.gradle.kts` binds
+`dev.ynagai.a2ui` to `mavenLocal()` exclusively, so nothing else can answer for the group under
+test.
 
 ## Checking that it still bites
 

@@ -3,21 +3,34 @@ name: Release dry run
 # `cd.yml`'s publish path, on demand, with the Maven Central upload replaced by a publish to a
 # directory under the runner's temp.
 #
-# `cd.yml` runs only on a `v*` tag, so every guard it carries would otherwise first execute during
+# `cd.yml` runs only on a `v*` tag, so the guards it carries would otherwise first execute during
 # a real release -- and a release is the one build where "it has never run" is expensive: Central
 # never re-uploads and never deletes, so a version that fails halfway is abandoned rather than
-# fixed. This is where those steps get to fail cheaply.
+# fixed. This is where most of those steps get to fail cheaply. Not all of them: the exceptions are
+# named below.
 #
 # What it proves: the version is a usable coordinate, every module's publication assembles, signs,
-# and lands in a repository; a consumer resolves all three artifacts from that repository on every
-# published target; and every deployed file carries a detached signature.
+# and lands in a repository; a consumer resolves all three artifacts from that repository on each
+# target the consumer build names; and every deployed file carries a detached signature.
 #
-# What it cannot prove: that Central accepts the result. Nothing is uploaded, so Central's own
-# validation -- the required POM fields, the staging bundle, whether the signing key's public half
-# is on a keyserver -- never runs. Measured with `--dry-run` on this tree, `publishToMavenCentral`
-# additionally runs `prepareMavenCentralPublishing` and the `...ToMavenCentralRepository` tasks,
-# none of which this exercises. A green run here is "the build is ready to try", not "the release
-# will succeed".
+# What it cannot prove:
+#
+#  - That Central accepts the result. Nothing is uploaded, so Central's own validation -- the
+#    required POM fields, the staging bundle, whether the signing key's public half is on a
+#    keyserver -- never runs. Measured with `--dry-run` on this tree, `publishToMavenCentral`
+#    additionally runs `prepareMavenCentralPublishing` and the `...ToMavenCentralRepository`
+#    tasks, none of which this exercises.
+#  - That `cd.yml`'s "Check the release credentials are present" step works. It reads five
+#    `secrets.*` and this workflow reads none, so that step has no counterpart here and still has
+#    its first execution on a tag. A long `GPG_KEY_ID` where it wants the short 8-hex form fails
+#    there, after a green run here.
+#  - That a *newly added* target publishes resolvably. The consumer step names its `compile*`
+#    tasks by hand, so adding a target to the three modules without adding it to
+#    `smoke-test/build.gradle.kts` and to both task lists leaves the new variant unresolved and
+#    the job green -- the asymmetry `smoke-test/README.md` records: removing a published target
+#    fails loudly, adding one is not covered until someone adds it there too.
+#
+# A green run here is "the build is ready to try", not "the release will succeed".
 #
 # Deliberately absent: `environment: release`, every `secrets.*` that `cd.yml` reads, and any tag,
 # release, or remote publish step. The only credential is the automatic `github.token` below,
@@ -88,7 +101,12 @@ jobs:
           version="${VERSION#v}"
           case "$version" in
             "" | *[!0-9A-Za-z.-]* )
-              echo "::error::Refusing '$VERSION': a version must be non-empty [0-9A-Za-z.-]" >&2
+              # Newlines stripped before the value is echoed, and only here: a workflow command is
+              # one line, so a `version` carrying `\n::add-mask::x` would otherwise have its second
+              # line parsed as a command of its own -- forging annotations, or masking a character
+              # across every later line of the run. `cd.yml` has no equivalent exposure, because a
+              # tag name cannot contain a newline; free text from a dispatch can.
+              echo "::error::Refusing '$(printf '%s' "$VERSION" | tr -d '\r\n')': a version must be non-empty [0-9A-Za-z.-]" >&2
               exit 1
               ;;
           esac
@@ -188,13 +206,21 @@ jobs:
           VERSION: ${{ steps.version.outputs.value }}
         run: |
           {
-            echo "### Release dry run for v${VERSION}"
+            # `always()`, so this also runs when the version step refused its input and wrote no
+            # output -- at which point `VERSION` is the empty string and a bare heading would read
+            # "for v".
+            if [ -n "$VERSION" ]; then
+              echo "### Release dry run for v${VERSION}"
+            else
+              echo '### Release dry run — refused before anything ran'
+            fi
             echo
             echo 'Nothing left this runner: no Maven Central upload, no tag, no release.'
             echo
             echo "- ref: \`${{ github.sha }}\`"
-            echo '- signed with a throwaway key generated in this job, whose public half is'
-            echo '  nowhere — a signature Central could not verify even if something uploaded it.'
+            echo '- any signing in this run used a throwaway key generated in the job, whose public'
+            echo '  half is nowhere — a signature Central could not verify even if something'
+            echo '  uploaded it.'
             echo
             echo 'Not covered: Central'"'"'s own validation. The required POM fields, the staging'
             echo 'bundle, and whether the release key is on a keyserver are only exercised by a'

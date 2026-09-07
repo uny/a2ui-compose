@@ -22,8 +22,9 @@ name: Release dry run
 #    tasks, none of which this exercises.
 #  - That `cd.yml`'s "Check the release credentials are present" step works. It reads five
 #    `secrets.*` and this workflow reads none, so that step has no counterpart here and still has
-#    its first execution on a tag. A long `GPG_KEY_ID` where it wants the short 8-hex form fails
-#    there, after a green run here.
+#    its first execution on a tag. The signing *mechanism* is rehearsed below in the same shape
+#    `cd.yml` uses it -- protected key, key id, passphrase -- but the secrets themselves are not:
+#    a `GPG_KEY_ID` stored in the 16-hex long form is refused there, after a green run here.
 #  - That a *newly added* target publishes resolvably. The consumer step names its `compile*`
 #    tasks by hand, so adding a target to the three modules without adding it to
 #    `smoke-test/build.gradle.kts` and to both task lists leaves the new variant unresolved and
@@ -37,12 +38,15 @@ name: Release dry run
 # scoped to `contents: read`. So this workflow cannot upload to Central and cannot write to the
 # repository.
 #
-# It *can* sign, with a key generated inside the job. That is a smaller claim than it sounds: the
-# key lives for one run and its public half is never distributed, so a signature made with it is
-# one Central could not verify even if something did upload it -- and nothing here can. The
-# property worth protecting was never "holds no key" but "holds no *secret* and publishes to no
-# *remote*", and a throwaway key adds neither. Do not swap it for a repository secret to make the
-# signing "more realistic"; that trades the whole safety argument for nothing.
+# It *can* sign, with a key generated inside the job -- passphrase-protected, and passed by key
+# id, because that is the shape `cd.yml` signs in and a rehearsal of a simpler configuration
+# rehearses the wrong thing. That is a smaller claim than it sounds: the key lives for one run and
+# its public half is never distributed, so a signature made with it is one Central could not verify
+# even if something did upload it -- and nothing here can. The property worth protecting was never
+# "holds no key" but "holds no *secret* and publishes to no *remote*", and neither the key nor its
+# literal passphrase is a secret: both are born and die inside one job. Do not swap either for a
+# repository secret to make the signing "more realistic"; that trades the whole safety argument for
+# nothing it does not already have.
 #
 # Why a key at all: `signAllPublications()` is unconditional, and measured on this tree a release
 # version without a key does not skip signing quietly -- `publishToMavenLocal` fails with
@@ -130,14 +134,50 @@ jobs:
           export GNUPGHOME="${RUNNER_TEMP}/dry-run-gnupg"
           mkdir -p "$GNUPGHOME"
           chmod 700 "$GNUPGHOME"
-          gpg --batch --pinentry-mode loopback --passphrase '' \
+
+          # Protected with a passphrase, and identified by a key id, because `cd.yml` passes both
+          # -- and a rehearsal that signs through a simpler configuration than the release uses is
+          # not rehearsing the release. Measured on this tree: with the passphrase wrong,
+          # `signJvmPublication` FAILS with `PGPException: checksum mismatch in checksum of 20
+          # bytes`. That is the failure `cd.yml` would otherwise meet 35 minutes into a tag build,
+          # since its pre-flight can only check that `GPG_PASSPHRASE` is non-empty, never that it
+          # decrypts the key.
+          #
+          # The passphrase is a literal, deliberately. It protects a key that lives for one job and
+          # whose public half is nowhere, so it is not a secret and must not be made into one --
+          # exactly as the header argues for the key itself. What it buys is that
+          # `signingInMemoryKeyPassword` is on the exercised path at all.
+          passphrase='dry-run-not-a-secret'
+
+          gpg --batch --pinentry-mode loopback --passphrase "$passphrase" \
             --quick-generate-key "A2UI Dry Run <dryrun@example.invalid>" rsa3072 sign never
 
+          # The short 8-hex id -- the only form Gradle accepts, and the form `cd.yml` requires of
+          # `GPG_KEY_ID`. Parsed from `--with-colons` rather than the human-readable listing, whose
+          # layout is not a stable interface: field 5 there is the 16-hex long id, whose low 8 hex
+          # are the short one.
+          key_id=$(
+            gpg --batch --with-colons --list-secret-keys dryrun@example.invalid \
+              | awk -F: '$1 == "sec" { print substr($5, 9); exit }'
+          )
+          case "$key_id" in
+            [0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f] ) ;;
+            * )
+              # Empty or malformed would not fail the publish -- Gradle signs happily with the
+              # property absent -- it would quietly drop this back to the weaker configuration the
+              # passphrase above exists to avoid.
+              echo "::error::could not derive the short 8-hex key id from the generated key (got '$key_id')" >&2
+              exit 1
+              ;;
+          esac
+
           ORG_GRADLE_PROJECT_signingInMemoryKey=$(
-            gpg --batch --pinentry-mode loopback --passphrase '' \
+            gpg --batch --pinentry-mode loopback --passphrase "$passphrase" \
               --armor --export-secret-keys dryrun@example.invalid
           )
           export ORG_GRADLE_PROJECT_signingInMemoryKey
+          export ORG_GRADLE_PROJECT_signingInMemoryKeyId="$key_id"
+          export ORG_GRADLE_PROJECT_signingInMemoryKeyPassword="$passphrase"
           # The runner masks `secrets.*`, and this key is not one, so nothing would redact it if a
           # later `--debug` echoed it. The key is throwaway and no dump path reaches it today, but
           # the shape of this step is what gets copied into one holding a real key. Per line,

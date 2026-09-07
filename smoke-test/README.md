@@ -64,6 +64,22 @@ adds it here too.
 `cd.yml`, between `publishToMavenLocal` and the upload to Central — so a publication that a
 consumer cannot resolve fails the release before anything reaches the portal.
 
+`release-dry-run.yml` runs the same pair on demand, against a repository under the runner's temp
+rather than `~/.m2`, signed with a key generated in the job. That is where the release path gets
+exercised before a tag exists — `cd.yml` itself cannot run until one does, and Central neither
+re-uploads nor deletes, so the first release is a poor place for a step's first execution.
+
+Both point the consumer at the repository the publish just wrote, but by different means, and the
+difference is what each can promise. `cd.yml` passes no `-Dmaven.repo.local` at all: publish and
+consumer both fall through to the default `~/.m2`, so it is the same repository either way — what
+a fresh GitHub-hosted runner adds is that the repository holds *nothing else*. On a warm one it
+would: a stale `0.1.0` left from an earlier run could answer for a variant this publish failed to
+write, and the gate would pass on artifacts this run never produced. `release-dry-run.yml` names a
+directory under the runner's temp instead, which nothing else can have written to, so it resolves
+what *that run* published wherever it runs. Either way `settings.gradle.kts` binds
+`dev.ynagai.a2ui` to `mavenLocal()` exclusively, so nothing else can answer for the group under
+test.
+
 ## Checking that it still bites
 
 A guard that cannot fail is not a guard. Two controls, both re-measured on 2026-09-06.

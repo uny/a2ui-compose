@@ -2,11 +2,34 @@
 
 A renderer for the [A2UI protocol](https://a2ui.org/) built on **Compose Multiplatform** — Android, iOS, desktop (JVM), macOS, and web (JS + wasmJs) from a single `commonMain`.
 
-> **Status: pre-alpha.** Nothing is published yet and the API is not stable. See [Roadmap](#roadmap).
+> **Status: `0.1.0` is on Maven Central, and the API is not stable.** A `0.x` line: expect
+> breaking changes between minor versions. See [Installation](#installation) and
+> [Roadmap](#roadmap).
 
 A2UI lets an agent describe a user interface as a stream of JSON, which the client renders with its
 own native widgets. The agent never ships code — the catalog of renderable components is the trust
 boundary, and it lives in your binary.
+
+## Installation
+
+```kotlin
+dependencies {
+    implementation("dev.ynagai.a2ui:a2ui-material3:0.1.0")
+}
+```
+
+That is the usual entry point: it brings `a2ui-compose`, which brings `a2ui-core`. Take the lower
+two directly when you do not want the Material 3 renderers -- `a2ui-compose` to draw the catalog
+with your own design system, `a2ui-core` for the protocol alone, which carries no Compose dependency
+at all:
+
+```kotlin
+implementation("dev.ynagai.a2ui:a2ui-compose:0.1.0")
+implementation("dev.ynagai.a2ui:a2ui-core:0.1.0")
+```
+
+Android consumers must compile against `compileSdk` 37 or later; see [Targets](#targets) for why
+that floor is not a preference.
 
 ## Protocol version
 
@@ -137,7 +160,10 @@ modules do, and only the Gallery does not.
 | **G0** | Skeleton — build, CI, all targets compiling | 2026-08-31 |
 | **G1** | `a2ui-core`: full v1.0 message handling, JSON Pointer binding, function evaluation | 2026-10-31 |
 | **G2** | `a2ui-material3`: the v1.0 standard widget catalog on Material 3 | 2026-12-31 |
-| **G3** | Publish `0.1.0` to Maven Central | one month after G2 |
+| **G3** | Publish `0.1.0` to Maven Central | ✅ 2026-09-08 |
+
+`0.1.0` is the first published version, not the finished one: G1 and G2 name work that is still
+open, and the release notes list what a consumer should know before adopting it.
 
 ## Prior art
 

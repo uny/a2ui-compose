@@ -24,6 +24,9 @@ import kotlinx.serialization.json.JsonPrimitive
  * argument   := name ":" expression | expression
  * ```
  *
+ * `name` is left undefined above, and what stands in for it is not the UAX #31 rule the rest of
+ * the library holds names to -- see [isFunctionName], which is where that costs something.
+ *
  * Parsing and evaluation are one pass rather than two. A parse tree would have to be re-walked to
  * evaluate, and the tree is never reused: `formatString` is re-run from the top whenever the data
  * it reads changes, so caching the parse would mean caching it against the template string.
@@ -403,11 +406,37 @@ private fun numberLiteral(text: String): JsonPrimitive? {
     return encodeNumber(value)
 }
 
+/**
+ * Whether [text] can be read as the name of a function being called.
+ *
+ * **This is a general-category approximation of UAX #31, and it is the one place in the library
+ * that still is.** Everywhere a name is judged against the specification's rule -- catalog
+ * component, function and argument names, and `patternProperties` on extension keys -- the answer
+ * comes from [dev.ynagai.a2ui.core.validation.isUnicodeIdentifier], which reads the derived
+ * `XID_Start` and `XID_Continue` tables. Here it comes from `isLetter` and `isLetterOrDigit`, and
+ * the two disagree in both directions: `_helper` is a name a catalog may declare and this refuses,
+ * because `_` is not a letter, so a catalog can define a function no format string can call; `ͺ`
+ * (U+037A) is `ID_Start` but not `XID_Start`, so the catalog check refuses it and this accepts it.
+ * The approximation also has no room for the combining marks and connector punctuation
+ * `XID_Continue` carries, so what it costs falls on the scripts that need them rather than evenly.
+ *
+ * It is an inconsistency rather than a failed MUST: the specification states no grammar for what a
+ * `${…}` expression may contain, so there is no rule here to conform to. What decides it is that a
+ * name a catalog accepts should be a name a format string can call. See issue #45, which carries
+ * the fix -- both predicates answering from `isUnicodeIdentifier`, keeping `@index` as the one
+ * system-function exception below.
+ */
 private fun isFunctionName(text: String): Boolean {
     if (text == FunctionCall.INDEX) return true
     return text.isNotEmpty() && text.first().isLetter() && text.all { it.isLetterOrDigit() || it == '_' }
 }
 
+/**
+ * Whether [text] can be read as the name of a named argument.
+ *
+ * The same approximation [isFunctionName] documents, differing only in admitting a leading `_` --
+ * which is what UAX #31 does too, so this half of the divergence is narrower than the other.
+ */
 private fun isArgumentName(text: String): Boolean =
     text.isNotEmpty() && (text.first().isLetter() || text.first() == '_') &&
         text.all { it.isLetterOrDigit() || it == '_' }

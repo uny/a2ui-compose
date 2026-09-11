@@ -204,8 +204,10 @@ public data class ComponentDefinition(
  * names inside a `${…}` by a general-category approximation of its own, and the two disagree in
  * both directions -- most visibly on a leading underscore, which the specification's pattern
  * admits and the parser refuses. So a catalog may declare `_helper` and no format string may call
- * it. Issue #45 is open against that, and the README states it under "Protocol version"; it is
- * mentioned here because this is where a name is accepted.
+ * it by that name -- today as a different error, since `0.1.0` dispatches only the basic catalog's
+ * functions, and as a refusal once catalog-declared functions are dispatched. Issue #45 is open
+ * against that, and the README states it under "Protocol version"; it is mentioned here because
+ * this is where a name is accepted.
  *
  * That invariant is established at construction, which is all a constructor can do: **the maps
  * passed to it must not be retained and mutated by the caller.** [components], [functions] and

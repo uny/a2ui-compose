@@ -60,17 +60,21 @@ a function name's first character, `isLetterOrDigit()` or `_` for the rest — i
 [`FormatString.kt`](a2ui-core/src/commonMain/kotlin/dev/ynagai/a2ui/core/function/FormatString.kt).
 
 What a consumer can hit is the disagreement: **a catalog this library accepts can declare a function
-that no format string can call.** `_helper` is a valid entity name, since the pattern admits a
-leading underscore, and the expression parser refuses it, because `_` is not a letter. The two
-diverge the other way too — `ͺ` (U+037A) is `ID_Start` but excluded from `XID_Start`, so the catalog
-check refuses the name and `isLetter` accepts it. And the approximation has no room for the
-combining marks and connector punctuation that `XID_Continue` carries, so what it costs falls on the
-scripts that need them rather than evenly.
+whose name no format string can call.** `_helper` is a valid entity name, since the pattern admits a
+leading underscore, and the expression parser refuses it, because `_` is not a letter. Today that is
+a difference in which error fires: `0.1.0` dispatches only the basic catalog's functions, so
+`${helper()}` fails as not implemented and `${_helper()}` fails earlier, as not a name — and once
+G1's function evaluation dispatches catalog-declared functions, the parser will refuse a name the
+catalog accepted. The two diverge the other way too — `ͺ` (U+037A) is `ID_Start` but excluded from
+`XID_Start`, so the catalog check refuses the name and `isLetter` accepts it. And the approximation
+has no room for the combining marks and the connector punctuation other than `_` that `XID_Continue`
+carries, nor — since `isLetter` sees one UTF-16 unit — for any name that begins outside the Basic
+Multilingual Plane, so what it costs falls on the scripts that need them rather than evenly.
 
-The specification states no normative grammar for `formatString` expressions, so this is not a
-failed MUST — there is no rule there to fail. It is written down anyway, because "this library
-enforces UAX #31" is true of catalog definitions and not of the expression parser, and `0.1.0`
-ships with the two disagreeing. [#45](https://github.com/uny/a2ui-compose/issues/45) is open and
+The specification states no production for a name inside a `formatString` expression, so this is
+not a failed MUST — there is no naming rule there to fail. It is written down anyway, because "this
+library enforces UAX #31" is true of catalog definitions and not of the expression parser, and
+`0.1.0` ships with the two disagreeing. [#45](https://github.com/uny/a2ui-compose/issues/45) is open and
 carries the fix.
 
 ## Targets

@@ -46,6 +46,38 @@ compatibility layer on day one, this one starts where the official renderers alr
 If v1.0 takes a breaking change before GA, the fallback is a stable-v0.9.1 / experimental-v1.0 split
 rather than a rewrite.
 
+### UAX #31 is enforced on catalogs and approximated in `formatString`
+
+`a2ui_protocol.md`'s "Catalog Entity Naming Rules" make component, function and argument names
+MUST-conform to UAX #31, and this library enforces that where a catalog is built:
+`CatalogDefinition` answers `^[\p{XID_Start}_][\p{XID_Continue}]*$` from the Unicode 17.0.0
+derived tables, in its constructor, so a catalog assembled in Kotlin is held to it as well as one
+decoded off the wire.
+**`formatString`'s expression parser is not on that rule.** It judges the function and argument
+names inside a `${…}` expression by a general-category approximation of its own — `isLetter()` for
+a function name's first character, `isLetterOrDigit()` or `_` for the rest — in the
+`isFunctionName` and `isArgumentName` predicates of
+[`FormatString.kt`](a2ui-core/src/commonMain/kotlin/dev/ynagai/a2ui/core/function/FormatString.kt).
+
+What a consumer can hit is the disagreement: **a catalog this library accepts can declare a function
+whose name no format string can call.** `_helper` is a valid entity name, since the pattern admits a
+leading underscore, and the expression parser refuses it, because `_` is not a letter. Today that is
+a difference in which error fires: `0.1.0` dispatches only the basic catalog's functions, so
+`${helper()}` fails as not implemented and `${_helper()}` fails earlier, as not a name — and once
+catalog-declared functions are dispatched, the parser will refuse a name the catalog accepted. The
+two diverge the other way too — `ͺ` (U+037A) is `ID_Start` but excluded from
+`XID_Start`, so the catalog check refuses the name and `isLetter` accepts it. And the approximation
+has no room for the combining marks and the connector punctuation other than `_` that `XID_Continue`
+carries, nor — since its `Char` predicates see one UTF-16 unit at a time — for any name with a
+character outside the Basic Multilingual Plane, so what it costs falls on the scripts that need them
+rather than evenly.
+
+The specification states no production for a name inside a `formatString` expression, so this is
+not a failed MUST — there is no naming rule there to fail. It is written down anyway, because "this
+library enforces UAX #31" is true of catalog definitions and not of the expression parser, and
+`0.1.0` ships with the two disagreeing. [#45](https://github.com/uny/a2ui-compose/issues/45) is open and
+carries the fix.
+
 ## Targets
 
 | Target | |
@@ -163,7 +195,10 @@ modules do, and only the Gallery does not.
 | **G3** | Publish `0.1.0` to Maven Central | ✅ 2026-09-08 |
 
 `0.1.0` is the first published version, not the finished one: G1 and G2 name work that is still
-open, and the release notes list what a consumer should know before adopting it.
+open, and the release notes list what a consumer should know before adopting it. The ✅ on G3 is a
+publication, not a claim of full conformance: see [UAX #31 is enforced on catalogs and
+approximated in `formatString`](#uax-31-is-enforced-on-catalogs-and-approximated-in-formatstring)
+for the one rule this release applies unevenly.
 
 ## Prior art
 

@@ -23,9 +23,9 @@ for you.
 A2UI v1.0 requires every catalog entity identifier and every extension key to match
 `^[\p{XID_Start}_][\p{XID_Continue}]*$` (`docs/a2ui_protocol.md`). That is the specification's
 prose; the vendored JSON schemas carry the pattern in exactly one place, the `patternProperties`
-key on `extensions` in `common_types.json`, so extension keys are the only names this library
-checks today. Component, function and argument names are stated by the prose and by upstream's own
-test runner but by no schema, and enforcing them is a behaviour change of its own. Neither half is
+key on `extensions` in `common_types.json`, so the schema evaluator reaches only extension keys.
+Component, function and argument names are stated by the prose and by upstream's own test runner
+but by no schema, so `CatalogDefinition` checks them itself, at construction. Neither half is
 answerable from Kotlin common code -- `Regex` does not support the property on Kotlin/Native or
 Kotlin/Wasm, and `java.lang.Character` is not reachable -- and the properties are *derived* from
 this database rather than definable in terms of anything the standard library exposes. So the

@@ -421,9 +421,10 @@ private fun numberLiteral(text: String): JsonPrimitive? {
  * here as not a name -- and it becomes a refusal of an accepted name once catalog-declared
  * functions are dispatched. `ͺ` (U+037A) is `ID_Start` but not `XID_Start`, so the catalog check
  * refuses it and this accepts it. The approximation also has no room for the combining marks and
- * the connector punctuation other than `_` that `XID_Continue` carries, nor -- `isLetter` sees one
- * UTF-16 unit, so a supplementary-plane name begins with a surrogate -- for any name outside the
- * Basic Multilingual Plane; what it costs falls on the scripts that need them rather than evenly.
+ * the connector punctuation other than `_` that `XID_Continue` carries, nor -- `isLetter` and
+ * `isLetterOrDigit` see one UTF-16 unit, and a supplementary-plane character is two surrogates --
+ * for any name with a character outside the Basic Multilingual Plane; what it costs falls on the
+ * scripts that need them rather than evenly.
  *
  * It is an inconsistency rather than a failed MUST: the specification states no production for a
  * name inside a `${…}` expression, so there is no naming rule here to conform to. What decides it

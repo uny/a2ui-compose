@@ -187,18 +187,19 @@ modules do, and only the Gallery does not.
 
 ## Roadmap
 
-| Gate | Contents | Target |
-|:--|:--|:--|
-| **G0** | Skeleton — build, CI, all targets compiling | 2026-08-31 |
-| **G1** | `a2ui-core`: full v1.0 message handling, JSON Pointer binding, function evaluation | 2026-10-31 |
-| **G2** | `a2ui-material3`: the v1.0 standard widget catalog on Material 3 | 2026-12-31 |
-| **G3** | Publish `0.1.0` to Maven Central | ✅ 2026-09-08 |
+| Gate | Contents | Target | Closed |
+|:--|:--|:--|:--|
+| **G0** | Skeleton — build, CI, all targets compiling | 2026-08-31 | ✅ 2026-08-25 |
+| **G1** | `a2ui-core`: full v1.0 message handling, JSON Pointer binding, function evaluation | 2026-10-31 | ✅ 2026-08-27 |
+| **G2** | `a2ui-material3`: the v1.0 standard widget catalog on Material 3 | 2026-12-31 | ✅ 2026-09-01 |
+| **G3** | Publish `0.1.0` to Maven Central | 2026-12-31 | ✅ 2026-09-08 |
 
-`0.1.0` is the first published version, not the finished one: G1 and G2 name work that is still
-open, and the release notes list what a consumer should know before adopting it. The ✅ on G3 is a
-publication, not a claim of full conformance: see [UAX #31 is enforced on catalogs and
-approximated in `formatString`](#uax-31-is-enforced-on-catalogs-and-approximated-in-formatstring)
-for the one rule this release applies unevenly.
+All four are closed, each ahead of its date. That is a different claim from "finished": `0.1.0` is a
+`0.x` line whose API is not stable, the release notes list what a consumer should know before
+adopting it, and the ✅ on G3 is a publication rather than a claim of full conformance — see
+[UAX #31 is enforced on catalogs and approximated in
+`formatString`](#uax-31-is-enforced-on-catalogs-and-approximated-in-formatstring) for the one rule
+this release applies unevenly.
 
 ## Prior art
 

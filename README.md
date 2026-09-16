@@ -28,8 +28,21 @@ implementation("dev.ynagai.a2ui:a2ui-compose:0.1.0")
 implementation("dev.ynagai.a2ui:a2ui-core:0.1.0")
 ```
 
-Android consumers must compile against `compileSdk` 37 or later; see [Targets](#targets) for why
-that floor is not a preference.
+### What `0.1.0` requires of your build
+
+Three floors, and the one with the clearest error message is the least binding of them. All
+three come from what the artifacts were built with, not from anything the library does:
+
+| Floor | Where it is declared | How it fails for you |
+|:--|:--|:--|
+| **Kotlin 2.4.x** | The klib manifest (`compiler_version = 2.4.10`, `abi_version = 2.4.0`) | A 2.3.x compiler cannot read the metadata, on any target, and the Kotlin plugin version is project-wide -- so this is a question about your whole toolchain. **KSP has no 2.4 line yet**, which pins any project with a KSP processor in the build (Room, Hilt, Moshi, …) to 2.3.x. |
+| **Compose Multiplatform 1.12.0** | `requires: 1.12.0` on `compose.runtime` / `compose.ui` in the Gradle module metadata | **Silently.** Gradle takes the highest version in a conflict, so a project on 1.10.0 is moved to 1.12.0 without being told. Holding the older version with `strictly` fails resolution instead. |
+| **`compileSdk` 37** (Android) | `minCompileSdk=37` in the AAR metadata | AGP fails the build with a clear message. Cheap to fix: `compileSdk` is what you compile against, and `targetSdk` need not move with it. See [Targets](#targets) for why 37. |
+
+The `0.x` line ships against the newest stable Kotlin and Compose Multiplatform; `0.1.0` is what
+that meant on its release date. Whether a later `0.x` lowers the Kotlin floor to 2.3.x for the KSP
+case is [#64](https://github.com/uny/a2ui-compose/issues/64), and a release that changes any floor
+will say so in its notes rather than leave it to be discovered.
 
 ## Protocol version
 

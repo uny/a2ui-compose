@@ -182,9 +182,9 @@ modules do, and only the Gallery does not.
 All four are closed, each ahead of its date. That is a different claim from "finished": `0.1.0` is a
 `0.x` line whose API is not stable, the release notes list what a consumer should know before
 adopting it, and the ✅ on G3 is a publication rather than a claim of full conformance — see
-[UAX #31 is enforced on catalogs and approximated in
-`formatString`](#uax-31-is-enforced-on-catalogs-and-approximated-in-formatstring) for the one rule
-this release applies unevenly.
+[UAX #31 is enforced on catalogs and in
+`formatString`](#uax-31-is-enforced-on-catalogs-and-in-formatstring) for the one rule `0.1.0`
+applied unevenly, unified since.
 
 ## Prior art
 

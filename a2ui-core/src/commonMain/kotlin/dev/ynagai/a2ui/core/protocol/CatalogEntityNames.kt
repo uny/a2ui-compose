@@ -210,6 +210,7 @@ private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>
                         // `patternProperties` regex and a `dependencies` trigger are none of them.
                         if (keyword == PROPERTIES) {
                             requireIdentifier(name, "property name in $owner")
+                            if (name == CALL) requireNoSystemCall(subschema, owner)
                         }
                         // A draft-07 `dependencies` entry may hold an array of required property
                         // names rather than a subschema; it is not an object, so the pop discards
@@ -222,6 +223,41 @@ private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>
                 else -> Unit
             }
         }
+    }
+}
+
+/**
+ * The System Namespace Rule, applied where a call is actually admitted.
+ *
+ * The rule is enforced on the keys of `functions`, but a call is never validated against that
+ * map: `common_types.json` reaches `catalog.json#/$defs/anyFunction`, and the catalog supplies
+ * that schema itself. So a catalog with an empty `functions` map could still write
+ * `{"call": {"const": "@evil"}}` under `$defs/anyFunction` and have `@evil` validate (#48).
+ * Whatever schema text admits a `call` name is where the catalog defines a function, by the only
+ * definition that matters to the checker -- so a `call` property whose `const` or `enum` names
+ * a `@`-prefixed string is refused, wherever in the catalog it sits.
+ *
+ * `@index` included: it is composed in by `common_types.json`, and a catalog re-admitting it is
+ * still a catalog defining into the namespace. Only the two literal keywords are read. A `call`
+ * typed as a bare string, or matched by a `pattern`, admits any name at all and is a different
+ * question -- whether `anyFunction` must correspond to `functions` -- that the prose does not
+ * settle and this does not decide.
+ */
+private fun requireNoSystemCall(subschema: JsonElement, owner: String) {
+    val schema = subschema as? JsonObject ?: return
+    val admitted = buildList {
+        (schema[CONST] as? JsonPrimitive)?.takeIf { it.isString }?.let { add(it.content) }
+        (schema[ENUM] as? JsonArray)?.forEach { entry ->
+            (entry as? JsonPrimitive)?.takeIf { it.isString }?.let { add(it.content) }
+        }
+    }
+    admitted.firstOrNull { it.startsWith(SYSTEM_FUNCTION_PREFIX) }?.let { name ->
+        throw A2uiFormatException(
+            "CatalogDefinition: $owner admits a call to `${name.take(ERROR_EXCERPT)}`, which is " +
+                "in the `$SYSTEM_FUNCTION_PREFIX` namespace reserved for system functions such " +
+                "as `${FunctionCall.INDEX}`; a catalog cannot define a function there, and " +
+                "admitting the name in a schema is defining it.",
+        )
     }
 }
 
@@ -390,6 +426,13 @@ private val COMMON_TYPES_REFERENCE: Regex =
 
 /** The prefix `a2ui_protocol.md`'s System Namespace Rule reserves. */
 private const val SYSTEM_FUNCTION_PREFIX: String = "@"
+
+/** The property a function call's name travels in; see [requireNoSystemCall]. */
+private const val CALL: String = "call"
+
+private const val CONST: String = "const"
+
+private const val ENUM: String = "enum"
 
 /** How much of a name an error message quotes; a catalog chooses its own key lengths. */
 private const val ERROR_EXCERPT: Int = 64

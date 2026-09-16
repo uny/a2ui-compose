@@ -88,6 +88,44 @@ class CatalogEntityNamesTest {
     }
 
     @Test
+    fun a_catalog_may_not_admit_a_system_call_through_its_own_any_function_schema() {
+        // #48. The rule above is on the keys of `functions`, but a call is validated against
+        // `$defs/anyFunction`, which the catalog supplies itself -- so an empty `functions` map
+        // and a `const` under `anyFunction` used to let `@evil` validate. Admitting a name in
+        // the schema is defining it. `@index` too: `common_types.json` composes it in, and a
+        // catalog re-admitting it is still writing into the namespace.
+        listOf(
+            """"${'$'}defs": {"anyFunction": {"type": "object",
+                "properties": {"call": {"const": "@evil"}}, "required": ["call"]}}""",
+            """"${'$'}defs": {"anyFunction": {"type": "object",
+                "properties": {"call": {"enum": ["required", "@evil"]}}, "required": ["call"]}}""",
+            """"${'$'}defs": {"anyFunction": {"oneOf": [{"type": "object",
+                "properties": {"call": {"const": "@index"}}}]}}""",
+        ).forEach { carried ->
+            val failure = assertFailsWith<A2uiFormatException>("should have been refused: $carried") {
+                json.decodeFromString<CatalogDefinition>(catalogCarrying(carried))
+            }
+            assertTrue(
+                failure.message.orEmpty().contains("admits a call to"),
+                "refused for the wrong reason: ${failure.message}",
+            )
+        }
+        // The same shape naming a function the catalog may define is not a finding here --
+        // whether it must also appear under `functions` is a different question.
+        json.decodeFromString<CatalogDefinition>(
+            catalogCarrying(
+                """"${'$'}defs": {"anyFunction": {"type": "object",
+                    "properties": {"call": {"const": "helper"}}, "required": ["call"]}}""",
+            ),
+        )
+        // And a `call` that is not a function name -- a component property that happens to be
+        // called `call`, holding a string -- admits nothing by literal and is left alone.
+        json.decodeFromString<CatalogDefinition>(
+            catalogWithComponentBody("""{"type": "object", "properties": {"call": {"type": "string"}}}"""),
+        )
+    }
+
+    @Test
     fun the_reserved_prefix_does_not_stop_the_one_system_function_from_being_called() {
         // Barring catalogs from the namespace must not bar the namespace's single inhabitant from
         // being invoked: `@index` is composed in by `common_types.json`, not by a catalog.

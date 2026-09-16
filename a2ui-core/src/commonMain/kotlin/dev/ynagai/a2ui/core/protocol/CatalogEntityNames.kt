@@ -170,6 +170,19 @@ private fun checkCarriedKeywords(
  * a `required` entry, a `dependentSchemas` trigger and a `$defs` entry name all *refer* to
  * something, and refusing them would reject catalogs that break no rule.
  *
+ * That line is a decision, not an oversight (#49). With `additionalProperties: true`, a name
+ * that appears only under `required` does reach the wire, and the prose's "argument/property
+ * names" does not say "declared". It is kept at declaration anyway, for two reasons. General
+ * JSON Schema lets a schema require a property that `patternProperties` or
+ * `additionalProperties` governs, whose key may legitimately be a hyphenated protocol key --
+ * so counting `required` refuses catalogs that break no rule. And once references count, there
+ * is no principled stop: `dependentRequired` on both sides, `dependencies` array entries,
+ * `dependentSchemas` keys and the discriminator constants all become in scope, and checking only
+ * `required` would be a one-keyword patch rather than a definition of "property name". Both
+ * bundled catalogs are unaffected either way -- all sixty `required` entries across `basic` and
+ * `testing` are identifiers -- so nothing shipped turns on it. Revisit if a spec release says
+ * "declared" or says otherwise.
+ *
  * Iterative rather than recursive. A definition is as deeply nested as whoever wrote it chose,
  * an inlined catalog is agent-controlled, and Kotlin/Native aborts the process on stack overflow
  * rather than raising something a caller could catch.

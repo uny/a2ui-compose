@@ -2,6 +2,7 @@ package dev.ynagai.a2ui.core.function
 
 import dev.ynagai.a2ui.core.protocol.FunctionCall
 import dev.ynagai.a2ui.core.protocol.encodeNumber
+import dev.ynagai.a2ui.core.validation.isUnicodeIdentifier
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
@@ -24,8 +25,8 @@ import kotlinx.serialization.json.JsonPrimitive
  * argument   := name ":" expression
  * ```
  *
- * `name` is left undefined above, and what stands in for it is not the UAX #31 rule the rest of
- * the library holds names to -- see [isFunctionName], which is where that costs something.
+ * `name` is left undefined above; what stands in for it is the UAX #31 rule the rest of the library
+ * holds names to -- see [isFunctionName].
  *
  * Parsing and evaluation are one pass rather than two. A parse tree would have to be re-walked to
  * evaluate, and the tree is never reused: `formatString` is re-run from the top whenever the data
@@ -409,44 +410,28 @@ private fun numberLiteral(text: String): JsonPrimitive? {
 /**
  * Whether [text] can be read as the name of a function being called.
  *
- * **This is a general-category approximation of UAX #31, and it is the one place in the library
- * that still is.** Everywhere a name is judged against the specification's rule -- catalog
- * component, function and argument names, and `patternProperties` on extension keys -- the answer
- * comes from [dev.ynagai.a2ui.core.validation.isUnicodeIdentifier], which reads the derived
- * `XID_Start` and `XID_Continue` tables. Here it comes from `isLetter` and `isLetterOrDigit`, and
- * the two disagree in both directions: `_helper` is a name a catalog may declare and this refuses,
- * because `_` is not a letter, so a catalog can define a function no format string can call by
- * that name. Today that only changes which error fires -- [Evaluator.invoke] is a closed `when`
- * over the basic catalog, so `${helper()}` fails there as not implemented and `${_helper()}` fails
- * here as not a name -- and it becomes a refusal of an accepted name once catalog-declared
- * functions are dispatched. `ͺ` (U+037A) is `ID_Start` but not `XID_Start`, so the catalog check
- * refuses it and this accepts it. The approximation also has no room for the combining marks and
- * the connector punctuation other than `_` that `XID_Continue` carries, nor -- `isLetter` and
- * `isLetterOrDigit` see one UTF-16 unit, and a supplementary-plane character is two surrogates --
- * for any name with a character outside the Basic Multilingual Plane; what it costs falls on the
- * scripts that need them rather than evenly.
+ * The specification states no production for a name inside a `${…}` expression, so there is no
+ * naming rule here to conform to. What decides it is that a name a catalog accepts should be a
+ * name a format string can call: catalog function names are held to UAX #31 by
+ * [dev.ynagai.a2ui.core.validation.isUnicodeIdentifier], and so this answers from the same tables.
+ * An earlier `isLetter`/`isLetterOrDigit` approximation disagreed with it in both directions --
+ * `_helper` is a name a catalog may declare that it refused, and `ͺ` (U+037A, `ID_Start` but not
+ * `XID_Start`) is one it accepted -- and fell hardest on the scripts that need combining marks or
+ * characters outside the Basic Multilingual Plane (#45).
  *
- * It is an inconsistency rather than a failed MUST: the specification states no production for a
- * name inside a `${…}` expression, so there is no naming rule here to conform to. What decides it
- * is that a name a catalog accepts should be a name a format string can call. See issue #45, which
- * carries the fix -- both predicates answering from `isUnicodeIdentifier`, keeping `@index` as the
- * one system-function exception below.
+ * `@index` is the one exception: a system function the catalog cannot declare, and the only name
+ * with a `@` that a template may call.
  */
-private fun isFunctionName(text: String): Boolean {
-    if (text == FunctionCall.INDEX) return true
-    return text.isNotEmpty() && text.first().isLetter() && text.all { it.isLetterOrDigit() || it == '_' }
-}
+private fun isFunctionName(text: String): Boolean =
+    text == FunctionCall.INDEX || isUnicodeIdentifier(text)
 
 /**
  * Whether [text] can be read as the name of a named argument.
  *
- * The same approximation [isFunctionName] documents, differing in admitting a leading `_` -- which
- * the specification's pattern does too, so this half of the divergence is narrower than the other
- * -- and in not admitting `@index`, which is a function name and never an argument's.
+ * The same rule as [isFunctionName] -- catalog argument names are held to it too -- without the
+ * `@index` exception, which is a function name and never an argument's.
  */
-private fun isArgumentName(text: String): Boolean =
-    text.isNotEmpty() && (text.first().isLetter() || text.first() == '_') &&
-        text.all { it.isLetterOrDigit() || it == '_' }
+private fun isArgumentName(text: String): Boolean = isUnicodeIdentifier(text)
 
 /**
  * Whether [text] can be read as a JSON Pointer, absolute or relative.

@@ -206,39 +206,11 @@ jobs:
             -Pa2uiVersion="$VERSION" -Dmaven.repo.local="${RUNNER_TEMP}/dry-run-m2" --stacktrace
 
       # Central requires a detached signature for every deployed file, and a local repository takes
-      # unsigned artifacts without complaint. The publish above would fail if a publication
-      # *declared* an `.asc` it could not produce -- but if `signAllPublications()` were removed or
-      # made conditional, nothing would be declared, the publish would succeed, and the consumer
-      # step would pass. That break reaches a release; this is what stops it.
-      #
-      # The POM count comes first because everything after it looks for an *absence*, and a check
-      # like that reports success just as cheerfully when it is looking at nothing. `-e` is on by
-      # default here but `-o pipefail` is not, so inside `find … | wc -l` the status is `wc`'s and
-      # find's exit on a missing directory is discarded. Both ways of looking at nothing -- an
-      # absent tree and a present but empty one -- are caught by the count.
-      #
-      # Checked in both directions on this tree before being written down: as published, every file
-      # has a sibling `.asc`; with one `.asc` removed, this step names that file and exits 1.
+      # unsigned artifacts without complaint -- the script's own header says why a publish would
+      # not have caught it. The same file `cd.yml` runs before its upload, not a copy: what the
+      # rehearsal checks is what the release checks.
       - name: Check every published file is signed
-        run: |
-          repo="${RUNNER_TEMP}/dry-run-m2"
-          published=$(find "$repo" -name '*.pom' | wc -l | tr -d ' ')
-          if [ "$published" -eq 0 ]; then
-            echo "::error::no POMs under $repo — the publish did not land there, so the check below would pass without inspecting anything" >&2
-            exit 1
-          fi
-          echo "Inspecting $published published POMs."
-
-          unsigned=$(find "$repo" -type f \
-            ! -name '*.asc' ! -name '*.md5' ! -name '*.sha1' ! -name '*.sha256' ! -name '*.sha512' \
-            ! -name 'maven-metadata*' \
-            -exec sh -c '[ -f "$1.asc" ] || echo "$1"' _ {} \;)
-          if [ -n "$unsigned" ]; then
-            echo "::error::published files carry no detached signature; Maven Central requires one per deployed file" >&2
-            echo "$unsigned"
-            exit 1
-          fi
-          echo "Every published file carries a .asc."
+        run: sh .github/scripts/check-published-signed.sh "${RUNNER_TEMP}/dry-run-m2"
 
       - name: Summarise
         if: always()

@@ -212,6 +212,14 @@ jobs:
             compileAndroidMain \
             -Pa2uiVersion="$VERSION" --stacktrace
 
+      # The last look before anything leaves the machine. A publication that declared no `.asc`
+      # -- `signAllPublications()` removed or made conditional -- passes the local publish and the
+      # consumer gate above, and would fail only in Central's validation after the full build and
+      # a portal round-trip. The same script `release-dry-run.yml` runs, aimed at the default
+      # local repository the publish above wrote to.
+      - name: Check every published file is signed
+        run: sh .github/scripts/check-published-signed.sh "$HOME/.m2/repository"
+
       # Uploads and validates; it does not release. The last step is a button in the Central
       # Portal, held by the person whose account it is -- which is the right place for it while
       # `publishAndReleaseToMavenCentral` exists and this is the first version to go out.

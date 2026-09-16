@@ -441,6 +441,41 @@ class InputComponentsTest {
     }
 
     @Test
+    fun an_empty_date_picker_cannot_be_confirmed() = runComposeUiTest {
+        // A picker opened on a field with no value has nothing selected. Confirming nothing used to
+        // close the dialog as though it were a cancel -- and with the time wanted too, it was the
+        // step that left the time picker unreachable (#22). The confirm is disabled instead.
+        setContent { Surface(rendererFor(DATE_AND_TIME)) }
+        onNodeWithContentDescription("Appointment").performClick()
+        onNodeWithText("OK").assertIsNotEnabled()
+        onAllNodes(isSelectable())[DAY_15].performClick()
+        onNodeWithText("OK").assertIsEnabled()
+    }
+
+    @Test
+    fun a_date_confirmed_on_an_empty_field_hands_over_to_the_time_picker() = runComposeUiTest {
+        // The whole two-dialog sequence, from a field with no value: pick a day, confirm, and the
+        // time picker opens in the date picker's place; confirm that too, and the model holds the
+        // two halves joined. The day cells are gone once the time picker is up, which is what says
+        // the second dialog is the other one and not the first still standing.
+        val renderer = rendererFor(DATE_AND_TIME)
+        setContent { Surface(renderer) }
+        onNodeWithContentDescription("Appointment").performClick()
+        onAllNodes(isSelectable())[DAY_15].performClick()
+        onNodeWithText("OK").performClick()
+        assertEquals(null, renderer.read("/appointment"), "the date alone should not be written yet")
+        onNodeWithText("OK").assertIsDisplayed()
+        onNodeWithText("OK").performClick()
+        // The month is the picker's own -- with no value to open on it shows the machine's current
+        // month -- so only the day and the time picker's default midnight are pinned.
+        val written = (renderer.read("/appointment") as JsonPrimitive).content
+        assertTrue(
+            Regex("""\d{4}-\d{2}-15T00:00""").matches(written),
+            "the two halves should combine into one date-time: $written",
+        )
+    }
+
+    @Test
     fun a_datetime_field_with_nowhere_to_write_is_disabled() = runComposeUiTest {
         setContent { Surface(rendererFor(DATE_TIME)) }
         onNodeWithText("Literal date").assertIsNotEnabled()
@@ -733,6 +768,12 @@ class InputComponentsTest {
            "value":{"path":"/when"}},
           {"id":"literal","component":"DateTimeInput","label":"Literal date","enableDate":true,
            "value":"2026-01-01"}
+        ]"""
+
+        val DATE_AND_TIME = """[
+          {"id":"root","component":"Column","children":["appointment"]},
+          {"id":"appointment","component":"DateTimeInput","label":"Appointment","enableDate":true,
+           "enableTime":true,"value":{"path":"/appointment"}}
         ]"""
 
         val FAR_DATE = """[

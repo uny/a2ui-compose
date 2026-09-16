@@ -48,9 +48,11 @@ import kotlinx.serialization.json.JsonPrimitive
  * Refusing the empty confirm is what Material's own date picker sample does, and it makes the
  * hand-off to the time picker a certainty rather than a branch.
  *
- * `min` and `max` bound the date picker's selectable range. They are read as ISO 8601 like
- * everything else here, and one that will not parse is ignored rather than treated as an empty
- * range that would refuse every date.
+ * `min` and `max` bound both pickers. The date picker greys out the days outside them; the time
+ * picker has no such API in Material, so its confirm is disabled while the clock reads a time
+ * outside them -- on the day the bound names for a `date-time`, on every day for a bare `time`
+ * (see [Iso8601.timeWithin]). They are read as ISO 8601 like everything else here, and one that
+ * will not parse is ignored rather than treated as an empty range that would refuse every value.
  *
  * A field whose `value` is not a data binding does not open a picker: it has nowhere to write, and
  * an input that collected an answer and dropped it is [TextFieldRenderer]'s broken renderer again.
@@ -66,8 +68,12 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
     val target = remember(scope) { scope.binding("value") }
     val failures = scope.rememberCheckFailures()
     val failure = failures.firstMessage()
-    val min = scope.rememberString("min")?.let { Iso8601.epochDay(it) }
-    val max = scope.rememberString("max")?.let { Iso8601.epochDay(it) }
+    val minText = scope.rememberString("min")
+    val maxText = scope.rememberString("max")
+    val min = minText?.let { Iso8601.epochDay(it) }
+    val max = maxText?.let { Iso8601.epochDay(it) }
+    val minTime = minText?.let { Iso8601.timeBound(it) }
+    val maxTime = maxText?.let { Iso8601.timeBound(it) }
 
     // Which dialog is open, if any. The date runs before the time when both are wanted, and
     // `pickedDay` carries the first answer across to the second.
@@ -155,19 +161,26 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
 
         Stage.TIME -> {
             val existing = Iso8601.hourMinute(value)
+            // The day picked a moment ago, or the one already in the model when only the time was
+            // asked for. Absent both, the time stands alone -- which is the `format: time` the
+            // catalog's own `min`/`max` allow.
+            val day = pickedDay ?: Iso8601.epochDay(value).takeIf { wantsDate }
+            // A field with no time yet opens on the lower bound when there is one, rather than on
+            // a midnight the bound would refuse -- so the dialog does not open with its confirm
+            // already disabled and nothing said about why.
+            val opening = existing
+                ?: minTime?.takeIf { day == null || it.day == null || it.day == day }
+                    ?.let { it.minuteOfDay / 60 to it.minuteOfDay % 60 }
             val state = rememberTimePickerState(
-                initialHour = existing?.first ?: 0,
-                initialMinute = existing?.second ?: 0,
+                initialHour = opening?.first ?: 0,
+                initialMinute = opening?.second ?: 0,
                 is24Hour = true,
             )
             PickerDialog(
                 onDismiss = { stage = Stage.NONE },
+                confirmEnabled = { Iso8601.timeWithin(day, state.hour, state.minute, minTime, maxTime) },
                 onConfirm = {
                     val time = Iso8601.time(state.hour, state.minute)
-                    // The day picked a moment ago, or the one already in the model when only the
-                    // time was asked for. Absent both, the time stands alone -- which is the
-                    // `format: time` the catalog's own `min`/`max` allow.
-                    val day = pickedDay ?: Iso8601.epochDay(value).takeIf { wantsDate }
                     val written = Iso8601.combine(day, time)
                     if (written != null && pointer != null) scope.write(pointer, JsonPrimitive(written))
                     pickedDay = null

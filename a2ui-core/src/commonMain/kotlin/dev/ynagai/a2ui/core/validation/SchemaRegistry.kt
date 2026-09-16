@@ -31,8 +31,12 @@ public data class SchemaLocation(
  * filename" (`docs/a2ui_protocol.md:146`).
  *
  * So a resolver cannot treat it as a URI. [SchemaRegistry] binds the bare name to the active
- * catalog before the registered documents are consulted, and any other spelling whose path ends in
- * this name once no registered document claims it.
+ * catalog before the registered documents are consulted -- and only the bare name. A reference
+ * whose path merely ends in this filename is a reference to a document, and when nothing
+ * registered that document it stays unresolvable: binding it to the catalog in play instead
+ * would resolve a `$ref` that names a catalog this renderer does not hold against a different
+ * schema, which is the fail-open [SchemaRegistry.resolve] promises not to be (#41). The prose
+ * calls the placeholder "a filename", and the shipped documents write nothing but the bare one.
  */
 internal const val CATALOG_PLACEHOLDER: String = "catalog.json"
 
@@ -148,15 +152,12 @@ public class SchemaRegistry private constructor(
         // short-circuit and the placeholder would reach such a catalog only by the fallback
         // below, and would reach a *different* bound catalog not at all.
         if (uriPart == CATALOG_PLACEHOLDER && activeCatalogUri != null) return activeCatalogUri
-        val absolute = if (uriPart.contains("://")) uriPart else joinRelative(uriPart, baseUri)
-        if (absolute in documents) return absolute
-        // The placeholder: a reference to `catalog.json` that no registered document claims means
-        // the catalog in play, whatever its own `$id` says.
-        return if (absolute.substringAfterLast('/') == CATALOG_PLACEHOLDER && activeCatalogUri != null) {
-            activeCatalogUri
-        } else {
-            absolute
-        }
+        // Anything else is a document's name, registered or not. There used to be a fallback here
+        // that bound any unregistered URI ending in `/catalog.json` to the catalog in play; it
+        // turned a reference to a catalog this renderer does not hold into a reference to one it
+        // does, so `https://missing.example/catalog.json#/$defs/x` validated while
+        // `https://missing.example/other.json#/$defs/x` was refused. See [CATALOG_PLACEHOLDER].
+        return if (uriPart.contains("://")) uriPart else joinRelative(uriPart, baseUri)
     }
 
     /**

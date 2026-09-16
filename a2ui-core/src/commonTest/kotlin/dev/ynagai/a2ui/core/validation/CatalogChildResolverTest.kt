@@ -332,4 +332,48 @@ class CatalogChildResolverTest {
         )
         assertEquals(listOf(ChildReference.Single("content", "c1")), found, found.toString())
     }
+
+    @Test
+    fun a_duplicate_catalog_id_reads_the_definition_out_of_the_catalog_it_binds() {
+        // #42. Two catalogs share a `catalogId` and publish different `$id`s. `of` keeps the last
+        // for that name and the placeholder binds to it -- but the name itself was answered out
+        // of the registry's map, which the first-wins pass had given to the first catalog. So a
+        // component's definition came from one catalog while every `catalog.json` inside it
+        // resolved against the other. The definitions are written inline here, with no
+        // placeholder to paper over the split: whichever catalog the definition is read from is
+        // the property reported. Both halves must name the same catalog -- the last, as the KDoc
+        // on `of` promises. A caller should still refuse the duplicate before it gets here.
+        fun catalog(id: String, property: String) = A2uiJson.strict.decodeFromString(
+            CatalogDefinition.serializer(),
+            """
+            {
+              "${'$'}id": "$id",
+              "catalogId": "urn:test:dup",
+              "components": {
+                "Panel": {
+                  "type": "object",
+                  "properties": {
+                    "component": {"const": "Panel"},
+                    "$property": {
+                      "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/Child"
+                    }
+                  }
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+        val first = catalog("urn:test:idA", "alpha")
+        val last = catalog("urn:test:idB", "beta")
+        val found = CatalogChildResolver.of(
+            listOf(first, last),
+            surfaceDefault = "urn:test:dup",
+        ).childrenOf(
+            A2uiJson.strict.decodeFromString(
+                Component.serializer(),
+                """{"id": "p", "component": "Panel", "alpha": "c1", "beta": "c2"}""",
+            ),
+        )
+        assertEquals(listOf(ChildReference.Single("beta", "c2")), found, found.toString())
+    }
 }

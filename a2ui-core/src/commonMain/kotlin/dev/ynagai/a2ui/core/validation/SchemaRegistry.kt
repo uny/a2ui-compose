@@ -50,6 +50,7 @@ internal const val CATALOG_PLACEHOLDER: String = "catalog.json"
 public class SchemaRegistry private constructor(
     private val documents: Map<String, JsonObject>,
     private val activeCatalogUri: String?,
+    private val activeCatalogId: String?,
     private val activeCatalog: JsonObject?,
 ) {
     /**
@@ -65,7 +66,12 @@ public class SchemaRegistry private constructor(
      * Below that, the catalog in play answers for its own URI whatever else claimed it. Two
      * catalogs may publish the same `$id` and the map can only keep one, but the placeholder
      * resolves through here and must reach the catalog the caller *named* rather than whichever
-     * namesake happened to register first.
+     * namesake happened to register first. The same holds for its `catalogId`, which is the name
+     * the caller actually bound it by: two catalogs sharing a `catalogId` under different `$id`s
+     * would otherwise have the placeholder reach the bound one and the name reach the map's --
+     * a definition read out of one catalog with its references resolved against another (#42).
+     * Only when no `$id` claimed that name, though; `$id` wins a name over `catalogId`, and
+     * binding a catalog does not change that.
      *
      * Below both, the name the placeholder joins to answers for nothing at all. It is a filename
      * the specification never binds to a document, so a registration standing at that URI is a
@@ -85,6 +91,7 @@ public class SchemaRegistry private constructor(
         // on the caller having passed the specification's documents first. `of` is public.
         uri in ProtocolSchemas.libraryUris -> ProtocolSchemas.libraryDocuments[uri]
         uri == activeCatalogUri -> activeCatalog ?: documents[uri]
+        uri == activeCatalogId -> activeCatalog
         // Second of the two layers that close #39, and deliberately redundant with the first:
         // `of` refuses the registration, this refuses the answer, and removing either one alone
         // leaves the tests green while removing both fails them. That is measured, not assumed.
@@ -220,7 +227,12 @@ public class SchemaRegistry private constructor(
             // keeps the existing rules exactly as they were -- a claim on a library URI is refused
             // by [document] rather than here -- and its `catalogId` only when it declares no `$id`.
             val activeUri = activeCatalog?.let { it.declaredId() ?: it.declaredCatalogId() }
-            return SchemaRegistry(all, activeUri, activeCatalog)
+            // And its `catalogId` as a second name, so that a bound catalog is the one answering
+            // for the name it was bound by -- unless some document's `$id` already holds that
+            // name, which keeps `$id` winning exactly as the two passes above arrange.
+            val activeId = activeCatalog?.declaredCatalogId()
+                ?.takeIf { id -> id != activeUri && ordered.none { it.declaredId() == id } }
+            return SchemaRegistry(all, activeUri, activeId, activeCatalog)
         }
 
         /** The catalog's own name, which is not required to agree with its `$id`. */

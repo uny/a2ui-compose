@@ -2,6 +2,7 @@ package dev.ynagai.a2ui.material3
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -134,6 +135,54 @@ class Iso8601Test {
         for (text in listOf("", "2026-08-30", "24:00", "12:60", "noon")) {
             assertNull(Iso8601.hourMinute(text), "`$text` should not read as a time")
         }
+    }
+
+    @Test
+    fun a_bound_yields_its_time_half_and_the_day_it_applies_on() {
+        // A bare time applies on every day; a date-time on the day it names; a bare date has no
+        // time half and bounds nothing here -- that is the date picker's business.
+        assertEquals(Iso8601.TimeBound(null, 9 * 60), Iso8601.timeBound("09:00"))
+        assertEquals(
+            Iso8601.TimeBound(Iso8601.epochDay("2026-01-01"), 9 * 60 + 30),
+            Iso8601.timeBound("2026-01-01T09:30"),
+        )
+        assertNull(Iso8601.timeBound("2026-01-01"))
+        assertNull(Iso8601.timeBound("noon"))
+    }
+
+    @Test
+    fun a_time_only_field_is_held_between_its_bounds_on_every_day() {
+        val min = Iso8601.timeBound("09:00")
+        val max = Iso8601.timeBound("17:00")
+        // #20's case: 02:00 is below a declared minimum of 09:00.
+        assertFalse(Iso8601.timeWithin(null, 2, 0, min, max))
+        assertTrue(Iso8601.timeWithin(null, 9, 0, min, max), "the bounds are inclusive")
+        assertTrue(Iso8601.timeWithin(null, 17, 0, min, max), "the bounds are inclusive")
+        assertFalse(Iso8601.timeWithin(null, 17, 1, min, max))
+        assertTrue(Iso8601.timeWithin(null, 12, 30, min, max))
+        // Either bound alone, and neither.
+        assertTrue(Iso8601.timeWithin(null, 23, 59, min, null))
+        assertTrue(Iso8601.timeWithin(null, 0, 0, null, max))
+        assertTrue(Iso8601.timeWithin(null, 0, 0, null, null))
+    }
+
+    @Test
+    fun a_date_time_bound_constrains_the_clock_only_on_the_day_it_names() {
+        val min = Iso8601.timeBound("2026-01-01T09:00")
+        val first = Iso8601.epochDay("2026-01-01")!!
+        // On the bound's own day the clock is held; the day after, the date picker has already
+        // put the value past the bound and the clock is free.
+        assertFalse(Iso8601.timeWithin(first, 8, 59, min, null))
+        assertTrue(Iso8601.timeWithin(first, 9, 0, min, null))
+        assertTrue(Iso8601.timeWithin(first + 1, 0, 0, min, null))
+        // A time-only field handed a date-time bound has no day to compare, so the clock half
+        // applies -- the conservative reading of a bound the catalog lets an agent write.
+        assertFalse(Iso8601.timeWithin(null, 8, 59, min, null))
+        // The mirror for `max`.
+        val max = Iso8601.timeBound("2026-01-31T17:00")
+        val last = Iso8601.epochDay("2026-01-31")!!
+        assertFalse(Iso8601.timeWithin(last, 17, 1, null, max))
+        assertTrue(Iso8601.timeWithin(last - 1, 23, 59, null, max))
     }
 
     @Test

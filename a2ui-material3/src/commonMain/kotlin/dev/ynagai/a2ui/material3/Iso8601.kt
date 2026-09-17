@@ -55,11 +55,8 @@ internal object Iso8601 {
      */
     fun timeBound(value: String): TimeBound? {
         val (hour, minute) = hourMinute(value) ?: return null
-        return TimeBound(epochDay(value), hour * 60 + minute)
+        return epochDay(value) to hour * 60 + minute
     }
-
-    /** See [timeBound]. [minuteOfDay] is `hour * 60 + minute`, which is what makes two comparable. */
-    data class TimeBound(val day: Long?, val minuteOfDay: Int)
 
     /**
      * Whether a clock time falls inside [min] and [max] on [day] -- both inclusive, either optional.
@@ -82,6 +79,10 @@ internal object Iso8601 {
 
     private fun TimeBound.appliesOn(epochDay: Long?): Boolean =
         day == null || epochDay == null || day == epochDay
+
+    private val TimeBound.day: Long? get() = first
+
+    private val TimeBound.minuteOfDay: Int get() = second
 
     /**
      * What a `DateTimeInput` writes back, given whichever halves it collected.
@@ -182,3 +183,13 @@ internal object Iso8601 {
         return era * 146_097 + dayOfEra - 719_468
     }
 }
+
+/**
+ * See [Iso8601.timeBound]: the day a bound applies on (null for every day) and its minute of the
+ * day, `hour * 60 + minute`, which is what makes two comparable.
+ *
+ * A `Pair` rather than a class: the Compose compiler emits a `$stableprop` for every non-private
+ * class in a module it compiles, and that symbol lands in the published klib ABI even for an
+ * `internal` class -- so a data class here would be a public API change for a private helper.
+ */
+internal typealias TimeBound = Pair<Long?, Int>

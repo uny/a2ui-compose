@@ -169,8 +169,8 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
             // a midnight the bound would refuse -- so the dialog does not open with its confirm
             // already disabled and nothing said about why.
             val opening = existing
-                ?: minTime?.takeIf { day == null || it.day == null || it.day == day }
-                    ?.let { it.minuteOfDay / 60 to it.minuteOfDay % 60 }
+                ?: minTime?.takeIf { (boundDay, _) -> day == null || boundDay == null || boundDay == day }
+                    ?.let { (_, minuteOfDay) -> minuteOfDay / 60 to minuteOfDay % 60 }
             val state = rememberTimePickerState(
                 initialHour = opening?.first ?: 0,
                 initialMinute = opening?.second ?: 0,

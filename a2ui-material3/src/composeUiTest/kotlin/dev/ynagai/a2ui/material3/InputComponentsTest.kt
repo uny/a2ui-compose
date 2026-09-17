@@ -456,8 +456,9 @@ class InputComponentsTest {
     fun a_date_confirmed_on_an_empty_field_hands_over_to_the_time_picker() = runComposeUiTest {
         // The whole two-dialog sequence, from a field with no value: pick a day, confirm, and the
         // time picker opens in the date picker's place; confirm that too, and the model holds the
-        // two halves joined. The day cells are gone once the time picker is up, which is what says
-        // the second dialog is the other one and not the first still standing.
+        // two halves joined. The `T00:00` half of the final value is what says the second dialog
+        // was the time picker and not the date picker still standing: a second confirm on the
+        // date picker would have written the date alone.
         val renderer = rendererFor(DATE_AND_TIME)
         setContent { Surface(renderer) }
         onNodeWithContentDescription("Appointment").performClick()

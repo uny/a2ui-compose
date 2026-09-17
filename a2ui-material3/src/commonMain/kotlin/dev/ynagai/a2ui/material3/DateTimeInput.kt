@@ -42,6 +42,12 @@ import kotlinx.serialization.json.JsonPrimitive
  * date is the half its own name leads with. With both enabled the date is asked first and the time
  * second, and the two are combined into one `yyyy-MM-ddTHH:mm` value.
  *
+ * The date dialog's confirm stays disabled until a day is selected. A picker opened on an empty
+ * field has nothing selected, and confirming nothing used to end the sequence there -- with both
+ * halves wanted, the time picker was never reached and the field could not be filled at all.
+ * Refusing the empty confirm is what Material's own date picker sample does, and it makes the
+ * hand-off to the time picker a certainty rather than a branch.
+ *
  * `min` and `max` bound the date picker's selectable range. They are read as ISO 8601 like
  * everything else here, and one that will not parse is ignored rather than treated as an empty
  * range that would refuse every date.
@@ -124,12 +130,15 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
             )
             PickerDialog(
                 onDismiss = { stage = Stage.NONE },
+                // Nothing selected, nothing to confirm -- see the KDoc. Read inside the lambda so
+                // the button follows the selection while the dialog is open.
+                confirmEnabled = { state.selectedDateMillis != null },
                 onConfirm = {
-                    val day = state.selectedDateMillis?.floorDiv(Iso8601.DAY_MILLIS)
+                    val day = state.selectedDateMillis?.floorDiv(Iso8601.DAY_MILLIS) ?: return@PickerDialog
                     pickedDay = day
                     // Straight on to the time when both were asked for; otherwise this was the
                     // whole answer and it is written now.
-                    if (wantsTime && day != null) {
+                    if (wantsTime) {
                         stage = Stage.TIME
                     } else {
                         val written = Iso8601.combine(day, time = null)
@@ -192,12 +201,15 @@ private enum class Stage { NONE, DATE, TIME }
 private fun PickerDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
+    confirmEnabled: () -> Boolean = { true },
     content: @Composable () -> Unit,
 ) {
     val strings = LocalA2uiStrings.current
     DatePickerDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onConfirm) { Text(strings.confirm) } },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = confirmEnabled()) { Text(strings.confirm) }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text(strings.cancel) } },
     ) {
         content()

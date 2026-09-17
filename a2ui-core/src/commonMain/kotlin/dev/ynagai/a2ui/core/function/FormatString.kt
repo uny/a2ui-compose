@@ -414,10 +414,8 @@ private fun numberLiteral(text: String): JsonPrimitive? {
  * naming rule here to conform to. What decides it is that a name a catalog accepts should be a
  * name a format string can call: catalog function names are held to UAX #31 by
  * [dev.ynagai.a2ui.core.validation.isUnicodeIdentifier], and so this answers from the same tables.
- * An earlier `isLetter`/`isLetterOrDigit` approximation disagreed with it in both directions --
- * `_helper` is a name a catalog may declare that it refused, and `ͺ` (U+037A, `ID_Start` but not
- * `XID_Start`) is one it accepted -- and fell hardest on the scripts that need combining marks or
- * characters outside the Basic Multilingual Plane (#45).
+ * `0.1.0` answered from an `isLetter`/`isLetterOrDigit` approximation instead, which disagreed with
+ * the catalog rule in both directions (#45); `isUnicodeIdentifier`'s own documentation says how.
  *
  * `@index` is the one exception: a system function the catalog cannot declare, and the only name
  * with a `@` that a template may call.

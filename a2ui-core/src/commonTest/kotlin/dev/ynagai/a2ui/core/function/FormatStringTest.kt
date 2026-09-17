@@ -155,6 +155,9 @@ class FormatStringTest {
         // A supplementary-plane letter, which a `Char`-at-a-time rule saw as two surrogates.
         val astral = assertFailsWith<A2uiFunctionException> { format("\${𝔥𝔢𝔩𝔭()}") }
         assertTrue(astral.message!!.contains("no function named"), astral.message!!)
+        // A combining mark (U+0301, `Mn`) is `XID_Continue` and neither a letter nor a digit.
+        val combining = assertFailsWith<A2uiFunctionException> { format("\${he\u0301lp()}") }
+        assertTrue(combining.message!!.contains("no function named"), combining.message!!)
         // And the other direction: `ͺ` (U+037A) is `ID_Start` but not `XID_Start`, so a catalog
         // refuses it as a name and the parser now does too.
         val excluded = assertFailsWith<A2uiFunctionException> { format("\${ͺ()}") }
@@ -169,6 +172,13 @@ class FormatStringTest {
         // rather than as "not an argument name" -- the parser accepted the name.
         val underscore = assertFailsWith<A2uiFunctionException> { format("\${formatNumber(_value:1)}") }
         assertTrue(underscore.message!!.contains("requires an argument"), underscore.message!!)
+        // The two names that tell this rule from the earlier approximation: an astral letter it
+        // refused, and `ͺ` (U+037A, not `XID_Start`) it accepted. An unrequired argument is
+        // otherwise ignored, so the second is the one input that used to render and now fails.
+        val astral = assertFailsWith<A2uiFunctionException> { format("\${formatNumber(𝔳:1)}") }
+        assertTrue(astral.message!!.contains("requires an argument"), astral.message!!)
+        val excluded = assertFailsWith<A2uiFunctionException> { format("\${formatNumber(ͺ:1)}") }
+        assertTrue(excluded.message!!.contains("is not an argument name"), excluded.message!!)
         val hyphen = assertFailsWith<A2uiFunctionException> { format("\${formatNumber(my-value:1)}") }
         assertTrue(hyphen.message!!.contains("is not an argument name"), hyphen.message!!)
         val digit = assertFailsWith<A2uiFunctionException> { format("\${formatNumber(9x:1)}") }

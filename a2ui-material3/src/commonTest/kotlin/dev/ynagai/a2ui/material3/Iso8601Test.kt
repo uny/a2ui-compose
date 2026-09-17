@@ -141,11 +141,8 @@ class Iso8601Test {
     fun a_bound_yields_its_time_half_and_the_day_it_applies_on() {
         // A bare time applies on every day; a date-time on the day it names; a bare date has no
         // time half and bounds nothing here -- that is the date picker's business.
-        assertEquals(Iso8601.TimeBound(null, 9 * 60), Iso8601.timeBound("09:00"))
-        assertEquals(
-            Iso8601.TimeBound(Iso8601.epochDay("2026-01-01"), 9 * 60 + 30),
-            Iso8601.timeBound("2026-01-01T09:30"),
-        )
+        assertEquals(null to 9 * 60, Iso8601.timeBound("09:00"))
+        assertEquals(Iso8601.epochDay("2026-01-01") to 9 * 60 + 30, Iso8601.timeBound("2026-01-01T09:30"))
         assertNull(Iso8601.timeBound("2026-01-01"))
         assertNull(Iso8601.timeBound("noon"))
     }

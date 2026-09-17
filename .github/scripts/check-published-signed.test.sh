@@ -1,8 +1,8 @@
 #!/bin/sh
 # Both directions of `check-published-signed.sh`, against a repository laid out by hand.
 #
-# Run from anywhere: `sh .github/scripts/check-published-signed.test.sh`. Exits non-zero on the
-# first case that does not behave, naming it.
+# Run from anywhere: `sh .github/scripts/check-published-signed.test.sh`. Runs every case and exits
+# non-zero if any did not behave, naming each.
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -27,15 +27,16 @@ expect() {
   fi
 }
 
-# A publication as `publishToMavenLocal` lays it out: the five real artifacts, each with its
-# `.asc`, plus the index file that must be ignored.
+# A cut-down publication in the shape `publishToMavenLocal` lays out: five artifacts, each with a
+# non-empty `.asc`, plus the index file that must be ignored. The real tree has more files per
+# module (klib, aar, tooling metadata), but the script is filename-agnostic.
 lay_out() {
   dir="$1/dev/ynagai/a2ui/a2ui-core/0.1.0"
   mkdir -p "$dir"
   for file in a2ui-core-0.1.0.jar a2ui-core-0.1.0-sources.jar a2ui-core-0.1.0-javadoc.jar \
       a2ui-core-0.1.0.module a2ui-core-0.1.0.pom; do
     : > "$dir/$file"
-    : > "$dir/$file.asc"
+    echo "-----BEGIN PGP SIGNATURE-----" > "$dir/$file.asc"
   done
   : > "$1/dev/ynagai/a2ui/a2ui-core/maven-metadata-local.xml"
 }
@@ -54,6 +55,11 @@ set -e
 if [ "$named" -eq 1 ]; then echo "ok   the missing signature is named"; else
   echo "FAIL the missing signature is not named"; failures=$((failures + 1)); fi
 
+# A signing task that wrote nothing leaves a name, not a signature.
+lay_out "$work/one-empty"
+: > "$work/one-empty/dev/ynagai/a2ui/a2ui-core/0.1.0/a2ui-core-0.1.0.pom.asc"
+expect "one .asc empty" 1 "$work/one-empty"
+
 expect "repository directory absent" 1 "$work/nowhere"
 
 mkdir -p "$work/empty"
@@ -63,6 +69,8 @@ expect "repository present but empty" 1 "$work/empty"
 lay_out "$work/with-checksums"
 : > "$work/with-checksums/dev/ynagai/a2ui/a2ui-core/0.1.0/a2ui-core-0.1.0.jar.sha1"
 : > "$work/with-checksums/dev/ynagai/a2ui/a2ui-core/0.1.0/a2ui-core-0.1.0.jar.md5"
+: > "$work/with-checksums/dev/ynagai/a2ui/a2ui-core/0.1.0/a2ui-core-0.1.0.jar.sha256"
+: > "$work/with-checksums/dev/ynagai/a2ui/a2ui-core/0.1.0/a2ui-core-0.1.0.jar.sha512"
 expect "checksums and the index need no signature" 0 "$work/with-checksums"
 
 [ "$failures" -eq 0 ] || { echo "$failures case(s) failed"; exit 1; }

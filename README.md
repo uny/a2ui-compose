@@ -39,10 +39,10 @@ three come from what the artifacts were built with, not from anything the librar
 | **Compose Multiplatform 1.12.0** | `requires: 1.12.0` on `compose.runtime` / `compose.ui` in the Gradle module metadata | **Silently.** Gradle takes the highest version in a conflict, so a project on 1.10.0 is moved to 1.12.0 without being told. Holding the older version with `strictly` fails resolution instead. |
 | **`compileSdk` 37** (Android) | `minCompileSdk=37` in the AAR metadata | AGP fails the build with a clear message. Cheap to fix: `compileSdk` is what you compile against, and `targetSdk` need not move with it. See [Targets](#targets) for why 37. |
 
-The `0.x` line ships against the newest stable Kotlin and Compose Multiplatform; `0.1.0` is what
-that meant on its release date. Whether a later `0.x` lowers the Kotlin floor to 2.3.x for the KSP
-case is [#64](https://github.com/uny/a2ui-compose/issues/64), and a release that changes any floor
-will say so in its notes rather than leave it to be discovered.
+`0.1.0` was built with the newest stable Kotlin and Compose Multiplatform of its release date.
+Whether a later `0.x` lowers the Kotlin floor to 2.3.x for the KSP case is
+[#64](https://github.com/uny/a2ui-compose/issues/64); a release that changes any floor will say so
+in its notes rather than leave it to be discovered.
 
 ## Protocol version
 

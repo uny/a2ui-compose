@@ -793,8 +793,8 @@ class CatalogIdentityTest {
         // than treats as vacuous success.
         //
         // At the registry rather than through `CatalogDefinition`, which since #50 refuses an
-        // external `$ref` to anything but `common_types.json` before it gets this far. `of` is
-        // public and takes raw documents, so the registry has to hold the line on its own.
+        // external `$ref` to any filename but `common_types.json` before it gets this far. `of`
+        // is public and takes raw documents, so the registry has to hold the line on its own.
         val bound = parseObject(
             """
             {"${'$'}id": "urn:test:external", "catalogId": "urn:test:external",
@@ -803,9 +803,14 @@ class CatalogIdentityTest {
         )
         val registry = SchemaRegistry.of(ProtocolSchemas.documents, activeCatalog = bound)
         val base = SchemaLocation("urn:test:external", "/${'$'}defs/anyComponent")
+        // Absolute and relative alike: the fallback keyed on the last path segment, so a relative
+        // `sub/catalog.json` -- joined, from a base with no directory, to itself -- reached the
+        // catalog in play by the same route.
         for (filename in listOf("catalog.json", "other.json")) {
-            val resolved = registry.resolve("https://missing.example/$filename#/${'$'}defs/permissive", base)
-            assertNull(resolved, "$filename resolved to $resolved")
+            for (uri in listOf("https://missing.example/$filename", "sub/$filename", "./$filename")) {
+                val resolved = registry.resolve("$uri#/${'$'}defs/permissive", base)
+                assertNull(resolved, "$uri resolved to $resolved")
+            }
         }
         // The bare placeholder is the one spelling that does mean the catalog in play.
         assertEquals(

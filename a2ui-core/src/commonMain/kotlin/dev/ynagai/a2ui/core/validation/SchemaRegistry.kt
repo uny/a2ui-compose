@@ -149,14 +149,11 @@ public class SchemaRegistry private constructor(
         // What the reservation withholds is the *name*: no registration may take it, and
         // [document] refuses it -- but only below `uri == activeCatalogUri`, so the catalog in
         // play does still answer there when the name it published is that URI. Drop this
-        // short-circuit and the placeholder would reach such a catalog only by the fallback
-        // below, and would reach a *different* bound catalog not at all.
+        // short-circuit and the placeholder would join to that reserved name, reaching such a
+        // catalog only by coincidence of `$id` and a *different* bound catalog not at all.
         if (uriPart == CATALOG_PLACEHOLDER && activeCatalogUri != null) return activeCatalogUri
-        // Anything else is a document's name, registered or not. There used to be a fallback here
-        // that bound any unregistered URI ending in `/catalog.json` to the catalog in play; it
-        // turned a reference to a catalog this renderer does not hold into a reference to one it
-        // does, so `https://missing.example/catalog.json#/$defs/x` validated while
-        // `https://missing.example/other.json#/$defs/x` was refused. See [CATALOG_PLACEHOLDER].
+        // Anything else names a document, registered or not; only the bare spelling is the
+        // placeholder (#41, see [CATALOG_PLACEHOLDER]).
         return if (uriPart.contains("://")) uriPart else joinRelative(uriPart, baseUri)
     }
 

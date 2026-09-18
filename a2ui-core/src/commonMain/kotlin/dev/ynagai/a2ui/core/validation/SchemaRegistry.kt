@@ -84,7 +84,7 @@ public class SchemaRegistry private constructor(
      * [CatalogValidator.validateMessage] documents. Reaching this means the catalog in play did
      * not claim the URI, so the only thing left to reach is a namesake.
      *
-     * A catalog that claims a library URI therefore reaches neither branch as itself: the
+     * A catalog whose `$id` claims a library URI therefore reaches no branch as itself: the
      * placeholder binds to that URI, the library document answers, and the pointer into it fails
      * to resolve. That is reported as an unresolvable reference, which is the truth. It also means
      * no schema text a catalog wrote is ever read at a library [SchemaLocation.documentUri], which
@@ -221,7 +221,9 @@ public class SchemaRegistry private constructor(
             // Registered only where nothing has spoken for the name. `catalogId` is an
             // agent-supplied string with no more constraint on it than `"type": "string"`, so a
             // catalog naming itself after another document must not answer for it -- and running
-            // this pass second is what guarantees `$id` always wins the name.
+            // this pass second is what guarantees `$id` always wins the name in the map. The one
+            // document that answers for its `catalogId` regardless is the catalog bound, through
+            // [document] rather than through here.
             for (document in ordered) {
                 val catalogId = document.declaredCatalogId() ?: continue
                 if (catalogId in ProtocolSchemas.catalogPlaceholderUris) continue

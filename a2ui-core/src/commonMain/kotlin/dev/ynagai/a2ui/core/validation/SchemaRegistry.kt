@@ -50,6 +50,7 @@ internal const val CATALOG_PLACEHOLDER: String = "catalog.json"
 public class SchemaRegistry private constructor(
     private val documents: Map<String, JsonObject>,
     private val activeCatalogUri: String?,
+    private val activeCatalogId: String?,
     private val activeCatalog: JsonObject?,
 ) {
     /**
@@ -65,16 +66,25 @@ public class SchemaRegistry private constructor(
      * Below that, the catalog in play answers for its own URI whatever else claimed it. Two
      * catalogs may publish the same `$id` and the map can only keep one, but the placeholder
      * resolves through here and must reach the catalog the caller *named* rather than whichever
-     * namesake happened to register first.
+     * namesake happened to register first. The same holds for its `catalogId`, which is the name
+     * the caller actually bound it by: two catalogs sharing a `catalogId` under different `$id`s
+     * would otherwise have the placeholder reach the bound one and the name reach the map's --
+     * a definition read out of one catalog with its references resolved against another (#42).
+     * Another catalog's `$id` claiming that name does not change this: `$id` wins a name in the
+     * *map*, where nothing else decides, but the caller has already bound this catalog by that
+     * name, and letting the map answer would only move the definition to a catalog the
+     * placeholder is not bound to -- the same split on the other axis. Which also means a bound
+     * catalog whose `catalogId` is a name the placeholder joins to answers there, as one whose
+     * `$id` is already does; the reservation below withholds the name from everything *else*.
      *
-     * Below both, the name the placeholder joins to answers for nothing at all. It is a filename
-     * the specification never binds to a document, so a registration standing at that URI is a
-     * catalog answering a reference meant for whichever catalog is *in play* -- and when none is,
-     * the reference has to stay unresolvable, because that is the fail-closed guarantee
+     * Below all three, the name the placeholder joins to answers for nothing at all. It is a
+     * filename the specification never binds to a document, so a registration standing at that
+     * URI is a catalog answering a reference meant for whichever catalog is *in play* -- and when
+     * none is, the reference has to stay unresolvable, because that is the fail-closed guarantee
      * [CatalogValidator.validateMessage] documents. Reaching this means the catalog in play did
      * not claim the URI, so the only thing left to reach is a namesake.
      *
-     * A catalog that claims a library URI therefore reaches neither branch as itself: the
+     * A catalog whose `$id` claims a library URI therefore reaches no branch as itself: the
      * placeholder binds to that URI, the library document answers, and the pointer into it fails
      * to resolve. That is reported as an unresolvable reference, which is the truth. It also means
      * no schema text a catalog wrote is ever read at a library [SchemaLocation.documentUri], which
@@ -85,6 +95,7 @@ public class SchemaRegistry private constructor(
         // on the caller having passed the specification's documents first. `of` is public.
         uri in ProtocolSchemas.libraryUris -> ProtocolSchemas.libraryDocuments[uri]
         uri == activeCatalogUri -> activeCatalog ?: documents[uri]
+        uri == activeCatalogId -> activeCatalog
         // Second of the two layers that close #39, and deliberately redundant with the first:
         // `of` refuses the registration, this refuses the answer, and removing either one alone
         // leaves the tests green while removing both fails them. That is measured, not assumed.
@@ -178,11 +189,11 @@ public class SchemaRegistry private constructor(
          * document entitled to answer there is whichever catalog is in play. See
          * [ProtocolSchemas.catalogPlaceholderUris].
          *
-         * [activeCatalog] is bound to [CATALOG_PLACEHOLDER] and answers for its own URI directly,
-         * so it does not depend on winning that race -- it is appended last, and under first-wins
-         * it would otherwise lose every collision. Passing it separately rather than inferring
-         * "the one that has a `catalogId`" keeps a catalog that inlines another one from silently
-         * taking over.
+         * [activeCatalog] is bound to [CATALOG_PLACEHOLDER] and answers for its own URI and its
+         * `catalogId` directly, so it does not depend on winning that race -- it is appended
+         * last, and under first-wins it would otherwise lose every collision. Passing it
+         * separately rather than inferring "the one that has a `catalogId`" keeps a catalog that
+         * inlines another one from silently taking over.
          */
         public fun of(
             documents: List<JsonObject>,
@@ -210,17 +221,23 @@ public class SchemaRegistry private constructor(
             // Registered only where nothing has spoken for the name. `catalogId` is an
             // agent-supplied string with no more constraint on it than `"type": "string"`, so a
             // catalog naming itself after another document must not answer for it -- and running
-            // this pass second is what guarantees `$id` always wins the name.
+            // this pass second is what guarantees `$id` always wins the name in the map. The one
+            // document that answers for its `catalogId` regardless is the catalog bound, through
+            // [document] rather than through here.
             for (document in ordered) {
                 val catalogId = document.declaredCatalogId() ?: continue
                 if (catalogId in ProtocolSchemas.catalogPlaceholderUris) continue
                 if (catalogId !in all) all[catalogId] = document
             }
-            // The name the active catalog is reachable by. Its `$id` when it declares one, which
-            // keeps the existing rules exactly as they were -- a claim on a library URI is refused
-            // by [document] rather than here -- and its `catalogId` only when it declares no `$id`.
+            // The URI the placeholder binds to. Its `$id` when it declares one, which keeps the
+            // existing rules exactly as they were -- a claim on a library URI is refused by
+            // [document] rather than here -- and its `catalogId` when it declares no `$id`.
             val activeUri = activeCatalog?.let { it.declaredId() ?: it.declaredCatalogId() }
-            return SchemaRegistry(all, activeUri, activeCatalog)
+            // And its `catalogId` as a second name, so that a bound catalog is the one answering
+            // for the name it was bound by, whatever the map gave that name to. Not filtered
+            // against the reservation or another document's `$id` on purpose; [document] says why.
+            val activeId = activeCatalog?.declaredCatalogId()?.takeIf { it != activeUri }
+            return SchemaRegistry(all, activeUri, activeId, activeCatalog)
         }
 
         /** The catalog's own name, which is not required to agree with its `$id`. */

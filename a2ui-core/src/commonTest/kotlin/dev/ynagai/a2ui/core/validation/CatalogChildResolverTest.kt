@@ -332,4 +332,131 @@ class CatalogChildResolverTest {
         )
         assertEquals(listOf(ChildReference.Single("content", "c1")), found, found.toString())
     }
+
+    @Test
+    fun a_duplicate_catalog_id_reads_the_definition_out_of_the_catalog_it_binds() {
+        // #42. Two catalogs share a `catalogId` and publish different `$id`s. `of` keeps the last
+        // for that name and the placeholder binds to it -- but the name itself was answered out
+        // of the registry's map, which the first-wins pass had given to the first catalog. So a
+        // component's definition came from one catalog while every `catalog.json` inside it
+        // resolved against the other. The definitions are written inline here, with no
+        // placeholder to paper over the split: whichever catalog the definition is read from is
+        // the property reported. Both halves must name the same catalog -- the last, as the KDoc
+        // on `of` promises. A caller should still refuse the duplicate before it gets here.
+        fun catalog(id: String, property: String) = A2uiJson.strict.decodeFromString(
+            CatalogDefinition.serializer(),
+            """
+            {
+              "${'$'}id": "$id",
+              "catalogId": "urn:test:dup",
+              "components": {
+                "Panel": {
+                  "type": "object",
+                  "properties": {
+                    "component": {"const": "Panel"},
+                    "$property": {
+                      "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/Child"
+                    }
+                  }
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+        val first = catalog("urn:test:idA", "alpha")
+        val last = catalog("urn:test:idB", "beta")
+        val found = CatalogChildResolver.of(
+            listOf(first, last),
+            surfaceDefault = "urn:test:dup",
+        ).childrenOf(
+            A2uiJson.strict.decodeFromString(
+                Component.serializer(),
+                """{"id": "p", "component": "Panel", "alpha": "c1", "beta": "c2"}""",
+            ),
+        )
+        assertEquals(listOf(ChildReference.Single("beta", "c2")), found, found.toString())
+    }
+
+    @Test
+    fun a_bound_catalog_answers_for_its_catalog_id_over_another_catalogs_id() {
+        // The other axis of the same split. `$id` wins a name in the registry's map, so a catalog
+        // publishing the bound catalog's `catalogId` as its `$id` used to be what the name
+        // resolved to -- while the placeholder stayed bound to the catalog the surface named. The
+        // checker keys on `catalogId` alone and checked against `bound`, so it accepted `alpha`
+        // and refused `beta` on the same component this reported `beta` for. Definitions are
+        // inline again, so the property found says which catalog was read.
+        fun catalog(id: String, catalogId: String, property: String) =
+            A2uiJson.strict.decodeFromString(
+                CatalogDefinition.serializer(),
+                """
+                {
+                  "${'$'}id": "$id",
+                  "catalogId": "$catalogId",
+                  "components": {
+                    "Panel": {
+                      "type": "object",
+                      "properties": {
+                        "component": {"const": "Panel"},
+                        "$property": {
+                          "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/Child"
+                        }
+                      }
+                    }
+                  }
+                }
+                """.trimIndent(),
+            )
+        val bound = catalog("urn:test:idA", "urn:test:name", "alpha")
+        val namesake = catalog("urn:test:name", "urn:test:other", "beta")
+        val found = CatalogChildResolver.of(
+            listOf(bound, namesake),
+            surfaceDefault = "urn:test:name",
+        ).childrenOf(
+            A2uiJson.strict.decodeFromString(
+                Component.serializer(),
+                """{"id": "p", "component": "Panel", "alpha": "c1", "beta": "c2"}""",
+            ),
+        )
+        assertEquals(listOf(ChildReference.Single("alpha", "c1")), found, found.toString())
+    }
+
+    @Test
+    fun finds_the_children_of_a_placeholder_named_catalog_that_also_declares_an_id() {
+        // `finds_the_children_of_a_component_that_overrides_to_a_catalog_named_after_the_placeholder`
+        // with an `$id` added. The reservation withholds the placeholder's name from every
+        // document but the one bound, and binding is by `catalogId` -- so declaring an `$id` as
+        // well must not turn the bound catalog back into a namesake the reservation refuses. It
+        // did: the name was answered out of the map, where the reservation had kept it empty, and
+        // the children were dropped while the checker, which reaches the catalog through the
+        // placeholder, reported the component valid.
+        val source = """
+        {
+          "${'$'}id": "urn:test:reserved-name",
+          "catalogId": "https://a2ui.org/specification/v1_0/catalog.json",
+          "components": {
+            "Column": {
+              "type": "object",
+              "properties": {
+                "component": {"const": "Column"},
+                "children": {
+                  "${'$'}ref": "https://a2ui.org/specification/v1_0/common_types.json#/${'$'}defs/ChildList"
+                }
+              }
+            }
+          }
+        }
+        """.trimIndent()
+        val named = A2uiJson.strict.decodeFromString(CatalogDefinition.serializer(), source)
+        val found = CatalogChildResolver.of(
+            listOf(named, CATALOG),
+            surfaceDefault = CATALOG.catalogId,
+        ).childrenOf(
+            A2uiJson.strict.decodeFromString(
+                Component.serializer(),
+                """{"id": "col", "component": "Column", "children": ["a", "b"],
+                    "catalogId": "${named.catalogId}"}""",
+            ),
+        )
+        assertEquals(listOf(ChildReference.Fixed("children", listOf("a", "b"))), found)
+    }
 }

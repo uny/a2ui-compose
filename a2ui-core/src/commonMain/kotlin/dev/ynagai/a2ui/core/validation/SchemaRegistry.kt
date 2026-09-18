@@ -70,13 +70,17 @@ public class SchemaRegistry private constructor(
      * the caller actually bound it by: two catalogs sharing a `catalogId` under different `$id`s
      * would otherwise have the placeholder reach the bound one and the name reach the map's --
      * a definition read out of one catalog with its references resolved against another (#42).
-     * Only when no `$id` claimed that name, though; `$id` wins a name over `catalogId`, and
-     * binding a catalog does not change that.
+     * Another catalog's `$id` claiming that name does not change this: `$id` wins a name in the
+     * *map*, where nothing else decides, but the caller has already bound this catalog by that
+     * name, and letting the map answer would only move the definition to a catalog the
+     * placeholder is not bound to -- the same split on the other axis. Which also means a bound
+     * catalog whose `catalogId` is a name the placeholder joins to answers there, as one whose
+     * `$id` is already does; the reservation below withholds the name from everything *else*.
      *
-     * Below both, the name the placeholder joins to answers for nothing at all. It is a filename
-     * the specification never binds to a document, so a registration standing at that URI is a
-     * catalog answering a reference meant for whichever catalog is *in play* -- and when none is,
-     * the reference has to stay unresolvable, because that is the fail-closed guarantee
+     * Below all three, the name the placeholder joins to answers for nothing at all. It is a
+     * filename the specification never binds to a document, so a registration standing at that
+     * URI is a catalog answering a reference meant for whichever catalog is *in play* -- and when
+     * none is, the reference has to stay unresolvable, because that is the fail-closed guarantee
      * [CatalogValidator.validateMessage] documents. Reaching this means the catalog in play did
      * not claim the URI, so the only thing left to reach is a namesake.
      *
@@ -185,11 +189,11 @@ public class SchemaRegistry private constructor(
          * document entitled to answer there is whichever catalog is in play. See
          * [ProtocolSchemas.catalogPlaceholderUris].
          *
-         * [activeCatalog] is bound to [CATALOG_PLACEHOLDER] and answers for its own URI directly,
-         * so it does not depend on winning that race -- it is appended last, and under first-wins
-         * it would otherwise lose every collision. Passing it separately rather than inferring
-         * "the one that has a `catalogId`" keeps a catalog that inlines another one from silently
-         * taking over.
+         * [activeCatalog] is bound to [CATALOG_PLACEHOLDER] and answers for its own URI and its
+         * `catalogId` directly, so it does not depend on winning that race -- it is appended
+         * last, and under first-wins it would otherwise lose every collision. Passing it
+         * separately rather than inferring "the one that has a `catalogId`" keeps a catalog that
+         * inlines another one from silently taking over.
          */
         public fun of(
             documents: List<JsonObject>,
@@ -223,15 +227,14 @@ public class SchemaRegistry private constructor(
                 if (catalogId in ProtocolSchemas.catalogPlaceholderUris) continue
                 if (catalogId !in all) all[catalogId] = document
             }
-            // The name the active catalog is reachable by. Its `$id` when it declares one, which
-            // keeps the existing rules exactly as they were -- a claim on a library URI is refused
-            // by [document] rather than here -- and its `catalogId` only when it declares no `$id`.
+            // The URI the placeholder binds to. Its `$id` when it declares one, which keeps the
+            // existing rules exactly as they were -- a claim on a library URI is refused by
+            // [document] rather than here -- and its `catalogId` when it declares no `$id`.
             val activeUri = activeCatalog?.let { it.declaredId() ?: it.declaredCatalogId() }
             // And its `catalogId` as a second name, so that a bound catalog is the one answering
-            // for the name it was bound by -- unless some document's `$id` already holds that
-            // name, which keeps `$id` winning exactly as the two passes above arrange.
-            val activeId = activeCatalog?.declaredCatalogId()
-                ?.takeIf { id -> id != activeUri && ordered.none { it.declaredId() == id } }
+            // for the name it was bound by, whatever the map gave that name to. Not filtered
+            // against the reservation or another document's `$id` on purpose; [document] says why.
+            val activeId = activeCatalog?.declaredCatalogId()?.takeIf { it != activeUri }
             return SchemaRegistry(all, activeUri, activeId, activeCatalog)
         }
 

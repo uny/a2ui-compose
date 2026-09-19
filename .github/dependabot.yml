@@ -27,7 +27,9 @@ updates:
   #
   # Kotlin, the Compose Multiplatform plugin and its artifacts have to move together, and their
   # release trains are not aligned -- so they are one group, and a PR from it may need a hand
-  # when the newest Kotlin is ahead of what the Compose compiler plugin supports.
+  # when the newest Kotlin is ahead of what the Compose compiler plugin supports. The Kotlin
+  # pattern is the plugin ids, dot included: `org.jetbrains.kotlin*` would also take the
+  # `org.jetbrains.kotlinx` libraries, which move on their own and belong in the other group.
   #
   # Dependabot skips pre-releases on its own when the current version is a release, which is
   # what keeps `1.13.0-alpha01` -- Central's `latest` for Compose today -- out of a `0.x` that
@@ -39,7 +41,7 @@ updates:
     groups:
       kotlin-and-compose:
         patterns:
-          - "org.jetbrains.kotlin*"
+          - "org.jetbrains.kotlin.*"
           - "org.jetbrains.compose*"
       gradle-dependencies:
         patterns:

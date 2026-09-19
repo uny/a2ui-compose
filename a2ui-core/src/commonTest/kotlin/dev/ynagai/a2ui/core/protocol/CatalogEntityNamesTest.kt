@@ -110,9 +110,17 @@ class CatalogEntityNamesTest {
             """"functions": {"helper": {"type": "object", "returnType": "void",
                 "properties": {"call": {"const": "@evil"}}, "required": ["call"]}},
                 "${'$'}defs": {"anyFunction": {"oneOf": [{"${'$'}ref": "#/functions/helper"}]}}""",
-        ).forEach { carried ->
-            val failure = assertFailsWith<A2uiFormatException>("should have been refused: $carried") {
-                json.decodeFromString<CatalogDefinition>(catalogCarrying(carried))
+        ).map(::catalogCarrying).plus(
+            // Rule 3 lets `anyFunction` point at a component, so a component's `call` is a
+            // function's the moment something points at it -- which is why the check cannot be
+            // scoped by position.
+            """{"catalogId": "example.com:testing",
+                "${'$'}defs": {"anyFunction": {"oneOf": [{"${'$'}ref": "#/components/Text"}]}},
+                "components": {"Text": {"type": "object",
+                "properties": {"call": {"const": "@evil"}}, "required": ["call"]}}}""",
+        ).forEach { catalog ->
+            val failure = assertFailsWith<A2uiFormatException>("should have been refused: $catalog") {
+                json.decodeFromString<CatalogDefinition>(catalog)
             }
             assertTrue(
                 failure.message.orEmpty().contains("admits a call to"),
@@ -127,15 +135,21 @@ class CatalogEntityNamesTest {
                     "properties": {"call": {"const": "helper"}}, "required": ["call"]}}""",
             ),
         )
-        // A component property that happens to be called `call` is component data, not a
-        // function name, whatever it enumerates: no `FunctionCall` is ever evaluated against a
-        // component schema, so `@here` here admits no call.
-        listOf(
-            """{"type": "object", "properties": {"call": {"type": "string"}}}""",
-            """{"type": "object", "properties": {"call": {"enum": ["@here", "@channel"]}}}""",
-        ).forEach { body ->
-            json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+        // The check keys on the name wherever it stands (the case above is why), so a component
+        // property that happens to be called `call` is held to it too: one holding a string
+        // spells no name and is left alone; one spelling `@here` is refused, whatever the
+        // component means by it.
+        json.decodeFromString<CatalogDefinition>(
+            catalogWithComponentBody("""{"type": "object", "properties": {"call": {"type": "string"}}}"""),
+        )
+        val component = assertFailsWith<A2uiFormatException> {
+            json.decodeFromString<CatalogDefinition>(
+                catalogWithComponentBody(
+                    """{"type": "object", "properties": {"call": {"enum": ["@here", "@channel"]}}}""",
+                ),
+            )
         }
+        assertTrue(component.message.orEmpty().contains("admits a call to"), component.message)
         // Under `not`, spelling the name keeps it out. This is a catalog excluding `@index` from
         // its own `anyFunction`, which is the opposite of defining it.
         json.decodeFromString<CatalogDefinition>(

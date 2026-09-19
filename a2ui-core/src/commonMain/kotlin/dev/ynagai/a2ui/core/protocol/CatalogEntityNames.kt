@@ -62,12 +62,7 @@ internal fun checkEntityNames(
             )
         }
         requireIdentifier(name, "component name")
-        checkSchema(
-            definition.schema,
-            "component `${name.take(ERROR_EXCERPT)}`",
-            selfNames,
-            callNamesFunction = false,
-        )
+        checkSchema(definition.schema, "component `${name.take(ERROR_EXCERPT)}`", selfNames)
     }
     functions.forEach { (name, definition) ->
         // The `@` namespace is reserved before UAX #31 is consulted, because the reason differs
@@ -89,12 +84,7 @@ internal fun checkEntityNames(
             )
         }
         requireIdentifier(name, "function name")
-        checkSchema(
-            definition.schema.raw,
-            "function `${name.take(ERROR_EXCERPT)}`",
-            selfNames,
-            callNamesFunction = true,
-        )
+        checkSchema(definition.schema.raw, "function `${name.take(ERROR_EXCERPT)}`", selfNames)
     }
 }
 
@@ -141,12 +131,7 @@ private fun checkCarriedKeywords(
         // refusing them decides a compatibility question about third-party inline catalogs that
         // is not this check's to decide.
         defs.forEach { (name, subschema) ->
-            checkSchema(
-                subschema,
-                "the catalog's `$DEFS/${name.take(ERROR_EXCERPT)}`",
-                selfNames,
-                callNamesFunction = true,
-            )
+            checkSchema(subschema, "the catalog's `$DEFS/${name.take(ERROR_EXCERPT)}`", selfNames)
         }
     }
 }
@@ -189,16 +174,11 @@ private fun checkCarriedKeywords(
  * an inlined catalog is agent-controlled, and Kotlin/Native aborts the process on stack overflow
  * rather than raising something a caller could catch.
  */
-private fun checkSchema(
-    root: JsonElement,
-    owner: String,
-    selfNames: Set<String>,
-    callNamesFunction: Boolean,
-) {
-    // Each entry carries whether a `call` property found in it names a function -- see
-    // [requireNoSystemCall] for where that is true and where it stops being so.
+private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>) {
+    // Each entry carries whether a `call` property found in it admits a name -- true everywhere
+    // but under `not`; see [requireNoSystemCall] for why it cannot be decided by position.
     val pending = ArrayDeque<Pair<JsonElement, Boolean>>()
-    pending.addLast(root to callNamesFunction)
+    pending.addLast(root to true)
     while (pending.isNotEmpty()) {
         // A schema is an object or a boolean. Anything else in a schema position is malformed,
         // and there is nothing under it to walk -- the evaluator ignores it too.
@@ -262,17 +242,18 @@ private fun checkSchema(
  * `{"call": {"const": "@evil"}}` under `$defs/anyFunction` and have `@evil` validate (#48).
  * Whatever schema text admits a `call` name is where the catalog defines a function, by the only
  * definition that matters to the checker -- so a `call` property whose `const` or `enum` names
- * a `@`-prefixed string is refused, wherever in the catalog a `call` names a function.
+ * a `@`-prefixed string is refused, wherever in the catalog it sits.
  *
  * `@index` included: it is composed in by `common_types.json`, and a catalog re-admitting it is
  * still a catalog defining into the namespace.
  *
- * Where a `call` property names a function is decided by position, not by the name alone. It
- * does under `functions` and under the catalog's `$defs` -- the only schemas a `FunctionCall`
- * is ever evaluated against -- and it does not under `components`, where a property that
- * happens to be called `call` is component data, whatever it enumerates. Nor does it under
- * `not`, where spelling a name excludes it: `{"not": {"properties": {"call": {"const":
- * "@index"}}}}` is a catalog keeping the system function *out* of `anyFunction`.
+ * Which `call` property names a function cannot be told by position: `anyFunction` may `$ref`
+ * `#/components/Text`, which rule 3 permits, so a component's `call` is a function's the moment
+ * something points at it. The check therefore keys on the name wherever it stands, and a
+ * component data property that happens to be called `call` and enumerates `@here` is refused
+ * with the rest -- the cost of not chasing references. The one position that is read
+ * differently is `not`, where spelling a name excludes it: `{"not": {"properties": {"call":
+ * {"const": "@index"}}}}` is a catalog keeping the system function *out* of `anyFunction`.
  *
  * Only the two literal keywords are read, and only where they sit directly on the `call`
  * subschema. This is a rule about what a catalog *spells*, not a boundary against what it

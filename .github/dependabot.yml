@@ -8,6 +8,18 @@
 # Grouped into one pull request: these four move independently and each bump is a one-line diff, so
 # separate PRs would be four CI runs a week to review a hash apiece.
 version: 2
+
+# Google's Maven repository, declared here because Dependabot cannot see it in the build. Its
+# Gradle parser only recognises the literal `google()` in a `repositories` block, and
+# `settings.gradle.kts` uses the `google { mavenContent { ... } }` form to scope what is fetched
+# from it -- so without this entry the Android Gradle plugin, whose plugin marker exists only on
+# Google's repository, is never version-checked and never gets a pull request, silently. No
+# credentials: it is a public repository, and an entry with only a `url` adds it to the lookup.
+registries:
+  google-maven:
+    type: maven-repository
+    url: https://maven.google.com
+
 updates:
   - package-ecosystem: github-actions
     directory: /
@@ -39,6 +51,8 @@ updates:
   # major arrives as an alert and not as a PR -- the same decision, taken by hand.
   - package-ecosystem: gradle
     directory: /
+    registries:
+      - google-maven
     schedule:
       interval: weekly
     groups:

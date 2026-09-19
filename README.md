@@ -28,8 +28,22 @@ implementation("dev.ynagai.a2ui:a2ui-compose:0.1.0")
 implementation("dev.ynagai.a2ui:a2ui-core:0.1.0")
 ```
 
-Android consumers must compile against `compileSdk` 37 or later; see [Targets](#targets) for why
-that floor is not a preference.
+### What `0.1.0` requires of your build
+
+Three floors, and the one with the clearest error message is the least binding of them. All
+three come from what the artifacts were built with, not from anything the library does.
+`a2ui-core` alone carries the first and the third; the Compose floor arrives with `a2ui-compose`:
+
+| Floor | Where it is declared | How it fails for you |
+|:--|:--|:--|
+| **Kotlin 2.4.x** on the klib targets (iOS, macOS, JS, wasm); **2.3.x or later** on JVM and Android | The klib manifest (`compiler_version = 2.4.10`, `abi_version = 2.4.0`); on JVM and Android, `@kotlin.Metadata` 2.4.0 in the class files and `requires: 2.4.10` on `kotlin-stdlib` | A 2.3.x compiler refuses a klib whose ABI version is newer than its own, and the Kotlin plugin version is project-wide -- so a KMP project with any of those targets moves its whole toolchain. Class-file metadata is read one language release ahead (Kotlin's stated best effort, not a guarantee), so a 2.3.x JVM or Android project compiles against `0.1.0`, with `kotlin-stdlib` moved to 2.4.10 the same silent way Compose is below. A KSP processor in the build does not move the floor: since KSP2, KSP releases are decoupled from your Kotlin version, and KSP 2.3.10 and later run on Kotlin 2.4 projects. |
+| **Compose Multiplatform 1.12.0** | `requires: 1.12.0` on `org.jetbrains.compose.runtime:runtime` / `org.jetbrains.compose.ui:ui` in the Gradle module metadata; `a2ui-material3` adds `requires: 1.9.0` on `org.jetbrains.compose.material3:material3`, which ships on its own version line | **Silently.** Under Gradle's default conflict resolution the highest version wins, so a project on 1.10.0 is moved to 1.12.0 without being told. Holding the older version with `strictly` on your own declaration does not fail either: it downgrades the library's `requires` to 1.10.0, and the code compiled against 1.12.0 breaks at runtime instead. |
+| **`compileSdk` 37** (Android) | `minCompileSdk=37` in the AAR metadata | AGP fails the build with a clear message. Cheap to fix: `compileSdk` is what you compile against, and `targetSdk` need not move with it. See [Targets](#targets) for why 37. |
+
+`0.1.0` was built with Kotlin 2.4.10 and Compose Multiplatform 1.12.0, the current stable lines
+at the time. Whether a later `0.x` lowers the klib floor to 2.3.x is
+[#64](https://github.com/uny/a2ui-compose/issues/64); a release that changes any floor will say so
+in its notes rather than leave it to be discovered.
 
 ## Protocol version
 

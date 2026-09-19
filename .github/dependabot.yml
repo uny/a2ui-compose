@@ -35,6 +35,8 @@ updates:
   # Dependabot skips pre-releases on its own when the current version is a release, which is
   # what keeps `1.13.0-alpha01` -- Central's `latest` for Compose today -- out of a `0.x` that
   # tracks the newest *stable*. Major bumps are ignored here: they are a decision, not a bump.
+  # Dependabot honours that ignore for security updates too, so a fix that only ships in a new
+  # major arrives as an alert and not as a PR -- the same decision, taken by hand.
   - package-ecosystem: gradle
     directory: /
     schedule:

@@ -521,6 +521,19 @@ class InputComponentsTest {
     }
 
     @Test
+    fun a_date_already_outside_the_bounds_cannot_be_confirmed_as_it_stands() = runComposeUiTest {
+        // Material greys out the days outside `min`/`max` but keeps one that arrived as the
+        // initial selection, so a value the agent wrote outside the range would confirm straight
+        // through -- and on to a time picker that, seeing a day the bound does not name, would
+        // hold nothing. The confirm asks the range too, and enables once a day inside it is picked.
+        setContent { Surface(rendererFor(BOUNDED_DATE_TIME)) }
+        onNodeWithContentDescription("Early").performClick()
+        onNodeWithText("OK").assertIsNotEnabled()
+        onAllNodes(isSelectable())[DAY_15].performClick()
+        onNodeWithText("OK").assertIsEnabled()
+    }
+
+    @Test
     fun a_date_handed_over_with_no_time_opens_the_clock_on_the_lower_bound() = runComposeUiTest {
         // The hand-off case of `a_time_field_with_no_value_opens_on_its_lower_bound`: the model
         // holds a date on the bound's own day and no time, so the time picker opens on the bound
@@ -680,6 +693,7 @@ class InputComponentsTest {
               "held": "2026-08-15T08:00",
               "free": "2026-08-16",
               "handed": "2026-08-15",
+              "early": "2026-08-14T10:00",
               "who": "Ada",
               "born": "1890-07-04",
               "picked": [],
@@ -848,13 +862,15 @@ class InputComponentsTest {
         ]"""
 
         val BOUNDED_DATE_TIME = """[
-          {"id":"root","component":"Column","children":["held","free","handed"]},
+          {"id":"root","component":"Column","children":["held","free","handed","early"]},
           {"id":"held","component":"DateTimeInput","label":"Held","enableDate":true,"enableTime":true,
            "min":"2026-08-15T09:00","value":{"path":"/held"}},
           {"id":"free","component":"DateTimeInput","label":"Free","enableDate":true,"enableTime":true,
            "min":"2026-08-15T09:00","value":{"path":"/free"}},
           {"id":"handed","component":"DateTimeInput","label":"Handed","enableDate":true,"enableTime":true,
-           "min":"2026-08-15T09:00","value":{"path":"/handed"}}
+           "min":"2026-08-15T09:00","value":{"path":"/handed"}},
+          {"id":"early","component":"DateTimeInput","label":"Early","enableDate":true,"enableTime":true,
+           "min":"2026-08-15T09:00","value":{"path":"/early"}}
         ]"""
 
         val FAR_DATE = """[

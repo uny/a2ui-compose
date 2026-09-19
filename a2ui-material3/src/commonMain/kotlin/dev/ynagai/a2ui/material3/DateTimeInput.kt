@@ -116,6 +116,7 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
 
         Stage.DATE -> {
             val selected = Iso8601.epochDay(value)
+            val selectable = remember(min, max) { RangeOfDays(min, max) }
             val state = rememberDatePickerState(
                 initialSelectedDateMillis = selected?.let { it * Iso8601.DAY_MILLIS },
                 // **Widened to cover what the payload names.** Material's default is 1900..2100,
@@ -132,13 +133,18 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
                 // opening the picker on 1890. The widening is here for reachability, and it
                 // happens to close that door too if a later version starts enforcing it.
                 yearRange = remember(selected, min, max) { yearsSpanning(selected, min, max) },
-                selectableDates = remember(min, max) { RangeOfDays(min, max) },
+                selectableDates = selectable,
             )
             PickerDialog(
                 onDismiss = { stage = Stage.NONE },
                 // Nothing selected, nothing to confirm -- see the KDoc. Read inside the lambda so
-                // the button follows the selection while the dialog is open.
-                confirmEnabled = { state.selectedDateMillis != null },
+                // the button follows the selection while the dialog is open. The range is asked
+                // too: Material greys a day outside it out but does not clear one that arrived as
+                // the initial selection, so a value the agent wrote outside `min`/`max` would
+                // otherwise confirm straight through the picker meant to refuse it.
+                confirmEnabled = {
+                    state.selectedDateMillis?.let(selectable::isSelectableDate) == true
+                },
                 onConfirm = {
                     val day = state.selectedDateMillis?.floorDiv(Iso8601.DAY_MILLIS) ?: return@PickerDialog
                     pickedDay = day

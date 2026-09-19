@@ -8,6 +8,18 @@
 # Grouped into one pull request: these four move independently and each bump is a one-line diff, so
 # separate PRs would be four CI runs a week to review a hash apiece.
 version: 2
+
+# Google's Maven repository, declared here because Dependabot cannot see it in the build. Its
+# Gradle parser only recognises the literal `google()` in a `repositories` block, and
+# `settings.gradle.kts` uses the `google { mavenContent { ... } }` form to scope what is fetched
+# from it -- so without this entry the Android Gradle plugin, whose plugin marker exists only on
+# Google's repository, is never version-checked and never gets a pull request, silently. No
+# credentials: it is a public repository, and an entry with only a `url` adds it to the lookup.
+registries:
+  google-maven:
+    type: maven-repository
+    url: https://maven.google.com
+
 updates:
   - package-ecosystem: github-actions
     directory: /
@@ -19,3 +31,40 @@ updates:
           - "*"
     commit-message:
       prefix: ci
+
+  # Gradle dependencies too. Until this entry existed, only the actions were watched, and the
+  # Kotlin version sat one patch behind the newest stable with nothing to say so. Weekly and
+  # grouped for the same reason the actions are: each bump is a version-catalog line, and CI
+  # for this repository costs ~35 minutes on macOS per run, so one PR per group a week is the
+  # budget: two Gradle PRs at most, and usually one.
+  #
+  # Kotlin, the Compose Multiplatform plugin and its artifacts have to move together, and their
+  # release trains are not aligned -- so they are one group, and a PR from it may need a hand
+  # when the newest Kotlin is ahead of what the Compose compiler plugin supports. The Kotlin
+  # pattern is the plugin ids, dot included: `org.jetbrains.kotlin*` would also take the
+  # `org.jetbrains.kotlinx` libraries, which move on their own and belong in the other group.
+  #
+  # Dependabot skips pre-releases on its own when the current version is a release, which is
+  # what keeps `1.13.0-alpha01` -- Central's `latest` for Compose today -- out of a `0.x` that
+  # tracks the newest *stable*. Major bumps are ignored here: they are a decision, not a bump.
+  # Dependabot honours that ignore for security updates too, so a fix that only ships in a new
+  # major arrives as an alert and not as a PR -- the same decision, taken by hand.
+  - package-ecosystem: gradle
+    directory: /
+    registries:
+      - google-maven
+    schedule:
+      interval: weekly
+    groups:
+      kotlin-and-compose:
+        patterns:
+          - "org.jetbrains.kotlin.*"
+          - "org.jetbrains.compose*"
+      gradle-dependencies:
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: build

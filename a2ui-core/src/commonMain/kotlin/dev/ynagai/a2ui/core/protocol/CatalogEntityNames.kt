@@ -175,22 +175,29 @@ private fun checkCarriedKeywords(
  * rather than raising something a caller could catch.
  */
 private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>) {
-    val pending = ArrayDeque<JsonElement>()
-    pending.addLast(root)
+    // Each entry carries whether a `call` property found in it admits a name -- true everywhere
+    // but under `not`; see [requireNoSystemCall] for why it cannot be decided by position.
+    val pending = ArrayDeque<Pair<JsonElement, Boolean>>()
+    pending.addLast(root to true)
     while (pending.isNotEmpty()) {
         // A schema is an object or a boolean. Anything else in a schema position is malformed,
         // and there is nothing under it to walk -- the evaluator ignores it too.
-        val schema = pending.removeLast() as? JsonObject ?: continue
+        val (element, callIsFunction) = pending.removeLast()
+        val schema = element as? JsonObject ?: continue
         schema.forEach { (keyword, value) ->
             when {
                 keyword == REF -> requirePermittedReference(value, owner, selfNames)
-                keyword in SUBSCHEMA -> pending.addLast(value)
+                // Under `not`, spelling a name excludes it; the flag is dropped so the call
+                // check reads no admission there. The name rule still applies below it.
+                keyword == NOT -> pending.addLast(value to false)
+                keyword in SUBSCHEMA -> pending.addLast(value to callIsFunction)
                 keyword == ITEMS ->
                     // 2020-12 gives `items` a single schema; draft-07 also let it hold the
                     // tuple form, an array of them. Both are still written.
-                    if (value is JsonArray) value.forEach { pending.addLast(it) }
-                    else pending.addLast(value)
-                keyword in SUBSCHEMA_LIST -> (value as? JsonArray)?.forEach { pending.addLast(it) }
+                    if (value is JsonArray) value.forEach { pending.addLast(it to callIsFunction) }
+                    else pending.addLast(value to callIsFunction)
+                keyword in SUBSCHEMA_LIST ->
+                    (value as? JsonArray)?.forEach { pending.addLast(it to callIsFunction) }
                 keyword in SCHEMA_MAPS -> {
                     // Refused rather than skipped, for the reason [checkCarriedKeywords] gives
                     // and with a sharper edge here. Every draft makes these keywords objects, so
@@ -210,11 +217,12 @@ private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>
                         // `patternProperties` regex and a `dependencies` trigger are none of them.
                         if (keyword == PROPERTIES) {
                             requireIdentifier(name, "property name in $owner")
+                            if (callIsFunction && name == CALL) requireNoSystemCall(subschema, owner)
                         }
                         // A draft-07 `dependencies` entry may hold an array of required property
                         // names rather than a subschema; it is not an object, so the pop discards
                         // it. That is the *entry*, not the map, and stays a skip.
-                        pending.addLast(subschema)
+                        pending.addLast(subschema to callIsFunction)
                     }
                 }
                 // Annotations, vendor extensions and instance values. Not schemas, so not walked,
@@ -222,6 +230,54 @@ private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>
                 else -> Unit
             }
         }
+    }
+}
+
+/**
+ * The System Namespace Rule, applied where a call is actually admitted.
+ *
+ * The rule is enforced on the keys of `functions`, but a call is never validated against that
+ * map: `common_types.json` reaches `catalog.json#/$defs/anyFunction`, and the catalog supplies
+ * that schema itself. So a catalog with an empty `functions` map could still write
+ * `{"call": {"const": "@evil"}}` under `$defs/anyFunction` and have `@evil` validate (#48).
+ * Whatever schema text admits a `call` name is where the catalog defines a function, by the only
+ * definition that matters to the checker -- so a `call` property whose `const` or `enum` names
+ * a `@`-prefixed string is refused, wherever in the catalog it sits.
+ *
+ * `@index` included: it is composed in by `common_types.json`, and a catalog re-admitting it is
+ * still a catalog defining into the namespace.
+ *
+ * Which `call` property names a function cannot be told by position: `anyFunction` may `$ref`
+ * `#/components/Text`, which rule 3 permits, so a component's `call` is a function's the moment
+ * something points at it. The check therefore keys on the name wherever it stands, and a
+ * component data property that happens to be called `call` and enumerates `@here` is refused
+ * with the rest -- the cost of not chasing references. The one position that is read
+ * differently is `not`, where spelling a name excludes it: `{"not": {"properties": {"call":
+ * {"const": "@index"}}}}` is a catalog keeping the system function *out* of `anyFunction`.
+ *
+ * Only the two literal keywords are read, and only where they sit directly on the `call`
+ * subschema. This is a rule about what a catalog *spells*, not a boundary against what it
+ * *admits*: a `call` typed as a bare string, or matched by a `pattern`, admits any name at all,
+ * and so does one whose `const` is reached through `anyOf`, a `$ref`, `patternProperties` or
+ * `additionalProperties`. Chasing those would only move the line, since the bare string stays
+ * open either way; closing it is a different question -- whether `anyFunction` must correspond
+ * to `functions` -- that the prose does not settle and this does not decide.
+ */
+private fun requireNoSystemCall(subschema: JsonElement, owner: String) {
+    val schema = subschema as? JsonObject ?: return
+    val admitted = buildList {
+        (schema[CONST] as? JsonPrimitive)?.takeIf { it.isString }?.let { add(it.content) }
+        (schema[ENUM] as? JsonArray)?.forEach { entry ->
+            (entry as? JsonPrimitive)?.takeIf { it.isString }?.let { add(it.content) }
+        }
+    }
+    admitted.firstOrNull { it.startsWith(SYSTEM_FUNCTION_PREFIX) }?.let { name ->
+        throw A2uiFormatException(
+            "CatalogDefinition: $owner admits a call to `${name.take(ERROR_EXCERPT)}`, which is " +
+                "in the `$SYSTEM_FUNCTION_PREFIX` namespace reserved for system functions such " +
+                "as `${FunctionCall.INDEX}`; a catalog cannot define a function there, and " +
+                "admitting the name in a schema is defining it.",
+        )
     }
 }
 
@@ -390,6 +446,16 @@ private val COMMON_TYPES_REFERENCE: Regex =
 
 /** The prefix `a2ui_protocol.md`'s System Namespace Rule reserves. */
 private const val SYSTEM_FUNCTION_PREFIX: String = "@"
+
+/** The property a function call's name travels in; see [requireNoSystemCall]. */
+private const val CALL: String = "call"
+
+/** In [SUBSCHEMA], but handled first: what it holds is what the schema refuses. */
+private const val NOT: String = "not"
+
+private const val CONST: String = "const"
+
+private const val ENUM: String = "enum"
 
 /** How much of a name an error message quotes; a catalog chooses its own key lengths. */
 private const val ERROR_EXCERPT: Int = 64

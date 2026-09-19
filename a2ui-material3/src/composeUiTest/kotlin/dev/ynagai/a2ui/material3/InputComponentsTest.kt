@@ -477,6 +477,31 @@ class InputComponentsTest {
     }
 
     @Test
+    fun a_time_outside_the_bounds_cannot_be_confirmed() = runComposeUiTest {
+        // #20. Material's time picker has no selectable-range API, so a `min`/`max` on the clock
+        // is enforced at the confirm: the model holds 18:30 against a `max` of 17:00, the dialog
+        // opens on 18:30, and OK is disabled. Driving the clock face to a time inside the bounds
+        // is not attempted here; the predicate behind the button is [Iso8601Test]'s `timeWithin`.
+        setContent { Surface(rendererFor(BOUNDED_TIME)) }
+        onNodeWithText("18:30").assertIsDisplayed()
+        onNodeWithContentDescription("Closes").performClick()
+        onNodeWithText("OK").assertIsNotEnabled()
+    }
+
+    @Test
+    fun a_time_field_with_no_value_opens_on_its_lower_bound() = runComposeUiTest {
+        // With nothing in the model, a picker opening on midnight under a `min` of 09:00 would
+        // open with its OK already disabled and nothing said about why. It opens on the bound
+        // instead, and the bound is inside the range, so confirming writes it.
+        val renderer = rendererFor(BOUNDED_TIME)
+        setContent { Surface(renderer) }
+        onNodeWithContentDescription("Opens").performClick()
+        onNodeWithText("OK").assertIsEnabled()
+        onNodeWithText("OK").performClick()
+        assertEquals(JsonPrimitive("09:00"), renderer.read("/opens"))
+    }
+
+    @Test
     fun a_datetime_field_with_nowhere_to_write_is_disabled() = runComposeUiTest {
         setContent { Surface(rendererFor(DATE_TIME)) }
         onNodeWithText("Literal date").assertIsNotEnabled()
@@ -618,6 +643,7 @@ class InputComponentsTest {
               "numeric": [1],
               "volume": 20,
               "when": "2026-08-30",
+              "closes": "18:30",
               "who": "Ada",
               "born": "1890-07-04",
               "picked": [],
@@ -775,6 +801,14 @@ class InputComponentsTest {
           {"id":"root","component":"Column","children":["appointment"]},
           {"id":"appointment","component":"DateTimeInput","label":"Appointment","enableDate":true,
            "enableTime":true,"value":{"path":"/appointment"}}
+        ]"""
+
+        val BOUNDED_TIME = """[
+          {"id":"root","component":"Column","children":["closes","opens"]},
+          {"id":"closes","component":"DateTimeInput","label":"Closes","enableTime":true,
+           "min":"09:00","max":"17:00","value":{"path":"/closes"}},
+          {"id":"opens","component":"DateTimeInput","label":"Opens","enableTime":true,
+           "min":"09:00","max":"17:00","value":{"path":"/opens"}}
         ]"""
 
         val FAR_DATE = """[

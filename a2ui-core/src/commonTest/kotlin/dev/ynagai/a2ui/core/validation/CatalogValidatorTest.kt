@@ -9,6 +9,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -780,6 +781,42 @@ class CatalogIdentityTest {
                 catalogId = hostile.catalogId,
             )
         assertTrue(result.isValid, result.violations.toString())
+    }
+
+    @Test
+    fun a_reference_to_a_catalog_this_renderer_does_not_hold_stays_unresolvable_whatever_its_filename() {
+        // #41. The catalog in play refers to an external catalog nobody registered. A fallback in
+        // `resolveDocumentUri` used to bind any unregistered URI ending in `/catalog.json` to the
+        // catalog in play, so the `catalog.json` spelling resolved -- into this very catalog's own
+        // `$defs` -- while the `other.json` spelling was refused. Two references that differ only
+        // in filename must fail the same way: unresolvable, which the evaluator reports rather
+        // than treats as vacuous success.
+        //
+        // At the registry rather than through `CatalogDefinition`, which since #50 refuses an
+        // external `$ref` to any filename but `common_types.json` before it gets this far. `of`
+        // is public and takes raw documents, so the registry has to hold the line on its own.
+        val bound = parseObject(
+            """
+            {"${'$'}id": "urn:test:external", "catalogId": "urn:test:external",
+             "${'$'}defs": {"permissive": {"type": "object", "additionalProperties": true}}}
+            """.trimIndent(),
+        )
+        val registry = SchemaRegistry.of(ProtocolSchemas.documents, activeCatalog = bound)
+        val base = SchemaLocation("urn:test:external", "/${'$'}defs/anyComponent")
+        // Absolute and relative alike: the fallback keyed on the last path segment, so a relative
+        // `sub/catalog.json` -- joined, from a base with no directory, to itself -- reached the
+        // catalog in play by the same route.
+        for (filename in listOf("catalog.json", "other.json")) {
+            for (uri in listOf("https://missing.example/$filename", "sub/$filename", "./$filename")) {
+                val resolved = registry.resolve("$uri#/${'$'}defs/permissive", base)
+                assertNull(resolved, "$uri resolved to $resolved")
+            }
+        }
+        // The bare placeholder is the one spelling that does mean the catalog in play.
+        assertEquals(
+            bound["\$defs"]!!.jsonObject["permissive"],
+            registry.resolve("catalog.json#/${'$'}defs/permissive", base)?.schema,
+        )
     }
 
     @Test

@@ -127,26 +127,32 @@ class CatalogEntityNamesTest {
                     "properties": {"call": {"const": "helper"}}, "required": ["call"]}}""",
             ),
         )
-        // The check keys on the property name alone, so a component property that happens to be
-        // called `call` is held to it too -- one holding a string spells no name and is left
-        // alone; one spelling a `@` literal is refused, whatever the component means by it.
-        json.decodeFromString<CatalogDefinition>(
-            catalogWithComponentBody("""{"type": "object", "properties": {"call": {"type": "string"}}}"""),
-        )
-        assertFailsWith<A2uiFormatException> {
-            json.decodeFromString<CatalogDefinition>(
-                catalogWithComponentBody(
-                    """{"type": "object", "properties": {"call": {"enum": ["@here", "@channel"]}}}""",
-                ),
-            )
+        // A component property that happens to be called `call` is component data, not a
+        // function name, whatever it enumerates: no `FunctionCall` is ever evaluated against a
+        // component schema, so `@here` here admits no call.
+        listOf(
+            """{"type": "object", "properties": {"call": {"type": "string"}}}""",
+            """{"type": "object", "properties": {"call": {"enum": ["@here", "@channel"]}}}""",
+        ).forEach { body ->
+            json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
         }
+        // Under `not`, spelling the name keeps it out. This is a catalog excluding `@index` from
+        // its own `anyFunction`, which is the opposite of defining it.
+        json.decodeFromString<CatalogDefinition>(
+            catalogCarrying(
+                """"functions": {"helper": {"type": "object", "returnType": "void",
+                    "properties": {"call": {"const": "helper"}}, "required": ["call"]}},
+                    "${'$'}defs": {"anyFunction": {"allOf": [{"${'$'}ref": "#/functions/helper"}],
+                    "not": {"properties": {"call": {"const": "@index"}}, "required": ["call"]}}}""",
+            ),
+        )
         // Shapes the check declines rather than trips over: a boolean subschema, and a `const`
         // that is not a string.
         listOf(
-            """{"type": "object", "properties": {"call": true}}""",
-            """{"type": "object", "properties": {"call": {"const": 42}}}""",
-        ).forEach { body ->
-            json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            """"${'$'}defs": {"anyFunction": {"type": "object", "properties": {"call": true}}}""",
+            """"${'$'}defs": {"anyFunction": {"type": "object", "properties": {"call": {"const": 42}}}}""",
+        ).forEach { carried ->
+            json.decodeFromString<CatalogDefinition>(catalogCarrying(carried))
         }
     }
 

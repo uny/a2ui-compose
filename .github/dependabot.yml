@@ -19,3 +19,33 @@ updates:
           - "*"
     commit-message:
       prefix: ci
+
+  # Gradle dependencies too. Until this entry existed, only the actions were watched, and the
+  # Kotlin version sat one patch behind the newest stable with nothing to say so. Weekly and
+  # grouped for the same reason the actions are: each bump is a version-catalog line, and CI
+  # for this repository costs ~35 minutes on macOS per run, so one PR a week is the budget.
+  #
+  # Kotlin, the Compose Multiplatform plugin and its artifacts have to move together, and their
+  # release trains are not aligned -- so they are one group, and a PR from it may need a hand
+  # when the newest Kotlin is ahead of what the Compose compiler plugin supports.
+  #
+  # Dependabot skips pre-releases on its own when the current version is a release, which is
+  # what keeps `1.13.0-alpha01` -- Central's `latest` for Compose today -- out of a `0.x` that
+  # tracks the newest *stable*. Major bumps are ignored here: they are a decision, not a bump.
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      kotlin-and-compose:
+        patterns:
+          - "org.jetbrains.kotlin*"
+          - "org.jetbrains.compose*"
+      gradle-dependencies:
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: build

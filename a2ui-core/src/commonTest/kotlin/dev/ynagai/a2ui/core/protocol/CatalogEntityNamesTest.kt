@@ -240,11 +240,14 @@ class CatalogEntityNamesTest {
     fun keys_that_are_not_property_names_are_left_alone() {
         // `$defs` entry names, `patternProperties` regexes and `required` entries are not entity
         // names. Refusing them would reject catalogs that break no rule -- and the ones refused
-        // would be third-party catalogs, since nothing bundled here is shaped that way.
+        // would be third-party catalogs, since nothing bundled here is shaped that way. The
+        // `required` case names a key that only `additionalProperties` admits, which is the
+        // shape #49 weighed: the name reaches the wire, and is still not a declaration.
         val untouched = listOf(
             """{"${'$'}defs":{"not-an-identifier":{"type":"string"}}}""",
             """{"patternProperties":{"^x-[a-z]+${'$'}":{"type":"string"}}}""",
             """{"properties":{"ok":{"type":"string"}},"required":["ok"],"title":"a-b"}""",
+            """{"type":"object","additionalProperties":true,"required":["x-legacy"]}""",
         )
         untouched.forEach { body ->
             val decoded = json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
@@ -414,7 +417,7 @@ class CatalogEntityNamesTest {
         // `dependencies` is the one name map whose entry is not always a schema: draft-07 lets it
         // hold an array of property names instead. The walk bottoms out on the strings in it, as
         // on any other array, so admitting the keyword must not start refusing that form.
-        val body = """{"type":"object","dependencies":{"a":["b","c"]}}"""
+        val body = """{"type":"object","dependencies":{"a":["b","x-legacy"]}}"""
         val decoded = json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
         assertEquals(setOf("Text"), decoded.components.keys)
     }

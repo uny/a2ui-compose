@@ -145,6 +145,13 @@ class Iso8601Test {
         assertEquals(Iso8601.epochDay("2026-01-01") to 9 * 60 + 30, Iso8601.timeBound("2026-01-01T09:30"))
         assertNull(Iso8601.timeBound("2026-01-01"))
         assertNull(Iso8601.timeBound("noon"))
+        // A date-time whose date half will not parse is ignored whole, not read as a bare time
+        // that would then bound every day.
+        assertNull(Iso8601.timeBound("2026-02-30T09:00"))
+        assertNull(Iso8601.timeBound("2026-1-1T09:00"))
+        // The only bare time the catalog's `format: time` admits carries seconds and an offset;
+        // the clock half is read and the rest left alone, as `epochDay` does with a tail.
+        assertEquals(null to 9 * 60, Iso8601.timeBound("09:00:00+09:00"))
     }
 
     @Test
@@ -180,6 +187,22 @@ class Iso8601Test {
         val last = Iso8601.epochDay("2026-01-31")!!
         assertFalse(Iso8601.timeWithin(last, 17, 1, null, max))
         assertTrue(Iso8601.timeWithin(last - 1, 23, 59, null, max))
+    }
+
+    @Test
+    fun a_picker_with_nothing_to_show_opens_on_the_lower_bound_that_applies() {
+        val everyDay = Iso8601.timeBound("09:30")
+        val oneDay = Iso8601.timeBound("2026-01-01T09:30")
+        val first = Iso8601.epochDay("2026-01-01")!!
+        // A bare-time bound applies on every day, and on a time-only field.
+        assertEquals(9 to 30, Iso8601.openingTime(first, everyDay))
+        assertEquals(9 to 30, Iso8601.openingTime(null, everyDay))
+        // A date-time bound applies on its own day, on a time-only field, and not the day after.
+        assertEquals(9 to 30, Iso8601.openingTime(first, oneDay))
+        assertEquals(9 to 30, Iso8601.openingTime(null, oneDay))
+        assertNull(Iso8601.openingTime(first + 1, oneDay))
+        // No lower bound, no opinion: the picker's own default stands.
+        assertNull(Iso8601.openingTime(first, null))
     }
 
     @Test

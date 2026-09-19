@@ -50,12 +50,18 @@ internal object Iso8601 {
      * The catalog types a bound as a `date`, a `time` or a `date-time`, and the date picker reads
      * the day out of it ([epochDay]). This reads the other half: a bare `time` bounds the clock on
      * every day ([TimeBound.day] is null), a `date-time` bounds it only on the day it names --
-     * before or after that day the date picker has already done the constraining -- and a bare
-     * `date` has no time half and bounds nothing here.
+     * on any other day the date picker's range is what applies -- and a bare `date` has no time
+     * half and bounds nothing here.
+     *
+     * A `date-time` whose date half will not parse is ignored whole, like any other bound that
+     * will not parse: reading its clock half as a bare `time` would turn one malformed day into a
+     * bound on every day, which is wider than anything the agent wrote.
      */
     fun timeBound(value: String): TimeBound? {
         val (hour, minute) = hourMinute(value) ?: return null
-        return epochDay(value) to hour * 60 + minute
+        val day = epochDay(value)
+        if ('T' in value && day == null) return null
+        return day to hour * 60 + minute
     }
 
     /**
@@ -75,6 +81,20 @@ internal object Iso8601 {
         val belowMin = min != null && min.appliesOn(day) && at < min.minuteOfDay
         val aboveMax = max != null && max.appliesOn(day) && at > max.minuteOfDay
         return !belowMin && !aboveMax
+    }
+
+    /**
+     * The time a picker with nothing to show yet should open on: the lower bound when one applies
+     * on [day], as an hour/minute pair, or null for the picker's own default.
+     *
+     * Opening on midnight under a `min` of 09:00 would open the dialog with its confirm already
+     * disabled and nothing said about why; the bound is inside the range by definition, so it is
+     * the first time the user could confirm. The same day rule as [timeWithin], so the two cannot
+     * disagree about which bound the dialog is under.
+     */
+    fun openingTime(day: Long?, min: TimeBound?): Pair<Int, Int>? {
+        if (min == null || !min.appliesOn(day)) return null
+        return min.minuteOfDay / 60 to min.minuteOfDay % 60
     }
 
     private fun TimeBound.appliesOn(epochDay: Long?): Boolean =

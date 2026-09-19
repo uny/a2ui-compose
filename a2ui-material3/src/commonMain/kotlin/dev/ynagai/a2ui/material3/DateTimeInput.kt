@@ -165,12 +165,9 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
             // asked for. Absent both, the time stands alone -- which is the `format: time` the
             // catalog's own `min`/`max` allow.
             val day = pickedDay ?: Iso8601.epochDay(value).takeIf { wantsDate }
-            // A field with no time yet opens on the lower bound when there is one, rather than on
-            // a midnight the bound would refuse -- so the dialog does not open with its confirm
-            // already disabled and nothing said about why.
-            val opening = existing
-                ?: minTime?.takeIf { (boundDay, _) -> day == null || boundDay == null || boundDay == day }
-                    ?.let { (_, minuteOfDay) -> minuteOfDay / 60 to minuteOfDay % 60 }
+            // A field with no time yet opens on the lower bound when one applies, rather than on
+            // a midnight the bound would refuse -- see [Iso8601.openingTime].
+            val opening = existing ?: Iso8601.openingTime(day, minTime)
             val state = rememberTimePickerState(
                 initialHour = opening?.first ?: 0,
                 initialMinute = opening?.second ?: 0,

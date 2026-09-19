@@ -23,7 +23,8 @@ updates:
   # Gradle dependencies too. Until this entry existed, only the actions were watched, and the
   # Kotlin version sat one patch behind the newest stable with nothing to say so. Weekly and
   # grouped for the same reason the actions are: each bump is a version-catalog line, and CI
-  # for this repository costs ~35 minutes on macOS per run, so one PR a week is the budget.
+  # for this repository costs ~35 minutes on macOS per run, so one PR per group a week is the
+  # budget: two Gradle PRs at most, and usually one.
   #
   # Kotlin, the Compose Multiplatform plugin and its artifacts have to move together, and their
   # release trains are not aligned -- so they are one group, and a PR from it may need a hand

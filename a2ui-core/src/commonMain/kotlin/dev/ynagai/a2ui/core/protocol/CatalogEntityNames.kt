@@ -238,10 +238,15 @@ private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>
  * a `@`-prefixed string is refused, wherever in the catalog it sits.
  *
  * `@index` included: it is composed in by `common_types.json`, and a catalog re-admitting it is
- * still a catalog defining into the namespace. Only the two literal keywords are read. A `call`
- * typed as a bare string, or matched by a `pattern`, admits any name at all and is a different
- * question -- whether `anyFunction` must correspond to `functions` -- that the prose does not
- * settle and this does not decide.
+ * still a catalog defining into the namespace.
+ *
+ * Only the two literal keywords are read, and only where they sit directly on the `call`
+ * subschema. This is a rule about what a catalog *spells*, not a boundary against what it
+ * *admits*: a `call` typed as a bare string, or matched by a `pattern`, admits any name at all,
+ * and so does one whose `const` is reached through `anyOf`, a `$ref`, `patternProperties` or
+ * `additionalProperties`. Chasing those would only move the line, since the bare string stays
+ * open either way; closing it is a different question -- whether `anyFunction` must correspond
+ * to `functions` -- that the prose does not settle and this does not decide.
  */
 private fun requireNoSystemCall(subschema: JsonElement, owner: String) {
     val schema = subschema as? JsonObject ?: return

@@ -101,6 +101,15 @@ class CatalogEntityNamesTest {
                 "properties": {"call": {"enum": ["required", "@evil"]}}, "required": ["call"]}}""",
             """"${'$'}defs": {"anyFunction": {"oneOf": [{"type": "object",
                 "properties": {"call": {"const": "@index"}}}]}}""",
+            // A non-string `enum` entry is skipped, not tripped over, and the string beside it
+            // is still read.
+            """"${'$'}defs": {"anyFunction": {"type": "object",
+                "properties": {"call": {"enum": [{"x": 1}, "@evil"]}}, "required": ["call"]}}""",
+            // The bundled catalogs' real shape: `anyFunction` points into `functions`, and the
+            // name is spelled in the definition. The key `helper` passes; the `const` does not.
+            """"functions": {"helper": {"type": "object", "returnType": "void",
+                "properties": {"call": {"const": "@evil"}}, "required": ["call"]}},
+                "${'$'}defs": {"anyFunction": {"oneOf": [{"${'$'}ref": "#/functions/helper"}]}}""",
         ).forEach { carried ->
             val failure = assertFailsWith<A2uiFormatException>("should have been refused: $carried") {
                 json.decodeFromString<CatalogDefinition>(catalogCarrying(carried))
@@ -118,11 +127,43 @@ class CatalogEntityNamesTest {
                     "properties": {"call": {"const": "helper"}}, "required": ["call"]}}""",
             ),
         )
-        // And a `call` that is not a function name -- a component property that happens to be
-        // called `call`, holding a string -- admits nothing by literal and is left alone.
+        // The check keys on the property name alone, so a component property that happens to be
+        // called `call` is held to it too -- one holding a string spells no name and is left
+        // alone; one spelling a `@` literal is refused, whatever the component means by it.
         json.decodeFromString<CatalogDefinition>(
             catalogWithComponentBody("""{"type": "object", "properties": {"call": {"type": "string"}}}"""),
         )
+        assertFailsWith<A2uiFormatException> {
+            json.decodeFromString<CatalogDefinition>(
+                catalogWithComponentBody(
+                    """{"type": "object", "properties": {"call": {"enum": ["@here", "@channel"]}}}""",
+                ),
+            )
+        }
+        // Shapes the check declines rather than trips over: a boolean subschema, and a `const`
+        // that is not a string.
+        listOf(
+            """{"type": "object", "properties": {"call": true}}""",
+            """{"type": "object", "properties": {"call": {"const": 42}}}""",
+        ).forEach { body ->
+            json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+        }
+    }
+
+    @Test
+    fun the_system_call_check_reads_only_a_literal_directly_on_the_call_subschema() {
+        // The boundary, pinned so that a change in either direction is deliberate. A `@` name
+        // reached through a combinator or a `$ref` is not read -- for the reason the KDoc on
+        // `requireNoSystemCall` gives: the check is about what a catalog spells, and a bare
+        // `type: string` admits every name regardless, so chasing these would only move the line.
+        listOf(
+            """"${'$'}defs": {"anyFunction": {"type": "object",
+                "properties": {"call": {"anyOf": [{"const": "@evil"}]}}, "required": ["call"]}}""",
+            """"${'$'}defs": {"evil": {"const": "@evil"}, "anyFunction": {"type": "object",
+                "properties": {"call": {"${'$'}ref": "#/${'$'}defs/evil"}}, "required": ["call"]}}""",
+        ).forEach { carried ->
+            json.decodeFromString<CatalogDefinition>(catalogCarrying(carried))
+        }
     }
 
     @Test

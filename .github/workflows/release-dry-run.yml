@@ -20,11 +20,12 @@ name: Release dry run
 #    keyserver -- never runs. Measured with `--dry-run` on this tree, `publishToMavenCentral`
 #    additionally runs `prepareMavenCentralPublishing` and the `...ToMavenCentralRepository`
 #    tasks, none of which this exercises.
-#  - That `cd.yml`'s "Check the release credentials are present" step works. It reads five
-#    `secrets.*` and this workflow reads none, so that step has no counterpart here and still has
-#    its first execution on a tag. The signing *mechanism* is rehearsed below in the same shape
-#    `cd.yml` uses it -- protected key, key id, passphrase -- but the secrets themselves are not:
-#    a `GPG_KEY_ID` stored in the 16-hex long form is refused there, after a green run here.
+#  - That the five secrets `cd.yml` reads are set and well-formed. This workflow reads none of
+#    them. What it does rehearse is the *check*: `check-release-credentials.sh`, the file `cd.yml`
+#    runs against the stored secrets, runs below against the key this job generates -- so the
+#    shapes real `gpg` output takes are known to pass the patterns a release applies. The stored
+#    values themselves are still first read on a tag: a `GPG_KEY_ID` saved in the 16-hex long
+#    form is refused there, after a green run here.
 #  - That a *newly added* target publishes resolvably. The consumer step names its `compile*`
 #    tasks by hand, so adding a target to the three modules without adding it to
 #    `smoke-test/build.gradle.kts` and to both task lists leaves the new variant unresolved and
@@ -186,6 +187,18 @@ jobs:
           while IFS= read -r key_line; do
             [ -n "$key_line" ] && echo "::add-mask::${key_line}"
           done <<< "$ORG_GRADLE_PROJECT_signingInMemoryKey"
+
+          # `cd.yml`'s credential check, against this key rather than the stored secrets. The
+          # script's own tests feed it strings laid out by hand; this is the one place it meets
+          # the id `--with-colons` derives and the block `--export-secret-keys --armor` writes,
+          # which is what a release hands it. The two Central values are placeholders -- the
+          # script asks only that they are set -- and are no more a secret than the passphrase.
+          MAVEN_CENTRAL_USERNAME='dry-run-not-a-secret' \
+            MAVEN_CENTRAL_PASSWORD='dry-run-not-a-secret' \
+            GPG_KEY_ID="$key_id" \
+            GPG_PRIVATE_KEY="$ORG_GRADLE_PROJECT_signingInMemoryKey" \
+            GPG_PASSPHRASE="$passphrase" \
+            sh .github/scripts/check-release-credentials.sh
 
           ./gradlew publishToMavenLocal -PVERSION_NAME="$VERSION" \
             -Dmaven.repo.local="${RUNNER_TEMP}/dry-run-m2" --stacktrace

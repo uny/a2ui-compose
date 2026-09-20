@@ -107,24 +107,11 @@ jobs:
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
       # Every secret this job needs, checked before the build rather than at the step that uses
-      # it. Two of these fail in ways worth pre-empting:
-      #
-      #  - A missing secret is the empty string, not an error. `signingInMemoryKeyId` empty fails
-      #    with `The key ID must be in a valid form (eg 00B5050F or 0x00B5050F), given value:` --
-      #    a message about the key's *shape* for a secret that was never set, arriving after the
-      #    full suite has run.
-      #  - Gradle takes the short 8-hex key id only. Measured on 2026-09-06 against a throwaway
-      #    key: the 8-hex form and *omitting the property entirely* both sign; the 16-hex long id,
-      #    the 40-hex fingerprint and the empty string all fail the `sign*Publication` tasks.
-      #    `gpg --list-secret-keys --keyid-format SHORT` prints the form that works.
-      #
-      # `GPG_PASSPHRASE` is required here deliberately, and this check is stricter than the
-      # toolchain: the plugin resolves `signingInMemoryKeyPassword` as `.orElse("").get()` (0.37.0
-      # bytecode), so an unprotected key signs fine with the property empty or absent. Requiring it
-      # encodes a policy rather than a technical need -- this repository signs with a
-      # passphrase-protected key, so an empty `GPG_PASSPHRASE` means a secret nobody set, not a key
-      # that needs none. If that key is ever replaced with an unprotected one, drop the name from
-      # the loop below; the failure otherwise reads as a missing secret.
+      # it. The checks live in a script because this workflow runs only on a release tag and so
+      # can never be exercised by CI -- the script can be, and is, on every PR
+      # (`check-release-credentials.test.sh`). `release-dry-run.yml` calls the same file against a
+      # key it generates, so what a rehearsal accepts is what a release accepts. The script's own
+      # header says what each check is for and which of them is policy rather than need.
       - name: Check the release credentials are present
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -132,31 +119,7 @@ jobs:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-        run: |
-          missing=
-          for name in MAVEN_CENTRAL_USERNAME MAVEN_CENTRAL_PASSWORD GPG_KEY_ID GPG_PRIVATE_KEY GPG_PASSPHRASE; do
-            eval "value=\$$name"
-            [ -n "$value" ] || missing="$missing $name"
-          done
-          if [ -n "$missing" ]; then
-            echo "::error::Not set on the 'release' environment:$missing" >&2
-            exit 1
-          fi
-          case "$GPG_KEY_ID" in
-            [0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f] | \
-            0[xX][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f] ) ;;
-            * )
-              echo "::error::GPG_KEY_ID must be the short 8-hex key id (gpg --list-secret-keys --keyid-format SHORT), not a long id or a fingerprint." >&2
-              exit 1
-              ;;
-          esac
-          case "$GPG_PRIVATE_KEY" in
-            *"BEGIN PGP PRIVATE KEY BLOCK"*"END PGP PRIVATE KEY BLOCK"* ) ;;
-            * )
-              echo "::error::GPG_PRIVATE_KEY must be the ASCII-armored private key, header and footer included (gpg --export-secret-keys --armor <SHORT_KEY_ID>)." >&2
-              exit 1
-              ;;
-          esac
+        run: sh .github/scripts/check-release-credentials.sh
 
       # The full suite before anything leaves the machine. A release is the one build where
       # "the tests passed on the PR" is not enough: the tag may point at a merge the PR never had.

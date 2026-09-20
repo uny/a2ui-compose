@@ -85,7 +85,7 @@ kotlin {
  * honour one, so a machine that relies on it has this task read a different directory than the
  * compiles resolve from: "nothing published" when `~/.m2/repository` holds no copy of the
  * version, and a check of whatever stale copy sits there when it does. Pass `-Dmaven.repo.local`
- * on such a machine; the workflows always do, or run on a runner with no `settings.xml`.
+ * on such a machine; CI runners have no `settings.xml`.
  */
 val localRepository: Provider<File> =
     providers.systemProperty("maven.repo.local")

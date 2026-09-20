@@ -26,10 +26,7 @@ copy of `gradle-wrapper.jar` is a second thing to keep pinned:
 
 ```bash
 ./gradlew publishToMavenLocal
-./gradlew -p smoke-test \
-  compileCommonMainKotlinMetadata compileKotlinJvm compileKotlinJs compileKotlinWasmJs \
-  compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinMacosArm64 \
-  compileAndroidMain
+./gradlew -p smoke-test compileAll
 ```
 
 Needs an Android SDK (`ANDROID_HOME`, or `sdk.dir` in `smoke-test/local.properties`) and, for the
@@ -39,9 +36,26 @@ three Apple targets, macOS.
 the producer's `../gradle.properties`, so it cannot go on naming a version the producer has left
 behind.
 
-`compileCommonMainKotlinMetadata`, not `compileKotlinMetadata`: the latter is a task that exists
-but is disabled under the hierarchical source-set model, so naming it compiled nothing. See the
-second control below.
+`compileAll` is two things in order. First `checkPublishedSets`, which reads the root `.module`
+file of every module the publish wrote under `dev/ynagai/a2ui/` at that version and fails if it
+names a module, or a target, that this build does not — the direction resolution cannot see,
+below. Then one compile per target declared in `build.gradle.kts`'s `kotlin {}` block, derived
+from that block rather than listed: today `compileCommonMainKotlinMetadata`, `compileKotlinJvm`,
+`compileKotlinJs`, `compileKotlinWasmJs`, `compileKotlinIosArm64`, `compileKotlinIosSimulatorArm64`,
+`compileKotlinMacosArm64` and `compileAndroidMain`, and checked with `--dry-run` that the graph is
+the same one naming those eight produced. Any of them can still be run on its own.
+
+The metadata one is `compileCommonMainKotlinMetadata`, not `compileKotlinMetadata`: the latter is
+a task that exists but is disabled under the hierarchical source-set model, so naming it compiled
+nothing. See the second control below.
+
+`checkPublishedSets` reads the repository `mavenLocal()` resolves from: `-Dmaven.repo.local` when
+passed, `~/.m2/repository` otherwise. A `localRepository` in `~/.m2/settings.xml` is honoured by
+`mavenLocal()` and not by this task, so on a machine that sets one the task reads a directory
+the compiles do not, and fails as "nothing published" rather than passing. On a warm `~/.m2`, a
+module the producer *stopped* publishing still sits at the same `-SNAPSHOT` version and fails
+here as unnamed; the message gives the directory to remove. Both are false failures, the safe
+direction; CI runs against a directory nothing else has written to.
 
 ## What it does not check
 
@@ -55,9 +69,15 @@ is not caught here either.
 It also does not pin each module's `api` scopes individually. It depends on all three, so a type
 reachable through more than one of them stays reachable when one downgrades it -- measured:
 moving `a2ui-compose`'s `api(compose.runtime)` / `api(compose.ui)` to `implementation` leaves the
-gate green, because `a2ui-material3`'s `api(compose.material3)` supplies both transitively. And the module and target lists are enumerated by hand in this build:
-*removing* a published target fails loudly, but *adding* one is simply not covered until someone
-adds it here too.
+gate green, because `a2ui-material3`'s `api(compose.material3)` supplies both transitively.
+
+The module and target sets are still written by hand in `build.gradle.kts`, but no longer
+unchecked: *removing* a published target fails resolution loudly, and *adding* one now fails
+`checkPublishedSets`, which compares what the publish wrote against what this build declares.
+What remains by hand is `Smoke.kt`: one symbol per module. A new module's coordinate line
+satisfies the check, and resolves, with no symbol behind it — so that module is proved to
+*resolve*, not that its metadata leads to a class. The failure message says to add the symbol;
+nothing enforces it.
 
 ## Where it runs
 
@@ -70,11 +90,12 @@ exercised before a tag exists — `cd.yml` itself cannot run until one does, and
 re-uploads nor deletes, so the first release is a poor place for a step's first execution.
 
 `build.yml` runs a reduced pair on every PR, in its `smoke` job: a `-SNAPSHOT` publish, so no
-signing key is needed, and two of the eight tasks above -- `compileCommonMainKotlinMetadata` and
-`compileKotlinJvm`, one for each half the controls below name. What a PR checks is that the three
+signing key is needed, then `checkPublishedSets` and two of the eight compiles --
+`compileCommonMainKotlinMetadata` and `compileKotlinJvm`, one for each half the controls below
+name. What a PR checks is that the publish wrote nothing this build does not name, that the three
 coordinates resolve, that their metadata jars carry what `Smoke.kt` names, and that one platform
 variant leads to real classes -- the rot a tag would otherwise be the first to find. The other
-six platform variants are left to the two release workflows.
+six platform variants are left to the two release workflows, which run `compileAll`.
 
 Both release workflows point the consumer at the repository the publish just wrote, but by
 different means, and the difference is what each can promise. `cd.yml` passes no `-Dmaven.repo.local` at all: publish and
@@ -118,3 +139,23 @@ mv /tmp/a2ui-core-0.1.0-SNAPSHOT.jar ~/.m2/repository/dev/ynagai/a2ui/a2ui-core/
 `Could not find dev.ynagai.a2ui:a2ui-core:0.1.0-SNAPSHOT`; `compileKotlinMetadata` reports
 `SKIPPED` and exits 0. A consumer writing `commonMain` against that publication could not have
 compiled, and the gate as first written would have passed it.
+
+**A published target this build does not name** -- the addition direction, which resolution
+cannot see. Measured on 2026-09-20 by taking a declaration *out* of this build, which is the
+same state as the producer adding one:
+
+```bash
+sed -i '' 's/^    macosArm64()$/    \/\/ macosArm64()/' smoke-test/build.gradle.kts
+./gradlew -p smoke-test checkPublishedSets                            # must fail
+git checkout smoke-test/build.gradle.kts
+```
+
+```
+> The producer published something this build does not name, so no compile here resolves it:
+    - published target {org.jetbrains.kotlin.native.target=macos_arm64, org.jetbrains.kotlin.platform.type=native} is declared by no target in this build's `kotlin {}`
+```
+
+Deleting the `a2ui-material3` coordinate line instead fails the same way, naming
+`dev.ynagai.a2ui:a2ui-material3:<version>` and its directory. And pointed at an empty
+`-Dmaven.repo.local`, it fails with `No dev.ynagai.a2ui:*:<version> under ...` rather than
+reporting an empty publication as fully covered.

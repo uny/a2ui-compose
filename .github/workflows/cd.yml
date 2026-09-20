@@ -156,9 +156,16 @@ jobs:
       # second copy of `gradle-wrapper.jar` to keep pinned. It is still a separate build: its own
       # `settings.gradle.kts` is what makes the dependency resolve by coordinate.
       #
-      # `compileCommonMainKotlinMetadata`, not `compileKotlinMetadata`. The latter exists as a
-      # task but is disabled under the hierarchical source-set model and can never run -- measured
-      # at tip efc2ba5, and `--rerun-tasks` does not force it:
+      # `compileAll` is the smoke build's own aggregate: `checkPublishedSets`, then one compile
+      # per target it declares, derived from its `kotlin {}` block rather than listed here. This
+      # step used to name the eight tasks by hand, which was one of the places a target added to
+      # the library had to be added again (#53); now the list lives in one place, and
+      # `checkPublishedSets` reads the `.module` files the publish above wrote and fails if they
+      # name a module or target the smoke build does not.
+      #
+      # The aggregate picks `compileCommonMainKotlinMetadata`, not `compileKotlinMetadata`. The
+      # latter exists as a task but is disabled under the hierarchical source-set model and can
+      # never run -- measured at tip efc2ba5, and `--rerun-tasks` does not force it:
       #
       #   > Task :compileKotlinMetadata SKIPPED
       #   Skipping task ':compileKotlinMetadata' as task onlyIf 'Task satisfies onlyIf spec' is false.
@@ -168,12 +175,7 @@ jobs:
       - name: Resolve it as a consumer would
         env:
           VERSION: ${{ steps.version.outputs.value }}
-        run: |
-          ./gradlew -p smoke-test \
-            compileCommonMainKotlinMetadata compileKotlinJvm compileKotlinJs compileKotlinWasmJs \
-            compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinMacosArm64 \
-            compileAndroidMain \
-            -Pa2uiVersion="$VERSION" --stacktrace
+        run: ./gradlew -p smoke-test compileAll -Pa2uiVersion="$VERSION" --stacktrace
 
       # The last look before anything leaves the machine. A publication that declared no `.asc`
       # -- `signAllPublications()` removed or made conditional -- passes the local publish and the

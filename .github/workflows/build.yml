@@ -167,7 +167,8 @@ jobs:
   # the upload, but the guard's own correctness should not be checked first on the one run where
   # checking it is most expensive (#53).
   #
-  # The two steps `cd.yml` runs between its build and its upload, with two differences.
+  # The publish and the consumer that `cd.yml` runs between its build and its upload -- not its
+  # signature check, which has nothing to check here -- with three differences.
   #
   # The version is a `-SNAPSHOT`. `signAllPublications()` skips every `sign*` task for a snapshot
   # and runs them for anything else, and this job holds no key, so a release version would fail
@@ -175,12 +176,17 @@ jobs:
   # Signing is `release-dry-run.yml`'s to rehearse; what this job proves is that the publication
   # configures and resolves.
   #
-  # And the consumer compiles one target, `jvm`, rather than the eight `cd.yml` names. Configuring
-  # the consumer build declares every target either way, so the `kotlin {}` block and the three
-  # coordinates are checked in full; one compile is enough to prove the published metadata leads
-  # to real classes and that `Smoke.kt` still names symbols that exist. The per-target half stays
-  # with the release path, where a missing variant costs a version number and the eight
-  # compilations are worth their minutes.
+  # The consumer runs two of the eight tasks `cd.yml` names: the `jvm` compile, and the common
+  # metadata one. Two rather than one because they resolve different files. `compileKotlinJvm`
+  # follows each `.module` to the `-jvm` jar and never opens the metadata jar the coordinate
+  # itself carries; `compileCommonMainKotlinMetadata` compiles `Smoke.kt` against that jar, which
+  # is what a consumer's own `commonMain` resolves. Measured on 2026-09-20 with `a2ui-core`'s
+  # metadata jar replaced by an empty one: the jvm compile stays green, the metadata compile fails
+  # on `Smoke.kt` with `Unresolved reference 'core'`. Seconds, on top of the jvm compile. The
+  # per-target half -- the six platform variants -- stays with the release path, where the eight
+  # compilations are worth their minutes: a variant published wrong is caught by `cd.yml`'s
+  # consumer before the upload, so what it costs there is the tag and the 35-minute build, not
+  # the version number.
   #
   # Its own job rather than two more steps on `apple`, which already holds the critical path:
   # nothing here links a test executable, so it is a few minutes of compile beside `apple` rather
@@ -221,8 +227,8 @@ jobs:
 
       - name: Resolve it as a consumer would
         run: >
-          ./gradlew -p smoke-test compileKotlinJvm -Pa2uiVersion="$SMOKE_VERSION"
-          -Dmaven.repo.local="${RUNNER_TEMP}/smoke-m2" --stacktrace
+          ./gradlew -p smoke-test compileCommonMainKotlinMetadata compileKotlinJvm
+          -Pa2uiVersion="$SMOKE_VERSION" -Dmaven.repo.local="${RUNNER_TEMP}/smoke-m2" --stacktrace
 
       - name: Upload reports
         if: failure()

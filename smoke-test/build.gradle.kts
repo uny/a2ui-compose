@@ -134,7 +134,9 @@ val declaredTargetAttributes: Provider<Map<String, Map<String, String>>> = provi
  *
  * Only `<module>/<version>/` for the version under test is read, so a version the producer left
  * behind in `~/.m2` is ignored. A *module* it left behind at the same `-SNAPSHOT` version is not,
- * and fails here as unnamed -- the safe direction, and the message names the directory.
+ * and fails here as unnamed -- the safe direction, and the message names the directory. That
+ * includes a per-target module (`a2ui-core-linuxx64`) of a target the producer dropped: no root
+ * points to it any more, so it is read as a root of its own.
  */
 val checkPublishedSets = tasks.register("checkPublishedSets") {
     group = "verification"
@@ -158,11 +160,24 @@ val checkPublishedSets = tasks.register("checkPublishedSets") {
         }
 
         @Suppress("UNCHECKED_CAST")
-        val publishedVariants: Map<String, List<Map<String, String>>> = moduleFiles
-            .associate { moduleFile ->
-                val module = groovy.json.JsonSlurper().parse(moduleFile) as Map<String, Any?>
-                val variants = module["variants"] as List<Map<String, Any?>>
-                moduleFile.parentFile.parentFile.name to variants
+        val variantsByModule: Map<String, List<Map<String, Any?>>> = moduleFiles.associate { moduleFile ->
+            val module = groovy.json.JsonSlurper().parse(moduleFile) as Map<String, Any?>
+            moduleFile.parentFile.parentFile.name to module["variants"] as List<Map<String, Any?>>
+        }
+
+        // A root is a module no other module's `available-at` points to. Not "a module whose
+        // variants carry `available-at`": a single-platform module -- a jvm-only sibling -- is a
+        // root whose variants list their files directly, and keyed on `available-at` it would be
+        // dropped with the per-target modules (`a2ui-core-jvm`) and never compared.
+        @Suppress("UNCHECKED_CAST")
+        val perTargetModules = variantsByModule.values.flatten()
+            .mapNotNull { (it["available-at"] as Map<String, Any?>?)?.get("module")?.toString() }
+            .toSet()
+        @Suppress("UNCHECKED_CAST")
+        val publishedVariants: Map<String, List<Map<String, String>>> = variantsByModule
+            .filterKeys { it !in perTargetModules }
+            .mapValues { (_, variants) ->
+                variants
                     .filter { "available-at" in it }
                     .map { variant ->
                         (variant["attributes"] as Map<String, Any?>)
@@ -170,8 +185,6 @@ val checkPublishedSets = tasks.register("checkPublishedSets") {
                             .mapValues { it.value.toString() }
                     }
             }
-            // A per-target module (`a2ui-core-jvm`) has no `available-at`; only the roots do.
-            .filterValues { it.isNotEmpty() }
 
         val unnamedModules = publishedVariants.keys - modules.get()
         val declared = targets.get()

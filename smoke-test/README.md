@@ -36,14 +36,17 @@ three Apple targets, macOS.
 the producer's `../gradle.properties`, so it cannot go on naming a version the producer has left
 behind.
 
-`compileAll` is two things in order. First `checkPublishedSets`, which reads the root `.module`
-file of every module the publish wrote under `dev/ynagai/a2ui/` at that version and fails if it
-names a module, or a target, that this build does not — the direction resolution cannot see,
-below. Then one compile per target declared in `build.gradle.kts`'s `kotlin {}` block, derived
-from that block rather than listed: today `compileCommonMainKotlinMetadata`, `compileKotlinJvm`,
-`compileKotlinJs`, `compileKotlinWasmJs`, `compileKotlinIosArm64`, `compileKotlinIosSimulatorArm64`,
-`compileKotlinMacosArm64` and `compileAndroidMain`, and checked with `--dry-run` that the graph is
-the same one naming those eight produced. Any of them can still be run on its own.
+`compileAll` is two things in order. First `checkPublishedSets`, which reads every `.module` file
+the publish wrote under `dev/ynagai/a2ui/` at that version, takes as a root each module no other
+module's `available-at` points to, and fails if a root has no coordinate line here or one of its
+variants names a target this build does not — the direction resolution cannot see, below. A root
+is found that way rather than by having `available-at` variants because a single-platform module
+has none and is a root all the same. Then one compile per target declared in `build.gradle.kts`'s
+`kotlin {}` block, derived from that block rather than listed: today
+`compileCommonMainKotlinMetadata`, `compileKotlinJvm`, `compileKotlinJs`, `compileKotlinWasmJs`,
+`compileKotlinIosArm64`, `compileKotlinIosSimulatorArm64`, `compileKotlinMacosArm64` and
+`compileAndroidMain`, and checked with `--dry-run` that the graph is the same one naming those
+eight produced. Any of them can still be run on its own.
 
 The metadata one is `compileCommonMainKotlinMetadata`, not `compileKotlinMetadata`: the latter is
 a task that exists but is disabled under the hierarchical source-set model, so naming it compiled
@@ -54,8 +57,10 @@ passed, `~/.m2/repository` otherwise. A `localRepository` in `~/.m2/settings.xml
 `mavenLocal()` and not by this task, so on a machine that sets one the task reads a directory
 the compiles do not, and fails as "nothing published" rather than passing. On a warm `~/.m2`, a
 module the producer *stopped* publishing still sits at the same `-SNAPSHOT` version and fails
-here as unnamed; the message gives the directory to remove. Both are false failures, the safe
-direction; CI runs against a directory nothing else has written to.
+here as unnamed; the message gives the directory to remove. So does the per-target directory of a
+target the producer dropped (`a2ui-core-linuxx64`): once no root points to it, it reads as a
+root. All of these are false failures, the safe direction; CI runs against a directory nothing
+else has written to.
 
 ## What it does not check
 
@@ -156,6 +161,8 @@ git checkout smoke-test/build.gradle.kts
 ```
 
 Deleting the `a2ui-material3` coordinate line instead fails the same way, naming
-`dev.ynagai.a2ui:a2ui-material3:<version>` and its directory. And pointed at an empty
-`-Dmaven.repo.local`, it fails with `No dev.ynagai.a2ui:*:<version> under ...` rather than
-reporting an empty publication as fully covered.
+`dev.ynagai.a2ui:a2ui-material3:<version>` and its directory. So does a jvm-only `a2ui-jvmonly`
+placed in the repository -- a root whose one variant has no `available-at` -- which the first
+draft of this task filtered out with the per-target modules and reported as fully covered. And
+pointed at an empty `-Dmaven.repo.local`, it fails with `No dev.ynagai.a2ui:*:<version> under ...`
+rather than reporting an empty publication as fully covered.

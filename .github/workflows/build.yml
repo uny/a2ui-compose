@@ -27,7 +27,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Three jobs rather than one, split by *backend* rather than by module or by test.
+# Three Gradle jobs rather than one, split by *backend* rather than by module or by test. (A
+# fourth job, `scripts`, runs no Gradle at all and is outside this accounting.)
 #
 # 58% of this build's wall-clock is linking test binaries; running the tests themselves is 6% and
 # compiling is under 2%. The unit of cost is therefore "one test executable per target", not "one
@@ -156,19 +157,87 @@ jobs:
           path: '**/build/reports/**'
           retention-days: 7
 
+  # The shell that CI otherwise never reaches, and the workflow files themselves.
+  #
+  # `cd.yml` runs only on a `v*` tag, so the scripts it stands on -- the credential check in front
+  # of an irreversible publish, the signature check behind it -- would first execute during a real
+  # release. Their `.test.sh` files execute them here instead, on every PR. A glob rather than a
+  # list, so a script added beside them with a test is covered by adding the test and nothing else:
+  # `check-published-signed.test.sh` arrived in #67 with no step to run it, and had never run in CI
+  # until this one. Seconds either way, and deliberately not folded into `apple`: a shell
+  # regression should not be reported as a Kotlin failure.
+  #
+  # Both runners, because this shell only ever *executes* on macOS -- `cd.yml` and
+  # `release-dry-run.yml` are both `macos-15` -- while ubuntu is where a contributor's shell
+  # instincts come from. Testing only on ubuntu would leave BSD `find`/`sed` and bash 3.2
+  # unexercised, so a GNU-only construct added later (`grep -P`, `sed -i` without a suffix,
+  # `readlink -f`) would stay green here and fail for the first time during the release this gate
+  # exists to protect.
+  #
+  # `actionlint` on one of the two, for the YAML around the scripts: expression types, `needs:`
+  # names, runner labels, and -- through `shellcheck`, which it finds on the runner's PATH -- every
+  # `run:` block, including the ones in the two workflows this job cannot otherwise execute. Two
+  # of the defects #54's review found by hand were in a `run:` block and both passed `actionlint`
+  # and `shellcheck`, which is why the tests above exist as well; this catches the class of
+  # mistake they do not, a workflow that GitHub would refuse or misread.
+  #
+  # Fetched as a release tarball checked against a sha256 rather than through a wrapper action:
+  # the wrapper would be one more third party's code running with the repository checked out, and
+  # the pin below is to the bytes, which is stricter than a commit. Recorded from the release's
+  # own `actionlint_<version>_checksums.txt`, and cross-checked against an independent download.
+  # To move it: fetch the new tarball, verify it the same way, and replace both values.
+  scripts:
+    name: scripts (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test every release script
+        run: |
+          for test in .github/scripts/*.test.sh; do
+            echo "::group::$test"
+            sh "$test"
+            echo "::endgroup::"
+          done
+
+      - name: Lint the workflows
+        if: runner.os == 'Linux'
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          curl -fsSL -o "${RUNNER_TEMP}/actionlint.tar.gz" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  ${RUNNER_TEMP}/actionlint.tar.gz" | sha256sum -c -
+          tar -xzf "${RUNNER_TEMP}/actionlint.tar.gz" -C "${RUNNER_TEMP}" actionlint
+          "${RUNNER_TEMP}/actionlint" -color
+
   # One check to require, so that a branch rule naming `build` keeps meaning "all of it".
   #
   # `always()` with an explicit result test rather than the default: without it a cancelled or
   # skipped upstream job leaves this one skipped, and a skipped required check reads as satisfied.
+  #
+  # Every job is named twice below, in `needs:` and in the test, and both are load-bearing: a job
+  # added to `needs:` alone is waited for and then ignored, since `always()` runs this step whatever
+  # the result was.
   build:
-    needs: [apple, js, wasm]
+    needs: [apple, js, wasm, scripts]
     if: always()
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check the three backends passed
+      - name: Check the three backends and the scripts passed
         run: |
-          echo "apple=${{ needs.apple.result }} js=${{ needs.js.result }} wasm=${{ needs.wasm.result }}"
+          echo "apple=${{ needs.apple.result }} js=${{ needs.js.result }} wasm=${{ needs.wasm.result }} scripts=${{ needs.scripts.result }}"
           [ "${{ needs.apple.result }}" = "success" ] \
             && [ "${{ needs.js.result }}" = "success" ] \
-            && [ "${{ needs.wasm.result }}" = "success" ]
+            && [ "${{ needs.wasm.result }}" = "success" ] \
+            && [ "${{ needs.scripts.result }}" = "success" ]

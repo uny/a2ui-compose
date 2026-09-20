@@ -27,8 +27,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Three Gradle jobs rather than one, split by *backend* rather than by module or by test. (A
-# fourth job, `scripts`, runs no Gradle at all and is outside this accounting.)
+# Three Gradle jobs rather than one, split by *backend* rather than by module or by test. (Two
+# more jobs are outside this accounting: `scripts` runs no Gradle at all, and `smoke` publishes
+# the library and builds a separate consumer against it -- see each.)
 #
 # 58% of this build's wall-clock is linking test binaries; running the tests themselves is 6% and
 # compiling is under 2%. The unit of cost is therefore "one test executable per target", not "one
@@ -157,6 +158,86 @@ jobs:
           path: '**/build/reports/**'
           retention-days: 7
 
+  # The consumer smoke test, on every PR rather than first on a tag.
+  #
+  # `smoke-test/` is a separate build that nothing above configures: it is not in the root
+  # `settings.gradle.kts`, so a `Smoke.kt` that no longer compiles -- a symbol renamed, with the
+  # `api/` dump regenerated so `checkLegacyAbi` stays green -- would first be noticed by `cd.yml`,
+  # aborting a release after its 35-minute build. Safe in direction, since the abort comes before
+  # the upload, but the guard's own correctness should not be checked first on the one run where
+  # checking it is most expensive (#53).
+  #
+  # The publish and the consumer that `cd.yml` runs between its build and its upload -- not its
+  # signature check, which has nothing to check here -- with three differences.
+  #
+  # The version is a `-SNAPSHOT`. `signAllPublications()` skips every `sign*` task for a snapshot
+  # and runs them for anything else, and this job holds no key, so a release version would fail
+  # with `No configured signatory` -- `cd.yml`'s comment on its publish step has the measurement.
+  # Signing is `release-dry-run.yml`'s to rehearse; what this job proves is that the publication
+  # configures and resolves.
+  #
+  # The consumer runs two of the eight tasks `cd.yml` names: the `jvm` compile, and the common
+  # metadata one. Two rather than one because they resolve different files. `compileKotlinJvm`
+  # follows each `.module` to the `-jvm` jar and never opens the metadata jar the coordinate
+  # itself carries; `compileCommonMainKotlinMetadata` compiles `Smoke.kt` against that jar, which
+  # is what a consumer's own `commonMain` resolves. Measured on 2026-09-20 with `a2ui-core`'s
+  # metadata jar replaced by an empty one: the jvm compile stays green, the metadata compile fails
+  # on `Smoke.kt` with `Unresolved reference 'core'`. Seconds, on top of the jvm compile. The
+  # per-target half -- the six platform variants -- stays with the release path, where the eight
+  # compilations are worth their minutes: a variant published wrong is caught by `cd.yml`'s
+  # consumer before the upload, so what it costs there is the tag and the 35-minute build, not
+  # the version number.
+  #
+  # Its own job rather than two more steps on `apple`, which already holds the critical path:
+  # nothing here links a test executable, so it is a few minutes of compile beside `apple` rather
+  # than on top of it -- and a consumer that cannot resolve is reported as that, not as a Kotlin
+  # failure. macOS, for the reason `apple` gives: on Linux the Apple targets are silently skipped,
+  # and the `.module` files published here would list fewer variants than a release does.
+  #
+  # `-Dmaven.repo.local` under the runner's temp for both steps, as `release-dry-run.yml` does and
+  # for its reason: the consumer must resolve what *this* run published, and `~/.m2` on a warm
+  # runner could answer with something older. `smoke-test/settings.gradle.kts` binds the group to
+  # `mavenLocal()` exclusively, so pointed at an empty directory the consumer fails to resolve --
+  # measured on 2026-09-20: `Could not find dev.ynagai.a2ui:a2ui-core:0.0.0-smoke-SNAPSHOT`.
+  smoke:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      # Any version ending in `-SNAPSHOT` would do; this one cannot be mistaken for a release, and
+      # is passed explicitly so that a `VERSION_NAME` bumped to a release number in
+      # `gradle.properties` does not turn this job into a signing failure.
+      SMOKE_VERSION: 0.0.0-smoke-SNAPSHOT
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Publish every module to a local repository
+        run: >
+          ./gradlew publishToMavenLocal -PVERSION_NAME="$SMOKE_VERSION"
+          -Dmaven.repo.local="${RUNNER_TEMP}/smoke-m2" --stacktrace
+
+      - name: Resolve it as a consumer would
+        run: >
+          ./gradlew -p smoke-test compileCommonMainKotlinMetadata compileKotlinJvm
+          -Pa2uiVersion="$SMOKE_VERSION" -Dmaven.repo.local="${RUNNER_TEMP}/smoke-m2" --stacktrace
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reports-smoke
+          path: '**/build/reports/**'
+          retention-days: 7
+
   # The shell that CI otherwise never reaches, and the workflow files themselves.
   #
   # `cd.yml` runs only on a `v*` tag, so the scripts it stands on -- the credential check in front
@@ -233,15 +314,16 @@ jobs:
   # added to `needs:` alone is waited for and then ignored, since `always()` runs this step whatever
   # the result was.
   build:
-    needs: [apple, js, wasm, scripts]
+    needs: [apple, js, wasm, smoke, scripts]
     if: always()
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check the three backends and the scripts passed
+      - name: Check the three backends, the smoke test and the scripts passed
         run: |
-          echo "apple=${{ needs.apple.result }} js=${{ needs.js.result }} wasm=${{ needs.wasm.result }} scripts=${{ needs.scripts.result }}"
+          echo "apple=${{ needs.apple.result }} js=${{ needs.js.result }} wasm=${{ needs.wasm.result }} smoke=${{ needs.smoke.result }} scripts=${{ needs.scripts.result }}"
           [ "${{ needs.apple.result }}" = "success" ] \
             && [ "${{ needs.js.result }}" = "success" ] \
             && [ "${{ needs.wasm.result }}" = "success" ] \
+            && [ "${{ needs.smoke.result }}" = "success" ] \
             && [ "${{ needs.scripts.result }}" = "success" ]

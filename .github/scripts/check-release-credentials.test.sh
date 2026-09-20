@@ -51,23 +51,34 @@ expect "GPG_PASSPHRASE empty" 1 GPG_PASSPHRASE=
 
 # Unset entirely, which a caller outside GitHub Actions can do and `set -u` would otherwise turn
 # into a different failure than the one being tested. `expect` always sets all five, so this one
-# case runs the script directly.
+# case runs the script directly. The message is checked as well as the exit status: under bash
+# 3.2 the shell's own `unbound variable` abort also exits 1, so the status alone would stay green
+# with `${name:-}` regressed to `$name`.
 set +e
-env -i PATH="$PATH" MAVEN_CENTRAL_USERNAME=user MAVEN_CENTRAL_PASSWORD=pass \
-  GPG_KEY_ID="$good_key_id" GPG_PRIVATE_KEY="$good_key" sh "$script" >/dev/null 2>&1
+output=$(env -i PATH="$PATH" MAVEN_CENTRAL_USERNAME=user MAVEN_CENTRAL_PASSWORD=pass \
+  GPG_KEY_ID="$good_key_id" GPG_PRIVATE_KEY="$good_key" sh "$script" 2>&1)
 got=$?
 set -e
-if [ "$got" -eq 1 ]; then echo "ok   GPG_PASSPHRASE unset"; else
-  echo "FAIL GPG_PASSPHRASE unset: expected exit 1, got $got"; failures=$((failures + 1)); fi
+case "$got:$output" in
+  1:*"Not set"*" GPG_PASSPHRASE"* ) echo "ok   GPG_PASSPHRASE unset" ;;
+  * )
+    echo "FAIL GPG_PASSPHRASE unset: expected exit 1 naming the secret, got exit $got"
+    echo "$output" | sed 's/^/    /'
+    failures=$((failures + 1))
+    ;;
+esac
 
-# A missing secret must be named, or the failure is a hunt through five settings.
+# A missing secret must be named, or the failure is a hunt through five settings. All five at
+# once, so that each name's place in the script's list is what this asserts: with one dropped, the
+# `GPG_KEY_ID empty` and `GPG_PRIVATE_KEY empty` cases above still exit 1, through the shape check
+# that follows -- the very message the list exists to pre-empt.
 set +e
-named=$(env -i PATH="$PATH" MAVEN_CENTRAL_USERNAME=user MAVEN_CENTRAL_PASSWORD= \
-  GPG_KEY_ID="$good_key_id" GPG_PRIVATE_KEY="$good_key" GPG_PASSPHRASE= sh "$script" 2>&1 \
-  | grep -c 'MAVEN_CENTRAL_PASSWORD GPG_PASSPHRASE')
+named=$(env -i PATH="$PATH" MAVEN_CENTRAL_USERNAME= MAVEN_CENTRAL_PASSWORD= \
+  GPG_KEY_ID= GPG_PRIVATE_KEY= GPG_PASSPHRASE= sh "$script" 2>&1 \
+  | grep -c 'MAVEN_CENTRAL_USERNAME MAVEN_CENTRAL_PASSWORD GPG_KEY_ID GPG_PRIVATE_KEY GPG_PASSPHRASE$')
 set -e
 if [ "$named" -eq 1 ]; then echo "ok   every missing secret is named"; else
-  echo "FAIL the missing secrets are not named"; failures=$((failures + 1)); fi
+  echo "FAIL the missing secrets are not all named"; failures=$((failures + 1)); fi
 
 # The key id: both prefixes pass; the two longer forms `gpg` also prints do not.
 expect "0x prefix" 0 GPG_KEY_ID=0x59cace12

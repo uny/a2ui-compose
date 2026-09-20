@@ -2,9 +2,13 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskProvider
+import java.io.File
 
 /** The name the generated index takes, and therefore the one no document may take. */
 private const val INDEX_NAME = "ALL"
+
+/** What a `const val` may be called: the constant-name subset of a Kotlin identifier. */
+private val CONSTANT_IDENTIFIER = Regex("[A-Z_][A-Z0-9_]*")
 
 /**
  * A constant name for the file at [path], derived so that adding a file to a scanned directory
@@ -19,10 +23,10 @@ private const val INDEX_NAME = "ALL"
  * A corpus whose filenames are not identifiers at all is not a mistake to be renamed around; it
  * is a corpus that wants [SpecEmbedding.namedConstants] off.
  */
-private fun constantName(path: String): String {
+internal fun constantName(path: String): String {
     val file = path.substringAfterLast('/')
     val name = file.removeSuffix(".json").uppercase()
-    require(Regex("[A-Z_][A-Z0-9_]*").matches(name)) {
+    require(CONSTANT_IDENTIFIER.matches(name)) {
         "`$file` does not name a Kotlin constant (`$name`). Rename the file, list it by hand, or " +
             "generate this corpus with `namedConstants = false`."
     }
@@ -40,7 +44,7 @@ private fun constantName(path: String): String {
  *
  * The boundary is pushed out by one unit rather than pulled in, so a chunk always makes progress.
  */
-private fun String.chunkedWholeCodePoints(size: Int): List<String> {
+internal fun String.chunkedWholeCodePoints(size: Int): List<String> {
     // A non-positive width makes no progress -- `end == start` appends "" forever, and `size = 0`
     // indexes `this[-1]` on the way. Both hang or crash the daemon rather than failing the task.
     require(size >= 1) { "a chunk is at least one unit wide, not $size." }
@@ -56,7 +60,7 @@ private fun String.chunkedWholeCodePoints(size: Int): List<String> {
 }
 
 /** [text] as a Kotlin string literal, chunked so no single source line grows unbounded. */
-private fun literal(text: String, indent: String): String {
+internal fun literal(text: String, indent: String): String {
     val quote = "\""
     // Chunked before escaping, not after: splitting the escaped text can cut an escape sequence
     // in half and emit a source file that does not parse.
@@ -71,6 +75,90 @@ private fun literal(text: String, indent: String): String {
             .replace("\n", "\\n")
     }
     return quote + chunks + quote
+}
+
+/**
+ * The `.json` files found under `spec/`[relative]: their bare [files], and the [location] that was
+ * listed, so a message can say where it looked.
+ */
+internal data class ScannedDirectory(val relative: String, val location: File, val files: List<String>)
+
+/**
+ * The documents [embedSpecDocuments] embeds -- the hand-listed [documents] followed by the
+ * [scanned] directory's files, keyed by constant name -- after every check that turns a compile
+ * error in a generated file under `build/` that nobody wrote into a sentence naming the document
+ * at fault.
+ *
+ * Kept out of the task action so the checks can be exercised without a `Project`: the five call
+ * sites in this build trip none of them, so nothing else ever runs a failure path.
+ */
+internal fun resolveDocuments(
+    taskName: String,
+    objectName: String,
+    documents: Map<String, String>,
+    scanned: ScannedDirectory?,
+    namedConstants: Boolean,
+): Map<String, String> {
+    val found = scanned?.let { (relative, location, files) ->
+        // A directory that is missing, renamed, or empty yields `null` or an empty array, and this
+        // task would then succeed with an empty `ALL` -- the same silent shortfall the collision
+        // check below refuses, arrived at from the other side. The corpus's own count assertion
+        // would catch it eventually, in a test, far from the path that was actually wrong.
+        require(files.isNotEmpty()) {
+            "`$relative` holds no `.json` files (looked in `$location`). Check the path."
+        }
+        files
+            // Sorted so the generated source is the same on every machine; a directory listing is
+            // not ordered, and an unstable one makes the build non-reproducible.
+            .sorted()
+            .map { (if (namedConstants) constantName(it) else it) to "$relative/$it" }
+            .also { pairs ->
+                // `associate` would keep the last silently, and a dropped case file reads as a
+                // suite that simply has fewer assertions in it.
+                val collisions = pairs.groupBy { it.first }.filterValues { it.size > 1 }
+                require(collisions.isEmpty()) {
+                    "files in `$relative` share a constant name: " +
+                        collisions.values.joinToString { group -> group.map { it.second }.toString() }
+                }
+            }
+            .toMap()
+    }.orEmpty()
+    // Checked before the merge, because `+` resolves a collision by keeping the scanned entry -- so
+    // a hand-listed document that a scanned filename happens to shadow would vanish, and a vanished
+    // document reads as one the specification simply does not have.
+    val shadowed = documents.keys intersect found.keys
+    require(shadowed.isEmpty()) {
+        "listed documents are shadowed by files in `${scanned?.relative}`: " +
+            shadowed.joinToString { "$it (${documents[it]} vs ${found[it]})" }
+    }
+    val all = documents + found
+    // `ALL` is keyed by bare filename, so two documents from different directories that share one
+    // would collide in the generated `mapOf` -- which Kotlin accepts, last wins.
+    val byFile = all.values.groupBy { it.substringAfterLast('/') }.filterValues { it.size > 1 }
+    require(byFile.isEmpty()) { "documents share a filename and would collide in `ALL`: $byFile" }
+    // `ALL` is the index's own name. A document that claims it emits both `const val ALL` and
+    // `val ALL` into one object, and the generated file then fails to compile on conflicting
+    // declarations -- a build error in a file nobody wrote, which is what every other check here
+    // exists to convert into a sentence naming the document.
+    require(!namedConstants || INDEX_NAME !in all.keys) {
+        "`${all[INDEX_NAME]}` takes the name `$INDEX_NAME`, which the generated index uses."
+    }
+    require(all.isNotEmpty()) {
+        "`$taskName` was given no documents and no directory, so `$objectName.ALL` would be " +
+            "empty -- which reads downstream as a corpus the specification does not have."
+    }
+    // Hand-listed keys go through the same check as derived ones. Skipping them is how
+    // `documents = mapOf("basic-catalog" to ...)` reaches the compiler as `const val basic-catalog`
+    // -- a build failure in a generated file nobody wrote, which is precisely what `constantName`
+    // exists to convert into a named message.
+    if (namedConstants) {
+        documents.forEach { (name, path) ->
+            require(CONSTANT_IDENTIFIER.matches(name)) {
+                "`$name` (listed for `$path`) does not name a Kotlin constant."
+            }
+        }
+    }
+    return all
 }
 
 /**
@@ -124,59 +212,14 @@ fun Project.embedSpecDocuments(
     outputs.dir(outputDir)
     doLast {
         val scanned = directory?.let { relative ->
-            specDir.dir(relative).asFile.listFiles()
-                .orEmpty()
-                .filter { it.isFile && it.extension == "json" }
-                .also { files ->
-                    // A directory that is missing, renamed, or empty yields `null` or an empty
-                    // array, and this task would then succeed with an empty `ALL` -- the same
-                    // silent shortfall the collision check below refuses, arrived at from the
-                    // other side. The corpus's own count assertion would catch it eventually, in
-                    // a test, far from the path that was actually wrong.
-                    require(files.isNotEmpty()) {
-                        "`$relative` holds no `.json` files (looked in " +
-                            "`${specDir.dir(relative).asFile}`). Check the path."
-                    }
-                }
-                // Sorted so the generated source is the same on every machine; a directory
-                // listing is not ordered, and an unstable one makes the build non-reproducible.
-                .sortedBy { it.name }
-                .map { (if (namedConstants) constantName(it.name) else it.name) to "$relative/${it.name}" }
-                .also { pairs ->
-                    // `associate` would keep the last silently, and a dropped case file reads as
-                    // a suite that simply has fewer assertions in it.
-                    val collisions = pairs.groupBy { it.first }.filterValues { it.size > 1 }
-                    require(collisions.isEmpty()) {
-                        "files in `$relative` share a constant name: " +
-                            collisions.values.joinToString { group -> group.map { it.second }.toString() }
-                    }
-                }
-                .toMap()
-        }.orEmpty()
-        // Checked before the merge, because `+` resolves a collision by keeping the scanned entry
-        // -- so a hand-listed document that a scanned filename happens to shadow would vanish, and
-        // a vanished document reads as one the specification simply does not have.
-        val shadowed = documents.keys intersect scanned.keys
-        require(shadowed.isEmpty()) {
-            "listed documents are shadowed by files in `$directory`: " +
-                shadowed.joinToString { "$it (${documents[it]} vs ${scanned[it]})" }
+            val location = specDir.dir(relative).asFile
+            ScannedDirectory(
+                relative,
+                location,
+                location.listFiles().orEmpty().filter { it.isFile && it.extension == "json" }.map { it.name },
+            )
         }
-        val all = documents + scanned
-        // `ALL` is keyed by bare filename, so two documents from different directories that share
-        // one would collide in the generated `mapOf` -- which Kotlin accepts, last wins.
-        val byFile = all.values.groupBy { it.substringAfterLast('/') }.filterValues { it.size > 1 }
-        require(byFile.isEmpty()) { "documents share a filename and would collide in `ALL`: $byFile" }
-        // `ALL` is the index's own name. A document that claims it emits both `const val ALL` and
-        // `val ALL` into one object, and the generated file then fails to compile on conflicting
-        // declarations -- a build error in a file nobody wrote, which is what every other check
-        // here exists to convert into a sentence naming the document.
-        require(!namedConstants || INDEX_NAME !in all.keys) {
-            "`${all[INDEX_NAME]}` takes the name `$INDEX_NAME`, which the generated index uses."
-        }
-        require(all.isNotEmpty()) {
-            "`$taskName` was given no documents and no directory, so `$objectName.ALL` would be " +
-                "empty -- which reads downstream as a corpus the specification does not have."
-        }
+        val all = resolveDocuments(taskName, objectName, documents, scanned, namedConstants)
         // Cleared, not just overwritten. Gradle does not empty a task's output directory between
         // runs, so renaming `objectName` or `packageName` leaves the previous file beside the new
         // one -- and a stale generated object compiles perfectly well and ships. Every check above
@@ -192,13 +235,6 @@ fun Project.embedSpecDocuments(
 
         val body = if (namedConstants) {
             all.entries.joinToString("\n\n") { (name, path) ->
-                // Hand-listed keys go through the same check as derived ones. Skipping them is how
-                // `documents = mapOf("basic-catalog" to ...)` reaches the compiler as
-                // `const val basic-catalog` -- a build failure in a generated file nobody wrote,
-                // which is precisely what `constantName` exists to convert into a named message.
-                require(Regex("[A-Z_][A-Z0-9_]*").matches(name)) {
-                    "`$name` (listed for `$path`) does not name a Kotlin constant."
-                }
                 listOf(
                     "    /** `$path`, verbatim. See `spec/README.md` for its provenance. */",
                     "    internal const val $name: String =",

@@ -69,8 +69,14 @@ rather than `~/.m2`, signed with a key generated in the job. That is where the r
 exercised before a tag exists — `cd.yml` itself cannot run until one does, and Central neither
 re-uploads nor deletes, so the first release is a poor place for a step's first execution.
 
-Both point the consumer at the repository the publish just wrote, but by different means, and the
-difference is what each can promise. `cd.yml` passes no `-Dmaven.repo.local` at all: publish and
+`build.yml` runs a reduced pair on every PR, in its `smoke` job: a `-SNAPSHOT` publish, so no
+signing key is needed, and `compileKotlinJvm` alone rather than the eight tasks above. Configuring
+this build declares every target either way, so what a PR checks is that the three coordinates
+resolve and that `Smoke.kt` still compiles against them -- the rot a tag would otherwise be the
+first to find. The per-target half is left to the two release workflows.
+
+Both release workflows point the consumer at the repository the publish just wrote, but by
+different means, and the difference is what each can promise. `cd.yml` passes no `-Dmaven.repo.local` at all: publish and
 consumer both fall through to the default `~/.m2`, so it is the same repository either way — what
 a fresh GitHub-hosted runner adds is that the repository holds *nothing else*. On a warm one it
 would: a stale `0.1.0` left from an earlier run could answer for a variant this publish failed to

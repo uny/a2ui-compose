@@ -201,12 +201,16 @@ jobs:
           persist-credentials: false
 
       - name: Test every release script
+        # Every file runs even after one fails, so a PR that breaks two scripts is reported as
+        # breaking two, and each group is closed whatever its test did.
         run: |
+          failed=0
           for test in .github/scripts/*.test.sh; do
             echo "::group::$test"
-            sh "$test"
+            sh "$test" || failed=1
             echo "::endgroup::"
           done
+          exit "$failed"
 
       - name: Lint the workflows
         if: runner.os == 'Linux'

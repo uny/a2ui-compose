@@ -55,7 +55,9 @@ nothing. See the second control below.
 `checkPublishedSets` reads the repository `mavenLocal()` resolves from: `-Dmaven.repo.local` when
 passed, `~/.m2/repository` otherwise. A `localRepository` in `~/.m2/settings.xml` is honoured by
 `mavenLocal()` and not by this task, so on a machine that sets one the task reads a directory
-the compiles do not, and fails as "nothing published" rather than passing. On a warm `~/.m2`, a
+the compiles do not: it fails as "nothing published" when `~/.m2/repository` holds no copy of the
+version, and checks whatever stale copy sits there when it does. Pass `-Dmaven.repo.local` on
+such a machine; CI never has a `settings.xml`. On a warm `~/.m2`, a
 module the producer *stopped* publishing still sits at the same `-SNAPSHOT` version and fails
 here as unnamed; the message gives the directory to remove. So does the per-target directory of a
 target the producer dropped (`a2ui-core-linuxx64`): once no root points to it, it reads as a

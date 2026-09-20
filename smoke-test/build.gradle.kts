@@ -83,8 +83,9 @@ kotlin {
  * it: `-Dmaven.repo.local` when passed -- every workflow but `cd.yml` passes it -- and `~/.m2/repository`
  * otherwise. A `localRepository` set in `~/.m2/settings.xml` is not consulted; `mavenLocal()` does
  * honour one, so a machine that relies on it has this task read a different directory than the
- * compiles resolve from, and the mismatch shows as a "nothing published" failure rather than a
- * silent pass.
+ * compiles resolve from: "nothing published" when `~/.m2/repository` holds no copy of the
+ * version, and a check of whatever stale copy sits there when it does. Pass `-Dmaven.repo.local`
+ * on such a machine; the workflows always do, or run on a runner with no `settings.xml`.
  */
 val localRepository: Provider<File> =
     providers.systemProperty("maven.repo.local")
@@ -127,10 +128,10 @@ val declaredTargetAttributes: Provider<Map<String, Map<String, String>>> = provi
  * consumer cannot resolve that this build exists to stop (#53).
  *
  * The published set is read from the repository the publish just wrote, not from the producer's
- * build scripts: the root `.module` of each published module lists one variant per target, each
- * with an `available-at` pointer to the per-target module and the Kotlin attributes a consumer's
- * resolution matches on. Those files are the publication; a set read from anywhere else could
- * disagree with them.
+ * build scripts: a root `.module` -- one no other module's `available-at` points to -- lists its
+ * variants with the Kotlin attributes a consumer's resolution matches on, one per target behind
+ * an `available-at` pointer for a multiplatform module, inline for a single-platform one. Those
+ * files are the publication; a set read from anywhere else could disagree with them.
  *
  * Only `<module>/<version>/` for the version under test is read, so a version the producer left
  * behind in `~/.m2` is ignored. A *module* it left behind at the same `-SNAPSHOT` version is not,
@@ -178,12 +179,17 @@ val checkPublishedSets = tasks.register("checkPublishedSets") {
             .filterKeys { it !in perTargetModules }
             .mapValues { (_, variants) ->
                 variants
-                    .filter { "available-at" in it }
                     .map { variant ->
                         (variant["attributes"] as Map<String, Any?>)
                             .filterKeys { it.startsWith("org.jetbrains.kotlin.") }
                             .mapValues { it.value.toString() }
                     }
+                    // Every variant of a root, not only the `available-at` ones: a platform
+                    // variant listed inline -- the whole of a single-platform root -- is a
+                    // target too. The root's own metadata variants are `common`, which no
+                    // platform target declares, and a variant with no Kotlin attribute at all
+                    // (a javadoc jar) is nothing to match.
+                    .filter { it.isNotEmpty() && it["org.jetbrains.kotlin.platform.type"] != "common" }
             }
 
         val unnamedModules = publishedVariants.keys - modules.get()

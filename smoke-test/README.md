@@ -110,7 +110,7 @@ test.
 
 ## Checking that it still bites
 
-A guard that cannot fail is not a guard. Two controls, both re-measured on 2026-09-06.
+A guard that cannot fail is not a guard. Three controls; the first two re-measured on 2026-09-06, the third on 2026-09-20.
 
 **One published platform variant removed** -- the per-target half:
 

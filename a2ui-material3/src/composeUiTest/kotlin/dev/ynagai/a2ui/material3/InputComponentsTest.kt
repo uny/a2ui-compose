@@ -477,6 +477,77 @@ class InputComponentsTest {
     }
 
     @Test
+    fun a_time_outside_the_bounds_cannot_be_confirmed() = runComposeUiTest {
+        // #20. Material's time picker has no selectable-range API, so a `min`/`max` on the clock
+        // is enforced at the confirm: the model holds 18:30 against a `max` of 17:00, the dialog
+        // opens on 18:30, and OK is disabled. Driving the clock face to a time inside the bounds
+        // is not attempted here; the predicate behind the button is [Iso8601Test]'s `timeWithin`.
+        setContent { Surface(rendererFor(BOUNDED_TIME)) }
+        onNodeWithText("18:30").assertIsDisplayed()
+        onNodeWithContentDescription("Closes").performClick()
+        onNodeWithText("OK").assertIsNotEnabled()
+    }
+
+    @Test
+    fun a_time_field_with_no_value_opens_on_its_lower_bound() = runComposeUiTest {
+        // With nothing in the model, a picker opening on midnight under a `min` of 09:00 would
+        // open with its OK already disabled and nothing said about why. It opens on the bound
+        // instead, and the bound is inside the range, so confirming writes it.
+        val renderer = rendererFor(BOUNDED_TIME)
+        setContent { Surface(renderer) }
+        onNodeWithContentDescription("Opens").performClick()
+        onNodeWithText("OK").assertIsEnabled()
+        onNodeWithText("OK").performClick()
+        assertEquals(JsonPrimitive("09:00"), renderer.read("/opens"))
+    }
+
+    @Test
+    fun a_date_time_bound_holds_the_clock_on_the_day_it_names() = runComposeUiTest {
+        // The day the date picker hands over is what decides whether a `date-time` bound applies.
+        // Both fields open on a day already in the model and confirm it as it stands: `held` is
+        // on the bound's own day and its 08:00 is refused; `free` is the day after, with no time
+        // yet, and the clock opens on the picker's own midnight -- not on the bound -- and confirms.
+        val renderer = rendererFor(BOUNDED_DATE_TIME)
+        setContent { Surface(renderer) }
+        onNodeWithContentDescription("Held").performClick()
+        onNodeWithText("OK").performClick()
+        onNodeWithText("OK").assertIsNotEnabled()
+        onNodeWithText("Cancel").performClick()
+        onNodeWithContentDescription("Free").performClick()
+        onNodeWithText("OK").performClick()
+        onNodeWithText("OK").assertIsEnabled()
+        onNodeWithText("OK").performClick()
+        assertEquals(JsonPrimitive("2026-08-16T00:00"), renderer.read("/free"))
+    }
+
+    @Test
+    fun a_date_already_outside_the_bounds_cannot_be_confirmed_as_it_stands() = runComposeUiTest {
+        // Material greys out the days outside `min`/`max` but keeps one that arrived as the
+        // initial selection, so a value the agent wrote outside the range would confirm straight
+        // through -- and on to a time picker that, seeing a day the bound does not name, would
+        // hold nothing. The confirm asks the range too, and enables once a day inside it is picked.
+        setContent { Surface(rendererFor(BOUNDED_DATE_TIME)) }
+        onNodeWithContentDescription("Early").performClick()
+        onNodeWithText("OK").assertIsNotEnabled()
+        onAllNodes(isSelectable())[DAY_15].performClick()
+        onNodeWithText("OK").assertIsEnabled()
+    }
+
+    @Test
+    fun a_date_handed_over_with_no_time_opens_the_clock_on_the_lower_bound() = runComposeUiTest {
+        // The hand-off case of `a_time_field_with_no_value_opens_on_its_lower_bound`: the model
+        // holds a date on the bound's own day and no time, so the time picker opens on the bound
+        // rather than on a midnight it would refuse, and confirming writes the two halves joined.
+        val renderer = rendererFor(BOUNDED_DATE_TIME)
+        setContent { Surface(renderer) }
+        onNodeWithContentDescription("Handed").performClick()
+        onNodeWithText("OK").performClick()
+        onNodeWithText("OK").assertIsEnabled()
+        onNodeWithText("OK").performClick()
+        assertEquals(JsonPrimitive("2026-08-15T09:00"), renderer.read("/handed"))
+    }
+
+    @Test
     fun a_datetime_field_with_nowhere_to_write_is_disabled() = runComposeUiTest {
         setContent { Surface(rendererFor(DATE_TIME)) }
         onNodeWithText("Literal date").assertIsNotEnabled()
@@ -618,6 +689,11 @@ class InputComponentsTest {
               "numeric": [1],
               "volume": 20,
               "when": "2026-08-30",
+              "closes": "18:30",
+              "held": "2026-08-15T08:00",
+              "free": "2026-08-16",
+              "handed": "2026-08-15",
+              "early": "2026-08-14T10:00",
               "who": "Ada",
               "born": "1890-07-04",
               "picked": [],
@@ -775,6 +851,26 @@ class InputComponentsTest {
           {"id":"root","component":"Column","children":["appointment"]},
           {"id":"appointment","component":"DateTimeInput","label":"Appointment","enableDate":true,
            "enableTime":true,"value":{"path":"/appointment"}}
+        ]"""
+
+        val BOUNDED_TIME = """[
+          {"id":"root","component":"Column","children":["closes","opens"]},
+          {"id":"closes","component":"DateTimeInput","label":"Closes","enableTime":true,
+           "min":"09:00","max":"17:00","value":{"path":"/closes"}},
+          {"id":"opens","component":"DateTimeInput","label":"Opens","enableTime":true,
+           "min":"09:00","max":"17:00","value":{"path":"/opens"}}
+        ]"""
+
+        val BOUNDED_DATE_TIME = """[
+          {"id":"root","component":"Column","children":["held","free","handed","early"]},
+          {"id":"held","component":"DateTimeInput","label":"Held","enableDate":true,"enableTime":true,
+           "min":"2026-08-15T09:00","value":{"path":"/held"}},
+          {"id":"free","component":"DateTimeInput","label":"Free","enableDate":true,"enableTime":true,
+           "min":"2026-08-15T09:00","value":{"path":"/free"}},
+          {"id":"handed","component":"DateTimeInput","label":"Handed","enableDate":true,"enableTime":true,
+           "min":"2026-08-15T09:00","value":{"path":"/handed"}},
+          {"id":"early","component":"DateTimeInput","label":"Early","enableDate":true,"enableTime":true,
+           "min":"2026-08-15T09:00","value":{"path":"/early"}}
         ]"""
 
         val FAR_DATE = """[

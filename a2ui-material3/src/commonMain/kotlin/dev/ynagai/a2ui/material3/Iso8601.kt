@@ -45,6 +45,66 @@ internal object Iso8601 {
     fun time(hour: Int, minute: Int): String = "${pad(hour, 2)}:${pad(minute, 2)}"
 
     /**
+     * The time half of a `min` or `max`, and the day it applies on.
+     *
+     * The catalog types a bound as a `date`, a `time` or a `date-time`, and the date picker reads
+     * the day out of it ([epochDay]). This reads the other half: a bare `time` bounds the clock on
+     * every day ([TimeBound.day] is null), a `date-time` bounds it only on the day it names --
+     * on any other day the date picker's range is what applies -- and a bare `date` has no time
+     * half and bounds nothing here.
+     *
+     * A `date-time` whose date half will not parse is ignored whole, like any other bound that
+     * will not parse: reading its clock half as a bare `time` would turn one malformed day into a
+     * bound on every day, which is wider than anything the agent wrote.
+     */
+    fun timeBound(value: String): TimeBound? {
+        val (hour, minute) = hourMinute(value) ?: return null
+        val day = epochDay(value)
+        if ('T' in value && day == null) return null
+        return day to hour * 60 + minute
+    }
+
+    /**
+     * Whether a clock time falls inside [min] and [max] on [day] -- both inclusive, either optional.
+     *
+     * [day] is the day the time will be written against, or null for a time-only field. A bound
+     * that names a day applies on that day and on no other; one that names none applies on every
+     * day, and so does any bound when the field has no day to compare -- a `date-time` bound on
+     * a time-only field can only mean its clock half.
+     *
+     * Material's `TimePicker` has no selectable-range API, unlike the date picker, so this is
+     * asked at confirm time: a time outside the bounds cannot be confirmed, which is the same
+     * refusal the date picker makes by greying a day out.
+     */
+    fun timeWithin(day: Long?, hour: Int, minute: Int, min: TimeBound?, max: TimeBound?): Boolean {
+        val at = hour * 60 + minute
+        val belowMin = min != null && min.appliesOn(day) && at < min.minuteOfDay
+        val aboveMax = max != null && max.appliesOn(day) && at > max.minuteOfDay
+        return !belowMin && !aboveMax
+    }
+
+    /**
+     * The time a picker with nothing to show yet should open on: the lower bound when one applies
+     * on [day], as an hour/minute pair, or null for the picker's own default.
+     *
+     * Opening on midnight under a `min` of 09:00 would open the dialog with its confirm already
+     * disabled and nothing said about why; the bound is inside the range by definition, so it is
+     * the first time the user could confirm. The same day rule as [timeWithin], so the two cannot
+     * disagree about which bound the dialog is under.
+     */
+    fun openingTime(day: Long?, min: TimeBound?): Pair<Int, Int>? {
+        if (min == null || !min.appliesOn(day)) return null
+        return min.minuteOfDay / 60 to min.minuteOfDay % 60
+    }
+
+    private fun TimeBound.appliesOn(epochDay: Long?): Boolean =
+        day == null || epochDay == null || day == epochDay
+
+    private val TimeBound.day: Long? get() = first
+
+    private val TimeBound.minuteOfDay: Int get() = second
+
+    /**
      * What a `DateTimeInput` writes back, given whichever halves it collected.
      *
      * The three shapes the catalog's `value` is allowed to take, and the rule for choosing between
@@ -143,3 +203,13 @@ internal object Iso8601 {
         return era * 146_097 + dayOfEra - 719_468
     }
 }
+
+/**
+ * See [Iso8601.timeBound]: the day a bound applies on (null for every day) and its minute of the
+ * day, `hour * 60 + minute`, which is what makes two comparable.
+ *
+ * A `Pair` rather than a class: the Compose compiler emits a `$stableprop` for every non-private
+ * class in a module it compiles, and that symbol lands in the published klib ABI even for an
+ * `internal` class -- so a data class here would be a public API change for a private helper.
+ */
+internal typealias TimeBound = Pair<Long?, Int>

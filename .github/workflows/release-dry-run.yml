@@ -26,11 +26,12 @@ name: Release dry run
 #    shapes real `gpg` output takes are known to pass the patterns a release applies. The stored
 #    values themselves are still first read on a tag: a `GPG_KEY_ID` saved in the 16-hex long
 #    form is refused there, after a green run here.
-#  - That a *newly added* target publishes resolvably. The consumer step names its `compile*`
-#    tasks by hand, so adding a target to the three modules without adding it to
-#    `smoke-test/build.gradle.kts` and to both task lists leaves the new variant unresolved and
-#    the job green -- the asymmetry `smoke-test/README.md` records: removing a published target
-#    fails loudly, adding one is not covered until someone adds it there too.
+#  - That a *newly added* symbol is reachable. `checkPublishedSets` in the consumer step fails
+#    when the publish wrote a module or target `smoke-test/build.gradle.kts` does not name, so a
+#    fourth module or an eighth target no longer passes unnoticed; but `Smoke.kt` names one
+#    symbol per module by hand, and a new module's coordinate line with no symbol behind it
+#    proves resolution, not that the metadata leads to a class -- `smoke-test/README.md`
+#    records the remainder under "What it does not check".
 #
 # A green run here is "the build is ready to try", not "the release will succeed".
 #
@@ -208,15 +209,17 @@ jobs:
       # -bound to `dev.ynagai.a2ui`, so nothing else can answer for the group under test. Measured
       # on this tree: with the redirect, all eight compilations resolve; without it, the same
       # command fails with `Could not find dev.ynagai.a2ui:a2ui-core:<version>`.
+      #
+      # `compileAll` is the same aggregate `cd.yml` calls -- `checkPublishedSets` against the
+      # `.module` files under this directory, then a compile per declared target -- so the task
+      # list is not a second copy to keep in step. `checkPublishedSets` reads the same
+      # `-Dmaven.repo.local`.
       - name: Resolve it as a consumer would
         env:
           VERSION: ${{ steps.version.outputs.value }}
-        run: |
-          ./gradlew -p smoke-test \
-            compileCommonMainKotlinMetadata compileKotlinJvm compileKotlinJs compileKotlinWasmJs \
-            compileKotlinIosArm64 compileKotlinIosSimulatorArm64 compileKotlinMacosArm64 \
-            compileAndroidMain \
-            -Pa2uiVersion="$VERSION" -Dmaven.repo.local="${RUNNER_TEMP}/dry-run-m2" --stacktrace
+        run: >
+          ./gradlew -p smoke-test compileAll
+          -Pa2uiVersion="$VERSION" -Dmaven.repo.local="${RUNNER_TEMP}/dry-run-m2" --stacktrace
 
       # Central requires a detached signature for every deployed file, and a local repository takes
       # unsigned artifacts without complaint -- the script's own header says why a publish would

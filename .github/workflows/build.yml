@@ -225,9 +225,15 @@ jobs:
           ./gradlew publishToMavenLocal -PVERSION_NAME="$SMOKE_VERSION"
           -Dmaven.repo.local="${RUNNER_TEMP}/smoke-m2" --stacktrace
 
+      # `checkPublishedSets` as well: it reads the `.module` files the publish above wrote and
+      # fails if they name a module or target `smoke-test/build.gradle.kts` does not, so the
+      # addition direction of #53 is caught on the PR that adds the target rather than by a
+      # release run. Milliseconds, and macOS is the runner where the publish writes every
+      # variant. The two compiles stay named by hand: they are the deliberate subset, not a copy
+      # of the release list, which is `compileAll`'s to derive.
       - name: Resolve it as a consumer would
         run: >
-          ./gradlew -p smoke-test compileCommonMainKotlinMetadata compileKotlinJvm
+          ./gradlew -p smoke-test checkPublishedSets compileCommonMainKotlinMetadata compileKotlinJvm
           -Pa2uiVersion="$SMOKE_VERSION" -Dmaven.repo.local="${RUNNER_TEMP}/smoke-m2" --stacktrace
 
       - name: Upload reports

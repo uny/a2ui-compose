@@ -127,11 +127,6 @@ class SpecEmbeddingTest {
     /** Reverses [literal]: the chunk separators first, then the escapes in the opposite order. */
     private fun unescape(source: String): String {
         val joined = source.removePrefix("\"").removeSuffix("\"").split("\" +\n  \"").joinToString("")
-        // Decoding alone would read an unescaped `$`, quote, CR or LF as itself and pass; each of
-        // those raw in a Kotlin line string is a missing escape, so it fails here instead.
-        joined.forEachIndexed { i, c ->
-            assertTrue(c !in "\"\$\r\n" || (i > 0 && joined[i - 1] == '\\'), "unescaped `${c.code}` in $joined")
-        }
         val out = StringBuilder()
         var i = 0
         while (i < joined.length) {
@@ -144,6 +139,9 @@ class SpecEmbeddingTest {
                 }
                 i += 2
             } else {
+                // Decoding alone would read an unescaped `$`, quote, CR or LF as itself and pass;
+                // each of those raw in a Kotlin line string is a missing escape, so it fails here.
+                assertTrue(c !in "\"\$\r\n", "unescaped `${c.code}` at $i in $joined")
                 out.append(c)
                 i++
             }

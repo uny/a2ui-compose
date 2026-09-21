@@ -9,7 +9,7 @@ import dev.ynagai.a2ui.compose.rememberString
 /**
  * `Text` -- the component every example in the corpus uses.
  *
- * The text is drawn by [LocalA2uiMarkdown] -- by default the Markdown subset [markdownText]
+ * The text is drawn by [LocalA2uiMarkdownRenderer] -- by default the Markdown subset [markdownText]
  * covers, which is not optional polish: the specification's own simplest example is a single
  * `Text` whose entire content is `# Hello, Minimal Catalog!`, and a renderer without it draws that
  * hash. What this renderer keeps for itself is everything around the drawing: the variant's style
@@ -24,13 +24,13 @@ import dev.ynagai.a2ui.compose.rememberString
 public val TextRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
     val source = scope.rememberString("text")
     val caption = scope.rememberString("variant") == "caption"
-    LocalA2uiMarkdown.current.Markdown(
+    LocalA2uiMarkdownRenderer.current.Markdown(
         source = source.orEmpty(),
         modifier = modifier.leafMargin(),
         style = with(MaterialTheme.typography) { if (caption) bodySmall else bodyLarge },
-        // Unspecified is not "no colour": it tells `Text` to take the colour from the style, and
-        // from `LocalContentColor` through it. Naming one here would break the inheritance a
-        // `Button` relies on to colour its label.
+        // Unspecified is not "no colour": it tells the renderer -- the default's `Text` -- to take
+        // the colour from the style, and from `LocalContentColor` through it. Naming one here
+        // would break the inheritance a `Button` relies on to colour its label.
         color = if (caption) LocalContentColor.current.copy(alpha = CAPTION_ALPHA) else Color.Unspecified,
     )
 }

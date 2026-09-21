@@ -480,7 +480,7 @@ class Material3ComponentsTest {
         setContent {
             typography = MaterialTheme.typography
             CompositionLocalProvider(
-                LocalA2uiMarkdown provides A2uiMarkdownRenderer { source, style, color, modifier ->
+                LocalA2uiMarkdownRenderer provides A2uiMarkdownRenderer { source, style, color, modifier ->
                     drawn += Triple(source, style, color)
                     Text("host:$source", modifier)
                 },
@@ -488,16 +488,20 @@ class Material3ComponentsTest {
         }
         onNodeWithText("host:# Hello, Minimal Catalog!").assertIsDisplayed()
         onNodeWithText("host:a caption").assertIsDisplayed()
+        // Every draw of a source, not the first: a recomposition that handed the wrong style the
+        // second time would otherwise hide behind a correct first record.
         val theme = checkNotNull(typography)
-        val heading = drawn.first { it.first == "# Hello, Minimal Catalog!" }
-        val caption = drawn.first { it.first == "a caption" }
-        assertEquals(theme.bodyLarge, heading.second)
-        assertEquals(Color.Unspecified, heading.third, "body text inherits its colour")
-        assertEquals(theme.bodySmall, caption.second)
-        assertTrue(
-            caption.third.isSpecified && caption.third.alpha < 1f,
-            "a caption should be handed the dimmed colour: ${caption.third}",
-        )
+        val headings = drawn.filter { it.first == "# Hello, Minimal Catalog!" }
+        val captions = drawn.filter { it.first == "a caption" }
+        assertTrue(headings.isNotEmpty() && captions.isNotEmpty(), "both texts should have been drawn: $drawn")
+        for ((_, style, color) in headings) {
+            assertEquals(theme.bodyLarge, style)
+            assertEquals(Color.Unspecified, color, "body text inherits its colour")
+        }
+        for ((_, style, color) in captions) {
+            assertEquals(theme.bodySmall, style)
+            assertTrue(color.isSpecified && color.alpha < 1f, "a caption should be handed the dimmed colour: $color")
+        }
     }
 
     @Test
@@ -507,7 +511,7 @@ class Material3ComponentsTest {
         // is therefore spaced like every other leaf, without knowing the strategy exists.
         setContent {
             CompositionLocalProvider(
-                LocalA2uiMarkdown provides A2uiMarkdownRenderer { source, _, _, modifier ->
+                LocalA2uiMarkdownRenderer provides A2uiMarkdownRenderer { source, _, _, modifier ->
                     Text(source, modifier)
                 },
             ) { Surface(TEXTS) }

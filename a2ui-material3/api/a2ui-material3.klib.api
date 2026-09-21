@@ -10,6 +10,15 @@ abstract fun interface dev.ynagai.a2ui.material3/A2uiImageLoader { // dev.ynagai
     abstract fun Image(kotlin/String, kotlin/String?, androidx.compose.ui.layout/ContentScale, androidx.compose.ui/Modifier, androidx.compose.runtime/Composer?, kotlin/Int) // dev.ynagai.a2ui.material3/A2uiImageLoader.Image|Image(kotlin.String;kotlin.String?;androidx.compose.ui.layout.ContentScale;androidx.compose.ui.Modifier;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 }
 
+abstract fun interface dev.ynagai.a2ui.material3/A2uiMarkdownRenderer { // dev.ynagai.a2ui.material3/A2uiMarkdownRenderer|null[0]
+    abstract fun Markdown(kotlin/String, androidx.compose.ui.text/TextStyle, androidx.compose.ui.graphics/Color, androidx.compose.ui/Modifier, androidx.compose.runtime/Composer?, kotlin/Int) // dev.ynagai.a2ui.material3/A2uiMarkdownRenderer.Markdown|Markdown(kotlin.String;androidx.compose.ui.text.TextStyle;androidx.compose.ui.graphics.Color;androidx.compose.ui.Modifier;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+
+    final object Companion { // dev.ynagai.a2ui.material3/A2uiMarkdownRenderer.Companion|null[0]
+        final val Inline // dev.ynagai.a2ui.material3/A2uiMarkdownRenderer.Companion.Inline|{}Inline[0]
+            final fun <get-Inline>(): dev.ynagai.a2ui.material3/A2uiMarkdownRenderer // dev.ynagai.a2ui.material3/A2uiMarkdownRenderer.Companion.Inline.<get-Inline>|<get-Inline>(){}[0]
+    }
+}
+
 final class dev.ynagai.a2ui.material3/A2uiStrings { // dev.ynagai.a2ui.material3/A2uiStrings|null[0]
     constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...) // dev.ynagai.a2ui.material3/A2uiStrings.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
 
@@ -64,6 +73,8 @@ final val dev.ynagai.a2ui.material3/ListRenderer // dev.ynagai.a2ui.material3/Li
     final fun <get-ListRenderer>(): dev.ynagai.a2ui.compose/ComponentRenderer // dev.ynagai.a2ui.material3/ListRenderer.<get-ListRenderer>|<get-ListRenderer>(){}[0]
 final val dev.ynagai.a2ui.material3/LocalA2uiImageLoader // dev.ynagai.a2ui.material3/LocalA2uiImageLoader|{}LocalA2uiImageLoader[0]
     final fun <get-LocalA2uiImageLoader>(): androidx.compose.runtime/ProvidableCompositionLocal<dev.ynagai.a2ui.material3/A2uiImageLoader?> // dev.ynagai.a2ui.material3/LocalA2uiImageLoader.<get-LocalA2uiImageLoader>|<get-LocalA2uiImageLoader>(){}[0]
+final val dev.ynagai.a2ui.material3/LocalA2uiMarkdown // dev.ynagai.a2ui.material3/LocalA2uiMarkdown|{}LocalA2uiMarkdown[0]
+    final fun <get-LocalA2uiMarkdown>(): androidx.compose.runtime/ProvidableCompositionLocal<dev.ynagai.a2ui.material3/A2uiMarkdownRenderer> // dev.ynagai.a2ui.material3/LocalA2uiMarkdown.<get-LocalA2uiMarkdown>|<get-LocalA2uiMarkdown>(){}[0]
 final val dev.ynagai.a2ui.material3/LocalA2uiStrings // dev.ynagai.a2ui.material3/LocalA2uiStrings|{}LocalA2uiStrings[0]
     final fun <get-LocalA2uiStrings>(): androidx.compose.runtime/ProvidableCompositionLocal<dev.ynagai.a2ui.material3/A2uiStrings> // dev.ynagai.a2ui.material3/LocalA2uiStrings.<get-LocalA2uiStrings>|<get-LocalA2uiStrings>(){}[0]
 final val dev.ynagai.a2ui.material3/ModalRenderer // dev.ynagai.a2ui.material3/ModalRenderer|{}ModalRenderer[0]

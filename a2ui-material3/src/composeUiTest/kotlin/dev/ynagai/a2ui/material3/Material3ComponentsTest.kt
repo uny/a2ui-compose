@@ -8,9 +8,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -462,6 +466,56 @@ class Material3ComponentsTest {
         }
         onNodeWithContentDescription("a private file").assertIsDisplayed()
         assertEquals(emptyList(), urls, "a file:// URL should never have reached the loader")
+    }
+
+    @Test
+    fun a_text_is_drawn_by_the_markdown_renderer_the_host_provided() = runComposeUiTest {
+        // The other extension point. The host's renderer is handed the source as the agent wrote
+        // it -- marker and all -- because parsing is the whole of what it is there to replace; and
+        // it is handed the style and colour `Text` resolved for the variant, because those are
+        // what it is there to keep. Both halves are asserted, since a seam that dropped the
+        // caption's style would draw every caption the size of body text.
+        val drawn = mutableListOf<Triple<String, TextStyle, Color>>()
+        var typography: Typography? = null
+        setContent {
+            typography = MaterialTheme.typography
+            CompositionLocalProvider(
+                LocalA2uiMarkdown provides A2uiMarkdownRenderer { source, style, color, modifier ->
+                    drawn += Triple(source, style, color)
+                    Text("host:$source", modifier)
+                },
+            ) { Surface(TEXTS) }
+        }
+        onNodeWithText("host:# Hello, Minimal Catalog!").assertIsDisplayed()
+        onNodeWithText("host:a caption").assertIsDisplayed()
+        val theme = checkNotNull(typography)
+        val heading = drawn.first { it.first == "# Hello, Minimal Catalog!" }
+        val caption = drawn.first { it.first == "a caption" }
+        assertEquals(theme.bodyLarge, heading.second)
+        assertEquals(Color.Unspecified, heading.third, "body text inherits its colour")
+        assertEquals(theme.bodySmall, caption.second)
+        assertTrue(
+            caption.third.isSpecified && caption.third.alpha < 1f,
+            "a caption should be handed the dimmed colour: ${caption.third}",
+        )
+    }
+
+    @Test
+    fun a_host_markdown_renderer_still_gets_the_leaf_margin() = runComposeUiTest {
+        // The margin is `Text`'s, not the renderer's -- the modifier handed over already carries
+        // it, as `A2uiImageLoader`'s does. A host renderer that puts the modifier on what it draws
+        // is therefore spaced like every other leaf, without knowing the strategy exists.
+        setContent {
+            CompositionLocalProvider(
+                LocalA2uiMarkdown provides A2uiMarkdownRenderer { source, _, _, modifier ->
+                    Text(source, modifier)
+                },
+            ) { Surface(TEXTS) }
+        }
+        val heading = onNodeWithText("# Hello, Minimal Catalog!").fetchSemanticsNode().boundsInRoot
+        val caption = onNodeWithText("a caption").fetchSemanticsNode().boundsInRoot
+        assertTrue(heading.top > 0f && heading.left > 0f, "the leaf should be inset: $heading")
+        assertTrue(caption.top > heading.bottom, "the margins should separate them: $heading then $caption")
     }
 
     @Test

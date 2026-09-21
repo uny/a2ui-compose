@@ -260,7 +260,7 @@ class FunctionEvaluatorTest {
         // `CallArguments.list` has three paths. From the wire an array literal is a list of
         // `Dynamic*` arguments, each evaluated on demand; a bound array is values. From a
         // `formatString` template the parser has evaluated everything already, so the items are
-        // values too -- the one path the suite never reached.
+        // values too -- the path this test pins.
         val template = """{"call":"formatString","args":{"value":"${'$'}{and(values:/flags)}"}}"""
         assertEquals(JsonPrimitive("false"), context("""{"flags":[true,false]}""").evaluate(call(template)))
         assertEquals(JsonPrimitive("true"), context("""{"flags":[true,true]}""").evaluate(call(template)))
@@ -288,6 +288,7 @@ class FunctionEvaluatorTest {
         val template = """{"call":"formatString","args":{"value":"${'$'}{and(values:/flag)}"}}"""
         val evaluated = assertFailsWith<A2uiFunctionException> { evaluator.evaluate(call(template)) }
         assertTrue(evaluated.message!!.contains("must be an array"), evaluated.message!!)
+        assertEquals("and", evaluated.call)
     }
 
     @Test

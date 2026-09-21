@@ -29,7 +29,8 @@ import androidx.compose.ui.unit.em
  * Not covered, and passed through as the literal characters: lists, block quotes, tables, images,
  * fenced code blocks, and reference links. That is a real gap rather than a rounding error --
  * `- List item` renders with its dash. It is the guide's own fallback, and it is legible, which is
- * what the guide asks the fallback to be.
+ * what the guide asks the fallback to be. A host that needs the rest provides a renderer through
+ * [LocalA2uiMarkdownRenderer], which is where the parser this file declines to choose can go.
  *
  * Links reduce to their label rather than becoming clickable because the specification says the
  * Markdown it supports is "without HTML, images, or links". A renderer that made them live would

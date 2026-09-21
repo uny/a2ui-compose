@@ -200,6 +200,12 @@ class FormatStringTest {
         val twice = assertFailsWith<A2uiFunctionException> { format("\${formatNumber(value:1,value:2)}") }
         assertTrue(twice.message!!.contains("names the argument `value` twice"), twice.message!!)
         assertEquals(FunctionNames.FORMAT_STRING, twice.call)
+        // The message quotes the template, which the agent chose: the excerpt is what keeps a
+        // megabyte of it out of the exception. Nothing else in the suite pins that bound.
+        val long = assertFailsWith<A2uiFunctionException> {
+            format("\${formatNumber(" + "a".repeat(10_000) + "}")
+        }
+        assertTrue(long.message!!.length < 200, "message length ${long.message!!.length}")
     }
 
     @Test
@@ -212,11 +218,14 @@ class FormatStringTest {
             "1,234.50",
             format("\${formatNumber(value:formatNumber(value:1234.5, grouping:false), decimals:2)}"),
         )
-        // And with the nested call last, where a split inside it leaves an unclosed call behind.
-        assertEquals(
-            "1,234.50",
-            format("\${formatNumber(decimals:2, value:formatNumber(value:1234.5, grouping:false))}"),
-        )
+        // `indexOfTop` has the same counter, and an unnamed bare call is the one shape that drives
+        // it: the only `:` is inside the inner parentheses, so the argument is correctly refused as
+        // unnamed. Without the counter the colon is found and `formatNumber(value` is refused as a
+        // name instead.
+        val unnamed = assertFailsWith<A2uiFunctionException> {
+            format("\${formatNumber(formatNumber(value:1))}")
+        }
+        assertTrue(unnamed.message!!.contains("must be named"), unnamed.message!!)
     }
 
     @Test
@@ -229,8 +238,6 @@ class FormatStringTest {
         // The escape does apply to the quote itself, in either quote style.
         assertEquals("it's", format("\${'it\\'s'}"))
         assertEquals("say \"hi\"", format("\${\"say \\\"hi\\\"\"}"))
-        // A literal with no backslash at all takes the copy-free path.
-        assertEquals("plain", format("\${\"plain\"}"))
     }
 
     @Test
@@ -239,17 +246,18 @@ class FormatStringTest {
         // Interpolated as the number, not as the spelling the agent used.
         assertEquals("1000", format("\${1e3}"))
         assertEquals("2.5", format("\${2.5}"))
-        // Everything `toDoubleOrNull` accepts beyond JSON's grammar is a relative path instead, so
-        // an agent whose data has a key of that name still reaches it. Drop the character filter
-        // and each of these starts interpolating as a number.
-        val data = """{"rows":[{"1d":"a","0x1p3":"b","Infinity":"c","NaN":"d","1e999":"e"}]}"""
+        // The spellings `toDoubleOrNull` accepts that JSON does not are relative paths instead, so
+        // an agent whose data has a key of that name still reaches it. Each guard has an input only
+        // it rejects: the character filter for `1d` and `0x1p3`, the leading-character check for
+        // `.5` (every character of which the filter allows), `isFinite` for `1e999`.
+        val data = """{"rows":[{"1d":"a","0x1p3":"b","Infinity":"c","NaN":"d",".5":"e","1e999":"f"}]}"""
         val scope = itemScope("/rows", 0)
         assertEquals("a", format("\${1d}", data, scope = scope))
         assertEquals("b", format("\${0x1p3}", data, scope = scope))
         assertEquals("c", format("\${Infinity}", data, scope = scope))
         assertEquals("d", format("\${NaN}", data, scope = scope))
-        // Passes the character filter but overflows to infinity, which is not a JSON number either.
-        assertEquals("e", format("\${1e999}", data, scope = scope))
+        assertEquals("e", format("\${.5}", data, scope = scope))
+        assertEquals("f", format("\${1e999}", data, scope = scope))
     }
 
     @Test

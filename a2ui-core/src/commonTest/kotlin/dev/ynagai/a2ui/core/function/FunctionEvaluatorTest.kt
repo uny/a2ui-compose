@@ -245,8 +245,9 @@ class FunctionEvaluatorTest {
     @Test
     fun logicOverAnEmptyArrayIsTheFoldsIdentity() {
         // #4: `and` over nothing is true and `or` over nothing is false, which is what a fold
-        // gives and nothing pinned. A check written as `and(values:/errors)` therefore validates
-        // when the list is empty -- the agent has to mean that, so the answer must not drift.
+        // gives and nothing pinned. The catalog schema says `minItems: 2`, so a literal `[]` is
+        // refused before it gets here, but a bound list has no such bound: `and(values:/errors)`
+        // is satisfied when the list is empty, so the answer must not drift.
         val evaluator = context("""{"none":[]}""")
         assertEquals(JsonPrimitive(true), evaluator.evaluate(call("""{"call":"and","args":{"values":[]}}""")))
         assertEquals(JsonPrimitive(false), evaluator.evaluate(call("""{"call":"or","args":{"values":[]}}""")))
@@ -504,10 +505,10 @@ class FunctionEvaluatorTest {
     @Test
     fun aConditionThatIsAnObjectButNotAValidationResultIsAFormatError() {
         // #4: the third outcome. An object reaches the `ValidationResult` serializer, so a
-        // malformed one raises the format exception rather than the function one -- a fourth
-        // type on this path, which a renderer's catch has to include. Pinned so that it cannot
-        // silently become a failed check, or an `IllegalArgumentException` from a stricter
-        // decoder, without anyone noticing.
+        // malformed one raises the format exception rather than the function one -- the one
+        // type of the three a renderer catches that nothing else on this path raises. Pinned so
+        // that it cannot silently become a failed check, or an `IllegalArgumentException` from a
+        // stricter decoder, without anyone noticing.
         val data = """{"checks":{"vague":{"valid":"yes"},"loud":{"valid":true,"severity":"loud"}}}"""
         val evaluator = context(data)
         val vague = assertFailsWith<A2uiFormatException> { evaluator.evaluateCheck(DataBinding("/checks/vague")) }

@@ -13,8 +13,10 @@ plugins {
 kotlin {
     explicitApi()
 
+    // The block form, with `enabled` set: the no-argument `abiValidation()` overload is Kotlin 2.4
+    // only, and on 2.3 the bare `abiValidation {}` leaves `checkLegacyAbi` SKIPPED (#64).
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
-    abiValidation()
+    abiValidation { enabled.set(true) }
 
     android {
         namespace = "dev.ynagai.a2ui.material3"

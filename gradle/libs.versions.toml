@@ -1,5 +1,9 @@
 [versions]
-kotlin = "2.4.20"
+# The Kotlin floor is the line the current stable Compose Multiplatform is built on, read from its
+# klib manifests (`compiler_version = 2.3.20` for 1.12.0): lower buys no consumer, higher locks out
+# ones Compose itself admits. It moves to 2.4 with the first Compose Multiplatform stable built on
+# Kotlin 2.4, and not with a Dependabot bump -- decline those until then. See #64 and the README.
+kotlin = "2.3.21"
 agp = "9.4.1"
 composeMultiplatform = "1.12.0"
 # material3 ships on its own version line, independent of the Compose Multiplatform release.

@@ -114,6 +114,8 @@ public abstract interface class dev/ynagai/a2ui/core/function/LocaleFormatter {
 }
 
 public final class dev/ynagai/a2ui/core/function/LocaleSymbols {
+	public static final field DAYS_IN_WEEK I
+	public static final field MONTHS_IN_YEAR I
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ldev/ynagai/a2ui/core/function/DateNames;Ldev/ynagai/a2ui/core/function/DateNames;Ljava/util/List;)V
 	public final fun getAmPm ()Ljava/util/List;
 	public final fun getDecimalSeparator ()Ljava/lang/String;
@@ -1449,6 +1451,7 @@ public final class dev/ynagai/a2ui/core/surface/JsonPointer {
 	public static final field APPEND Ljava/lang/String;
 	public static final field Companion Ldev/ynagai/a2ui/core/surface/JsonPointer$Companion;
 	public static final field MAX_TOKENS I
+	public synthetic fun <init> (Ljava/util/List;ZLkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun child (Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/JsonPointer;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getTokens ()Ljava/util/List;
@@ -1679,6 +1682,7 @@ public final class dev/ynagai/a2ui/core/surface/TraversalKt {
 public final class dev/ynagai/a2ui/core/validation/CatalogChildResolver : dev/ynagai/a2ui/core/surface/ChildResolver {
 	public static final field Companion Ldev/ynagai/a2ui/core/validation/CatalogChildResolver$Companion;
 	public static final field MAX_REFERENCES I
+	public synthetic fun <init> (Ljava/util/Map;Ljava/lang/String;Ldev/ynagai/a2ui/core/validation/ValidationLimits;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun childrenOf (Ldev/ynagai/a2ui/core/protocol/Component;)Ljava/util/List;
 }
 
@@ -1723,6 +1727,7 @@ public final class dev/ynagai/a2ui/core/validation/CatalogResolution$Unspecified
 
 public final class dev/ynagai/a2ui/core/validation/CatalogValidator {
 	public static final field Companion Ldev/ynagai/a2ui/core/validation/CatalogValidator$Companion;
+	public synthetic fun <init> (Ljava/util/Map;Ljava/util/Map;Ldev/ynagai/a2ui/core/validation/ValidationLimits;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getCatalogIds ()Ljava/util/Set;
 	public final fun resolve (Ljava/lang/String;Ljava/lang/String;)Ldev/ynagai/a2ui/core/validation/CatalogResolution;
 	public final fun validate (Ldev/ynagai/a2ui/core/protocol/Component;Ljava/lang/String;)Ldev/ynagai/a2ui/core/validation/SchemaValidation;
@@ -1797,6 +1802,7 @@ public final class dev/ynagai/a2ui/core/validation/ProtocolSchemas {
 }
 
 public final class dev/ynagai/a2ui/core/validation/SchemaEvaluator {
+	public static final field EXPLAIN_SHARE I
 	public fun <init> (Ldev/ynagai/a2ui/core/validation/SchemaRegistry;Ldev/ynagai/a2ui/core/validation/ValidationLimits;)V
 	public synthetic fun <init> (Ldev/ynagai/a2ui/core/validation/SchemaRegistry;Ldev/ynagai/a2ui/core/validation/ValidationLimits;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun validate (Lkotlinx/serialization/json/JsonElement;Ldev/ynagai/a2ui/core/validation/SchemaLocation;Lkotlinx/serialization/json/JsonElement;)Ldev/ynagai/a2ui/core/validation/SchemaValidation;
@@ -1817,6 +1823,7 @@ public final class dev/ynagai/a2ui/core/validation/SchemaLocation {
 
 public final class dev/ynagai/a2ui/core/validation/SchemaRegistry {
 	public static final field Companion Ldev/ynagai/a2ui/core/validation/SchemaRegistry$Companion;
+	public synthetic fun <init> (Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Lkotlinx/serialization/json/JsonObject;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun document (Ljava/lang/String;)Lkotlinx/serialization/json/JsonObject;
 	public final fun resolve (Ljava/lang/String;Ldev/ynagai/a2ui/core/validation/SchemaLocation;)Ldev/ynagai/a2ui/core/validation/SchemaRegistry$Resolved;
 }

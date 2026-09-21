@@ -1,5 +1,6 @@
 package dev.ynagai.a2ui.core.function
 
+import dev.ynagai.a2ui.core.protocol.A2uiFormatException
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.DataBinding
 import dev.ynagai.a2ui.core.protocol.FunctionCall
@@ -242,6 +243,53 @@ class FunctionEvaluatorTest {
     }
 
     @Test
+    fun logicOverAnEmptyArrayIsTheFoldsIdentity() {
+        // #4: `and` over nothing is true and `or` over nothing is false, which is what a fold
+        // gives and nothing pinned. A check written as `and(values:/errors)` therefore validates
+        // when the list is empty -- the agent has to mean that, so the answer must not drift.
+        val evaluator = context("""{"none":[]}""")
+        assertEquals(JsonPrimitive(true), evaluator.evaluate(call("""{"call":"and","args":{"values":[]}}""")))
+        assertEquals(JsonPrimitive(false), evaluator.evaluate(call("""{"call":"or","args":{"values":[]}}""")))
+        val bound = """{"call":"and","args":{"values":{"path":"/none"}}}"""
+        assertEquals(JsonPrimitive(true), evaluator.evaluate(call(bound)))
+    }
+
+    @Test
+    fun aValuesArrayFromATemplateIsReadAsValuesRatherThanAsArguments() {
+        // `CallArguments.list` has three paths. From the wire an array literal is a list of
+        // `Dynamic*` arguments, each evaluated on demand; a bound array is values. From a
+        // `formatString` template the parser has evaluated everything already, so the items are
+        // values too -- the one path the suite never reached.
+        val template = """{"call":"formatString","args":{"value":"${'$'}{and(values:/flags)}"}}"""
+        assertEquals(JsonPrimitive("false"), context("""{"flags":[true,false]}""").evaluate(call(template)))
+        assertEquals(JsonPrimitive("true"), context("""{"flags":[true,true]}""").evaluate(call(template)))
+        // An item shaped like a binding is a value here, not a binding to follow: read as an
+        // argument it would resolve `/decoy` and the check would pass.
+        val decoy = context("""{"flags":[{"path":"/decoy"}],"decoy":true}""")
+        val failure = assertFailsWith<A2uiFunctionException> { decoy.evaluate(call(template)) }
+        assertTrue(failure.message!!.contains("must be a boolean"), failure.message!!)
+    }
+
+    @Test
+    fun aValuesArgumentThatIsNotAnArrayIsACallFailure() {
+        val evaluator = context("""{"flag":true}""")
+        val literal = assertFailsWith<A2uiFunctionException> {
+            evaluator.evaluate(call("""{"call":"and","args":{"values":true}}"""))
+        }
+        assertTrue(literal.message!!.contains("must be an array"), literal.message!!)
+        assertEquals("and", literal.call)
+        val bound = assertFailsWith<A2uiFunctionException> {
+            evaluator.evaluate(call("""{"call":"or","args":{"values":{"path":"/flag"}}}"""))
+        }
+        assertTrue(bound.message!!.contains("must be an array"), bound.message!!)
+        assertEquals("or", bound.call)
+        // And the pre-evaluated path, where the value arrives already resolved.
+        val template = """{"call":"formatString","args":{"value":"${'$'}{and(values:/flag)}"}}"""
+        val evaluated = assertFailsWith<A2uiFunctionException> { evaluator.evaluate(call(template)) }
+        assertTrue(evaluated.message!!.contains("must be an array"), evaluated.message!!)
+    }
+
+    @Test
     fun notNegates() {
         assertEquals(
             JsonPrimitive(false),
@@ -447,9 +495,25 @@ class FunctionEvaluatorTest {
 
     @Test
     fun aConditionThatIsNotAnObjectIsAMalformedCheckRatherThanAFailedOne() {
-        assertFailsWith<A2uiFunctionException> {
+        val failure = assertFailsWith<A2uiFunctionException> {
             context().evaluateCheck(call("""{"call":"and","args":{"values":[true,true]}}"""))
         }
+        assertTrue(failure.message!!.contains("must evaluate to a ValidationResult"), failure.message!!)
+    }
+
+    @Test
+    fun aConditionThatIsAnObjectButNotAValidationResultIsAFormatError() {
+        // #4: the third outcome. An object reaches the `ValidationResult` serializer, so a
+        // malformed one raises the format exception rather than the function one -- a fourth
+        // type on this path, which a renderer's catch has to include. Pinned so that it cannot
+        // silently become a failed check, or an `IllegalArgumentException` from a stricter
+        // decoder, without anyone noticing.
+        val data = """{"checks":{"vague":{"valid":"yes"},"loud":{"valid":true,"severity":"loud"}}}"""
+        val evaluator = context(data)
+        val vague = assertFailsWith<A2uiFormatException> { evaluator.evaluateCheck(DataBinding("/checks/vague")) }
+        assertTrue(vague.message!!.contains("`valid`"), vague.message!!)
+        val loud = assertFailsWith<A2uiFormatException> { evaluator.evaluateCheck(DataBinding("/checks/loud")) }
+        assertTrue(loud.message!!.contains("severity"), loud.message!!)
     }
 
     // ---- bounds -----------------------------------------------------------------------

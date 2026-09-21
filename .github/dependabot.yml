@@ -66,5 +66,12 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # The Kotlin floor follows the line Compose Multiplatform is built on (#64, and the comment
+      # on `kotlin` in `gradle/libs.versions.toml`), so a Kotlin *minor* is a decision too: it
+      # moves with the first Compose Multiplatform stable built on the next line, in one PR that
+      # also drops this entry. Patches within the line still arrive. Same caveat as above: a
+      # security fix that only ships in the next minor arrives as an alert, not a PR.
+      - dependency-name: "org.jetbrains.kotlin.*"
+        update-types: ["version-update:semver-minor"]
     commit-message:
       prefix: build

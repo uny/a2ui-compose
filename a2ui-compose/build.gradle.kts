@@ -27,8 +27,11 @@ val generateBasicCatalog = embedSpecDocuments(
 kotlin {
     explicitApi()
 
+    // The block form, with `enabled` set: the no-argument `abiValidation()` overload is Kotlin 2.4
+    // only, and on 2.3 the bare `abiValidation {}` leaves `checkKotlinAbi` SKIPPED -- while
+    // `checkLegacyAbi`, the task CI runs, still reports success, so the build stays green (#64).
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
-    abiValidation()
+    abiValidation { enabled.set(true) }
 
     android {
         namespace = "dev.ynagai.a2ui.compose"

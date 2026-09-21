@@ -82,7 +82,7 @@ private fun blocksOf(node: ASTNode, source: String, depth: Int): List<MarkdownBl
     // Composites only: the tokens between blocks at this depth are still bookkeeping, and a
     // quote marker emitted as a paragraph would put a `>` on screen beside the text it degraded to.
     if (depth > MAX_BLOCK_DEPTH && node.children.isNotEmpty()) {
-        return listOf(MarkdownBlock.Paragraph(AnnotatedString(node.text(source).trim())))
+        return listOf(MarkdownBlock.Paragraph(AnnotatedString(flatText(node, source).trim())))
     }
     return when (node.type) {
         MarkdownElementTypes.PARAGRAPH -> listOf(MarkdownBlock.Paragraph(inline(node.children, source)))
@@ -285,7 +285,7 @@ private fun AnnotatedString.Builder.appendInlineNode(node: ASTNode, source: Stri
         return
     }
     if (depth > MAX_INLINE_DEPTH) {
-        append(node.text(source))
+        append(flatText(node, source))
         return
     }
     val children = node.children
@@ -366,10 +366,11 @@ private fun unescape(text: String): String {
             hex.isNotEmpty() -> hex.toIntOrNull(16)
             else -> null
         }
-        // `&#0;` and anything past the code point range are U+FFFD in CommonMark; the rest as-is.
+        // `&#0;`, a lone surrogate and anything past the code point range are U+FFFD, which is
+        // CommonMark's rule for an invalid code point; the rest as-is.
         when {
             code == null -> match.value
-            code == 0 || code > MAX_CODE_POINT -> "\uFFFD"
+            code == 0 || code > MAX_CODE_POINT || code in HIGH_SURROGATE_START..LOW_SURROGATE_END -> "\uFFFD"
             else -> buildString { appendCodePoint(code) }
         }
     }
@@ -383,6 +384,35 @@ private fun StringBuilder.appendCodePoint(code: Int) {
         append(((offset shr 10) + HIGH_SURROGATE_START).toChar())
         append(((offset and 0x3FF) + LOW_SURROGATE_START).toChar())
     }
+}
+
+/**
+ * A subtree past the nesting bound, as characters -- with the exclusions still kept.
+ *
+ * Not `node.text(source)`: the raw slice would put a `<b>` tag and a link's destination on screen,
+ * and "raw HTML is not drawn" is a promise this file makes without a depth carve-out. So the
+ * leaves are walked instead, dropping the tags and the destinations and keeping the rest as the
+ * agent wrote it. Iteratively, since this is the path taken precisely when recursion has been
+ * refused.
+ */
+private fun flatText(node: ASTNode, source: String): String {
+    val out = StringBuilder()
+    val stack = ArrayDeque<ASTNode>()
+    stack.addLast(node)
+    while (stack.isNotEmpty()) {
+        val current = stack.removeLast()
+        when (current.type) {
+            MarkdownTokenTypes.HTML_TAG, MarkdownElementTypes.HTML_BLOCK,
+            MarkdownElementTypes.LINK_DESTINATION, MarkdownElementTypes.LINK_TITLE,
+            -> continue
+        }
+        if (current.children.isEmpty()) {
+            out.append(current.text(source))
+        } else {
+            for (index in current.children.indices.reversed()) stack.addLast(current.children[index])
+        }
+    }
+    return out.toString()
 }
 
 private fun ASTNode.text(source: String): String = getTextInNode(source).toString()
@@ -425,6 +455,7 @@ private const val MAX_CODE_POINT = 0x10FFFF
 private const val SURROGATE_BASE = 0x10000
 private const val HIGH_SURROGATE_START = 0xD800
 private const val LOW_SURROGATE_START = 0xDC00
+private const val LOW_SURROGATE_END = 0xDFFF
 
 /**
  * How deep a container may nest before its content is emitted as the text it was written as.

@@ -50,6 +50,18 @@ class MarkdownBlocksTest {
     @Test
     fun escapes_and_entities_resolve_and_unknown_ones_stay() {
         assertEquals("*c* & é \uD83D\uDE00 \\q &nosuch; �", paragraph("\\*c\\* &amp; &eacute; &#x1F600; \\q &nosuch; &#0;").text)
+        // Decimal, and the three invalid shapes CommonMark replaces: zero, out of range, and a
+        // lone surrogate, which would otherwise be half a character in the string.
+        assertEquals("A \uFFFD \uFFFD \uFFFD", paragraph("&#65; &#0; &#1114112; &#xD800;").text)
+    }
+
+    @Test
+    fun a_code_span_strips_one_space_from_each_end_and_only_then() {
+        assertEquals("a", paragraph("` a `").text)
+        assertEquals("  ", paragraph("`  `").text)
+        assertEquals(" a", paragraph("` a`").text)
+        // A line ending inside a span is a space.
+        assertEquals("a b", paragraph("`a\nb`").text)
     }
 
     @Test
@@ -178,7 +190,24 @@ class MarkdownBlocksTest {
         val close = " b*".repeat(MAX_INLINE_DEPTH + 4)
         val text = paragraph(open + "c" + close)
         assertTrue('*' in text.text, "the innermost delimiters should have been emitted as text: ${text.text}")
-        assertTrue(text.spanStyles.isNotEmpty(), "the outer levels should still be emphasised")
+        // One italic span per level up to the bound, and none past it: the count is what
+        // distinguishes the walk's bound from the parser having stopped nesting on its own.
+        assertEquals(MAX_INLINE_DEPTH + 1, text.spanStyles.count { it.item.fontStyle == FontStyle.Italic })
+    }
+
+    @Test
+    fun past_the_bound_the_exclusions_still_hold() {
+        // The degraded text is the agent's characters, but not all of them: a tag and a link's
+        // destination are dropped there too, or "raw HTML is not drawn" would have a depth
+        // carve-out that nine `>` characters could reach.
+        val deep = parseMarkdownBlocks("> ".repeat(MAX_BLOCK_DEPTH + 2) + "<b>x</b> [l](https://e.com) ![a](u)")
+        var block: MarkdownBlock = deep.single()
+        while (block is MarkdownBlock.Quote) block = block.blocks.single()
+        val leaf = assertIs<MarkdownBlock.Paragraph>(block).text.text
+        assertTrue("<b>" !in leaf && "e.com" !in leaf, "the tag and the destination should be gone: $leaf")
+        assertTrue("x" in leaf && "[l]" in leaf && "[a]" in leaf, "the text and the labels should remain: $leaf")
+        val inline = paragraph("*a ".repeat(MAX_INLINE_DEPTH + 2) + "<b>x</b> [l](https://e.com)" + " b*".repeat(MAX_INLINE_DEPTH + 2)).text
+        assertTrue("<b>" !in inline && "e.com" !in inline, "inline too: $inline")
     }
 
     private fun paragraph(source: String): AnnotatedString =

@@ -132,7 +132,7 @@ private fun blocksOf(node: ASTNode, source: String, depth: Int): List<MarkdownBl
         MarkdownElementTypes.CODE_FENCE -> listOf(MarkdownBlock.Code(fenceText(node, source)))
 
         // Lines from the separators, not the `CODE_LINE` tokens alone: a blank line inside the
-        // block is an `EOL` with no `CODE_LINE` beside it, and it is the agent's.
+        // block is an `EOL` with no `CODE_LINE` beside it, and the agent wrote that line too.
         MarkdownElementTypes.CODE_BLOCK -> listOf(
             MarkdownBlock.Code(codeLines(node, source, MarkdownTokenTypes.CODE_LINE) { it.removeIndent() }.joinToString("\n")),
         )

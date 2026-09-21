@@ -47,6 +47,37 @@ class Material3MarkdownRendererTest {
     }
 
     @Test
+    fun an_ordered_list_counts_from_where_the_agent_started() = runComposeUiTest {
+        // The number drawn is the block's `start` plus the index, and only the composition adds
+        // them: a marker that ignored `start` would pass every conversion test.
+        setContent { Surface(ORDERED) }
+        onNodeWithText("3.").assertIsDisplayed()
+        onNodeWithText("4.").assertIsDisplayed()
+        onAllNodesWithText("1.").assertCountEquals(0)
+    }
+
+    @Test
+    fun past_the_length_cap_the_text_is_drawn_verbatim() = runComposeUiTest {
+        // One character over the bound and the source goes to the default renderer, which draws
+        // it as it is: the list marker stays a dash and no bullet is drawn. The property the KDoc
+        // claims -- that the point where parsing stops is the same for both renderers -- is only
+        // as true as this comparison.
+        val filler = "x".repeat(MAX_MARKDOWN_INPUT - "- item\n".length + 1)
+        setContent { Surface(text("- item\n" + filler)) }
+        onNodeWithText("- item", substring = true).assertIsDisplayed()
+        onAllNodesWithText("\u2022").assertCountEquals(0)
+    }
+
+    @Test
+    fun at_the_length_cap_the_text_is_still_parsed() = runComposeUiTest {
+        val filler = "x".repeat(MAX_MARKDOWN_INPUT - "- item\n".length)
+        setContent { Surface(text("- item\n" + filler)) }
+        // The filler line is the item's lazy continuation, so it is one paragraph: `item x…`.
+        onNodeWithText("item x", substring = true).assertIsDisplayed()
+        onAllNodesWithText("\u2022").assertCountEquals(1)
+    }
+
+    @Test
     fun the_leaf_margin_reaches_the_outermost_block() = runComposeUiTest {
         // `Text` hands over a modifier that already carries the margin; putting it on the column
         // rather than on a block inside it is what keeps a list spaced like every other leaf.
@@ -105,6 +136,17 @@ class Material3MarkdownRendererTest {
 
     private companion object {
         const val SURFACE = "s"
+
+        /** A surface holding one `Text` whose source is [markdown], JSON-escaped. */
+        fun text(markdown: String): String {
+            val escaped = markdown.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
+            return """[
+                {"id":"root","component":"Column","children":["md"]},
+                {"id":"md","component":"Text","text":"$escaped"}
+            ]"""
+        }
+
+        val ORDERED = text("3) three\n4) four")
 
         val BLOCKS = """[
             {"id":"root","component":"Column","children":["md"]},

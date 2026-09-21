@@ -1,0 +1,29 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, macosArm64, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.ynagai.a2ui:a2ui-material3-markdown>
+final object dev.ynagai.a2ui.material3.markdown/Material3MarkdownRenderer : dev.ynagai.a2ui.material3/A2uiMarkdownRenderer { // dev.ynagai.a2ui.material3.markdown/Material3MarkdownRenderer|null[0]
+    final fun Markdown(kotlin/String, androidx.compose.ui.text/TextStyle, androidx.compose.ui.graphics/Color, androidx.compose.ui/Modifier, androidx.compose.runtime/Composer?, kotlin/Int) // dev.ynagai.a2ui.material3.markdown/Material3MarkdownRenderer.Markdown|Markdown(kotlin.String;androidx.compose.ui.text.TextStyle;androidx.compose.ui.graphics.Color;androidx.compose.ui.Modifier;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+}
+
+final val dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Code$stableprop // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Code$stableprop|#static{}dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Code$stableprop[0]
+final val dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Heading$stableprop // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Heading$stableprop|#static{}dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Heading$stableprop[0]
+final val dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_ListBlock$stableprop // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_ListBlock$stableprop|#static{}dev_ynagai_a2ui_material3_markdown_MarkdownBlock_ListBlock$stableprop[0]
+final val dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Paragraph$stableprop // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Paragraph$stableprop|#static{}dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Paragraph$stableprop[0]
+final val dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Quote$stableprop // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Quote$stableprop|#static{}dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Quote$stableprop[0]
+final val dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Rule$stableprop // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Rule$stableprop|#static{}dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Rule$stableprop[0]
+final val dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Table$stableprop // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Table$stableprop|#static{}dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Table$stableprop[0]
+final val dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_Material3MarkdownRenderer$stableprop // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_Material3MarkdownRenderer$stableprop|#static{}dev_ynagai_a2ui_material3_markdown_Material3MarkdownRenderer$stableprop[0]
+
+final fun dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Code$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Code$stableprop_getter|dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Code$stableprop_getter(){}[0]
+final fun dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Heading$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Heading$stableprop_getter|dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Heading$stableprop_getter(){}[0]
+final fun dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_ListBlock$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_ListBlock$stableprop_getter|dev_ynagai_a2ui_material3_markdown_MarkdownBlock_ListBlock$stableprop_getter(){}[0]
+final fun dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Paragraph$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Paragraph$stableprop_getter|dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Paragraph$stableprop_getter(){}[0]
+final fun dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Quote$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Quote$stableprop_getter|dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Quote$stableprop_getter(){}[0]
+final fun dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Rule$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Rule$stableprop_getter|dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Rule$stableprop_getter(){}[0]
+final fun dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Table$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Table$stableprop_getter|dev_ynagai_a2ui_material3_markdown_MarkdownBlock_Table$stableprop_getter(){}[0]
+final fun dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_Material3MarkdownRenderer$stableprop_getter(): kotlin/Int // dev.ynagai.a2ui.material3.markdown/dev_ynagai_a2ui_material3_markdown_Material3MarkdownRenderer$stableprop_getter|dev_ynagai_a2ui_material3_markdown_Material3MarkdownRenderer$stableprop_getter(){}[0]

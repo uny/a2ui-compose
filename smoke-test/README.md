@@ -15,7 +15,7 @@ Maven Central makes that expensive. A version is never re-uploaded and never del
 publication is not fixed — it is abandoned, and the number is burnt.
 
 So this build resolves the artifacts from a repository and compiles against a symbol from each of
-the three, on every target the library publishes. Resolution alone would not be enough: an artifact
+the four, on every target the library publishes. Resolution alone would not be enough: an artifact
 can resolve and still be missing the class, because a `.module` file can point a variant at a jar
 that does not carry it.
 
@@ -73,7 +73,7 @@ passes this gate on JVM and Android and fails first in a consumer's `NoClassDefF
 does it run AGP's `checkAarMetadata`, so a `minCompileSdk` raised past a consumer's `compileSdk`
 is not caught here either.
 
-It also does not pin each module's `api` scopes individually. It depends on all three, so a type
+It also does not pin each module's `api` scopes individually. It depends on all four, so a type
 reachable through more than one of them stays reachable when one downgrades it -- measured:
 moving `a2ui-compose`'s `api(compose.runtime)` / `api(compose.ui)` to `implementation` leaves the
 gate green, because `a2ui-material3`'s `api(compose.material3)` supplies both transitively.
@@ -99,7 +99,7 @@ re-uploads nor deletes, so the first release is a poor place for a step's first 
 `build.yml` runs a reduced pair on every PR, in its `smoke` job: a `-SNAPSHOT` publish, so no
 signing key is needed, then `checkPublishedSets` and two of the eight compiles --
 `compileCommonMainKotlinMetadata` and `compileKotlinJvm`, one for each half the controls below
-name. What a PR checks is that the publish wrote nothing this build does not name, that the three
+name. What a PR checks is that the publish wrote nothing this build does not name, that the four
 coordinates resolve, that their metadata jars carry what `Smoke.kt` names, and that one platform
 variant leads to real classes -- the rot a tag would otherwise be the first to find. The other
 six platform variants are left to the two release workflows, which run `compileAll`.

@@ -18,7 +18,8 @@ import androidx.compose.ui.text.TextStyle
  * characters they are. That gap is a real one, and this seam is how a host closes it without
  * giving up the rest of `Text`: a host that already ships a Markdown renderer hands it in here and
  * keeps the style resolution, the caption variant and the leaf margin that `Text` would otherwise
- * make it reimplement.
+ * make it reimplement. `a2ui-material3-markdown` ships one, `Material3MarkdownRenderer`, for a
+ * host that has none and does not mind the parser it brings.
  *
  * ```kotlin
  * CompositionLocalProvider(

@@ -74,6 +74,7 @@ kotlin {
             implementation("$a2uiGroup:a2ui-core:$a2uiVersion")
             implementation("$a2uiGroup:a2ui-compose:$a2uiVersion")
             implementation("$a2uiGroup:a2ui-material3:$a2uiVersion")
+            implementation("$a2uiGroup:a2ui-material3-markdown:$a2uiVersion")
         }
     }
 }

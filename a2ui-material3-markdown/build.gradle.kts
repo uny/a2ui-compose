@@ -111,9 +111,8 @@ kotlin {
  * well, which is also what makes the fail-early property above true rather than aspirational.
  *
  * The javadoc jar is a real one. Central requires the artifact either way, and the KDoc in this
- * library carries the reasoning behind its own rules -- why the catalog walk descends where it
- * does, why a reference is restricted -- which is the part a consumer cannot re-derive from the
- * signatures.
+ * module carries the reasoning behind its own rules -- why a link is its label, where the depth
+ * bound sits and why -- which is the part a consumer cannot re-derive from the signatures.
  *
  * The sources jar is registered here rather than by `withSourcesJar(publish = true)` in the
  * `kotlin` block. Both were tried: the KMP helper registers one empty jar per target, each writing

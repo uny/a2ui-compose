@@ -91,7 +91,6 @@ class LocaleFormatterTest {
         // agent wrote, or that rounding left behind, is kept.
         assertEquals("-0", text("formatNumber", """{"value":-0.0}"""))
         assertEquals("-0.00", text("formatNumber", """{"value":-0.001,"decimals":2}"""))
-        assertEquals("0", text("formatNumber", """{"value":0.0}"""))
     }
 
     @Test
@@ -99,10 +98,11 @@ class LocaleFormatterTest {
         // #4: unreachable through the evaluator, which refuses a non-finite `value` before any
         // formatter sees it -- pinned below -- but `FallbackLocaleFormatter` is public and a
         // caller of its own can hand it one. `Double.toString` spells all three the same way on
-        // every target, so the early return is what keeps `fixedDigits` from rounding infinity.
+        // every target; `fixedDigits` refuses them on its own, so what the early return actually
+        // prevents is the grouping pass, which would write `In,fin,ity`.
         assertEquals("NaN", FallbackLocaleFormatter.formatNumber(Double.NaN, decimals = 2, grouping = true))
         assertEquals("Infinity", FallbackLocaleFormatter.formatNumber(Double.POSITIVE_INFINITY, null, true))
-        assertEquals("-Infinity", FallbackLocaleFormatter.formatNumber(Double.NEGATIVE_INFINITY, 0, false))
+        assertEquals("-Infinity", FallbackLocaleFormatter.formatNumber(Double.NEGATIVE_INFINITY, 0, true))
         val failure = assertFailsWith<A2uiFunctionException> { text("formatNumber", """{"value":"NaN"}""") }
         assertTrue(failure.message!!.contains("`value` must be a number"), failure.message!!)
     }

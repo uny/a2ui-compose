@@ -39,9 +39,10 @@ concurrency:
 # splitting JS from wasmJs is what makes the difference: they are 60% of the build between them, so
 # a two-job "Apple / everything else" split would have left one job holding 21 of the 35 minutes.
 #
-# The union of the three jobs' task graphs is exactly the task graph of the single
-# `build checkLegacyAbi` this replaces -- 858 tasks, verified with `--dry-run` and a set difference.
-# Nothing stopped being verified. Re-run that check when changing any of the command lines below:
+# The union of the three jobs' task graphs is the task graph of the single `build checkLegacyAbi`
+# this replaces -- 858 tasks, verified with `--dry-run` and a set difference -- plus `:buildSrc:test`,
+# which `build` does not reach (see the Apple job). Nothing stopped being verified. Re-run that
+# check when changing any of the command lines below:
 #
 #   ./gradlew <job's arguments> --dry-run | grep -oE '^:[a-zA-Z0-9:_-]+' | sort -u
 #
@@ -77,9 +78,13 @@ jobs:
       # `build` minus the two web backends' test executables and production bundles, which the
       # other two jobs own. The web *libraries* are still compiled here, because `assemble` builds
       # them and they are cheap -- it is the executables that cost.
+      #
+      # `:buildSrc:test` by name: since Gradle 8 the root build assembles `buildSrc` with `jar`, so
+      # its tests neither run nor compile unless asked for. Without this line the embedder's tests
+      # would be green on every PR by never executing.
       - name: Build
         run: >
-          ./gradlew build checkLegacyAbi
+          ./gradlew build checkLegacyAbi :buildSrc:test
           -x jsTest -x jsBrowserTest -x wasmJsTest -x wasmJsBrowserTest
           -x jsBrowserDistribution -x wasmJsBrowserDistribution
           -x compileProductionExecutableKotlinJs

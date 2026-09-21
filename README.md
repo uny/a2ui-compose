@@ -44,7 +44,7 @@ CompositionLocalProvider(LocalA2uiMarkdownRenderer provides Material3MarkdownRen
 }
 ```
 
-### What this library requires of your build
+### What `0.2.0` requires of your build
 
 Three floors and one version line, and the one with the clearest error message is the least
 binding of them. All come from what the artifacts were built with, not from anything the library

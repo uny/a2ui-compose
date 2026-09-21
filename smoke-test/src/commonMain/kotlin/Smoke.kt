@@ -7,7 +7,9 @@ import dev.ynagai.a2ui.compose.ComponentRegistry
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.core.protocol.CatalogDefinition
 import dev.ynagai.a2ui.core.protocol.ComponentDefinition
+import dev.ynagai.a2ui.material3.A2uiMarkdownRenderer
 import dev.ynagai.a2ui.material3.Material3Components
+import dev.ynagai.a2ui.material3.markdown.Material3MarkdownRenderer
 import kotlinx.serialization.json.buildJsonObject
 
 /**
@@ -16,7 +18,7 @@ import kotlinx.serialization.json.buildJsonObject
  * Resolution alone is not the whole property. An artifact can resolve and still be missing the
  * class -- a `.module` file can point a variant at a jar that does not carry it, and the metadata
  * module can resolve while a platform one does not. Compiling against a symbol from each of the
- * three, on every target, is what proves the published metadata leads somewhere real.
+ * four, on every target, is what proves the published metadata leads somewhere real.
  */
 @Suppress("unused")
 internal fun catalog(): CatalogDefinition = CatalogDefinition(
@@ -26,6 +28,13 @@ internal fun catalog(): CatalogDefinition = CatalogDefinition(
 
 @Suppress("unused")
 internal fun registry(): ComponentRegistry = Material3Components.Basic
+
+/**
+ * Typed as the seam rather than as the object, so this also compiles the claim that the
+ * renderer *is* an `A2uiMarkdownRenderer` -- which is the one line a host writes to install it.
+ */
+@Suppress("unused")
+internal fun markdown(): A2uiMarkdownRenderer = Material3MarkdownRenderer
 
 /**
  * Writes a renderer, which is the thing a host actually does with this library.

@@ -131,12 +131,11 @@ private fun blocksOf(node: ASTNode, source: String, depth: Int): List<MarkdownBl
 
         MarkdownElementTypes.CODE_FENCE -> listOf(MarkdownBlock.Code(fenceText(node, source)))
 
-        MarkdownElementTypes.CODE_BLOCK -> {
-            val lines = node.children
-                .filter { it.type == MarkdownTokenTypes.CODE_LINE }
-                .map { it.text(source).removeIndent() }
-            listOf(MarkdownBlock.Code(lines.joinToString("\n")))
-        }
+        // Lines from the separators, not the `CODE_LINE` tokens alone: a blank line inside the
+        // block is an `EOL` with no `CODE_LINE` beside it, and it is the agent's.
+        MarkdownElementTypes.CODE_BLOCK -> listOf(
+            MarkdownBlock.Code(codeLines(node, source, MarkdownTokenTypes.CODE_LINE) { it.removeIndent() }.joinToString("\n")),
+        )
 
         MarkdownTokenTypes.HORIZONTAL_RULE -> listOf(MarkdownBlock.Rule)
 
@@ -193,12 +192,21 @@ private fun listItem(item: ASTNode, source: String, depth: Int): List<MarkdownBl
  * first one and always empty, so it is dropped; a fence the agent never closed ends with the
  * last line it wrote.
  */
-private fun fenceText(node: ASTNode, source: String): String {
+private fun fenceText(node: ASTNode, source: String): String =
+    codeLines(node, source, MarkdownTokenTypes.CODE_FENCE_CONTENT) { it }.drop(1).joinToString("\n")
+
+/**
+ * [node]'s lines, split on its `EOL` tokens: the [content] tokens between two of them are one
+ * line, passed through [line], and a pair with nothing between them is a blank one. What follows
+ * the last `EOL` is a line only if something was written there, so a closing fence's own line
+ * does not become an empty last one.
+ */
+private inline fun codeLines(node: ASTNode, source: String, content: IElementType, line: (String) -> String): List<String> {
     val lines = mutableListOf<String>()
     val current = StringBuilder()
     for (child in node.children) {
         when (child.type) {
-            MarkdownTokenTypes.CODE_FENCE_CONTENT -> current.append(child.text(source))
+            content -> current.append(line(child.text(source)))
             MarkdownTokenTypes.EOL -> {
                 lines += current.toString()
                 current.setLength(0)
@@ -206,7 +214,7 @@ private fun fenceText(node: ASTNode, source: String): String {
         }
     }
     if (current.isNotEmpty()) lines += current.toString()
-    return lines.drop(1).joinToString("\n")
+    return lines
 }
 
 private fun table(node: ASTNode, source: String): MarkdownBlock.Table {

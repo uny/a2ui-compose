@@ -138,6 +138,10 @@ class MarkdownBlocksTest {
     fun code_keeps_its_lines_and_loses_the_fence_the_language_and_the_indent() {
         assertEquals(MarkdownBlock.Code("val x\n\n  y"), parseMarkdownBlocks("```kt\nval x\n\n  y\n```").single())
         assertEquals(MarkdownBlock.Code("indented\ncode"), parseMarkdownBlocks("    indented\n    code").single())
+        // A blank line inside an indented block is the agent's, whether it was written empty or as
+        // the indent alone; a tab is the indent too.
+        assertEquals(MarkdownBlock.Code("a\n\nb\n\nc"), parseMarkdownBlocks("    a\n\n    b\n    \n    c").single())
+        assertEquals(MarkdownBlock.Code("tab"), parseMarkdownBlocks("\ttab").single())
         // Unclosed: what the agent wrote so far, which is what a streaming agent's fence is
         // until its closing line arrives.
         assertEquals(MarkdownBlock.Code("\n  lead"), parseMarkdownBlocks("```\n\n  lead\n").single())

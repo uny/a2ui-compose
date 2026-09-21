@@ -84,6 +84,29 @@ class LocaleFormatterTest {
         assertTrue(failure.message!!.contains("`decimals` must not be negative"), failure.message!!)
     }
 
+    @Test
+    fun formatNumberKeepsTheSignOfNegativeZero() {
+        // #4: `-0.0 == 0.0`, so the sign has to be read off the reciprocal, and nothing said
+        // which way the fallback went. It goes the way `SymbolLocaleFormatter` does: a sign the
+        // agent wrote, or that rounding left behind, is kept.
+        assertEquals("-0", text("formatNumber", """{"value":-0.0}"""))
+        assertEquals("-0.00", text("formatNumber", """{"value":-0.001,"decimals":2}"""))
+        assertEquals("0", text("formatNumber", """{"value":0.0}"""))
+    }
+
+    @Test
+    fun theFallbackWritesANonFiniteValueAsItsName() {
+        // #4: unreachable through the evaluator, which refuses a non-finite `value` before any
+        // formatter sees it -- pinned below -- but `FallbackLocaleFormatter` is public and a
+        // caller of its own can hand it one. `Double.toString` spells all three the same way on
+        // every target, so the early return is what keeps `fixedDigits` from rounding infinity.
+        assertEquals("NaN", FallbackLocaleFormatter.formatNumber(Double.NaN, decimals = 2, grouping = true))
+        assertEquals("Infinity", FallbackLocaleFormatter.formatNumber(Double.POSITIVE_INFINITY, null, true))
+        assertEquals("-Infinity", FallbackLocaleFormatter.formatNumber(Double.NEGATIVE_INFINITY, 0, false))
+        val failure = assertFailsWith<A2uiFunctionException> { text("formatNumber", """{"value":"NaN"}""") }
+        assertTrue(failure.message!!.contains("`value` must be a number"), failure.message!!)
+    }
+
     // ---- formatCurrency ---------------------------------------------------------------
 
     @Test
@@ -97,7 +120,8 @@ class LocaleFormatterTest {
 
     @Test
     fun formatCurrencyRequiresItsCode() {
-        assertFailsWith<A2uiFunctionException> { text("formatCurrency", """{"value":1}""") }
+        val failure = assertFailsWith<A2uiFunctionException> { text("formatCurrency", """{"value":1}""") }
+        assertTrue(failure.message!!.contains("requires an argument `currency`"), failure.message!!)
     }
 
     // ---- pluralize --------------------------------------------------------------------
@@ -115,7 +139,8 @@ class LocaleFormatterTest {
     fun pluralizeFailsWhenNeitherTheCategoryNorTheFallbackIsSupplied() {
         // The schema makes `other` required; the evaluator only has to notice when the value it
         // needs is missing, which for a count of 5 is `other` itself.
-        assertFailsWith<A2uiFunctionException> { text("pluralize", """{"value":5,"one":"x"}""") }
+        val failure = assertFailsWith<A2uiFunctionException> { text("pluralize", """{"value":5,"one":"x"}""") }
+        assertTrue(failure.message!!.contains("requires an argument `other`"), failure.message!!)
         // With a count of 1 the same call resolves, because `one` is the category that applies.
         assertEquals("x", text("pluralize", """{"value":1,"one":"x"}"""))
     }
@@ -205,9 +230,10 @@ class LocaleFormatterTest {
 
     @Test
     fun formatDateRefusesAValueThatIsNeitherFormat() {
-        assertFailsWith<A2uiFunctionException> {
+        val failure = assertFailsWith<A2uiFunctionException> {
             text("formatDate", """{"value":"last Tuesday","format":"yyyy"}""")
         }
+        assertTrue(failure.message!!.contains("ISO 8601"), failure.message!!)
     }
 
     @Test
@@ -226,6 +252,28 @@ class LocaleFormatterTest {
             "Thursday 29 February 2024",
             text("formatDate", """{"value":1709164800000,"format":"EEEE d MMMM yyyy"}"""),
         )
+    }
+
+    @Test
+    fun formatDateRendersTheNarrowNames() {
+        // #4: five letters is TR35's narrow form, which the fallback takes as the first letter
+        // of the English name. `SymbolLocaleFormatterTest` pins the width from data; this pins
+        // the fallback's own spelling, since nothing else reaches `name` with a count above four.
+        assertEquals("A", text("formatDate", """{"value":$REFERENCE,"format":"MMMMM"}"""))
+        assertEquals("T", text("formatDate", """{"value":$REFERENCE,"format":"EEEEE"}"""))
+    }
+
+    @Test
+    fun formatDateWritesAYearBeforeTheCommonEraWithItsSign() {
+        // #4: `pad` has a branch for a negative value, reached only by `y`. -0001-01-01T00:00Z is
+        // 719,893 days before the epoch: 719,528 to 0000-01-01 (proleptic Gregorian) and the 365
+        // of year -1, which is not a leap year. `yy` is the low two digits, so the sign is lost
+        // there by design, as it is for any other year.
+        assertEquals(
+            "-0001-01-01",
+            text("formatDate", """{"value":-62198755200000,"format":"yyyy-MM-dd"}"""),
+        )
+        assertEquals("99", text("formatDate", """{"value":-62198755200000,"format":"yy"}"""))
     }
 }
 
@@ -260,6 +308,19 @@ class Iso8601Test {
         // in place, so a guard that checked only the separator would read past the end.
         assertNull(parseIso8601("2025-08-26T09:30:"))
         assertNull(parseIso8601("2025-08-26T09:30:0"))
+    }
+
+    @Test
+    fun aDateBeforeTheEpochIsItsOwnNegativeConstant() {
+        // #4: the round trip below cannot see an error both directions share -- change
+        // `DAYS_FROM_ERA_TO_EPOCH` and it still closes. These are the constants themselves.
+        assertEquals(-86_400_000L, parseIso8601("1969-12-31"))
+        assertEquals(-62_167_219_200_000L, parseIso8601("0000-01-01"))
+        assertEquals(-86_400_000L, CivilDateTime.toEpochMillis(1969, 12, 31, 0, 0, 0, 0))
+        val at = CivilDateTime.ofEpochMillis(-86_400_000L)
+        assertEquals(listOf(1969, 12, 31), listOf(at.year, at.month, at.day))
+        // 1969-12-31 was a Wednesday, index 3 counting from Sunday.
+        assertEquals(3, at.dayOfWeek)
     }
 
     @Test

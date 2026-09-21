@@ -123,8 +123,9 @@ jobs:
 
       # The full suite before anything leaves the machine. A release is the one build where
       # "the tests passed on the PR" is not enough: the tag may point at a merge the PR never had.
+      # `:buildSrc:test` by name, as in `build.yml`: `build` does not reach it.
       - name: Verify
-        run: ./gradlew build checkLegacyAbi --stacktrace
+        run: ./gradlew build checkLegacyAbi :buildSrc:test --stacktrace
 
       # Publish locally first, and consume it. This is the gate -- see `smoke-test/README.md`.
       # Publishing to Maven Central is irreversible: a version is never re-uploaded and never

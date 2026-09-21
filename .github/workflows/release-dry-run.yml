@@ -119,7 +119,7 @@ jobs:
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
       - name: Verify
-        run: ./gradlew build checkLegacyAbi --stacktrace
+        run: ./gradlew build checkLegacyAbi :buildSrc:test --stacktrace
 
       # `cd.yml`'s "Publish to the local repository" step, aimed at a directory the later steps can
       # inspect and nothing else can have written to. `~/.m2` would work on a fresh runner and hide

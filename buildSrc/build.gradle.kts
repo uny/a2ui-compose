@@ -9,7 +9,8 @@ dependencies {
 }
 
 // Not run by the root build. Since Gradle 8, `buildSrc` is assembled with `jar`, not `build`, so
-// its tests neither run nor compile unless `:buildSrc:test` is named -- which `build.yml` does.
+// its tests neither run nor compile unless `:buildSrc:test` is named -- which every workflow that
+// runs `build` does (`build.yml`, `cd.yml`, `release-dry-run.yml`).
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }

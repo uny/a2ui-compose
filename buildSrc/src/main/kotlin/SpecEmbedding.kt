@@ -7,8 +7,11 @@ import java.io.File
 /** The name the generated index takes, and therefore the one no document may take. */
 private const val INDEX_NAME = "ALL"
 
-/** What a `const val` may be called: the constant-name subset of a Kotlin identifier. */
-private val CONSTANT_IDENTIFIER = Regex("[A-Z_][A-Z0-9_]*")
+/**
+ * What a `const val` may be called: the constant-name subset of a Kotlin identifier. Names made of
+ * underscores alone are reserved by the language, so a bare `_` is refused here too.
+ */
+private val CONSTANT_IDENTIFIER = Regex("_*[A-Z][A-Z0-9_]*|_+[0-9][A-Z0-9_]*")
 
 /**
  * A constant name for the file at [path], derived so that adding a file to a scanned directory
@@ -100,10 +103,10 @@ internal fun resolveDocuments(
     namedConstants: Boolean,
 ): Map<String, String> {
     val found = scanned?.let { (relative, location, files) ->
-        // A directory that is missing, renamed, or empty yields `null` or an empty array, and this
-        // task would then succeed with an empty `ALL` -- the same silent shortfall the collision
-        // check below refuses, arrived at from the other side. The corpus's own count assertion
-        // would catch it eventually, in a test, far from the path that was actually wrong.
+        // A directory that is missing, renamed, or empty lists nothing, and this task would then
+        // succeed with an empty `ALL` -- the same silent shortfall the collision check below
+        // refuses, arrived at from the other side. The corpus's own count assertion would catch it
+        // eventually, in a test, far from the path that was actually wrong.
         require(files.isNotEmpty()) {
             "`$relative` holds no `.json` files (looked in `$location`). Check the path."
         }

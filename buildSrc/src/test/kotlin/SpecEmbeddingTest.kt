@@ -19,6 +19,7 @@ class SpecEmbeddingTest {
     fun `constantName upper-cases the stem and drops the directory and extension`() {
         assertEquals("INITIAL_STATE_VALIDATION", constantName("a/b/initial_state_validation.json"))
         assertEquals("_LEADING", constantName("_leading.json"))
+        assertEquals("__1", constantName("__1.json"))
         assertEquals("V2", constantName("v2.json"))
         // Only `.json` is stripped; anything else is part of the stem and judged as such.
         assertEquals("SCHEMA", constantName("schema"))
@@ -26,7 +27,8 @@ class SpecEmbeddingTest {
 
     @Test
     fun `constantName refuses a stem that is not an identifier, naming the file`() {
-        for (file in listOf("dynamic-values.json", "00_simple-text.json", "1st.json", "a.b.json", "with space.json", ".json")) {
+        // `_` and `__` match the identifier grammar but are reserved by the language.
+        for (file in listOf("dynamic-values.json", "00_simple-text.json", "1st.json", "a.b.json", "with space.json", ".json", "_.json", "__.json")) {
             val error = assertFailsWith<IllegalArgumentException>(file) { constantName("dir/$file") }
             assertContains(error.message.orEmpty(), "`$file`")
         }
@@ -232,6 +234,7 @@ class SpecEmbeddingTest {
         val message = failing { resolve(documents = mapOf("basic-catalog" to "basic_catalog.json")) }
         assertContains(message, "`basic-catalog`")
         assertContains(message, "`basic_catalog.json`")
+        assertContains(failing { resolve(documents = mapOf("_" to "underscore.json")) }, "`_`")
         // Keys are not checked when no constants are emitted from them.
         assertEquals(
             mapOf("basic-catalog" to "basic_catalog.json"),

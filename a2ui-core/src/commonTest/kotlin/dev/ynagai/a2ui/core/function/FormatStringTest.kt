@@ -186,6 +186,81 @@ class FormatStringTest {
     }
 
     @Test
+    fun aParserErrorIsAFunctionExceptionNamingFormatString() {
+        // #4: each of these branches sits next to unguarded substring arithmetic. A regression that
+        // turned one into an `IndexOutOfBoundsException` would escape as a type the evaluator's
+        // KDoc tells renderers they need not catch, so the type is the assertion, not just the
+        // message.
+        val unclosed = assertFailsWith<A2uiFunctionException> { format("\${formatNumber(value:1}") }
+        assertTrue(unclosed.message!!.contains("opens a call it does not close"), unclosed.message!!)
+        assertEquals(FunctionNames.FORMAT_STRING, unclosed.call)
+        val empty = assertFailsWith<A2uiFunctionException> { format("\${formatNumber(value:1,,decimals:2)}") }
+        assertTrue(empty.message!!.contains("has an empty argument"), empty.message!!)
+        assertEquals(FunctionNames.FORMAT_STRING, empty.call)
+        val twice = assertFailsWith<A2uiFunctionException> { format("\${formatNumber(value:1,value:2)}") }
+        assertTrue(twice.message!!.contains("names the argument `value` twice"), twice.message!!)
+        assertEquals(FunctionNames.FORMAT_STRING, twice.call)
+        // The message quotes the template, which the agent chose: the excerpt is what keeps a
+        // megabyte of it out of the exception. Nothing else in the suite pins that bound.
+        val long = assertFailsWith<A2uiFunctionException> {
+            format("\${formatNumber(" + "a".repeat(10_000) + "}")
+        }
+        assertTrue(long.message!!.length < 200, "message length ${long.message!!.length}")
+    }
+
+    @Test
+    fun aBareNestedCallDoesNotSplitTheArgumentList() {
+        // `callsNestInsideOneAnother` nests through a quoted string, which `splitTop` skips as a
+        // whole and never counts a parenthesis for. This is the other shape: the inner call's
+        // comma and colon are inside its own parentheses, and only the counter keeps the outer
+        // list from splitting there. Break it and `grouping:false), decimals:2` is argument two.
+        assertEquals(
+            "1,234.50",
+            format("\${formatNumber(value:formatNumber(value:1234.5, grouping:false), decimals:2)}"),
+        )
+        // `indexOfTop` has the same counter, and an unnamed bare call is the one shape that drives
+        // it: the only `:` is inside the inner parentheses, so the argument is correctly refused as
+        // unnamed. Without the counter the colon is found and `formatNumber(value` is refused as a
+        // name instead.
+        val unnamed = assertFailsWith<A2uiFunctionException> {
+            format("\${formatNumber(formatNumber(value:1))}")
+        }
+        assertTrue(unnamed.message!!.contains("must be named"), unnamed.message!!)
+    }
+
+    @Test
+    fun aQuotedLiteralHasNoEscapeTable() {
+        // The specification defines quoting but no escape sequences, so `\n` is the letter n. An
+        // escape table added here would pass every other test while making the same template mean
+        // different things on different renderers.
+        assertEquals("anb", format("\${'a\\nb'}"))
+        assertEquals("a\\b", format("\${'a\\\\b'}"))
+        // The escape does apply to the quote itself, in either quote style.
+        assertEquals("it's", format("\${'it\\'s'}"))
+        assertEquals("say \"hi\"", format("\${\"say \\\"hi\\\"\"}"))
+    }
+
+    @Test
+    fun aNumberLiteralIsOnlyWhatJsonCallsANumber() {
+        assertEquals("-3", format("\${-3}"))
+        // Interpolated as the number, not as the spelling the agent used.
+        assertEquals("1000", format("\${1e3}"))
+        assertEquals("2.5", format("\${2.5}"))
+        // The spellings `toDoubleOrNull` accepts that JSON does not are relative paths instead, so
+        // an agent whose data has a key of that name still reaches it. Each guard has an input only
+        // it rejects: the character filter for `1d` and `0x1p3`, the leading-character check for
+        // `.5` (every character of which the filter allows), `isFinite` for `1e999`.
+        val data = """{"rows":[{"1d":"a","0x1p3":"b","Infinity":"c","NaN":"d",".5":"e","1e999":"f"}]}"""
+        val scope = itemScope("/rows", 0)
+        assertEquals("a", format("\${1d}", data, scope = scope))
+        assertEquals("b", format("\${0x1p3}", data, scope = scope))
+        assertEquals("c", format("\${Infinity}", data, scope = scope))
+        assertEquals("d", format("\${NaN}", data, scope = scope))
+        assertEquals("e", format("\${.5}", data, scope = scope))
+        assertEquals("f", format("\${1e999}", data, scope = scope))
+    }
+
+    @Test
     fun indexIsAvailableInsideATemplateItem() {
         assertEquals(
             "3. Ada",

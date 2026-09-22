@@ -257,6 +257,20 @@ class Material3ComponentsTest {
     }
 
     @Test
+    fun a_weighted_child_is_held_to_its_share_below_its_own_minimum() = runComposeUiTest {
+        // The one place the layout is not flexbox, on purpose. A web renderer would hold the
+        // weighted text with the unbreakable word at its min-content and push its sibling off the
+        // row; here both keep the half the agent asked for, and the long word is cut instead.
+        setContent { Surface(WEIGHTED_TEXTS_ONE_UNBREAKABLE, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val short = onNodeWithText("short").fetchSemanticsNode().boundsInRoot
+        val long = onNodeWithText(UNBREAKABLE_WORD).fetchSemanticsNode().boundsInRoot
+        assertTrue(long.width <= root.width * 0.55f, "the long word is held to its share: $long in $root")
+        assertTrue(short.width >= root.width * 0.45f, "its sibling keeps its share: $short in $root")
+        assertTrue(short.right <= root.right + 1f, "and stays on the row: $short in $root")
+    }
+
+    @Test
     fun a_field_in_a_wide_row_keeps_its_natural_width() = runComposeUiTest {
         // The other half of a field filling a row: on a screen with room, it takes Material's
         // 280dp and not the whole row, which is what the web renderers draw for a weightless
@@ -1255,6 +1269,15 @@ class Material3ComponentsTest {
             {"id":"root","component":"Row","children":["empty","w"]},
             {"id":"empty","component":"Row","children":[]},
             {"id":"w","component":"Text","text":"takes the rest","weight":1}
+        ]"""
+
+        /** A word far wider than half a phone, with nowhere to break it. */
+        const val UNBREAKABLE_WORD = "Pneumonoultramicroscopicsilicovolcanoconiosis_Pneumonoultramicroscopic"
+
+        val WEIGHTED_TEXTS_ONE_UNBREAKABLE = """[
+            {"id":"root","component":"Row","children":["long","short"]},
+            {"id":"long","component":"Text","text":"$UNBREAKABLE_WORD","weight":1},
+            {"id":"short","component":"Text","text":"short","weight":1}
         ]"""
 
         /** Two cards around the same column, so the trait walk reaches that column twice. */

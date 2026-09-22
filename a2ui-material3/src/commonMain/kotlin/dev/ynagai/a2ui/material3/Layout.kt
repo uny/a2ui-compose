@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.IntrinsicMeasurable
 import androidx.compose.ui.layout.IntrinsicMeasureScope
@@ -320,15 +322,20 @@ private fun Flex(
     children: List<LaidOutChild>,
     scope: A2uiComponentScope,
 ) {
-    val policy = remember(axis, arrangement, crossAlignment, children) {
-        FlexMeasurePolicy(axis, arrangement, crossAlignment, children)
+    // The outermost container of a tree opens the session, and every one nested inside it shares
+    // it; a second surface, on another window or another thread, has one of its own.
+    val session = LocalQuerySession.current ?: remember { QuerySession() }
+    val policy = remember(axis, arrangement, crossAlignment, children, session) {
+        FlexMeasurePolicy(axis, arrangement, crossAlignment, children, session)
     }
     Layout(
         content = {
-            // The index is the id, and the policy reads it back: a renderer that dropped the
-            // modifier it was handed is measured as a child that said nothing about itself.
-            children.forEachIndexed { index, child ->
-                scope.RenderChild(child.child, Modifier.layoutId(index))
+            CompositionLocalProvider(LocalQuerySession provides session) {
+                // The index is the id, and the policy reads it back: a renderer that dropped the
+                // modifier it was handed is measured as a child that said nothing about itself.
+                children.forEachIndexed { index, child ->
+                    scope.RenderChild(child.child, Modifier.layoutId(index))
+                }
             }
         },
         modifier = modifier,
@@ -341,6 +348,7 @@ private class FlexMeasurePolicy(
     private val arrangement: Any,
     private val crossAlignment: CrossAlignment,
     private val children: List<LaidOutChild>,
+    private val session: QuerySession,
 ) : MeasurePolicy {
     private val horizontal = axis == LayoutAxis.Horizontal
 
@@ -380,7 +388,7 @@ private class FlexMeasurePolicy(
     private fun IntrinsicMeasurable.ask(index: Int, query: Query, arg: Int): Int? {
         val key = keyOf(index)
         if (key in refused) return null
-        val answers = QuerySession.answers
+        val answers = session.answers
         val cacheKey = if (answers == null) null else Asked(this, query, arg)
         cacheKey?.let { answers!![it] }?.let { return it }
         return try {
@@ -610,19 +618,19 @@ private class FlexMeasurePolicy(
         return largest
     }
 
-    override fun IntrinsicMeasureScope.minIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int = QuerySession.run {
+    override fun IntrinsicMeasureScope.minIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int = session.run {
         if (horizontal) measurables.sumMain(height, least = true) else measurables.largestCross(height, least = true)
     }
 
-    override fun IntrinsicMeasureScope.maxIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int = QuerySession.run {
+    override fun IntrinsicMeasureScope.maxIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int = session.run {
         if (horizontal) measurables.sumMain(height, least = false) else measurables.largestCross(height, least = false)
     }
 
-    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int = QuerySession.run {
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int = session.run {
         if (horizontal) measurables.largestCross(width, least = true) else measurables.sumMain(width, least = true)
     }
 
-    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int = QuerySession.run {
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int = session.run {
         if (horizontal) measurables.largestCross(width, least = false) else measurables.sumMain(width, least = false)
     }
 }
@@ -639,6 +647,9 @@ private enum class Query {
     }
 }
 
+/** The [QuerySession] of the outermost [Flex] above, or none at the top of a tree. */
+private val LocalQuerySession = staticCompositionLocalOf<QuerySession?> { null }
+
 /** A question put to one child, as the key its answer is remembered under for the session. */
 private data class Asked(val measurable: IntrinsicMeasurable, val query: Query, val arg: Int)
 
@@ -653,9 +664,11 @@ private data class Asked(val measurable: IntrinsicMeasurable, val query: Query, 
  * outermost container to be asked opens a session, every container beneath it reads and writes
  * the one map, and the session closes with the answer -- each child is asked each question once,
  * and the work is the size of the tree. Not kept across queries: the next one may come after the
- * children have changed. Layout runs on the one UI thread, which is what a plain global rests on.
+ * children have changed. One session belongs to one tree of containers, handed down through
+ * [LocalQuerySession], because layout runs on the thread that composed the tree: two surfaces laid
+ * out on two threads at once -- two windows, two tests running side by side -- never share a map.
  */
-private object QuerySession {
+private class QuerySession {
     var answers: HashMap<Asked, Int>? = null
         private set
 

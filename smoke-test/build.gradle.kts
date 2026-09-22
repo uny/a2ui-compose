@@ -17,6 +17,7 @@
  */
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import java.util.Properties
+import java.util.zip.ZipFile
 
 plugins {
     // From the producer's own version catalog, read across the build boundary in
@@ -221,6 +222,77 @@ val checkPublishedSets = tasks.register("checkPublishedSets") {
 }
 
 /**
+ * The Kotlin the producer's catalog names, and what the published klibs must have been compiled
+ * with. Read here rather than in `doLast`: the catalog accessor is a configuration-time object.
+ */
+val catalogKotlin: String = libs.versions.kotlin.get()
+
+/**
+ * Fails when a published klib was compiled by a Kotlin other than the catalog's.
+ *
+ * The floor a consumer inherits on the klib targets is the compiler that built the klibs, not the
+ * version the catalog names: a klib's `default/manifest` carries `compiler_version` and
+ * `abi_version`, and a compiler older than the ABI version refuses the klib. `checkPublishedSets`
+ * compares Gradle attributes and the compiles resolve, and neither opens a manifest -- so a
+ * toolchain override or a transitively newer Kotlin Gradle plugin that raised the compiler would
+ * publish klibs a 2.3.x consumer cannot read, and every gate here would stay green. The README's
+ * floor was measured by hand once (#89); this reads it from the publication every time (#90).
+ *
+ * `compiler_version` must equal the catalog's `kotlin`. `abi_version` is checked to its
+ * `major.minor` only: it is a version of the klib format, which moves with a Kotlin minor and not
+ * necessarily with a patch, so an exact derivation from the compiler version would be a guess.
+ *
+ * Every `.klib` under the version under test is read -- one per native, JS and Wasm target of
+ * each module -- and none found is a failure, as in `checkPublishedSets`: a check over an empty
+ * set has inspected nothing.
+ */
+val checkKlibFloor = tasks.register("checkKlibFloor") {
+    group = "verification"
+    description = "Fails if a published klib's manifest names a compiler other than the catalog's Kotlin."
+
+    val repository = localRepository
+    val version = a2uiVersion
+    val group = a2uiGroup
+    val kotlinVersion = catalogKotlin
+
+    doLast {
+        val groupDirectory = repository.get().resolve(group.replace('.', '/'))
+        val klibs = groupDirectory.walkTopDown()
+            .filter { it.isFile && it.extension == "klib" && it.parentFile.name == version }
+            .sortedBy { it.path }
+            .toList()
+        check(klibs.isNotEmpty()) {
+            "No *.klib for $group:*:$version under $groupDirectory. Run `./gradlew publishToMavenLocal` " +
+                "first, with the same -Dmaven.repo.local if any."
+        }
+
+        val abiPrefix = kotlinVersion.split('.').take(2).joinToString(".") + "."
+        val problems = klibs.mapNotNull { klib ->
+            val manifest = ZipFile(klib).use { zip ->
+                val entry = zip.getEntry("default/manifest")
+                    ?: return@mapNotNull "${klib.name}: no default/manifest entry"
+                zip.getInputStream(entry).use { Properties().apply { load(it) } }
+            }
+            val compiler = manifest.getProperty("compiler_version")
+            val abi = manifest.getProperty("abi_version")
+            when {
+                compiler != kotlinVersion ->
+                    "${klib.name}: compiler_version=$compiler, catalog kotlin=$kotlinVersion"
+                abi == null || !abi.startsWith(abiPrefix) ->
+                    "${klib.name}: abi_version=$abi, expected $abiPrefix* for Kotlin $kotlinVersion"
+                else -> null
+            }
+        }
+        check(problems.isEmpty()) {
+            "A published klib was not compiled by the catalog's Kotlin, so the floor a consumer " +
+                "inherits is not the one gradle/libs.versions.toml and the README state:\n" +
+                problems.joinToString("\n") { "  - $it" }
+        }
+        logger.lifecycle("${klibs.size} klibs carry compiler_version=$kotlinVersion and abi_version=$abiPrefix*.")
+    }
+}
+
+/**
  * One compile task per target, derived from `kotlin.targets` rather than listed: the `main`
  * compilation of each platform target, and `commonMain` -- not `main` -- of the metadata target.
  * Its `main` is `compileKotlinMetadata`, the task the README's second control is about: present,
@@ -240,7 +312,8 @@ val mainCompileTasks: Provider<List<TaskProvider<*>>> = provider {
 }
 
 /**
- * The gate as one task: `checkPublishedSets`, then `Smoke.kt` compiled on every declared target.
+ * The gate as one task: `checkPublishedSets` and `checkKlibFloor`, then `Smoke.kt` compiled on
+ * every declared target.
  *
  * So a target added to the `kotlin {}` block above is compiled without a task list changing
  * anywhere. `cd.yml` and `release-dry-run.yml` used to name the eight tasks by hand and call
@@ -248,14 +321,14 @@ val mainCompileTasks: Provider<List<TaskProvider<*>>> = provider {
  */
 tasks.register("compileAll") {
     group = "verification"
-    description = "Checks the declared sets cover the publication, then compiles Smoke.kt on every target."
+    description = "Checks the declared sets and the klib floor cover the publication, then compiles Smoke.kt on every target."
 
-    dependsOn(checkPublishedSets)
+    dependsOn(checkPublishedSets, checkKlibFloor)
     dependsOn(mainCompileTasks)
 }
 
-// The check first: it is milliseconds, and a failure there is the finding; a compile that fails
-// to resolve before it would report the same fact less clearly.
+// The checks first: they are milliseconds, and a failure there is the finding; a compile that
+// fails to resolve before them would report the same fact less clearly.
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
-    mustRunAfter(checkPublishedSets)
+    mustRunAfter(checkPublishedSets, checkKlibFloor)
 }

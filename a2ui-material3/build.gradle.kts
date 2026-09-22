@@ -14,8 +14,9 @@ kotlin {
     explicitApi()
 
     // The block form, with `enabled` set: the no-argument `abiValidation()` overload is Kotlin 2.4
-    // only, and on 2.3 the bare `abiValidation {}` leaves `checkKotlinAbi` SKIPPED -- while
-    // `checkLegacyAbi`, the task CI runs, still reports success, so the build stays green (#64).
+    // only, and on 2.3 the bare `abiValidation {}` leaves `checkKotlinAbi` SKIPPED, and a skipped
+    // check exits 0 like an executed one, so the build stays green (#64). CI reads the task's
+    // outcome from the build log and fails on SKIPPED (`.github/scripts/check-abi-ran.sh`, #90).
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
     abiValidation { enabled.set(true) }
 

@@ -36,12 +36,16 @@ three Apple targets, macOS.
 the producer's `../gradle.properties`, so it cannot go on naming a version the producer has left
 behind.
 
-`compileAll` is two things in order. First `checkPublishedSets`, which reads every `.module` file
+`compileAll` is three things in order. First `checkPublishedSets`, which reads every `.module` file
 the publish wrote under `dev/ynagai/a2ui/` at that version, takes as a root each module no other
 module's `available-at` points to, and fails if a root has no coordinate line here or one of its
 variants names a target this build does not — the direction resolution cannot see, below. A root
 is found that way rather than by having `available-at` variants because a single-platform module
-has none and is a root all the same. Then one compile per target declared in `build.gradle.kts`'s
+has none and is a root all the same. Then `checkKlibFloor`, which opens every `.klib` published at
+that version and fails if its `default/manifest` names a `compiler_version` other than the
+catalog's `kotlin`, or an `abi_version` outside that Kotlin's `major.minor` — the floor a consumer
+inherits on the klib targets is the compiler that built the klibs, and nothing else in either
+build reads it (#90). Then one compile per target declared in `build.gradle.kts`'s
 `kotlin {}` block, derived from that block rather than listed: today
 `compileCommonMainKotlinMetadata`, `compileKotlinJvm`, `compileKotlinJs`, `compileKotlinWasmJs`,
 `compileKotlinIosArm64`, `compileKotlinIosSimulatorArm64`, `compileKotlinMacosArm64` and
@@ -97,7 +101,7 @@ exercised before a tag exists — `cd.yml` itself cannot run until one does, and
 re-uploads nor deletes, so the first release is a poor place for a step's first execution.
 
 `build.yml` runs a reduced pair on every PR, in its `smoke` job: a `-SNAPSHOT` publish, so no
-signing key is needed, then `checkPublishedSets` and two of the eight compiles --
+signing key is needed, then `checkPublishedSets`, `checkKlibFloor` and two of the eight compiles --
 `compileCommonMainKotlinMetadata` and `compileKotlinJvm`, one for each half the controls below
 name. What a PR checks is that the publish wrote nothing this build does not name, that the four
 coordinates resolve, that their metadata jars carry what `Smoke.kt` names, and that one platform

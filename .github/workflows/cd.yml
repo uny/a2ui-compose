@@ -124,8 +124,18 @@ jobs:
       # The full suite before anything leaves the machine. A release is the one build where
       # "the tests passed on the PR" is not enough: the tag may point at a merge the PR never had.
       # `:buildSrc:test` by name, as in `build.yml`: `build` does not reach it.
+      #
+      # `--console=plain`, `tee` and the step after: the same guard `build.yml` runs, for the same
+      # reason -- a SKIPPED `checkKotlinAbi` exits 0 (#90). `pipefail`, or `tee` would hide a
+      # failed build.
       - name: Verify
-        run: ./gradlew build checkLegacyAbi :buildSrc:test --stacktrace
+        run: >
+          set -o pipefail;
+          ./gradlew build checkKotlinAbi :buildSrc:test --console=plain --stacktrace
+          | tee "${RUNNER_TEMP}/gradle-build.log"
+
+      - name: Check the ABI check executed
+        run: sh .github/scripts/check-abi-ran.sh "${RUNNER_TEMP}/gradle-build.log" .
 
       # Publish locally first, and consume it. This is the gate -- see `smoke-test/README.md`.
       # Publishing to Maven Central is irreversible: a version is never re-uploaded and never
@@ -157,12 +167,14 @@ jobs:
       # second copy of `gradle-wrapper.jar` to keep pinned. It is still a separate build: its own
       # `settings.gradle.kts` is what makes the dependency resolve by coordinate.
       #
-      # `compileAll` is the smoke build's own aggregate: `checkPublishedSets`, then one compile
-      # per target it declares, derived from its `kotlin {}` block rather than listed here. This
-      # step used to name the eight tasks by hand, which was one of the places a target added to
-      # the library had to be added again (#53); now the list lives in one place, and
-      # `checkPublishedSets` reads the `.module` files the publish above wrote and fails if they
-      # name a module or target the smoke build does not.
+      # `compileAll` is the smoke build's own aggregate: `checkPublishedSets` and `checkKlibFloor`,
+      # then one compile per target it declares, derived from its `kotlin {}` block rather than
+      # listed here. This step used to name the eight tasks by hand, which was one of the places
+      # a target added to the library had to be added again (#53); now the list lives in one
+      # place, and `checkPublishedSets` reads the `.module` files the publish above wrote and
+      # fails if they name a module or target the smoke build does not. `checkKlibFloor` reads
+      # each published klib's manifest and fails if the compiler that built it is not the
+      # catalog's Kotlin -- the floor the README states, which nothing else here reads (#90).
       #
       # The aggregate picks `compileCommonMainKotlinMetadata`, not `compileKotlinMetadata`. The
       # latter exists as a task but is disabled under the hierarchical source-set model and can

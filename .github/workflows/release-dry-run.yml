@@ -118,8 +118,17 @@ jobs:
           esac
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
+      # `--console=plain`, `tee` and the step after: the same guard `build.yml` runs, for the same
+      # reason -- a SKIPPED `checkKotlinAbi` exits 0 (#90). `pipefail`, or `tee` would hide a
+      # failed build.
       - name: Verify
-        run: ./gradlew build checkLegacyAbi :buildSrc:test --stacktrace
+        run: >
+          set -o pipefail;
+          ./gradlew build checkKotlinAbi :buildSrc:test --console=plain --stacktrace
+          | tee "${RUNNER_TEMP}/gradle-build.log"
+
+      - name: Check the ABI check executed
+        run: sh .github/scripts/check-abi-ran.sh "${RUNNER_TEMP}/gradle-build.log" .
 
       # `cd.yml`'s "Publish to the local repository" step, aimed at a directory the later steps can
       # inspect and nothing else can have written to. `~/.m2` would work on a fresh runner and hide
@@ -211,9 +220,9 @@ jobs:
       # command fails with `Could not find dev.ynagai.a2ui:a2ui-core:<version>`.
       #
       # `compileAll` is the same aggregate `cd.yml` calls -- `checkPublishedSets` against the
-      # `.module` files under this directory, then a compile per declared target -- so the task
-      # list is not a second copy to keep in step. `checkPublishedSets` reads the same
-      # `-Dmaven.repo.local`.
+      # `.module` files under this directory, `checkKlibFloor` against the klib manifests, then a
+      # compile per declared target -- so the task list is not a second copy to keep in step.
+      # Both checks read the same `-Dmaven.repo.local`.
       - name: Resolve it as a consumer would
         env:
           VERSION: ${{ steps.version.outputs.value }}

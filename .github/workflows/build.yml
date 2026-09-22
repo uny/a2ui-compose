@@ -39,14 +39,14 @@ concurrency:
 # splitting JS from wasmJs is what makes the difference: they are 60% of the build between them, so
 # a two-job "Apple / everything else" split would have left one job holding 21 of the 35 minutes.
 #
-# The union of the three jobs' task graphs is the task graph of the single `build checkLegacyAbi`
-# this replaces -- 858 tasks, verified with `--dry-run` and a set difference -- plus `:buildSrc:test`,
+# The union of the three jobs' task graphs is the task graph of the single `build checkKotlinAbi`
+# this replaces -- 1126 tasks, verified with `--dry-run` and a set difference -- plus `:buildSrc:test`,
 # which `build` does not reach (see the Apple job). Nothing stopped being verified. Re-run that
 # check when changing any of the command lines below:
 #
 #   ./gradlew <job's arguments> --dry-run | grep -oE '^:[a-zA-Z0-9:_-]+' | sort -u
 #
-# and confirm the three results still cover `./gradlew build checkLegacyAbi --dry-run`.
+# and confirm the three results still cover `./gradlew build checkKotlinAbi --dry-run`.
 
 jobs:
   # Everything that is not a web backend: the Apple targets, JVM, Android, the metadata and
@@ -55,7 +55,7 @@ jobs:
   # macOS, because on Linux the Apple targets are silently skipped -- `kotlin.native.ignoreDisabledTargets=true`
   # turns them off rather than failing -- and a green build that skipped them says nothing.
   #
-  # `checkLegacyAbi` belongs here for the same reason and not merely by convenience: the checked-in
+  # `checkKotlinAbi` belongs here for the same reason and not merely by convenience: the checked-in
   # klib dump covers `[iosArm64, iosSimulatorArm64, js, macosArm64, wasmJs]`, so on Linux the
   # regenerated dump would be missing three targets and the check would compare against something
   # the build cannot produce.
@@ -82,15 +82,29 @@ jobs:
       # `:buildSrc:test` by name: since Gradle 8 the root build assembles `buildSrc` with `jar`, so
       # its tests neither run nor compile unless asked for. Without this line the embedder's tests
       # would be green on every PR by never executing.
+      #
+      # `--console=plain` and the `tee`, for the step after this one: the ABI check is opt-in on
+      # Kotlin 2.3 and a SKIPPED `checkKotlinAbi` exits 0 like an executed one (#90), so the task
+      # outcomes are kept for a script to read. `pipefail`, because the default shell is `bash -e`
+      # without it, and `tee` would otherwise turn a failed build into a green step.
       - name: Build
         run: >
-          ./gradlew build checkLegacyAbi :buildSrc:test
+          set -o pipefail;
+          ./gradlew build checkKotlinAbi :buildSrc:test
           -x jsTest -x jsBrowserTest -x wasmJsTest -x wasmJsBrowserTest
           -x jsBrowserDistribution -x wasmJsBrowserDistribution
           -x compileProductionExecutableKotlinJs
           -x compileProductionExecutableKotlinWasmJs
           -x compileProductionExecutableKotlinWasmJsOptimize
-          --stacktrace
+          --console=plain --stacktrace
+          | tee "${RUNNER_TEMP}/gradle-build.log"
+
+      # Reads the log above and fails unless every module with an `api/` dump had its
+      # `checkKotlinAbi` execute -- the guard `enabled.set(true)` in each module has nothing else
+      # for. The script's header says what counts as executed; `check-abi-ran.test.sh` runs it in
+      # both directions in the `scripts` job.
+      - name: Check the ABI check executed
+        run: sh .github/scripts/check-abi-ran.sh "${RUNNER_TEMP}/gradle-build.log" .
 
       - name: Upload reports
         if: failure()
@@ -167,7 +181,7 @@ jobs:
   #
   # `smoke-test/` is a separate build that nothing above configures: it is not in the root
   # `settings.gradle.kts`, so a `Smoke.kt` that no longer compiles -- a symbol renamed, with the
-  # `api/` dump regenerated so `checkLegacyAbi` stays green -- would first be noticed by `cd.yml`,
+  # `api/` dump regenerated so `checkKotlinAbi` stays green -- would first be noticed by `cd.yml`,
   # aborting a release after its 35-minute build. Safe in direction, since the abort comes before
   # the upload, but the guard's own correctness should not be checked first on the one run where
   # checking it is most expensive (#53).
@@ -233,12 +247,15 @@ jobs:
       # `checkPublishedSets` as well: it reads the `.module` files the publish above wrote and
       # fails if they name a module or target `smoke-test/build.gradle.kts` does not, so the
       # addition direction of #53 is caught on the PR that adds the target rather than by a
-      # release run. Milliseconds, and macOS is the runner where the publish writes every
-      # variant. The two compiles stay named by hand: they are the deliberate subset, not a copy
-      # of the release list, which is `compileAll`'s to derive.
+      # release run. `checkKlibFloor` for the same reason: it reads each published klib's
+      # manifest and fails if the compiler that built it is not the catalog's Kotlin, which is
+      # the floor the README states (#90). Milliseconds each, and macOS is the runner where the
+      # publish writes every variant. The two compiles stay named by hand: they are the
+      # deliberate subset, not a copy of the release list, which is `compileAll`'s to derive.
       - name: Resolve it as a consumer would
         run: >
-          ./gradlew -p smoke-test checkPublishedSets compileCommonMainKotlinMetadata compileKotlinJvm
+          ./gradlew -p smoke-test checkPublishedSets checkKlibFloor
+          compileCommonMainKotlinMetadata compileKotlinJvm
           -Pa2uiVersion="$SMOKE_VERSION" -Dmaven.repo.local="${RUNNER_TEMP}/smoke-m2" --stacktrace
 
       - name: Upload reports

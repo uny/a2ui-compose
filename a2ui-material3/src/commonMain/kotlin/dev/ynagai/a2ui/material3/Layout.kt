@@ -380,11 +380,14 @@ private class FlexMeasurePolicy(
         return Spec(weight = child.weight, fill = child.traits.fit == MainAxisFit.Fill)
     }
 
-    private fun IntrinsicMeasurable.ask(index: Int, query: IntrinsicMeasurable.() -> Int): Int? {
+    private fun IntrinsicMeasurable.ask(index: Int, query: Query, arg: Int): Int? {
         val key = keyOf(index)
         if (key in refused) return null
+        val answers = QuerySession.answers
+        val cacheKey = if (answers == null) null else Asked(this, query, arg)
+        cacheKey?.let { answers!![it] }?.let { return it }
         return try {
-            query()
+            query.of(this, arg).also { if (cacheKey != null) answers!![cacheKey] = it }
         } catch (refusal: IllegalStateException) {
             refused += key
             null
@@ -392,16 +395,16 @@ private class FlexMeasurePolicy(
     }
 
     private fun IntrinsicMeasurable.minMain(index: Int, cross: Int): Int? =
-        ask(index) { if (horizontal) minIntrinsicWidth(cross) else minIntrinsicHeight(cross) }
+        ask(index, if (horizontal) Query.MinWidth else Query.MinHeight, cross)
 
     private fun IntrinsicMeasurable.maxMain(index: Int, cross: Int): Int? =
-        ask(index) { if (horizontal) maxIntrinsicWidth(cross) else maxIntrinsicHeight(cross) }
+        ask(index, if (horizontal) Query.MaxWidth else Query.MaxHeight, cross)
 
     private fun IntrinsicMeasurable.minCross(index: Int, main: Int): Int? =
-        ask(index) { if (horizontal) minIntrinsicHeight(main) else minIntrinsicWidth(main) }
+        ask(index, if (horizontal) Query.MinHeight else Query.MinWidth, main)
 
     private fun IntrinsicMeasurable.maxCross(index: Int, main: Int): Int? =
-        ask(index) { if (horizontal) maxIntrinsicHeight(main) else maxIntrinsicWidth(main) }
+        ask(index, if (horizontal) Query.MaxHeight else Query.MaxWidth, main)
 
     /**
      * The plan: hands each child, in the order it must be measured, the least and the most it may
@@ -609,17 +612,64 @@ private class FlexMeasurePolicy(
         return largest
     }
 
-    override fun IntrinsicMeasureScope.minIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int =
+    override fun IntrinsicMeasureScope.minIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int = QuerySession.run {
         if (horizontal) measurables.sumMain(height, least = true) else measurables.largestCross(height, least = true)
+    }
 
-    override fun IntrinsicMeasureScope.maxIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int =
+    override fun IntrinsicMeasureScope.maxIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int = QuerySession.run {
         if (horizontal) measurables.sumMain(height, least = false) else measurables.largestCross(height, least = false)
+    }
 
-    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int =
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int = QuerySession.run {
         if (horizontal) measurables.largestCross(width, least = true) else measurables.sumMain(width, least = true)
+    }
 
-    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int =
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int = QuerySession.run {
         if (horizontal) measurables.largestCross(width, least = false) else measurables.sumMain(width, least = false)
+    }
+}
+
+/** One of the four intrinsic questions, so that an answer can be remembered under it. */
+private enum class Query {
+    MinWidth, MaxWidth, MinHeight, MaxHeight;
+
+    fun of(measurable: IntrinsicMeasurable, arg: Int): Int = when (this) {
+        MinWidth -> measurable.minIntrinsicWidth(arg)
+        MaxWidth -> measurable.maxIntrinsicWidth(arg)
+        MinHeight -> measurable.minIntrinsicHeight(arg)
+        MaxHeight -> measurable.maxIntrinsicHeight(arg)
+    }
+}
+
+/** A question put to one child, as the key its answer is remembered under for the session. */
+private data class Asked(val measurable: IntrinsicMeasurable, val query: Query, val arg: Int)
+
+/**
+ * The answers gathered while one intrinsic query works its way down through nested [Flex]es.
+ *
+ * A container asked its cross-axis size plans the axis first, which asks each child three
+ * questions; a child that is itself a container does the same for its own, and so on down. Every
+ * question repeats the ones the container above already asked, so the work grows as three to the
+ * depth: a text under eighteen single-child rows and columns took forty seconds to answer, and a
+ * surface may nest to twenty-four. Nothing changes while one question is being answered, so the
+ * outermost container to be asked opens a session, every container beneath it reads and writes
+ * the one map, and the session closes with the answer -- each child is asked each question once,
+ * and the work is the size of the tree. Not kept across queries: the next one may come after the
+ * children have changed. Layout runs on the one UI thread, which is what a plain global rests on.
+ */
+private object QuerySession {
+    var answers: HashMap<Asked, Int>? = null
+        private set
+
+    inline fun run(query: () -> Int): Int {
+        val opened = answers == null
+        if (opened) answers = HashMap()
+        try {
+            return query()
+        } finally {
+            if (opened) answers = null
+        }
+    }
 }
 
 /**

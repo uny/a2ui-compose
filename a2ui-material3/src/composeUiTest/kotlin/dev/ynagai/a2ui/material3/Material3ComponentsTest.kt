@@ -191,6 +191,28 @@ class Material3ComponentsTest {
     }
 
     @Test
+    fun a_text_under_two_dozen_nested_containers_is_laid_out_in_a_moment() = runComposeUiTest {
+        // Alternating rows and columns, one inside the next, as deep as a surface may nest. A
+        // container asked its size asks each child three questions and a child container asks
+        // its own the same, which is three to the depth unless the answers are shared down the
+        // chain: eighteen levels took forty seconds before they were. Wall-clock bounds are not
+        // asserted; without the sharing this test does not finish, which is assertion enough.
+        val depth = 22
+        val components = buildString {
+            append("""[{"id":"root","component":"Column","children":["w0","after"]},""")
+            for (i in 0 until depth) {
+                append("""{"id":"w$i","component":"${if (i % 2 == 0) "Row" else "Column"}","children":["w${i + 1}"]},""")
+            }
+            append("""{"id":"w$depth","component":"Text","text":"leaf"},""")
+            append("""{"id":"after","component":"Text","text":"after"}]""")
+        }
+        setContent { Surface(components, width = PHONE_WIDTH) }
+        val leaf = onNodeWithText("leaf").fetchSemanticsNode().boundsInRoot
+        val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+        assertTrue(leaf.width > 0f && after.top >= leaf.bottom, "the leaf is drawn and the text after it below: $leaf, $after")
+    }
+
+    @Test
     fun a_field_in_a_wide_row_keeps_its_natural_width() = runComposeUiTest {
         // The other half of a field filling a row: on a screen with room, it takes Material's
         // 280dp and not the whole row, which is what the web renderers draw for a weightless

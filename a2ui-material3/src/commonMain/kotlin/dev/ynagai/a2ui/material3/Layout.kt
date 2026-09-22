@@ -571,11 +571,30 @@ private class FlexMeasurePolicy(
         "This layout holds a child whose intrinsic size cannot be asked, so its own cannot be either.",
     )
 
-    private fun List<IntrinsicMeasurable>.sumMain(cross: Int, least: Boolean): Int = indices.sumOf { index ->
-        val spec = specOf(this[index])
-        val counts = !least || (spec.weight == 0f && !spec.fill)
-        if (!counts) 0L else (if (least) this[index].minMain(index, cross) else this[index].maxMain(index, cross))?.toLong() ?: refuse()
-    }.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    private fun List<IntrinsicMeasurable>.sumMain(cross: Int, least: Boolean): Int {
+        var sum = 0L
+        // The weighted children are measured to their shares, so what they need together is the
+        // size at which the share of the most demanding one reaches its preferred size -- the
+        // largest preferred-size-per-unit-of-weight, times the weight there is -- and not the
+        // sum of their preferred sizes, which hands a `weight: 1` child beside a `weight: 9` one
+        // a tenth of what it asked for. Compose's own `Row` answers the same way.
+        var perUnit = 0.0
+        var totalWeight = 0.0
+        for (index in indices) {
+            val spec = specOf(this[index])
+            if (spec.weight > 0f) {
+                if (least) continue
+                val preferred = this[index].maxMain(index, cross) ?: refuse()
+                perUnit = max(perUnit, preferred / spec.weight.toDouble())
+                totalWeight += spec.weight
+                continue
+            }
+            if (least && spec.fill) continue
+            sum += (if (least) this[index].minMain(index, cross) else this[index].maxMain(index, cross))?.toLong() ?: refuse()
+        }
+        if (totalWeight > 0.0) sum += (perUnit * totalWeight).coerceAtMost(Int.MAX_VALUE.toDouble()).toLong()
+        return sum.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
 
     private fun List<IntrinsicMeasurable>.largestCross(main: Int, least: Boolean): Int {
         var largest = 0

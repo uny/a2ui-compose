@@ -176,6 +176,21 @@ class Material3ComponentsTest {
     }
 
     @Test
+    fun a_weighted_child_is_not_cut_to_a_share_of_the_preferred_sizes_it_shares_with() = runComposeUiTest {
+        // A column asks an inner column how tall it would like to be, and measures it to the
+        // answer. The inner column measures its weighted children to their shares, so the sum of
+        // their preferred sizes is not the answer: at that height a `weight: 1` text beside a
+        // `weight: 9` one is handed a tenth of what it asked for and cut to nothing. The answer
+        // is the height at which the most demanding child's share reaches its preferred size.
+        setContent { Surface(WEIGHTED_COLUMN_IN_A_COLUMN, width = PHONE_WIDTH) }
+        val a = onNodeWithText(LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        val b = onNodeWithText("short").fetchSemanticsNode().boundsInRoot
+        val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+        assertTrue(a.height >= 40f, "the weighted text keeps its lines: $a")
+        assertTrue(after.top >= b.bottom, "the text after the column sits below it: $after under $b")
+    }
+
+    @Test
     fun a_field_in_a_wide_row_keeps_its_natural_width() = runComposeUiTest {
         // The other half of a field filling a row: on a screen with room, it takes Material's
         // 280dp and not the whole row, which is what the web renderers draw for a weightless
@@ -1119,6 +1134,14 @@ class Material3ComponentsTest {
             {"id":"root","component":"Row","children":["a","b"]},
             {"id":"a","component":"Text","text":"$LONG_TEXT_A"},
             {"id":"b","component":"Text","text":"$LONG_TEXT_B"}
+        ]"""
+
+        val WEIGHTED_COLUMN_IN_A_COLUMN = """[
+            {"id":"root","component":"Column","children":["inner","after"]},
+            {"id":"inner","component":"Column","children":["a","b"]},
+            {"id":"a","component":"Text","text":"$LONG_TEXT_A","weight":1},
+            {"id":"b","component":"Text","text":"short","weight":9},
+            {"id":"after","component":"Text","text":"after"}
         ]"""
 
         val CARD_OF_BANNER_BESIDE_TEXT = """[

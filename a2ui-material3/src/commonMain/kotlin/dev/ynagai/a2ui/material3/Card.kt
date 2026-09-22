@@ -10,6 +10,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.RenderChild
 import dev.ynagai.a2ui.compose.rememberChildren
 
@@ -70,7 +71,7 @@ import dev.ynagai.a2ui.compose.rememberChildren
  * refuses draws all of what it named rather than silently dropping the tail. `CatalogValidator` is
  * where a caller that wants the refusal asks for it.
  */
-public val CardRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val CardRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Content) { scope, modifier ->
     val children = scope.rememberChildren("child")
     Box(
         modifier

@@ -8,6 +8,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutAxis
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.firstMessage
 import dev.ynagai.a2ui.compose.hasError
 import dev.ynagai.a2ui.compose.rememberCheckFailures
@@ -28,7 +30,16 @@ import kotlinx.serialization.json.JsonPrimitive
  * an absent `value` gives the field nowhere to write, and a writable-looking field that discards
  * every keystroke reads as a broken renderer rather than as a payload that asked for one.
  */
-public val TextFieldRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val TextFieldRenderer: ComponentRenderer = ComponentRenderer(
+    // Material's text field is 280dp wide unless given less, and it never insists: handed a
+    // narrower share it takes the share. What it does insist on is its *intrinsic* minimum, which
+    // is that 280dp -- so as a content child it would pin every row it sits in at a width no phone
+    // has and be shrunk for nobody. As a filling child it is measured last, to what its siblings
+    // left, which is the width it would have taken anyway on a screen wide enough. The official
+    // Flutter renderer draws the same conclusion (`isImplicitlyFlexible`) for the same components.
+    // Down a column it is content-sized; filling the cross axis there costs nobody anything.
+    traits = { _, axis -> if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Content },
+) { scope, modifier ->
     val label = scope.rememberString("label")
     val placeholder = scope.rememberString("placeholder")
     val variant = scope.rememberString("variant")

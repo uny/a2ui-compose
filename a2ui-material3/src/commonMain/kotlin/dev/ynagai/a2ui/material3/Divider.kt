@@ -3,6 +3,8 @@ package dev.ynagai.a2ui.material3
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.VerticalDivider
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutAxis
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.rememberString
 
 /**
@@ -17,7 +19,17 @@ import dev.ynagai.a2ui.compose.rememberString
  * `axis` is read as a string and anything but `vertical` draws horizontal, which is the catalog's
  * default and the reading a malformed value degrades to.
  */
-public val DividerRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val DividerRenderer: ComponentRenderer = ComponentRenderer(
+    // A divider fills the axis it is drawn along -- `HorizontalDivider` is a `fillMaxWidth` box and
+    // `VerticalDivider` a `fillMaxHeight` one. Along a container running the same way, "the width
+    // of the container" is the whole container, and a hairline that took all of it left every
+    // sibling measuring at zero; so along its own axis it asks for a share. A divider drawn across
+    // a container claims nothing and is left alone.
+    traits = { component, axis ->
+        val vertical = component.enumProperty("axis") == "vertical"
+        if (vertical == (axis == LayoutAxis.Vertical)) LayoutTraits.Fill else LayoutTraits.Content
+    },
+) { scope, modifier ->
     val axis = scope.rememberString("axis")
     if (axis == "vertical") {
         // "Spanning the height of the container" is what `VerticalDivider` does on its own: it

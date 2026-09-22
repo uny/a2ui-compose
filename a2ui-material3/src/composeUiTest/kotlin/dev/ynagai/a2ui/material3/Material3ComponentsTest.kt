@@ -120,6 +120,70 @@ class Material3ComponentsTest {
     }
 
     @Test
+    fun a_long_text_in_a_row_shares_the_width_rather_than_taking_it() = runComposeUiTest {
+        // The specification's `13_coffee-order` shape -- a `spaceBetween` row holding a column of
+        // texts and a price -- with an item name long enough to wrap. Compose's own `Row` measures
+        // the column first against the whole width, the name wraps at that width, and the price
+        // measures at zero. The upstream issue (a2ui-project/a2ui#2710) calls it main-axis space
+        // starvation, and it is the case `claimsMainAxis` could not reach: nothing here fills.
+        setContent { Surface(LONG_NAME_BESIDE_PRICE, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val price = onNodeWithText("$4.50").fetchSemanticsNode().boundsInRoot
+        assertTrue(price.width > 0f, "the price should have been given room: $price")
+        assertTrue(
+            price.right <= root.right && price.left > root.left + root.width / 2f,
+            "the price should sit in the right half, on screen: $price within $root",
+        )
+    }
+
+    @Test
+    fun a_long_text_does_not_starve_a_leaf_that_comes_after_it() = runComposeUiTest {
+        // The same failure with a `Button` as the sibling. A leaf with a size of its own is exactly
+        // what a sequential measure hands nothing to once a wrapping text has taken the width first.
+        setContent { Surface(LONG_TEXT_THEN_BUTTON, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val button = onNodeWithText("Go").fetchSemanticsNode().boundsInRoot
+        assertTrue(button.width > 0f && button.right <= root.right, "the button should be drawn on screen: $button in $root")
+    }
+
+    @Test
+    fun two_long_texts_in_a_row_both_get_room() = runComposeUiTest {
+        // Neither has a claim on the other: both wrap, so both shrink, and the second is not left
+        // with what the first did not want. Flexbox's answer, which is the web renderers'.
+        setContent { Surface(TWO_LONG_TEXTS, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val first = onNodeWithText(LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText(LONG_TEXT_B).fetchSemanticsNode().boundsInRoot
+        assertTrue(first.width > 0f && second.width > 0f, "both texts should be drawn: $first, $second")
+        assertTrue(second.right <= root.right + 1f, "the second text should not run off the row: $second in $root")
+        assertTrue(second.left >= first.right, "the texts should not overlap: $first then $second")
+    }
+
+    @Test
+    fun a_card_around_a_banner_image_is_not_measured_to_nothing() = runComposeUiTest {
+        // A `largeFeature` image fills whatever width it is given, so the card around it has no
+        // preferred width to report -- an intrinsic query answers zero. A layout that shared the
+        // row from preferred sizes alone measured the card to zero and it vanished, text and all.
+        setContent { Surface(CARD_OF_BANNER_BESIDE_TEXT, width = PHONE_WIDTH) }
+        val caption = onNodeWithText("in the card").fetchSemanticsNode().boundsInRoot
+        val beside = onNodeWithText("beside the card").fetchSemanticsNode().boundsInRoot
+        assertTrue(caption.width > 0f, "the card's own text should be drawn: $caption")
+        assertTrue(beside.width > 0f && beside.left >= caption.right, "the text beside it should keep its place: $beside after $caption")
+    }
+
+    @Test
+    fun a_field_in_a_wide_row_keeps_its_natural_width() = runComposeUiTest {
+        // The other half of a field filling a row: on a screen with room, it takes Material's
+        // 280dp and not the whole row, which is what the web renderers draw for a weightless
+        // input (`flex: 0 1 auto`) and what leaves `justify` something to arrange. Drawn at the
+        // harness's own width, which is wide.
+        setContent { Surface(FIELD_AND_BUTTON) }
+        val field = onNodeWithText("Search").fetchSemanticsNode().boundsInRoot
+        // Material's `TextFieldDefaults.MinWidth`, at the harness's density of one.
+        assertTrue(field.width <= 280f, "a field with room should take its natural width, not the row: $field")
+    }
+
+    @Test
     fun a_field_beside_a_button_does_not_take_the_whole_row() {
         // A `TextField` used to fill the width whatever its parent was, so the button next to it
         // measured at zero and drew nothing -- a submit button that is on screen and invisible.
@@ -725,6 +789,41 @@ class Material3ComponentsTest {
             {"id":"aaa","component":"Text","text":"aaa"},
             {"id":"bbb","component":"Text","text":"bbb"},
             {"id":"after","component":"Text","text":"AFTER"}
+        ]"""
+
+        const val LONG_TEXT_A = "A first sentence that is comfortably longer than half a phone screen"
+        const val LONG_TEXT_B = "And a second one that is longer still, so neither fits beside the other"
+
+        val LONG_NAME_BESIDE_PRICE = """[
+            {"id":"root","component":"Row","children":["item_details","item_price"],
+             "justify":"spaceBetween","align":"start"},
+            {"id":"item_details","component":"Column","children":["item_name","item_size"]},
+            {"id":"item_name","component":"Text","variant":"body",
+             "text":"Caramel Macchiato with oat milk, extra shot, no foam, light ice, in a reusable cup"},
+            {"id":"item_size","component":"Text","text":"Large","variant":"caption"},
+            {"id":"item_price","component":"Text","text":"${'$'}4.50","variant":"body"}
+        ]"""
+
+        val LONG_TEXT_THEN_BUTTON = """[
+            {"id":"root","component":"Row","children":["long","go"]},
+            {"id":"long","component":"Text","text":"$LONG_TEXT_A"},
+            {"id":"go","component":"Button","child":"go_label","action":{"event":{"name":"go"}}},
+            {"id":"go_label","component":"Text","text":"Go"}
+        ]"""
+
+        val TWO_LONG_TEXTS = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Text","text":"$LONG_TEXT_A"},
+            {"id":"b","component":"Text","text":"$LONG_TEXT_B"}
+        ]"""
+
+        val CARD_OF_BANNER_BESIDE_TEXT = """[
+            {"id":"root","component":"Row","children":["card","beside"]},
+            {"id":"card","component":"Card","child":"card_col"},
+            {"id":"card_col","component":"Column","children":["banner","caption"]},
+            {"id":"banner","component":"Image","url":"https://example.invalid/banner.png","variant":"largeFeature"},
+            {"id":"caption","component":"Text","text":"in the card"},
+            {"id":"beside","component":"Text","text":"beside the card"}
         ]"""
 
         val COLUMN_IN_ROW = """[

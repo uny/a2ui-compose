@@ -17,6 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.A2uiComponentScope
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutAxis
+import dev.ynagai.a2ui.compose.LayoutTraits
+import dev.ynagai.a2ui.compose.MainAxisFit
 import dev.ynagai.a2ui.compose.RenderChild
 import dev.ynagai.a2ui.compose.rememberChildren
 import kotlinx.serialization.json.JsonArray
@@ -49,7 +52,19 @@ import kotlinx.serialization.json.JsonObject
  * `weight` is the only other property, and a row or a column reads it off this component rather
  * than this renderer reading it -- see `Layout.kt`.
  */
-public val TabsRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val TabsRenderer: ComponentRenderer = ComponentRenderer(
+    // The strip measures itself across whatever it is offered, so in a row it asks for a share.
+    // And it is the one shipped renderer that cannot be asked its size: Material's
+    // `PrimaryScrollableTabRow` is a `SubcomposeLayout`, which raises on an intrinsic query --
+    // so a row or a column holding a `Tabs` measures it without asking, and so does every
+    // container above that one. See [LayoutTraits].
+    traits = { _, axis ->
+        LayoutTraits(
+            fit = if (axis == LayoutAxis.Horizontal) MainAxisFit.Fill else MainAxisFit.Content,
+            answersIntrinsics = false,
+        )
+    },
+) { scope, modifier ->
     val tabs = scope.rememberTabs()
     // **A re-sent `Tabs` starts again at the first tab.** The scope is remembered on the
     // `Component` itself (`A2uiSurface.kt`), so an `updateComponents` touching this component at

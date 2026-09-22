@@ -22,6 +22,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutAxis
+import dev.ynagai.a2ui.compose.LayoutTraits
+import dev.ynagai.a2ui.core.protocol.Component
 import dev.ynagai.a2ui.compose.rememberString
 
 /**
@@ -53,7 +56,7 @@ import dev.ynagai.a2ui.compose.rememberString
  * catalog carrying no words of the agent's -- no `description`, no `altText` -- so an unnamed
  * frame is a region a screen reader passes over entirely. [A2uiStrings.video] supplies it.
  */
-public val VideoRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val VideoRenderer: ComponentRenderer = ComponentRenderer(traits = ::spansARow) { scope, modifier ->
     val poster = scope.rememberString("posterUrl")
     val loader = LocalA2uiImageLoader.current
     val strings = LocalA2uiStrings.current
@@ -106,7 +109,7 @@ public val VideoRenderer: ComponentRenderer = ComponentRenderer { scope, modifie
  * A bar spanning its container, per the guide's "like video, its container should span the full
  * width of its parent".
  */
-public val AudioPlayerRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val AudioPlayerRenderer: ComponentRenderer = ComponentRenderer(traits = ::spansARow) { scope, modifier ->
     val description = scope.rememberString("description")
     Row(
         modifier
@@ -166,3 +169,11 @@ private val VIDEO_GLYPH = 56.dp
 private val AUDIO_PADDING = 12.dp
 
 private const val PLAY_GLYPH = "play"
+
+/**
+ * The guide asks both media frames to "span the full width of the parent's container", and this
+ * module draws them that way -- which takes a row's whole width for the same reason a slider does.
+ * So in a row each asks for a share; down a column, filling the width costs a sibling nothing.
+ */
+private fun spansARow(@Suppress("UNUSED_PARAMETER") component: Component, axis: LayoutAxis): LayoutTraits =
+    if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Content

@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import dev.ynagai.a2ui.compose.A2uiComponentScope
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutAxis
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.firstMessage
 import dev.ynagai.a2ui.compose.rememberCheckFailures
 import dev.ynagai.a2ui.compose.rememberNumber
@@ -33,7 +35,13 @@ import kotlinx.serialization.json.JsonPrimitive
  * `min..max` is the agent's to fix, but a thumb drawn off the end of its own track is not a way of
  * saying so.
  */
-public val SliderRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val SliderRenderer: ComponentRenderer = ComponentRenderer(
+    // Material's slider lays its track across the whole width it is offered -- there is no
+    // intrinsic width a track could have -- so beside a `Text` in a `Row` it took the row and left
+    // the label at zero. A row hands it a share instead; down a column it fills the cross axis,
+    // which costs nobody anything.
+    traits = { _, axis -> if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Content },
+) { scope, modifier ->
     val label = scope.rememberString("label")
     val min = scope.finite("min") ?: 0f
     val max = scope.finite("max")

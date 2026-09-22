@@ -28,6 +28,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.A2uiComponentScope
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutAxis
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.firstMessage
 import dev.ynagai.a2ui.compose.rememberBoolean
 import dev.ynagai.a2ui.compose.rememberCheckFailures
@@ -72,7 +74,10 @@ import kotlinx.serialization.json.contentOrNull
  * A picker whose `value` is not a data binding draws its options and refuses them, the same way
  * [CheckBoxRenderer] does and for the same reason.
  */
-public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer(
+    // See [TextFieldRenderer] for why an input fills a row rather than sitting in it as content.
+    traits = { _, axis -> if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Content },
+) { scope, modifier ->
     val label = scope.rememberString("label")
     val variant = scope.rememberString("variant")
     val displayStyle = scope.rememberString("displayStyle")

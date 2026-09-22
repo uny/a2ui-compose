@@ -178,6 +178,48 @@ own `ComponentRenderer`s, and pays nothing for a Material 3 it does not use.
 Transport is deliberately absent: the library stays transport-free, so you can drive it from SSE,
 AG-UI, a WebSocket, or a local agent loop without the library taking an opinion.
 
+### A row shares its width the way the web renderers do
+
+`Row` and `Column` are not Compose's `Row` and `Column`. The official renderers are CSS flexbox: a
+weightless child is `flex: 0 1 auto` — drawn at its preferred size, shrunk in proportion when the
+container is short of room, never below its minimum — and a weighted child grows into what is
+left. Compose's `Row` measures weightless children in order, each against whatever its
+predecessors left, so a column of text that wraps at the row's full width leaves the price beside
+it measuring at zero: the specification's `13_coffee-order` with a long item name, and every
+label/value pair in the corpus once the label is long enough
+([a2ui-project/a2ui#2710](https://github.com/a2ui-project/a2ui/issues/2710)). The two containers
+here are a `Layout` that asks its children their preferred and minimum sizes first and shares the
+axis from those, which is the flexbox algorithm; the tests hold every one of the specification's
+examples to "every text has room at 320dp".
+
+Asking a child its size is an intrinsic measurement query, and a `SubcomposeLayout` — a
+`LazyColumn`, a `BoxWithConstraints`, Material's tab row — cannot answer one and raises. So a
+renderer declares what a container may do with it, as `LayoutTraits`:
+
+```kotlin
+val registry = Material3Components.Basic.with(
+    mapOf(
+        // Plain Compose layout: content-sized, and a row may ask its size to share fairly.
+        "Badge" to ComponentRenderer(LayoutTraits.Content) { scope, modifier -> /* … */ },
+        // Backed by a LazyColumn: content-sized, but measured without asking.
+        "Feed" to ComponentRenderer(LayoutTraits.Host) { scope, modifier -> /* … */ },
+        // A chart that stretches across a row, like a slider's track.
+        "Chart" to ComponentRenderer(
+            traits = { _, axis -> if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Content },
+        ) { scope, modifier -> /* … */ },
+    ),
+)
+```
+
+A renderer registered as a plain lambda gets `LayoutTraits.Host`: content-sized, never asked. That
+is the safe reading for a renderer the library has not seen, and it costs the fair share — a child
+that cannot be asked is measured first, in order, and takes what it takes. A container asks a child
+only when every renderer beneath it answers, so one `Host` renderer inside a `Column` turns the
+whole column into one; the shipped renderers all answer except `Tabs`.
+
+`align: stretch`, the catalog's default on the cross axis, is still drawn as `start` — see the note
+on `crossAlignment` in `Layout.kt` for why, and for what the traits make possible next.
+
 ## Gallery
 
 `a2ui-gallery` is the reference environment the A2UI framework adapter blueprint asks every renderer

@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.firstMessage
 import dev.ynagai.a2ui.compose.rememberBoolean
 import dev.ynagai.a2ui.compose.rememberCheckFailures
@@ -36,7 +37,7 @@ import kotlinx.serialization.json.JsonPrimitive
  * the schema already refuses; drawing the unchecked box is the same degradation an unreadable
  * property gets everywhere else here.
  */
-public val CheckBoxRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val CheckBoxRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Content) { scope, modifier ->
     val label = scope.rememberString("label")
     val checked = scope.rememberBoolean("value") ?: false
     val target = remember(scope) { scope.binding("value") }

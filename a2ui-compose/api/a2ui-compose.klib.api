@@ -288,8 +288,6 @@ final class dev.ynagai.a2ui.compose/LayoutTraits { // dev.ynagai.a2ui.compose/La
             final fun <get-Content>(): dev.ynagai.a2ui.compose/LayoutTraits // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Content.<get-Content>|<get-Content>(){}[0]
         final val Fill // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Fill|{}Fill[0]
             final fun <get-Fill>(): dev.ynagai.a2ui.compose/LayoutTraits // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Fill.<get-Fill>|<get-Fill>(){}[0]
-        final val Host // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Host|{}Host[0]
-            final fun <get-Host>(): dev.ynagai.a2ui.compose/LayoutTraits // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Host.<get-Host>|<get-Host>(){}[0]
     }
 }
 

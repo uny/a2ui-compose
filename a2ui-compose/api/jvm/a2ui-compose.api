@@ -267,7 +267,6 @@ public final class dev/ynagai/a2ui/compose/LayoutTraits {
 public final class dev/ynagai/a2ui/compose/LayoutTraits$Companion {
 	public final fun getContent ()Ldev/ynagai/a2ui/compose/LayoutTraits;
 	public final fun getFill ()Ldev/ynagai/a2ui/compose/LayoutTraits;
-	public final fun getHost ()Ldev/ynagai/a2ui/compose/LayoutTraits;
 }
 
 public final class dev/ynagai/a2ui/compose/LayoutTraitsKt {

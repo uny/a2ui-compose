@@ -36,8 +36,8 @@ public enum class MainAxisFit {
  * `SubcomposeLayout` (a `LazyColumn`, a `BoxWithConstraints`) raises on the question, the
  * container catches that, and measures the child without asking from then on.
  *
- * A renderer that says nothing gets [Host], which is [Content]: content-sized, asked its size,
- * and measured as it comes if it cannot answer. That is right for most of what a host draws.
+ * A renderer that says nothing is [Content]: content-sized, asked its size, and measured as it
+ * comes if it cannot answer. That is right for most of what a host draws.
  */
 @Immutable
 public class LayoutTraits(public val fit: MainAxisFit) {
@@ -57,9 +57,6 @@ public class LayoutTraits(public val fit: MainAxisFit) {
 
         /** Fills its share of the axis. */
         public val Fill: LayoutTraits = LayoutTraits(MainAxisFit.Fill)
-
-        /** What a renderer gets when it declares nothing -- [Content]. */
-        public val Host: LayoutTraits = Content
     }
 }
 

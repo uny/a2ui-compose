@@ -18,12 +18,12 @@ public fun interface ComponentRenderer {
     /**
      * How a component of this kind sits along the main axis of the `Row` or `Column` holding it.
      *
-     * [LayoutTraits.Host] unless overridden, which is the reading a lambda registered by a host
-     * gets: content-sized, and never asked for an intrinsic size. See [LayoutTraits] for what the
-     * container does with the answer, and the `ComponentRenderer(traits, render)` constructors for
-     * declaring one without spelling out an object.
+     * [LayoutTraits.Content] unless overridden, which is the reading a lambda registered by a host
+     * gets. See [LayoutTraits] for what the container does with the answer, and the
+     * `ComponentRenderer(traits, render)` constructors for declaring one without spelling out an
+     * object.
      */
-    public fun layoutTraits(component: Component, axis: LayoutAxis): LayoutTraits = LayoutTraits.Host
+    public fun layoutTraits(component: Component, axis: LayoutAxis): LayoutTraits = LayoutTraits.Content
 }
 
 /**

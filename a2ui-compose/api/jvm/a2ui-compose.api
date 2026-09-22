@@ -272,6 +272,7 @@ public final class dev/ynagai/a2ui/compose/LayoutTraits$Companion {
 public final class dev/ynagai/a2ui/compose/LayoutTraitsKt {
 	public static final fun ComponentRenderer (Ldev/ynagai/a2ui/compose/LayoutTraits;Ldev/ynagai/a2ui/compose/ComponentRenderer;)Ldev/ynagai/a2ui/compose/ComponentRenderer;
 	public static final fun ComponentRenderer (Lkotlin/jvm/functions/Function2;Ldev/ynagai/a2ui/compose/ComponentRenderer;)Ldev/ynagai/a2ui/compose/ComponentRenderer;
+	public static final fun layoutTraitsOf (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Ldev/ynagai/a2ui/compose/A2uiChild;Ldev/ynagai/a2ui/compose/ComponentRegistry;Ldev/ynagai/a2ui/compose/LayoutAxis;)Ldev/ynagai/a2ui/compose/LayoutTraits;
 }
 
 public final class dev/ynagai/a2ui/compose/MainAxisFit : java/lang/Enum {

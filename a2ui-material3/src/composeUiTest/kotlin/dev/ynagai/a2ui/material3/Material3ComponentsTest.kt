@@ -213,6 +213,20 @@ class Material3ComponentsTest {
     }
 
     @Test
+    fun a_card_of_only_a_banner_asks_the_row_for_a_share() = runComposeUiTest {
+        // A card has no size of its own: it is its content plus padding. Around an image that
+        // fills whatever it is given, that is sixty-four pixels of margin around nothing, and a
+        // row that took the number at face value measured the card to it -- the image inside drew
+        // at no width at all. What the child says has to include what it wraps.
+        setContent { Surface(CARD_OF_ONLY_A_BANNER_BESIDE_TEXT, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val image = onNodeWithContentDescription("banner").fetchSemanticsNode().boundsInRoot
+        val beside = onNodeWithText("beside the card").fetchSemanticsNode().boundsInRoot
+        assertTrue(image.width > root.width / 4, "the banner gets a share of the row: $image in $root")
+        assertTrue(beside.width > 0f && beside.left >= image.right, "the text keeps its place: $beside after $image")
+    }
+
+    @Test
     fun a_field_in_a_wide_row_keeps_its_natural_width() = runComposeUiTest {
         // The other half of a field filling a row: on a screen with room, it takes Material's
         // 280dp and not the whole row, which is what the web renderers draw for a weightless
@@ -1164,6 +1178,13 @@ class Material3ComponentsTest {
             {"id":"a","component":"Text","text":"$LONG_TEXT_A","weight":1},
             {"id":"b","component":"Text","text":"short","weight":9},
             {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        val CARD_OF_ONLY_A_BANNER_BESIDE_TEXT = """[
+            {"id":"root","component":"Row","children":["card","beside"]},
+            {"id":"card","component":"Card","child":"banner"},
+            {"id":"banner","component":"Image","url":"https://example.invalid/banner.png","variant":"largeFeature","description":"banner"},
+            {"id":"beside","component":"Text","text":"beside the card"}
         ]"""
 
         val CARD_OF_BANNER_BESIDE_TEXT = """[

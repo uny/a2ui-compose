@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import dev.ynagai.a2ui.core.protocol.Component
+import dev.ynagai.a2ui.core.protocol.ComponentId
+import dev.ynagai.a2ui.core.surface.ChildReference
+import dev.ynagai.a2ui.core.surface.SurfaceModel
 
 /** The main axis of the `Row` or `Column` a component is being laid out in. */
 public enum class LayoutAxis { Horizontal, Vertical }
@@ -82,3 +85,60 @@ public fun ComponentRenderer(
 /** A [ComponentRenderer] with the same [LayoutTraits] whatever the component or the axis. */
 public fun ComponentRenderer(traits: LayoutTraits, render: ComponentRenderer): ComponentRenderer =
     ComponentRenderer({ _, _ -> traits }, render)
+
+/**
+ * What [child] and everything it wraps say, together, about how it fits [axis].
+ *
+ * A renderer speaks for its own component, and a wrapper -- a `Card`, a `Column` holding one thing
+ * -- has no size of its own to declare. Its renderer says [MainAxisFit.Content] truthfully and the
+ * container then asks it a question its content cannot answer: a card around an image that fills
+ * whatever it is given reports the width of its own padding, sixty-four pixels of margin around
+ * nothing, and is measured to it. The image inside draws at no width at all, which is the
+ * starvation this all exists to end, one level down from where the container was looking.
+ *
+ * So a wrapper that declares nothing of its own, and whose children all fill, fills. A card of a
+ * banner asks for a share; a card of a banner *and a caption* does not, because the caption has a
+ * preferred width and the card can be asked for it. The walk stops at the first child that is
+ * content-sized, at a child that declares [MainAxisFit.Fill] itself, and at [TRAIT_DEPTH] levels
+ * -- which also ends the cycle an agent can build, the same bound `A2uiSurface` draws with.
+ *
+ * Children are resolved through the surface's catalog, not by property name, so this holds for a
+ * host's own wrapper as it does for the ones this library ships.
+ */
+public fun A2uiComponentScope.layoutTraitsOf(
+    child: A2uiChild,
+    registry: ComponentRegistry,
+    axis: LayoutAxis,
+): LayoutTraits {
+    val surface = surface ?: return LayoutTraits.Content
+    return traitsOf(child.componentId, registry, axis, surface, depth = 0)
+}
+
+/** How deep [layoutTraitsOf] looks for a wrapper's content before it takes the declaration as given. */
+private const val TRAIT_DEPTH = 8
+
+private fun A2uiComponentScope.traitsOf(
+    id: ComponentId,
+    registry: ComponentRegistry,
+    axis: LayoutAxis,
+    surface: SurfaceModel,
+    depth: Int,
+): LayoutTraits {
+    // A component the surface does not hold, or a type the registry cannot draw, is a placeholder:
+    // plain layout, content-sized.
+    val component = surface.components[id] ?: return LayoutTraits.Content
+    val declared = registry[component.component]?.layoutTraits(component, axis) ?: return LayoutTraits.Content
+    if (declared.fit == MainAxisFit.Fill || depth >= TRAIT_DEPTH) return declared
+    val children = runCatching { renderer.childResolver(surface).childrenOf(component) }
+        .getOrDefault(emptyList())
+        .flatMap { reference ->
+            when (reference) {
+                is ChildReference.Single -> listOf(reference.id)
+                is ChildReference.Fixed -> reference.ids
+                is ChildReference.Template -> listOf(reference.componentId)
+            }
+        }
+    if (children.isEmpty()) return declared
+    val all = children.all { traitsOf(it, registry, axis, surface, depth + 1).fit == MainAxisFit.Fill }
+    return if (all) LayoutTraits.Fill else declared
+}

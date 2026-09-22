@@ -30,6 +30,7 @@ import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.LocalA2uiRegistry
 import dev.ynagai.a2ui.compose.MainAxisFit
 import dev.ynagai.a2ui.compose.RenderChild
+import dev.ynagai.a2ui.compose.layoutTraitsOf
 import dev.ynagai.a2ui.compose.rememberString
 import dev.ynagai.a2ui.core.protocol.Component
 import kotlinx.serialization.json.JsonPrimitive
@@ -144,17 +145,12 @@ private fun A2uiComponentScope.rememberLaidOutChildren(axis: LayoutAxis): List<L
         derivedStateOf {
             allChildren().map { child ->
                 val component = surface?.components?.get(child.componentId)
-                val renderer = component?.let { registry[it.component] }
                 LaidOutChild(
                     child = child,
                     weight = weightOf(component),
-                    // A component the surface does not hold, or a type the registry cannot draw,
-                    // is drawn as a placeholder -- plain layout, content-sized.
-                    traits = if (component != null && renderer != null) {
-                        renderer.layoutTraits(component, axis)
-                    } else {
-                        LayoutTraits.Content
-                    },
+                    // What the child and everything it wraps say together: a card holding only an
+                    // image that fills asks for a share, rather than for the width of its padding.
+                    traits = layoutTraitsOf(child, registry, axis),
                 )
             }
         }

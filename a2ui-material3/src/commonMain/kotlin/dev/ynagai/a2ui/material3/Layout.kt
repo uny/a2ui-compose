@@ -24,14 +24,12 @@ import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import dev.ynagai.a2ui.compose.A2uiChild
 import dev.ynagai.a2ui.compose.A2uiComponentScope
-import dev.ynagai.a2ui.compose.ComponentRegistry
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.LayoutAxis
 import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.LocalA2uiRegistry
 import dev.ynagai.a2ui.compose.MainAxisFit
 import dev.ynagai.a2ui.compose.RenderChild
-import dev.ynagai.a2ui.compose.answersIntrinsics
 import dev.ynagai.a2ui.compose.rememberString
 import dev.ynagai.a2ui.core.protocol.Component
 import kotlinx.serialization.json.JsonPrimitive
@@ -119,15 +117,13 @@ private fun containerTraits(component: Component, axis: LayoutAxis, own: LayoutA
  *
  * `weight` is a property of the *child* but only a row or a column can act on it, which is why the
  * container reads it off each child on the child's behalf. [traits] are the child renderer's own
- * word on how it fits the axis, and [answersIntrinsics] whether the whole subtree under it keeps
- * that word -- see [LayoutTraits] for why a container needs both.
+ * word on how it fits the axis -- see [LayoutTraits].
  */
 @Immutable
 private data class LaidOutChild(
     val child: A2uiChild,
     val weight: Float,
     val traits: LayoutTraits,
-    val answersIntrinsics: Boolean,
 )
 
 /**
@@ -138,12 +134,11 @@ private data class LaidOutChild(
  * container to every write the surface takes -- including data model writes, which cannot change
  * a weight. Inside a `derivedStateOf` the recomputation still happens and the equal result is
  * discarded without invalidating anyone, which is the granularity the adapter layer buys and this
- * would otherwise spend. The subtree walk behind [answersIntrinsics] is inside the same derivation
- * for the same reason: it reads the component graph and nothing else.
+ * would otherwise spend.
  */
 @Composable
 private fun A2uiComponentScope.rememberLaidOutChildren(axis: LayoutAxis): List<LaidOutChild> {
-    val registry = rememberLayoutRegistry()
+    val registry = LocalA2uiRegistry.current
     val value by remember(this, registry, axis) {
         derivedStateOf {
             allChildren().map { child ->
@@ -159,49 +154,12 @@ private fun A2uiComponentScope.rememberLaidOutChildren(axis: LayoutAxis): List<L
                     } else {
                         LayoutTraits.Content
                     },
-                    answersIntrinsics = answersIntrinsics(child, registry),
                 )
             }
         }
     }
     return value
 }
-
-/**
- * The registry a container reads [LayoutTraits] from: [LocalA2uiRegistry], with the renderers that
- * draw through a host seam marked as not answering intrinsics when the installed implementation
- * does not say it does.
- *
- * `Text` draws through [LocalA2uiMarkdownRenderer]; `Image`, and a `Video`'s poster, through
- * [LocalA2uiImageLoader]. Their renderers promise a container it may ask their size, and the
- * promise is only as good as the host's layout: a Markdown renderer built on a `LazyColumn` or an
- * image loader on `SubcomposeAsyncImage` raises on the query, from inside the container's own
- * measure pass. The renderer cannot see the seam when it is asked for its traits -- `layoutTraits`
- * runs outside composition -- so the container consults the seams and withdraws the promise here.
- * Keyed by type name rather than by renderer identity: a host's own `Text` renderer that never
- * touches the seam loses a fair share it could have had, which is the safe direction to be wrong
- * in. Without a loader an `Image` is the placeholder, which is plain layout.
- */
-@Composable
-private fun rememberLayoutRegistry(): ComponentRegistry {
-    val registry = LocalA2uiRegistry.current
-    val markdown = LocalA2uiMarkdownRenderer.current
-    val loader = LocalA2uiImageLoader.current
-    return remember(registry, markdown, loader) {
-        val unasked = buildSet {
-            if (!markdown.answersIntrinsics) add("Text")
-            if (loader != null && !loader.answersIntrinsics) { add("Image"); add("Video") }
-        }
-        if (unasked.isEmpty()) registry
-        else registry.with(unasked.mapNotNull { type -> registry[type]?.let { type to it.notAnswering() } }.toMap())
-    }
-}
-
-/** This renderer's traits with the intrinsics promise withdrawn -- see [rememberLayoutRegistry]. */
-private fun ComponentRenderer.notAnswering(): ComponentRenderer = ComponentRenderer(
-    traits = { component, axis -> LayoutTraits(layoutTraits(component, axis).fit, answersIntrinsics = false) },
-    render = this,
-)
 
 /**
  * The `weight` [component] declared, or 0 when it declared none.
@@ -299,9 +257,9 @@ private enum class CrossAlignment(val fraction: Float) { Start(0f), Center(0.5f)
  *
  * The Compose idiom that fixes that is `height(IntrinsicSize.Min)` on the container, which makes
  * *every descendant* answer intrinsic measurement queries; a `SubcomposeLayout` cannot, and raises.
- * [Flex] now knows which children can be asked -- that is what [LayoutTraits.answersIntrinsics]
- * is for -- so a stretch that asks only where asking is safe, and degrades to `start` elsewhere,
- * is the next step and not this one. Until then the children keep their natural cross-axis size
+ * [Flex] now learns which children can be asked and remembers the ones that cannot, so a stretch
+ * that asks only where asking is safe, and degrades to `start` elsewhere, is the next step and
+ * not this one. Until then the children keep their natural cross-axis size
  * and the container wraps them, and a column of cards squares up to the widest only by accident of
  * its content.
  */
@@ -324,31 +282,38 @@ private fun crossAlignment(align: String?): CrossAlignment = when (align) {
  * child, find it too big, and measure it again -- Compose measures once -- so fairness has to be
  * decided *before* measuring, from the sizes the children would like.
  *
- * That is what intrinsic measurement is for, and what [LayoutTraits.answersIntrinsics] gates:
+ * That is what intrinsic measurement is for, and [FlexMeasurePolicy.distribute] is the plan it
+ * yields, shared by the measure pass and by this layout's own answers to its parent:
  *
- * 1. Children that cannot be asked are measured first, in order, each capped so that the children
- *    that *can* be asked keep at least their minimum. They take what they take.
+ * 1. Children that cannot be asked -- a `SubcomposeLayout` somewhere beneath raised on the
+ *    question, and the container remembers -- are measured first, in order, sharing what is left
+ *    once the askable children's minimums are set aside, so that no two of them can starve each
+ *    other either. They take what they take.
  * 2. Children that can be asked report their preferred and minimum sizes along the axis. If the
  *    preferred sizes fit in what is left, each gets its preferred size; if not, the deficit is
  *    taken from each in proportion to its preferred size, no child going below its minimum, the
  *    ones pinned at their minimum dropping out and the rest absorbing their share -- the
  *    flex-shrink algorithm. Order plays no part.
- * 3. Weighted children divide what remains by weight. One with an explicit `weight` is measured
- *    to exactly its share, as Compose's own `weight` does and as `flex: N` grows on the web. One
- *    that fills only because its renderer says it [MainAxisFit.Fill]s -- a text field, a slider,
- *    an image -- is measured *up to* its share: a field takes its 280dp when the row has it and
- *    the share when it does not, which is the web's `flex: 0 1 auto` for the same input, and
- *    leaves `justify` something to arrange when the row is wide. So is a content child that
- *    reports no preferred size at all: a `Card` around a banner image has nothing to say about
- *    its width because the image fills whatever it is given, and a basis of zero would have
- *    measured it to nothing.
+ * 3. Children that fill -- a renderer that says it [MainAxisFit.Fill]s, or one whose preferred
+ *    size is nothing at all, like a `Card` around a banner image -- are measured *up to* a share of
+ *    what remains: a filler takes the room when the row has it and its share when it does not,
+ *    which is the web's `flex: 0 1 auto` for something whose preferred size is the room, and
+ *    leaves `justify` something to arrange when the row is wide.
+ * 4. Children with an explicit `weight` divide what is left after that by weight, each measured
+ *    to exactly its share, as Compose's own `weight` does. The web would also hold such a child
+ *    at its min-content; this layout does not, on purpose -- see the note in the code.
  *
  * Along an unbounded axis -- a horizontally scrolling `List` -- nothing is short of room, so every
- * child gets its preferred size and a weighted one is measured loosely. `justify` is applied
- * through Compose's own `Arrangement`s, so the spacing semantics are the ones `Row` has; `align`
- * is [crossAlignment]. The layout answers intrinsic queries of its own by summing (along the
- * axis) or taking the largest (across it) of its children's, which is what lets a nested `Row`
- * take part in its parent's sharing.
+ * child gets its preferred size and a filling or weighted one is measured loosely. `justify` is
+ * applied through Compose's own `Arrangement`s, so the spacing semantics are the ones `Row` has;
+ * `align` is [crossAlignment].
+ *
+ * The layout answers its parent's questions from the same plan. Along the axis it is a sum --
+ * preferred sizes for the maximum, minimums for the minimum, where a filling or weighted child
+ * counts for nothing in the minimum because it is measured to what its siblings leave. Across the
+ * axis it is the largest child *at the width the plan would give it*: a text that wraps in its
+ * share is taller than the same text asked at the row's full width, and a column sizing its rows
+ * from the latter would cut them short.
  */
 @Composable
 private fun Flex(
@@ -383,34 +348,163 @@ private class FlexMeasurePolicy(
 ) : MeasurePolicy {
     private val horizontal = axis == LayoutAxis.Horizontal
 
-    /** What the policy knows about one measurable: its child's declaration, or nothing. */
-    private class Spec(val weight: Float, val fill: Boolean, val askable: Boolean) {
-        /** Weighted, explicitly or by filling: measured last, to a share of what is left. */
-        val share: Float get() = if (weight > 0f) weight else if (fill) 1f else 0f
+    /**
+     * The children that raised on an intrinsic query, by index, and are not asked again.
+     *
+     * A `SubcomposeLayout` anywhere beneath a child -- a `LazyColumn`, a `BoxWithConstraints`,
+     * Coil's `SubcomposeAsyncImage`, whatever a host's renderer is built on -- raises
+     * `IllegalStateException` from the query, and does so without touching any layout state: the
+     * query is refused, not half-answered. So the container asks once, remembers the refusal for
+     * as long as it has these children (a new list is a new policy), and measures that child as
+     * one with nothing to say. The one exception per child is the whole cost, and it is what
+     * makes a wrong guess about a renderer's layout a lost fair share rather than a crashed
+     * surface.
+     */
+    private val refused = HashSet<Int>()
 
-        /** The share a filler counts for when it joined the weighted late -- see the fillers in `measure`. */
-        val shareOrOne: Float get() = if (share > 0f) share else 1f
-    }
+    /** What the policy knows about one measurable: its child's declaration, or nothing. */
+    private class Spec(val weight: Float, val fill: Boolean)
 
     private fun specOf(measurable: IntrinsicMeasurable): Spec {
         val child = ((measurable.parentData as? LayoutIdParentData)?.layoutId as? Int)?.let(children::getOrNull)
-            ?: return Spec(weight = 0f, fill = false, askable = false)
-        return Spec(
-            weight = child.weight,
-            fill = child.traits.fit == MainAxisFit.Fill,
-            askable = child.traits.answersIntrinsics && child.answersIntrinsics,
-        )
+            ?: return Spec(weight = 0f, fill = false)
+        return Spec(weight = child.weight, fill = child.traits.fit == MainAxisFit.Fill)
+    }
+
+    private fun IntrinsicMeasurable.ask(index: Int, query: IntrinsicMeasurable.() -> Int): Int? {
+        if (index in refused) return null
+        return try {
+            query()
+        } catch (refusal: IllegalStateException) {
+            refused += index
+            null
+        }
+    }
+
+    private fun IntrinsicMeasurable.minMain(index: Int, cross: Int): Int? =
+        ask(index) { if (horizontal) minIntrinsicWidth(cross) else minIntrinsicHeight(cross) }
+
+    private fun IntrinsicMeasurable.maxMain(index: Int, cross: Int): Int? =
+        ask(index) { if (horizontal) maxIntrinsicWidth(cross) else maxIntrinsicHeight(cross) }
+
+    private fun IntrinsicMeasurable.minCross(index: Int, main: Int): Int? =
+        ask(index) { if (horizontal) minIntrinsicHeight(main) else minIntrinsicWidth(main) }
+
+    private fun IntrinsicMeasurable.maxCross(index: Int, main: Int): Int? =
+        ask(index) { if (horizontal) maxIntrinsicHeight(main) else maxIntrinsicWidth(main) }
+
+    /**
+     * The plan: hands each child, in the order it must be measured, the least and the most it may
+     * take along the axis, and learns from [take] what it took. See [Flex] for the four steps.
+     *
+     * [take] is the measure pass's `measure`, or, when a parent is asking this layout's intrinsic
+     * size, an estimate from the child's own intrinsics -- the plan is the same either way, which
+     * is the point.
+     */
+    private fun distribute(
+        measurables: List<IntrinsicMeasurable>,
+        mainMax: Int,
+        crossMax: Int,
+        take: (index: Int, min: Int, max: Int) -> Int,
+    ) {
+        val specs = measurables.map(::specOf)
+        val bounded = mainMax != Constraints.Infinity
+        var remaining = mainMax
+        val spend = { taken: Int -> if (bounded) remaining = max(0, remaining - taken) }
+
+        // Ask everyone who is content-sized, once. A child whose preferred size is nothing joins
+        // the fillers: a wrapper around something that fills whatever it is given has no size to
+        // be fair about, and a basis of zero would have measured it to nothing.
+        val preferred = HashMap<Int, Int>()
+        val minimum = HashMap<Int, Int>()
+        val unasked = ArrayList<Int>()
+        val fillers = ArrayList<Int>()
+        val askable = ArrayList<Int>()
+        for (index in specs.indices) {
+            val spec = specs[index]
+            if (spec.weight > 0f) continue
+            if (spec.fill) {
+                fillers += index
+                continue
+            }
+            val most = measurables[index].maxMain(index, crossMax)
+            val least = if (most == null) null else measurables[index].minMain(index, crossMax)
+            when {
+                most == null || least == null -> unasked += index
+                most == 0 -> fillers += index
+                else -> {
+                    askable += index
+                    preferred[index] = most
+                    minimum[index] = least
+                }
+            }
+        }
+
+        // 1. The children that cannot be asked, sharing what the askable ones' minimums leave.
+        val reserve = askable.sumOf { minimum.getValue(it).toLong() }
+        unasked.forEachIndexed { slot, index ->
+            val left = unasked.size - slot
+            val cap = if (bounded) ((remaining - reserve).coerceAtLeast(0L) / left).toInt() else Constraints.Infinity
+            spend(take(index, 0, cap))
+        }
+
+        // 2. The askable ones, at their preferred size or a fair shrink of it.
+        if (askable.isNotEmpty()) {
+            val basis = IntArray(askable.size) { preferred.getValue(askable[it]) }
+            val floor = IntArray(askable.size) { minimum.getValue(askable[it]) }
+            val targets = if (bounded && basis.sumOf { it.toLong() } > remaining) shrink(basis, floor, remaining) else basis
+            askable.forEachIndexed { slot, index -> spend(take(index, 0, targets[slot])) }
+        }
+
+        // 3. The fillers, each up to an equal share of what is left -- counted against the
+        //    weighted children's shares too, so that a filler that takes less leaves the rest to
+        //    them rather than to nobody.
+        val weighted = specs.indices.filter { specs[it].weight > 0f }
+        if (fillers.isNotEmpty()) {
+            val totalWeight = weighted.sumOf { specs[it].weight.toDouble() }
+            fillers.forEachIndexed { slot, index ->
+                val left = fillers.size - slot
+                val cap = if (bounded) (remaining / (left + totalWeight)).roundToInt() else Constraints.Infinity
+                spend(take(index, 0, cap))
+            }
+        }
+
+        // 4. The weighted ones, to exactly their share of what is left. Cumulative rounding, so the
+        //    shares sum to what there is: rounding each on its own hands out a pixel per child too
+        //    many, and the last child pays for all of them.
+        if (weighted.isNotEmpty()) {
+            if (bounded) {
+                val free = remaining
+                val total = weighted.sumOf { specs[it].weight.toDouble() }
+                var cumulative = 0.0
+                var handed = 0
+                for (index in weighted) {
+                    cumulative += specs[index].weight
+                    // In doubles: a weight is any finite `Float`, and `free` times a large one
+                    // overflows a `Float` to infinity, which rounds to `Int.MAX_VALUE`.
+                    val upTo = (free.toDouble() * cumulative / total).roundToInt().coerceIn(0, free)
+                    val share = upTo - handed
+                    handed = upTo
+                    // Exactly the share, even below the child's own minimum. The web would hold a
+                    // `flex: N` child at its min-content (`min-width: auto`) and let the row
+                    // overflow; here the agent asked for proportions -- the specification's
+                    // `33_financial-data-grid` is four weighted columns -- and a grid whose widest
+                    // figure pushes the row off a phone is worse than a cell that wraps its figure.
+                    // A deliberate departure, and the one place this layout is not flexbox.
+                    take(index, share, share)
+                }
+            } else {
+                for (index in weighted) take(index, 0, Constraints.Infinity)
+            }
+        }
     }
 
     override fun MeasureScope.measure(measurables: List<Measurable>, constraints: Constraints): MeasureResult {
-        val specs = measurables.map(::specOf)
         val mainMax = if (horizontal) constraints.maxWidth else constraints.maxHeight
         val crossMax = if (horizontal) constraints.maxHeight else constraints.maxWidth
-        val bounded = mainMax != Constraints.Infinity
         val placeables = arrayOfNulls<Placeable>(measurables.size)
-        var remaining = mainMax
 
-        fun measure(index: Int, min: Int, max: Int) {
+        distribute(measurables, mainMax, crossMax) { index, min, max ->
             // `fitPrioritizing*` rather than the constructor, which throws past 2^18 - 2 in a
             // dimension. A text's minimum intrinsic width is its longest word, and the agent
             // chooses the words; a floor that outgrows what `Constraints` can hold is clamped to
@@ -420,58 +514,12 @@ private class FlexMeasurePolicy(
             } else {
                 Constraints.fitPrioritizingHeight(minWidth = 0, maxWidth = crossMax, minHeight = min, maxHeight = max)
             }
-            val placeable = measurables[index].measure(c)
-            placeables[index] = placeable
-            if (bounded) remaining = max(0, remaining - placeable.main())
-        }
-
-        val content = specs.indices.filter { specs[it].share == 0f }.toMutableList()
-        // A child that can be asked and answers "nothing" -- a wrapper around something that fills
-        // whatever it is given -- has no size to be fair about, and joins the fillers.
-        val fillers = content.filter { specs[it].askable && measurables[it].maxIntrinsicMain(crossMax) == 0 }
-        content -= fillers.toSet()
-        val (askable, unasked) = content.partition { specs[it].askable }
-
-        // 1. The children that cannot be asked, capped so the askable ones keep their minimum.
-        val minimums = askable.associateWith { measurables[it].minIntrinsicMain(crossMax) }
-        val reserve = minimums.values.sum()
-        for (index in unasked) {
-            measure(index, 0, if (bounded) max(0, remaining - reserve) else Constraints.Infinity)
-        }
-
-        // 2. The askable ones, at their preferred size or a fair shrink of it.
-        if (askable.isNotEmpty()) {
-            val basis = IntArray(askable.size) { measurables[askable[it]].maxIntrinsicMain(crossMax) }
-            val floor = IntArray(askable.size) { minimums.getValue(askable[it]) }
-            val targets = if (bounded && basis.sum() > remaining) shrink(basis, floor, remaining) else basis
-            askable.forEachIndexed { slot, index -> measure(index, 0, targets[slot]) }
-        }
-
-        // 3. The weighted ones, to their share of what is left: exactly, for an explicit weight;
-        //    up to, for a child that only fills.
-        val weighted = specs.indices.filter { specs[it].share > 0f } + fillers
-        if (weighted.isNotEmpty()) {
-            if (bounded) {
-                val free = remaining
-                val total = weighted.sumOf { specs[it].shareOrOne.toDouble() }
-                var handed = 0
-                weighted.forEachIndexed { slot, index ->
-                    val share = if (slot == weighted.lastIndex) {
-                        max(0, free - handed)
-                    } else {
-                        // In doubles: a weight is any finite `Float`, and `free` times a large one
-                        // overflows a `Float` to infinity, which rounds to `Int.MAX_VALUE`.
-                        (free.toDouble() * specs[index].shareOrOne / total).roundToInt().also { handed += it }
-                    }
-                    measure(index, if (specs[index].weight > 0f) share else 0, share)
-                }
-            } else {
-                for (index in weighted) measure(index, 0, Constraints.Infinity)
-            }
+            measurables[index].measure(c).also { placeables[index] = it }.main()
         }
 
         val sizes = IntArray(placeables.size) { placeables[it]!!.main() }
-        val mainSize = if (horizontal) constraints.constrainWidth(sizes.sum()) else constraints.constrainHeight(sizes.sum())
+        val used = sizes.sumOf { it.toLong() }.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        val mainSize = if (horizontal) constraints.constrainWidth(used) else constraints.constrainHeight(used)
         val crossUsed = placeables.maxOfOrNull { it!!.cross() } ?: 0
         val crossSize = if (horizontal) constraints.constrainHeight(crossUsed) else constraints.constrainWidth(crossUsed)
         val positions = IntArray(sizes.size)
@@ -502,41 +550,39 @@ private class FlexMeasurePolicy(
     private fun Placeable.main() = if (horizontal) width else height
     private fun Placeable.cross() = if (horizontal) height else width
 
-    private fun IntrinsicMeasurable.minIntrinsicMain(cross: Int) =
-        if (horizontal) minIntrinsicWidth(cross) else minIntrinsicHeight(cross)
+    // This layout's own answers. Along the axis, sums; across it, the largest child at the size
+    // the plan would give it. A child that cannot be asked counts for nothing -- it is the child
+    // the plan measures as it comes, and there is no number to sum.
+    private fun List<IntrinsicMeasurable>.sumMain(cross: Int, least: Boolean): Int = indices.sumOf { index ->
+        val spec = specOf(this[index])
+        val counts = !least || (spec.weight == 0f && !spec.fill)
+        if (!counts) 0L else (if (least) this[index].minMain(index, cross) else this[index].maxMain(index, cross))?.toLong() ?: 0L
+    }.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
 
-    private fun IntrinsicMeasurable.maxIntrinsicMain(cross: Int) =
-        if (horizontal) maxIntrinsicWidth(cross) else maxIntrinsicHeight(cross)
+    private fun List<IntrinsicMeasurable>.largestCross(main: Int, least: Boolean): Int {
+        var largest = 0
+        distribute(this, main, Constraints.Infinity) { index, _, max ->
+            // The room the plan gives this child, and what the child would take of it: its
+            // preferred size when that fits, the room when it does not, all of it for a filler.
+            val given = if (max == Constraints.Infinity) this[index].maxMain(index, Constraints.Infinity) ?: 0 else max
+            val across = if (least) this[index].minCross(index, given) else this[index].maxCross(index, given)
+            largest = max(largest, across ?: 0)
+            given
+        }
+        return largest
+    }
 
-    // The container's own intrinsics: a sum along the axis, the largest across it. A parent asks
-    // these only when this container's subtree answers them, which `answersIntrinsics` decided.
-    //
-    // Along the axis, a weighted child contributes nothing to the *minimum*. It is measured to
-    // whatever is left once its siblings have taken theirs, so the least this container needs is
-    // what those siblings need -- and a text field's own minimum (Material's is 280dp) would
-    // otherwise pin every container above it at a width no phone has, and the row beside it
-    // would be shrunk to make room for a floor the field never insists on when it is given less.
     override fun IntrinsicMeasureScope.minIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int =
-        measurables.along(horizontal, least = true) { it.minIntrinsicWidth(height) }
+        if (horizontal) measurables.sumMain(height, least = true) else measurables.largestCross(height, least = true)
 
     override fun IntrinsicMeasureScope.maxIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int =
-        measurables.along(horizontal, least = false) { it.maxIntrinsicWidth(height) }
+        if (horizontal) measurables.sumMain(height, least = false) else measurables.largestCross(height, least = false)
 
     override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int =
-        measurables.along(!horizontal, least = true) { it.minIntrinsicHeight(width) }
+        if (horizontal) measurables.largestCross(width, least = true) else measurables.sumMain(width, least = true)
 
     override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int =
-        measurables.along(!horizontal, least = false) { it.maxIntrinsicHeight(width) }
-
-    private inline fun List<IntrinsicMeasurable>.along(
-        sum: Boolean,
-        least: Boolean,
-        query: (IntrinsicMeasurable) -> Int,
-    ): Int = if (sum) {
-        sumOf { if (least && specOf(it).share > 0f) 0 else query(it) }
-    } else {
-        maxOfOrNull(query) ?: 0
-    }
+        if (horizontal) measurables.largestCross(width, least = false) else measurables.sumMain(width, least = false)
 }
 
 /**

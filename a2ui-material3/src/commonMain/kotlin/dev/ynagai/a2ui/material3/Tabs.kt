@@ -19,7 +19,6 @@ import dev.ynagai.a2ui.compose.A2uiComponentScope
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.LayoutAxis
 import dev.ynagai.a2ui.compose.LayoutTraits
-import dev.ynagai.a2ui.compose.MainAxisFit
 import dev.ynagai.a2ui.compose.RenderChild
 import dev.ynagai.a2ui.compose.rememberChildren
 import kotlinx.serialization.json.JsonArray
@@ -53,17 +52,11 @@ import kotlinx.serialization.json.JsonObject
  * than this renderer reading it -- see `Layout.kt`.
  */
 public val TabsRenderer: ComponentRenderer = ComponentRenderer(
-    // The strip measures itself across whatever it is offered, so in a row it asks for a share.
-    // And it is the one shipped renderer that cannot be asked its size: Material's
-    // `PrimaryScrollableTabRow` is a `SubcomposeLayout`, which raises on an intrinsic query --
-    // so a row or a column holding a `Tabs` measures it without asking, and so does every
-    // container above that one. See [LayoutTraits].
-    traits = { _, axis ->
-        LayoutTraits(
-            fit = if (axis == LayoutAxis.Horizontal) MainAxisFit.Fill else MainAxisFit.Content,
-            answersIntrinsics = false,
-        )
-    },
+    // The strip measures itself across whatever it is offered, so in a row it asks for a share;
+    // down a column, filling the width costs a sibling nothing. And it is never asked its size --
+    // the `refusesIntrinsics` below says why -- so a row or a column holding a `Tabs`, or a card
+    // holding one, measures it as it comes.
+    traits = { _, axis -> if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Content },
 ) { scope, modifier ->
     val tabs = scope.rememberTabs()
     // **A re-sent `Tabs` starts again at the first tab.** The scope is remembered on the
@@ -77,7 +70,11 @@ public val TabsRenderer: ComponentRenderer = ComponentRenderer(
     // move together. It is here so that changing either key cannot silently index past the end.
     val index = selected.coerceIn(0, (tabs.size - 1).coerceAtLeast(0))
     if (tabs.isEmpty()) return@ComponentRenderer
-    Column(modifier) {
+    // `PrimaryScrollableTabRow` *answers* an intrinsic query, and answering is the problem: it
+    // subcomposes its tabs to do so, the subcomposition invalidates the layout that asked, and a
+    // `Card` around this strip inside a `Row` asked once per measure never settles. Refused
+    // instead, which a container takes as it takes a `LazyColumn`'s refusal.
+    Column(modifier.refusesIntrinsics()) {
         // Scrollable rather than the fixed `PrimaryTabRow`, which divides the width evenly among
         // its tabs: the number of tabs is the agent's, and four or five titles of ordinary length
         // are already narrow enough to be clipped mid-word on a phone. Scrolling degrades to the

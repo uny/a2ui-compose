@@ -20,6 +20,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -30,7 +31,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.v2.runComposeUiTest
 import dev.ynagai.a2ui.compose.A2uiPlaceholder
 import dev.ynagai.a2ui.compose.A2uiPlaceholderReason
@@ -244,9 +244,9 @@ class Material3ComponentsTest {
 
     @Test
     fun a_host_markdown_renderer_that_cannot_be_asked_does_not_crash_a_row() = runComposeUiTest {
-        // A `Text` promises a row it can be asked its size, but what it draws is the host's. A
-        // renderer built on a `SubcomposeLayout` -- `BoxWithConstraints` is one -- raises on the
-        // query, so a seam implementation that does not say it answers is not asked.
+        // What a `Text` draws is the host's. A renderer built on a `SubcomposeLayout` --
+        // `BoxWithConstraints` is one -- raises on the intrinsic query, from inside the row's own
+        // measure pass; the row catches it, remembers, and measures the text without asking.
         setContent {
             CompositionLocalProvider(LocalA2uiMarkdownRenderer provides SubcomposingMarkdown) {
                 Surface(TWO_SHORT_TEXTS, width = PHONE_WIDTH)
@@ -260,8 +260,8 @@ class Material3ComponentsTest {
     @Test
     fun a_host_image_loader_that_cannot_be_asked_does_not_crash_a_row() = runComposeUiTest {
         // The same seam for `Image` and a `Video`'s poster: Coil's `SubcomposeAsyncImage` is a
-        // `SubcomposeLayout`, and a loader that does not say it answers is not asked. A filling
-        // image is never asked directly, so the fixture asks through a fixed-size one and a card.
+        // `SubcomposeLayout`, and the row survives the refusal the same way. A filling image is
+        // never asked directly, so the fixture asks through a fixed-size one and a card.
         setContent {
             CompositionLocalProvider(LocalA2uiImageLoader provides SubcomposingImageLoader) {
                 Surface(IMAGE_AND_VIDEO_BESIDE_TEXT, width = PHONE_WIDTH)
@@ -272,10 +272,10 @@ class Material3ComponentsTest {
     }
 
     @Test
-    fun a_tabs_inside_a_row_is_measured_without_being_asked() = runComposeUiTest {
-        // The one shipped renderer that cannot be asked: Material's tab row is a
-        // `SubcomposeLayout`. It sits in a row beside a text, and inside a card in the same row,
-        // so that the container above it and the one above that both have to take its word for it.
+    fun a_tabs_inside_a_row_leaves_room_for_the_text_beside_it() = runComposeUiTest {
+        // A tab strip measures itself across whatever it is offered, so in a row it is a filler.
+        // It sits in a row beside a text, and inside a card in the same row, so that the container
+        // above it and the one above that both have to share around it.
         setContent { Surface(TABS_IN_A_ROW, width = PHONE_WIDTH) }
         val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
         assertTrue(beside.width > 0f, "the text beside the tabs is drawn: $beside")
@@ -294,6 +294,72 @@ class Material3ComponentsTest {
         val first = onNodeWithText("first").fetchSemanticsNode().boundsInRoot
         val second = onNodeWithText("second").fetchSemanticsNode().boundsInRoot
         assertTrue(first.bottom <= second.top, "the first child stays above the second: $first, $second")
+    }
+
+    @Test
+    fun two_children_that_cannot_be_asked_share_the_row_between_them() = runComposeUiTest {
+        // Two host renderers built on a `LazyColumn`, side by side. Neither can be asked its
+        // size, so the row measures them as they come -- but sharing what is left between the
+        // ones still to come, not handing the first the lot: measured in order against the whole
+        // width, the first wraps its text at the row and the second measures at zero, which is the
+        // starvation this layout exists to end, back again by a different door.
+        val registry = Material3Components.Basic.with(
+            mapOf(
+                "Feed" to ComponentRenderer { scope, m ->
+                    LazyColumn(m) { item { Text(scope.string("text").orEmpty()) } }
+                },
+            ),
+        )
+        setContent {
+            Box(Modifier.size(PHONE_WIDTH, SURFACE_HEIGHT)) {
+                MaterialTheme { A2uiSurface(rendererFor(TWO_FEEDS), SURFACE, registry) }
+            }
+        }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val first = onNodeWithText(LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText(LONG_TEXT_B).fetchSemanticsNode().boundsInRoot
+        assertTrue(first.width > 0f && second.width > 0f, "both feeds drawn: $first, $second")
+        assertTrue(second.right <= root.right + 1f, "the second feed stays on the row: $second in $root")
+        assertTrue(second.left >= first.right, "the feeds do not overlap: $first then $second")
+    }
+
+    @Test
+    fun a_field_beside_a_long_text_shrinks_with_it_rather_than_vanishing() = runComposeUiTest {
+        // A field is content-sized like the web's `<input>`: 280dp when there is room, less when
+        // there is not, in proportion with the text beside it. Measured as a filler it would have
+        // been handed what the text left, and a text that wraps at the row leaves nothing.
+        setContent { Surface(FIELD_BESIDE_LONG_TEXT, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val field = onNodeWithText("Search").fetchSemanticsNode().boundsInRoot
+        val text = onNodeWithText(LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        assertTrue(field.width >= 100f, "the field keeps a usable width: $field")
+        assertTrue(text.width > 0f && text.right <= root.right + 1f, "the text is drawn beside it: $text in $root")
+    }
+
+    @Test
+    fun an_empty_row_does_not_take_a_share_from_a_weighted_sibling() = runComposeUiTest {
+        // A child whose preferred size is nothing is measured as a filler, up to a share -- and
+        // an empty row takes none of it. What it did not take goes to the weighted sibling, not
+        // to nobody: the shares are cut from what is left after the fillers, not alongside them.
+        setContent { Surface(EMPTY_ROW_AND_WEIGHTED_TEXT, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val weighted = onNodeWithText("takes the rest").fetchSemanticsNode().boundsInRoot
+        assertTrue(weighted.width >= root.width * 0.8f, "the weighted text should get nearly the row: $weighted in $root")
+    }
+
+    @Test
+    fun a_column_short_of_height_sizes_a_row_by_the_text_as_it_will_wrap() = runComposeUiTest {
+        // A column that is short of height asks each row how tall it would like to be. Asked at
+        // the column's full width, a row answers for a text laid out on that width -- two lines --
+        // while the text, given its share of the row beside a price, wraps to four. A row sized
+        // from the first answer cuts the text; the plan the row measures by is the plan it
+        // answers by, so the height is the four-line one.
+        setContent { Surface(WRAPPING_ROW_IN_A_SHORT_COLUMN, width = PHONE_WIDTH, height = 200.dp) }
+        val text = onNodeWithText(LONG_TEXT_B).fetchSemanticsNode().boundsInRoot
+        val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+        // `after` is one line, so it is the ruler: the wrapped text should stand at least three of it.
+        assertTrue(text.height >= after.height * 3f - 1f, "the text should be laid out on the lines its share needs, not cut: $text against a line of ${after.height}")
+        assertTrue(after.top >= text.bottom - 1f, "the text after the row sits below all of it: $after under $text")
     }
 
     @Test
@@ -784,8 +850,8 @@ class Material3ComponentsTest {
      * test drawn at the default size passes with or without the fix that makes it true.
      */
     @Composable
-    private fun Surface(components: String, width: Dp) {
-        Box(Modifier.size(width, SURFACE_HEIGHT)) { Surface(components) }
+    private fun Surface(components: String, width: Dp, height: Dp = SURFACE_HEIGHT) {
+        Box(Modifier.size(width, height)) { Surface(components) }
     }
 
     @Composable
@@ -1000,6 +1066,32 @@ class Material3ComponentsTest {
             {"id":"banner","component":"Image","url":"https://example.invalid/banner.png","variant":"largeFeature"},
             {"id":"caption","component":"Text","text":"in the card"},
             {"id":"beside","component":"Text","text":"beside the card"}
+        ]"""
+
+        val TWO_FEEDS = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Feed","text":"$LONG_TEXT_A"},
+            {"id":"b","component":"Feed","text":"$LONG_TEXT_B"}
+        ]"""
+
+        val FIELD_BESIDE_LONG_TEXT = """[
+            {"id":"root","component":"Row","children":["f","t"]},
+            {"id":"f","component":"TextField","label":"Search","value":{"path":"/typed"}},
+            {"id":"t","component":"Text","text":"$LONG_TEXT_A"}
+        ]"""
+
+        val EMPTY_ROW_AND_WEIGHTED_TEXT = """[
+            {"id":"root","component":"Row","children":["empty","w"]},
+            {"id":"empty","component":"Row","children":[]},
+            {"id":"w","component":"Text","text":"takes the rest","weight":1}
+        ]"""
+
+        val WRAPPING_ROW_IN_A_SHORT_COLUMN = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["long","price"],"justify":"spaceBetween"},
+            {"id":"long","component":"Text","text":"$LONG_TEXT_B"},
+            {"id":"price","component":"Text","text":"${'$'}4.50 per portion, which is a wide price"},
+            {"id":"after","component":"Text","text":"after"}
         ]"""
 
         val COLUMN_IN_ROW = """[

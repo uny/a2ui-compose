@@ -43,9 +43,9 @@ class PhoneWidthLayoutTest {
             val renderer = A2uiRenderer(A2uiRendererConfig.Default.withClock { CLOCK })
             renderer.applyAll(example.decoded)
             val surface = renderer.state.surfaces.filterValues { it.isRenderable }.keys.single()
-            val width = WIDER[example.file] ?: PHONE_WIDTH
+            val edgeIsSoft = example.file in OVERFLOWS_A_PHONE
             setContent {
-                Box(Modifier.size(width, SURFACE_HEIGHT)) {
+                Box(Modifier.size(PHONE_WIDTH, SURFACE_HEIGHT)) {
                     MaterialTheme {
                         A2uiSurface(renderer = renderer, surfaceId = surface, registry = Material3Components.Basic)
                     }
@@ -66,7 +66,7 @@ class PhoneWidthLayoutTest {
                 val end = node.positionInRoot.x + width
                 if (width <= 0) {
                     complaints += "${example.file}: \"${text.take(40)}\" has no width"
-                } else if (!scrolling && end > right + TOLERANCE) {
+                } else if (!scrolling && !edgeIsSoft && end > right + TOLERANCE) {
                     complaints += "${example.file}: \"${text.take(40)}\" runs off the right edge (ends at $end, edge at $right)"
                 }
             }
@@ -87,13 +87,13 @@ class PhoneWidthLayoutTest {
         val PHONE_WIDTH = 320.dp
 
         /**
-         * The examples whose *minimum* content is wider than a phone, drawn at the narrowest width
-         * that holds them. A two-pane editor beside a preview puts "Celebrating" and a guest's name
-         * side by side in half of 320dp, and no fair share fits two words into a slot narrower than
-         * the words: the row overflows, as a flex row on the web would. What the test still holds
-         * such an example to is the same claim at a width its author evidently meant it for.
+         * The examples whose *minimum* content is wider than a phone, held to the first claim only.
+         * A two-pane editor beside a preview puts "Celebrating" and a guest's name side by side in
+         * half of 320dp, and no fair share fits two words into a slot narrower than the words: the
+         * row overflows its edge, as a flex row on the web would. Every text still has to have
+         * room -- that is the claim under test -- and only the edge is let go.
          */
-        val WIDER = mapOf("30_live-invitation-builder.json" to 480.dp)
+        val OVERFLOWS_A_PHONE = setOf("30_live-invitation-builder.json")
 
         /** Tall enough that nothing is height-constrained. */
         val SURFACE_HEIGHT = 2000.dp

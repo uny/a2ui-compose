@@ -55,35 +55,16 @@ public fun interface A2uiMarkdownRenderer {
     @Composable
     public fun Markdown(source: String, style: TextStyle, color: Color, modifier: Modifier)
 
-    /**
-     * Whether what [Markdown] draws answers intrinsic measurement queries.
-     *
-     * A `Row` or `Column` shares its main axis from its children's preferred sizes, and asks a
-     * `Text` for its size only if what the `Text` draws can answer: plain Compose layout can, a
-     * `SubcomposeLayout` -- a `LazyColumn`, a `BoxWithConstraints` -- raises. False unless an
-     * implementation says otherwise, so that a renderer registered as a lambda is never asked and
-     * cannot crash a row; the cost is that a `Text` drawn through it takes what its siblings
-     * leave rather than a fair share. An implementation made of plain layout returns true and
-     * gets the sharing back. See `LayoutTraits` in `a2ui-compose`.
-     */
-    public val answersIntrinsics: Boolean get() = false
-
     public companion object {
         /**
          * The default: [markdownText]'s subset in a single Material 3 `Text`.
          *
          * Public so a host can compose on top of it -- fall back to it for the sources its own
-         * renderer declines, or wrap it -- rather than only replace it. An object rather than a
-         * lambda so that it can say it [answersIntrinsics]: a single `Text` does.
+         * renderer declines, or wrap it -- rather than only replace it.
          */
-        public val Inline: A2uiMarkdownRenderer = object : A2uiMarkdownRenderer {
-            @Composable
-            override fun Markdown(source: String, style: TextStyle, color: Color, modifier: Modifier) {
-                val text = remember(source) { markdownText(source) }
-                Text(text = text, modifier = modifier, style = style, color = color)
-            }
-
-            override val answersIntrinsics: Boolean get() = true
+        public val Inline: A2uiMarkdownRenderer = A2uiMarkdownRenderer { source, style, color, modifier ->
+            val text = remember(source) { markdownText(source) }
+            Text(text = text, modifier = modifier, style = style, color = color)
         }
     }
 }

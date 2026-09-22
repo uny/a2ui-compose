@@ -193,17 +193,21 @@ axis from those, which is the flexbox algorithm; the tests hold every one of the
 examples to "every text has room at 320dp".
 
 Asking a child its size is an intrinsic measurement query, and a `SubcomposeLayout` — a
-`LazyColumn`, a `BoxWithConstraints`, Material's tab row — cannot answer one and raises. So a
-renderer declares what a container may do with it, as `LayoutTraits`:
+`LazyColumn`, a `BoxWithConstraints`, Coil's `SubcomposeAsyncImage`, whatever a host's renderer is
+built on — cannot answer one and raises. The container catches that, remembers which child
+refused, and measures it as it comes from then on: first, in order, sharing what the askable
+children's minimums leave with any other child that refused. A wrong guess about a renderer's
+layout costs a fair share, never a surface, and there is nothing to declare. What a renderer does
+declare is which of two things it is, as `LayoutTraits`:
 
 ```kotlin
 val registry = Material3Components.Basic.with(
     mapOf(
-        // Plain Compose layout: content-sized, and a row may ask its size to share fairly.
+        // Content-sized: drawn at its preferred size, shrunk in proportion when the row is short.
+        // Also what a renderer registered as a plain lambda gets.
         "Badge" to ComponentRenderer(LayoutTraits.Content) { scope, modifier -> /* … */ },
-        // Backed by a LazyColumn: content-sized, but measured without asking.
-        "Feed" to ComponentRenderer(LayoutTraits.Host) { scope, modifier -> /* … */ },
-        // A chart that stretches across a row, like a slider's track.
+        // Fills: no preferred width of its own, like a slider's track, so it takes a share of what
+        // the content-sized children leave -- up to that share, so that a wide row keeps its slack.
         "Chart" to ComponentRenderer(
             traits = { _, axis -> if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Content },
         ) { scope, modifier -> /* … */ },
@@ -211,23 +215,23 @@ val registry = Material3Components.Basic.with(
 )
 ```
 
-A renderer registered as a plain lambda gets `LayoutTraits.Host`: content-sized, never asked. That
-is the safe reading for a renderer the library has not seen, and it costs the fair share — a child
-that cannot be asked is measured first, in order, and takes what it takes. A container asks a child
-only when every renderer beneath it answers, so one `Host` renderer inside a `Column` turns the
-whole column into one; the shipped renderers all answer except `Tabs`.
+Of the shipped renderers, `Divider` (along its axis), `Image` (the container-filling variants),
+`Slider`, `Video`, `AudioPlayer` and `Tabs` fill a row; everything else is content, including the
+three inputs. A Material text field is 280dp wide unless given less and takes less without
+complaint, but *reports* that 280dp as its minimum, which would pin every row a field sits in at
+a width no phone has — so `TextField`, `DateTimeInput` and `ChoicePicker` report a minimum of
+120dp instead, and shrink in proportion with the text beside them the way a browser's `<input>`
+does. `Tabs` refuses to be asked at all: Material's scrollable tab row *would* answer, by
+subcomposing its tabs, and the subcomposition invalidates the layout that asked.
 
-Two of them draw through a seam the host fills — `Text` through `LocalA2uiMarkdownRenderer`, `Image`
-and a `Video`'s poster through `LocalA2uiImageLoader` — and their promise is only as good as what
-the host put there. Both interfaces therefore carry `answersIntrinsics`, false unless an
-implementation says otherwise: a renderer or loader written as a lambda is never asked and cannot
-crash a row, at the cost of the fair share for the `Text`s or `Image`s it draws; one made of plain
-layout overrides it to `true` and gets the sharing back. The shipped `A2uiMarkdownRenderer.Inline`
-and `Material3MarkdownRenderer` both answer; a loader on Coil's `AsyncImage` may say so, one on
-`SubcomposeAsyncImage` must not.
+One deliberate departure from flexbox: a child with an explicit `weight` is measured to exactly
+its share, even below its own minimum. The web would hold it at its min-content and let the row
+overflow; here the agent asked for proportions — `33_financial-data-grid` is four weighted columns
+— and a grid whose widest figure pushes the row off a phone is worse than a cell that wraps.
 
 `align: stretch`, the catalog's default on the cross axis, is still drawn as `start` — see the note
-on `crossAlignment` in `Layout.kt` for why, and for what the traits make possible next.
+on `crossAlignment` in `Layout.kt` for why, and for what the container's memory of refusals makes
+possible next.
 
 ## Gallery
 

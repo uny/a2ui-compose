@@ -274,10 +274,8 @@ final class dev.ynagai.a2ui.compose/ComponentRegistry { // dev.ynagai.a2ui.compo
 }
 
 final class dev.ynagai.a2ui.compose/LayoutTraits { // dev.ynagai.a2ui.compose/LayoutTraits|null[0]
-    constructor <init>(dev.ynagai.a2ui.compose/MainAxisFit, kotlin/Boolean) // dev.ynagai.a2ui.compose/LayoutTraits.<init>|<init>(dev.ynagai.a2ui.compose.MainAxisFit;kotlin.Boolean){}[0]
+    constructor <init>(dev.ynagai.a2ui.compose/MainAxisFit) // dev.ynagai.a2ui.compose/LayoutTraits.<init>|<init>(dev.ynagai.a2ui.compose.MainAxisFit){}[0]
 
-    final val answersIntrinsics // dev.ynagai.a2ui.compose/LayoutTraits.answersIntrinsics|{}answersIntrinsics[0]
-        final fun <get-answersIntrinsics>(): kotlin/Boolean // dev.ynagai.a2ui.compose/LayoutTraits.answersIntrinsics.<get-answersIntrinsics>|<get-answersIntrinsics>(){}[0]
     final val fit // dev.ynagai.a2ui.compose/LayoutTraits.fit|{}fit[0]
         final fun <get-fit>(): dev.ynagai.a2ui.compose/MainAxisFit // dev.ynagai.a2ui.compose/LayoutTraits.fit.<get-fit>|<get-fit>(){}[0]
 
@@ -329,7 +327,6 @@ final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_ComponentRegistry$stab
 final val dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_LayoutTraits$stableprop // dev.ynagai.a2ui.compose/dev_ynagai_a2ui_compose_LayoutTraits$stableprop|#static{}dev_ynagai_a2ui_compose_LayoutTraits$stableprop[0]
 
 final fun (dev.ynagai.a2ui.compose/A2uiComponentScope).dev.ynagai.a2ui.compose/RenderChild(dev.ynagai.a2ui.compose/A2uiChild, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.ynagai.a2ui.compose/RenderChild|RenderChild@dev.ynagai.a2ui.compose.A2uiComponentScope(dev.ynagai.a2ui.compose.A2uiChild;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
-final fun (dev.ynagai.a2ui.compose/A2uiComponentScope).dev.ynagai.a2ui.compose/answersIntrinsics(dev.ynagai.a2ui.compose/A2uiChild, dev.ynagai.a2ui.compose/ComponentRegistry, kotlin/Int = ...): kotlin/Boolean // dev.ynagai.a2ui.compose/answersIntrinsics|answersIntrinsics@dev.ynagai.a2ui.compose.A2uiComponentScope(dev.ynagai.a2ui.compose.A2uiChild;dev.ynagai.a2ui.compose.ComponentRegistry;kotlin.Int){}[0]
 final fun (dev.ynagai.a2ui.compose/A2uiComponentScope).dev.ynagai.a2ui.compose/checkFailures(): kotlin.collections/List<dev.ynagai.a2ui.compose/A2uiCheckFailure> // dev.ynagai.a2ui.compose/checkFailures|checkFailures@dev.ynagai.a2ui.compose.A2uiComponentScope(){}[0]
 final fun (dev.ynagai.a2ui.compose/A2uiComponentScope).dev.ynagai.a2ui.compose/rememberAction(kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): dev.ynagai.a2ui.core.protocol/Action? // dev.ynagai.a2ui.compose/rememberAction|rememberAction@dev.ynagai.a2ui.compose.A2uiComponentScope(kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun (dev.ynagai.a2ui.compose/A2uiComponentScope).dev.ynagai.a2ui.compose/rememberAllChildren(androidx.compose.runtime/Composer?, kotlin/Int): kotlin.collections/List<dev.ynagai.a2ui.compose/A2uiChild> // dev.ynagai.a2ui.compose/rememberAllChildren|rememberAllChildren@dev.ynagai.a2ui.compose.A2uiComponentScope(androidx.compose.runtime.Composer?;kotlin.Int){}[0]

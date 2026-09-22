@@ -7,16 +7,10 @@
 
 // Library unique name: <dev.ynagai.a2ui:a2ui-material3>
 abstract fun interface dev.ynagai.a2ui.material3/A2uiImageLoader { // dev.ynagai.a2ui.material3/A2uiImageLoader|null[0]
-    open val answersIntrinsics // dev.ynagai.a2ui.material3/A2uiImageLoader.answersIntrinsics|{}answersIntrinsics[0]
-        open fun <get-answersIntrinsics>(): kotlin/Boolean // dev.ynagai.a2ui.material3/A2uiImageLoader.answersIntrinsics.<get-answersIntrinsics>|<get-answersIntrinsics>(){}[0]
-
     abstract fun Image(kotlin/String, kotlin/String?, androidx.compose.ui.layout/ContentScale, androidx.compose.ui/Modifier, androidx.compose.runtime/Composer?, kotlin/Int) // dev.ynagai.a2ui.material3/A2uiImageLoader.Image|Image(kotlin.String;kotlin.String?;androidx.compose.ui.layout.ContentScale;androidx.compose.ui.Modifier;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 }
 
 abstract fun interface dev.ynagai.a2ui.material3/A2uiMarkdownRenderer { // dev.ynagai.a2ui.material3/A2uiMarkdownRenderer|null[0]
-    open val answersIntrinsics // dev.ynagai.a2ui.material3/A2uiMarkdownRenderer.answersIntrinsics|{}answersIntrinsics[0]
-        open fun <get-answersIntrinsics>(): kotlin/Boolean // dev.ynagai.a2ui.material3/A2uiMarkdownRenderer.answersIntrinsics.<get-answersIntrinsics>|<get-answersIntrinsics>(){}[0]
-
     abstract fun Markdown(kotlin/String, androidx.compose.ui.text/TextStyle, androidx.compose.ui.graphics/Color, androidx.compose.ui/Modifier, androidx.compose.runtime/Composer?, kotlin/Int) // dev.ynagai.a2ui.material3/A2uiMarkdownRenderer.Markdown|Markdown(kotlin.String;androidx.compose.ui.text.TextStyle;androidx.compose.ui.graphics.Color;androidx.compose.ui.Modifier;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 
     final object Companion { // dev.ynagai.a2ui.material3/A2uiMarkdownRenderer.Companion|null[0]

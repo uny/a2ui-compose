@@ -28,7 +28,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.A2uiComponentScope
 import dev.ynagai.a2ui.compose.ComponentRenderer
-import dev.ynagai.a2ui.compose.LayoutAxis
 import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.firstMessage
 import dev.ynagai.a2ui.compose.rememberBoolean
@@ -75,8 +74,9 @@ import kotlinx.serialization.json.contentOrNull
  * [CheckBoxRenderer] does and for the same reason.
  */
 public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer(
-    // See [TextFieldRenderer] for why an input fills a row rather than sitting in it as content.
-    traits = { _, axis -> if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Content },
+    // Content-sized and shrinkable, as [TextFieldRenderer] is: the filter field would otherwise
+    // hold the picker at 280dp, and the chips wrap in whatever width they are given.
+    LayoutTraits.Content,
 ) { scope, modifier ->
     val label = scope.rememberString("label")
     val variant = scope.rememberString("variant")
@@ -131,7 +131,7 @@ public val ChoicePickerRenderer: ComponentRenderer = ComponentRenderer(
         }
     }
 
-    Column(modifier = modifier.leafMargin()) {
+    Column(modifier = modifier.leafMargin().shrinkableTo(INPUT_MIN_WIDTH)) {
         if (label != null) {
             Text(text = label, style = MaterialTheme.typography.labelLarge)
         }

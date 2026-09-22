@@ -19,7 +19,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import dev.ynagai.a2ui.compose.ComponentRenderer
-import dev.ynagai.a2ui.compose.LayoutAxis
 import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.firstMessage
 import dev.ynagai.a2ui.compose.hasError
@@ -61,8 +60,8 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 @OptIn(ExperimentalMaterial3Api::class)
 public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer(
-    // See [TextFieldRenderer] for why an input fills a row rather than sitting in it as content.
-    traits = { _, axis -> if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Content },
+    // Content-sized and shrinkable, as [TextFieldRenderer] is and for the same reason.
+    LayoutTraits.Content,
 ) { scope, modifier ->
     val label = scope.rememberString("label")
     val value = scope.rememberString("value").orEmpty()
@@ -85,7 +84,7 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer(
     var stage by remember(scope) { mutableStateOf(Stage.NONE) }
     var pickedDay by remember(scope) { mutableStateOf<Long?>(null) }
 
-    Column(modifier = modifier.leafMargin()) {
+    Column(modifier = modifier.leafMargin().shrinkableTo(INPUT_MIN_WIDTH)) {
         OutlinedTextField(
             value = value,
             // Read-only, so this is never called; required by the API. The field's own text comes

@@ -7,9 +7,6 @@
 
 // Library unique name: <dev.ynagai.a2ui:a2ui-material3-markdown>
 final object dev.ynagai.a2ui.material3.markdown/Material3MarkdownRenderer : dev.ynagai.a2ui.material3/A2uiMarkdownRenderer { // dev.ynagai.a2ui.material3.markdown/Material3MarkdownRenderer|null[0]
-    final val answersIntrinsics // dev.ynagai.a2ui.material3.markdown/Material3MarkdownRenderer.answersIntrinsics|{}answersIntrinsics[0]
-        final fun <get-answersIntrinsics>(): kotlin/Boolean // dev.ynagai.a2ui.material3.markdown/Material3MarkdownRenderer.answersIntrinsics.<get-answersIntrinsics>|<get-answersIntrinsics>(){}[0]
-
     final fun Markdown(kotlin/String, androidx.compose.ui.text/TextStyle, androidx.compose.ui.graphics/Color, androidx.compose.ui/Modifier, androidx.compose.runtime/Composer?, kotlin/Int) // dev.ynagai.a2ui.material3.markdown/Material3MarkdownRenderer.Markdown|Markdown(kotlin.String;androidx.compose.ui.text.TextStyle;androidx.compose.ui.graphics.Color;androidx.compose.ui.Modifier;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 }
 

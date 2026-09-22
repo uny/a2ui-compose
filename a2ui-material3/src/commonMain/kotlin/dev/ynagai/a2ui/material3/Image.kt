@@ -69,19 +69,6 @@ public fun interface A2uiImageLoader {
      */
     @Composable
     public fun Image(url: String, description: String?, scale: ContentScale, modifier: Modifier)
-
-    /**
-     * Whether what [Image] draws answers intrinsic measurement queries.
-     *
-     * A `Row` or `Column` that shares its main axis from its children's preferred sizes asks an
-     * `Image` -- or a `Card` around one, or a `Video` whose poster this loader draws -- for its
-     * size only if the loader's layout can answer. Coil's `AsyncImage` can; its
-     * `SubcomposeAsyncImage` is a `SubcomposeLayout` and raises. False unless a loader says
-     * otherwise, so that one registered as a lambda is never asked and cannot crash a row; a
-     * loader made of plain layout returns true and its images take part in the sharing. See
-     * `LayoutTraits` in `a2ui-compose`.
-     */
-    public val answersIntrinsics: Boolean get() = false
 }
 
 /**

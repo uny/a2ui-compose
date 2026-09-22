@@ -1,6 +1,7 @@
 package dev.ynagai.a2ui.material3
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -235,6 +236,35 @@ class Material3ComponentsTest {
         setContent { Surface(UNBREAKABLE_TOKEN_BESIDE_TEXT, width = PHONE_WIDTH) }
         val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
         assertTrue(beside.width >= 0f, "the row measured: $beside")
+    }
+
+    @Test
+    fun a_host_markdown_renderer_that_cannot_be_asked_does_not_crash_a_row() = runComposeUiTest {
+        // A `Text` promises a row it can be asked its size, but what it draws is the host's. A
+        // renderer built on a `SubcomposeLayout` -- `BoxWithConstraints` is one -- raises on the
+        // query, so a seam implementation that does not say it answers is not asked.
+        setContent {
+            CompositionLocalProvider(LocalA2uiMarkdownRenderer provides SubcomposingMarkdown) {
+                Surface(TWO_SHORT_TEXTS, width = PHONE_WIDTH)
+            }
+        }
+        val first = onNodeWithText("first").fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText("second").fetchSemanticsNode().boundsInRoot
+        assertTrue(first.width > 0f && second.width > 0f, "both texts drawn: $first, $second")
+    }
+
+    @Test
+    fun a_host_image_loader_that_cannot_be_asked_does_not_crash_a_row() = runComposeUiTest {
+        // The same seam for `Image` and a `Video`'s poster: Coil's `SubcomposeAsyncImage` is a
+        // `SubcomposeLayout`, and a loader that does not say it answers is not asked. A filling
+        // image is never asked directly, so the fixture asks through a fixed-size one and a card.
+        setContent {
+            CompositionLocalProvider(LocalA2uiImageLoader provides SubcomposingImageLoader) {
+                Surface(IMAGE_AND_VIDEO_BESIDE_TEXT, width = PHONE_WIDTH)
+            }
+        }
+        val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
+        assertTrue(beside.width > 0f, "the text beside the media is drawn: $beside")
     }
 
     @Test
@@ -891,6 +921,26 @@ class Material3ComponentsTest {
             {"id":"a","component":"Text","text":"${"x".repeat(40_000)}"},
             {"id":"b","component":"Text","text":"beside"}
         ]"""
+
+        // An avatar is content-sized, so a row asks it; a video fills, so a row does not ask it
+        // directly -- but the card around it is content, and the query recurses through the card.
+        val IMAGE_AND_VIDEO_BESIDE_TEXT = """[
+            {"id":"root","component":"Row","children":["pic","card","beside"]},
+            {"id":"pic","component":"Image","url":"https://example.invalid/a.png","variant":"avatar"},
+            {"id":"card","component":"Card","child":"clip"},
+            {"id":"clip","component":"Video","url":"https://example.invalid/a.mp4","posterUrl":"https://example.invalid/p.png"},
+            {"id":"beside","component":"Text","text":"beside"}
+        ]"""
+
+        /** A Markdown renderer whose layout is a `SubcomposeLayout`, as a host's may be. */
+        val SubcomposingMarkdown = A2uiMarkdownRenderer { source, style, color, modifier ->
+            BoxWithConstraints(modifier) { Text(source, style = style, color = color) }
+        }
+
+        /** An image loader whose layout is a `SubcomposeLayout`, as Coil's `SubcomposeAsyncImage` is. */
+        val SubcomposingImageLoader = A2uiImageLoader { _, _, _, modifier ->
+            BoxWithConstraints(modifier) { Box(Modifier.size(maxWidth, 10.dp)) }
+        }
 
         val TWO_LONG_TEXTS = """[
             {"id":"root","component":"Row","children":["a","b"]},

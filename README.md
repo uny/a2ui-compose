@@ -217,6 +217,15 @@ that cannot be asked is measured first, in order, and takes what it takes. A con
 only when every renderer beneath it answers, so one `Host` renderer inside a `Column` turns the
 whole column into one; the shipped renderers all answer except `Tabs`.
 
+Two of them draw through a seam the host fills — `Text` through `LocalA2uiMarkdownRenderer`, `Image`
+and a `Video`'s poster through `LocalA2uiImageLoader` — and their promise is only as good as what
+the host put there. Both interfaces therefore carry `answersIntrinsics`, false unless an
+implementation says otherwise: a renderer or loader written as a lambda is never asked and cannot
+crash a row, at the cost of the fair share for the `Text`s or `Image`s it draws; one made of plain
+layout overrides it to `true` and gets the sharing back. The shipped `A2uiMarkdownRenderer.Inline`
+and `Material3MarkdownRenderer` both answer; a loader on Coil's `AsyncImage` may say so, one on
+`SubcomposeAsyncImage` must not.
+
 `align: stretch`, the catalog's default on the cross axis, is still drawn as `start` — see the note
 on `crossAlignment` in `Layout.kt` for why, and for what the traits make possible next.
 

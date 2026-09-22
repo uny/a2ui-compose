@@ -91,6 +91,9 @@ public object Material3MarkdownRenderer : A2uiMarkdownRenderer {
             Blocks(blocks, style, color, resolved)
         }
     }
+
+    /** Every block is `Row`, `Column`, `Text` and `Box`: plain layout, so a row may ask its size. */
+    override val answersIntrinsics: Boolean get() = true
 }
 
 /** The blocks in a column, each drawn by [Block]; the column is the caller's. */

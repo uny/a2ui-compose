@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import dev.ynagai.a2ui.compose.A2uiChild
 import dev.ynagai.a2ui.compose.A2uiComponentScope
+import dev.ynagai.a2ui.compose.ComponentRegistry
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.LayoutAxis
 import dev.ynagai.a2ui.compose.LayoutTraits
@@ -142,7 +143,7 @@ private data class LaidOutChild(
  */
 @Composable
 private fun A2uiComponentScope.rememberLaidOutChildren(axis: LayoutAxis): List<LaidOutChild> {
-    val registry = LocalA2uiRegistry.current
+    val registry = rememberLayoutRegistry()
     val value by remember(this, registry, axis) {
         derivedStateOf {
             allChildren().map { child ->
@@ -165,6 +166,42 @@ private fun A2uiComponentScope.rememberLaidOutChildren(axis: LayoutAxis): List<L
     }
     return value
 }
+
+/**
+ * The registry a container reads [LayoutTraits] from: [LocalA2uiRegistry], with the renderers that
+ * draw through a host seam marked as not answering intrinsics when the installed implementation
+ * does not say it does.
+ *
+ * `Text` draws through [LocalA2uiMarkdownRenderer]; `Image`, and a `Video`'s poster, through
+ * [LocalA2uiImageLoader]. Their renderers promise a container it may ask their size, and the
+ * promise is only as good as the host's layout: a Markdown renderer built on a `LazyColumn` or an
+ * image loader on `SubcomposeAsyncImage` raises on the query, from inside the container's own
+ * measure pass. The renderer cannot see the seam when it is asked for its traits -- `layoutTraits`
+ * runs outside composition -- so the container consults the seams and withdraws the promise here.
+ * Keyed by type name rather than by renderer identity: a host's own `Text` renderer that never
+ * touches the seam loses a fair share it could have had, which is the safe direction to be wrong
+ * in. Without a loader an `Image` is the placeholder, which is plain layout.
+ */
+@Composable
+private fun rememberLayoutRegistry(): ComponentRegistry {
+    val registry = LocalA2uiRegistry.current
+    val markdown = LocalA2uiMarkdownRenderer.current
+    val loader = LocalA2uiImageLoader.current
+    return remember(registry, markdown, loader) {
+        val unasked = buildSet {
+            if (!markdown.answersIntrinsics) add("Text")
+            if (loader != null && !loader.answersIntrinsics) { add("Image"); add("Video") }
+        }
+        if (unasked.isEmpty()) registry
+        else registry.with(unasked.mapNotNull { type -> registry[type]?.let { type to it.notAnswering() } }.toMap())
+    }
+}
+
+/** This renderer's traits with the intrinsics promise withdrawn -- see [rememberLayoutRegistry]. */
+private fun ComponentRenderer.notAnswering(): ComponentRenderer = ComponentRenderer(
+    traits = { component, axis -> LayoutTraits(layoutTraits(component, axis).fit, answersIntrinsics = false) },
+    render = this,
+)
 
 /**
  * The `weight` [component] declared, or 0 when it declared none.

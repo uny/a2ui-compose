@@ -259,9 +259,8 @@ private enum class CrossAlignment(val fraction: Float) { Start(0f), Center(0.5f)
  * *every descendant* answer intrinsic measurement queries; a `SubcomposeLayout` cannot, and raises.
  * [Flex] now learns which children can be asked and remembers the ones that cannot, so a stretch
  * that asks only where asking is safe, and degrades to `start` elsewhere, is the next step and
- * not this one. Until then the children keep their natural cross-axis size
- * and the container wraps them, and a column of cards squares up to the widest only by accident of
- * its content.
+ * not this one. Until then the children keep their natural cross-axis size and the container
+ * wraps them, and a column of cards squares up to the widest only by accident of its content.
  */
 private fun crossAlignment(align: String?): CrossAlignment = when (align) {
     "center" -> CrossAlignment.Center
@@ -562,12 +561,20 @@ private class FlexMeasurePolicy(
     private fun Placeable.cross() = if (horizontal) height else width
 
     // This layout's own answers. Along the axis, sums; across it, the largest child at the size
-    // the plan would give it. A child that cannot be asked counts for nothing -- it is the child
-    // the plan measures as it comes, and there is no number to sum.
+    // the plan would give it. A child that cannot be asked leaves this layout without an answer
+    // either: it is the child the plan measures as it comes, and there is no number to sum. So
+    // the refusal is passed up -- a parent that shares from intrinsic sizes measures this layout
+    // as it comes too, the way it would the child itself. Counting the child as nothing instead
+    // was an answer that read as a preferred size, and a `Column` measuring a row to its answer
+    // cut a three-line feed to the one line of the text beside it.
+    private fun refuse(): Nothing = throw IllegalStateException(
+        "This layout holds a child whose intrinsic size cannot be asked, so its own cannot be either.",
+    )
+
     private fun List<IntrinsicMeasurable>.sumMain(cross: Int, least: Boolean): Int = indices.sumOf { index ->
         val spec = specOf(this[index])
         val counts = !least || (spec.weight == 0f && !spec.fill)
-        if (!counts) 0L else (if (least) this[index].minMain(index, cross) else this[index].maxMain(index, cross))?.toLong() ?: 0L
+        if (!counts) 0L else (if (least) this[index].minMain(index, cross) else this[index].maxMain(index, cross))?.toLong() ?: refuse()
     }.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
 
     private fun List<IntrinsicMeasurable>.largestCross(main: Int, least: Boolean): Int {
@@ -575,9 +582,9 @@ private class FlexMeasurePolicy(
         distribute(this, main, Constraints.Infinity) { index, _, max ->
             // The room the plan gives this child, and what the child would take of it: its
             // preferred size when that fits, the room when it does not, all of it for a filler.
-            val given = if (max == Constraints.Infinity) this[index].maxMain(index, Constraints.Infinity) ?: 0 else max
+            val given = if (max == Constraints.Infinity) this[index].maxMain(index, Constraints.Infinity) ?: refuse() else max
             val across = if (least) this[index].minCross(index, given) else this[index].maxCross(index, given)
-            largest = max(largest, across ?: 0)
+            largest = max(largest, across ?: refuse())
             given
         }
         return largest

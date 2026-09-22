@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -357,6 +358,31 @@ class Material3ComponentsTest {
         val root = onRoot().fetchSemanticsNode().boundsInRoot
         val text = onNodeWithText(LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
         assertTrue(text.width > root.width * 0.6f, "the late text gets what the feed leaves, not half the row: $text in $root")
+    }
+
+    @Test
+    fun a_row_with_a_child_that_cannot_be_asked_is_not_cut_to_its_siblings_height() = runComposeUiTest {
+        // A column asks its rows how tall they would be, and measures each to its answer. A row
+        // holding a host renderer that refuses the question has no answer to give for that child,
+        // and one that counts it as nothing is cut to the text beside it: a three-line feed
+        // squeezed into one line, and the text below the row drawn over the two it hid. The row
+        // refuses too, and the column measures it as it comes.
+        val registry = Material3Components.Basic.with(
+            mapOf(
+                "Feed" to ComponentRenderer { _, m ->
+                    LazyColumn(m) { items(listOf("line one", "line two", "line three")) { Text(it) } }
+                },
+            ),
+        )
+        setContent {
+            Box(Modifier.size(PHONE_WIDTH, SURFACE_HEIGHT)) {
+                MaterialTheme { A2uiSurface(rendererFor(FEED_ROW_IN_A_COLUMN), SURFACE, registry) }
+            }
+        }
+        val last = onNodeWithText("line three").fetchSemanticsNode().boundsInRoot
+        val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+        assertTrue(last.height > 0f, "the feed keeps its height: $last")
+        assertTrue(after.top >= last.bottom, "the text after the row sits below the whole feed: $after under $last")
     }
 
     @Test
@@ -1107,6 +1133,14 @@ class Material3ComponentsTest {
         val LATE_TEXT_BESIDE_A_FEED = """[
             {"id":"root","component":"Row","children":["a","b"]},
             {"id":"b","component":"Feed","text":"feed"}
+        ]"""
+
+        val FEED_ROW_IN_A_COLUMN = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["feed","beside"]},
+            {"id":"feed","component":"Feed"},
+            {"id":"beside","component":"Text","text":"beside"},
+            {"id":"after","component":"Text","text":"after"}
         ]"""
 
         val TWO_FEEDS = """[

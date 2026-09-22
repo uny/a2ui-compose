@@ -268,6 +268,16 @@ class Material3ComponentsTest {
     }
 
     @Test
+    fun a_tabs_inside_a_row_is_measured_without_being_asked() = runComposeUiTest {
+        // The one shipped renderer that cannot be asked: Material's tab row is a
+        // `SubcomposeLayout`. It sits in a row beside a text, and inside a card in the same row,
+        // so that the container above it and the one above that both have to take its word for it.
+        setContent { Surface(TABS_IN_A_ROW, width = PHONE_WIDTH) }
+        val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
+        assertTrue(beside.width > 0f, "the text beside the tabs is drawn: $beside")
+    }
+
+    @Test
     fun a_field_beside_a_button_does_not_take_the_whole_row() {
         // A `TextField` used to fill the width whatever its parent was, so the button next to it
         // measured at zero and drew nothing -- a submit button that is on screen and invisible.
@@ -941,6 +951,16 @@ class Material3ComponentsTest {
         val SubcomposingImageLoader = A2uiImageLoader { _, _, _, modifier ->
             BoxWithConstraints(modifier) { Box(Modifier.size(maxWidth, 10.dp)) }
         }
+
+        val TABS_IN_A_ROW = """[
+            {"id":"root","component":"Row","children":["tabs","card","beside"]},
+            {"id":"tabs","component":"Tabs","tabs":[{"title":"One","child":"one"}]},
+            {"id":"one","component":"Text","text":"one"},
+            {"id":"card","component":"Card","child":"inner_tabs"},
+            {"id":"inner_tabs","component":"Tabs","tabs":[{"title":"Two","child":"two"}]},
+            {"id":"two","component":"Text","text":"two"},
+            {"id":"beside","component":"Text","text":"beside"}
+        ]"""
 
         val TWO_LONG_TEXTS = """[
             {"id":"root","component":"Row","children":["a","b"]},

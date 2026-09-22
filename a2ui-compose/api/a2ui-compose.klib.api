@@ -281,6 +281,10 @@ final class dev.ynagai.a2ui.compose/LayoutTraits { // dev.ynagai.a2ui.compose/La
     final val fit // dev.ynagai.a2ui.compose/LayoutTraits.fit|{}fit[0]
         final fun <get-fit>(): dev.ynagai.a2ui.compose/MainAxisFit // dev.ynagai.a2ui.compose/LayoutTraits.fit.<get-fit>|<get-fit>(){}[0]
 
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.compose/LayoutTraits.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.compose/LayoutTraits.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.ynagai.a2ui.compose/LayoutTraits.toString|toString(){}[0]
+
     final object Companion { // dev.ynagai.a2ui.compose/LayoutTraits.Companion|null[0]
         final val Content // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Content|{}Content[0]
             final fun <get-Content>(): dev.ynagai.a2ui.compose/LayoutTraits // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Content.<get-Content>|<get-Content>(){}[0]

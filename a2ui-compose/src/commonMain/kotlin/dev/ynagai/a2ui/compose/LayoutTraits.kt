@@ -45,6 +45,18 @@ public class LayoutTraits(
     public val fit: MainAxisFit,
     public val answersIntrinsics: Boolean,
 ) {
+    // A value, compared by its fields. A container remembers what it knows about each child and
+    // recomputes it inside a `derivedStateOf`, which discards an equal result without invalidating
+    // anyone; a renderer that builds its traits fresh on every call -- `LayoutTraits(fit, false)`
+    // in a lambda -- would otherwise never compare equal, and the container would be rebuilt on
+    // every write to the surface.
+    override fun equals(other: Any?): Boolean =
+        other is LayoutTraits && other.fit == fit && other.answersIntrinsics == answersIntrinsics
+
+    override fun hashCode(): Int = fit.hashCode() * 31 + answersIntrinsics.hashCode()
+
+    override fun toString(): String = "LayoutTraits(fit=$fit, answersIntrinsics=$answersIntrinsics)"
+
     public companion object {
         /** Content-sized, not to be asked for intrinsics: the default for a renderer that says nothing. */
         public val Host: LayoutTraits = LayoutTraits(MainAxisFit.Content, answersIntrinsics = false)

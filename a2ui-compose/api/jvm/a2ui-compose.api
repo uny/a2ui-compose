@@ -258,8 +258,11 @@ public final class dev/ynagai/a2ui/compose/LayoutTraits {
 	public static final field $stable I
 	public static final field Companion Ldev/ynagai/a2ui/compose/LayoutTraits$Companion;
 	public fun <init> (Ldev/ynagai/a2ui/compose/MainAxisFit;Z)V
+	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAnswersIntrinsics ()Z
 	public final fun getFit ()Ldev/ynagai/a2ui/compose/MainAxisFit;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class dev/ynagai/a2ui/compose/LayoutTraits$Companion {

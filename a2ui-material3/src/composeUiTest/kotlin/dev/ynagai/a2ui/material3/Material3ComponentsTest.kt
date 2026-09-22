@@ -201,6 +201,43 @@ class Material3ComponentsTest {
     }
 
     @Test
+    fun an_enormous_weight_does_not_crash_the_row() = runComposeUiTest {
+        // `1e38` passes `weightOf` -- it is a finite `Float` -- and multiplied by the free width it
+        // overflowed to infinity, which `roundToInt` saturates to `Int.MAX_VALUE`, a width
+        // `Constraints` cannot hold. The share arithmetic is done in doubles now.
+        setContent { Surface(HUGE_WEIGHT_BESIDE_ONE, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val heavy = onNodeWithText("heavy").fetchSemanticsNode().boundsInRoot
+        val light = onNodeWithText("light").fetchSemanticsNode().boundsInRoot
+        assertTrue(heavy.width > 0f && heavy.right <= root.right + 1f, "the weighted child is drawn on screen: $heavy in $root")
+        assertTrue(light.width >= 0f, "the row measured: $light")
+    }
+
+    @Test
+    fun two_very_long_texts_still_share_the_row_fairly() = runComposeUiTest {
+        // Long enough that the deficit times a preferred width passes `Int.MAX_VALUE`: the
+        // proportional cut was computed in `Int` and wrapped, so nobody was pinned, the loop
+        // stopped, and the rounding clean-up drained the first text to its floor.
+        setContent { Surface(TWO_VERY_LONG_TEXTS, width = PHONE_WIDTH) }
+        val first = onNodeWithText(VERY_LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText(VERY_LONG_TEXT_B).fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            first.width > 60f && second.width > 60f,
+            "both texts should keep a fair share of the row: $first, $second",
+        )
+    }
+
+    @Test
+    fun an_unbreakable_token_wider_than_constraints_can_hold_does_not_crash_the_row() = runComposeUiTest {
+        // A text's minimum intrinsic width is its longest word, and an agent can make that any
+        // length. `Constraints` holds at most 2^18 - 2 in one dimension, so a floor past that has
+        // to be clamped before it becomes a measurement constraint.
+        setContent { Surface(UNBREAKABLE_TOKEN_BESIDE_TEXT, width = PHONE_WIDTH) }
+        val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
+        assertTrue(beside.width >= 0f, "the row measured: $beside")
+    }
+
+    @Test
     fun a_field_beside_a_button_does_not_take_the_whole_row() {
         // A `TextField` used to fill the width whatever its parent was, so the button next to it
         // measured at zero and drew nothing -- a submit button that is on screen and invisible.
@@ -832,6 +869,27 @@ class Material3ComponentsTest {
             {"id":"root","component":"Row","children":["a","b"]},
             {"id":"a","component":"Text","text":"first"},
             {"id":"b","component":"Text","text":"second"}
+        ]"""
+
+        val VERY_LONG_TEXT_A = (1..900).joinToString(" ") { "alpha" }
+        val VERY_LONG_TEXT_B = (1..900).joinToString(" ") { "omega" }
+
+        val HUGE_WEIGHT_BESIDE_ONE = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Text","text":"heavy","weight":1e38},
+            {"id":"b","component":"Text","text":"light","weight":1}
+        ]"""
+
+        val TWO_VERY_LONG_TEXTS = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Text","text":"$VERY_LONG_TEXT_A"},
+            {"id":"b","component":"Text","text":"$VERY_LONG_TEXT_B"}
+        ]"""
+
+        val UNBREAKABLE_TOKEN_BESIDE_TEXT = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Text","text":"${"x".repeat(40_000)}"},
+            {"id":"b","component":"Text","text":"beside"}
         ]"""
 
         val TWO_LONG_TEXTS = """[

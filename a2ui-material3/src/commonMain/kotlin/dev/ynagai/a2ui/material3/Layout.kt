@@ -374,10 +374,14 @@ private class FlexMeasurePolicy(
         var remaining = mainMax
 
         fun measure(index: Int, min: Int, max: Int) {
+            // `fitPrioritizing*` rather than the constructor, which throws past 2^18 - 2 in a
+            // dimension. A text's minimum intrinsic width is its longest word, and the agent
+            // chooses the words; a floor that outgrows what `Constraints` can hold is clamped to
+            // it -- the text is measured as wide as anything can be, and wraps from there.
             val c = if (horizontal) {
-                Constraints(minWidth = min, maxWidth = max, minHeight = 0, maxHeight = crossMax)
+                Constraints.fitPrioritizingWidth(minWidth = min, maxWidth = max, minHeight = 0, maxHeight = crossMax)
             } else {
-                Constraints(minWidth = 0, maxWidth = crossMax, minHeight = min, maxHeight = max)
+                Constraints.fitPrioritizingHeight(minWidth = 0, maxWidth = crossMax, minHeight = min, maxHeight = max)
             }
             val placeable = measurables[index].measure(c)
             placeables[index] = placeable
@@ -418,7 +422,9 @@ private class FlexMeasurePolicy(
                     val share = if (slot == weighted.lastIndex) {
                         max(0, free - handed)
                     } else {
-                        (free * specs[index].shareOrOne / total).roundToInt().also { handed += it }
+                        // In doubles: a weight is any finite `Float`, and `free` times a large one
+                        // overflows a `Float` to infinity, which rounds to `Int.MAX_VALUE`.
+                        (free.toDouble() * specs[index].shareOrOne / total).roundToInt().also { handed += it }
                     }
                     measure(index, if (specs[index].weight > 0f) share else 0, share)
                 }
@@ -511,7 +517,10 @@ private fun shrink(basis: IntArray, floor: IntArray, available: Int): IntArray {
         val weight = open.sumOf { basis[it].toDouble() }
         var pinnedThisPass = false
         for (i in open) {
-            val cut = if (weight > 0.0) deficit * basis[i] / weight else deficit / open.size.toDouble()
+            // `deficit * basis[i]` in `Int` wraps for two long texts -- each a few thousand pixels
+            // wide unwrapped -- and a wrapped cut pins nobody, so the loop ends with the deficit
+            // unabsorbed and the rounding clean-up below drains one child to its floor.
+            val cut = if (weight > 0.0) deficit.toDouble() * basis[i] / weight else deficit / open.size.toDouble()
             val next = (target[i] - cut).roundToInt()
             if (next <= floor[i]) {
                 target[i] = floor[i]

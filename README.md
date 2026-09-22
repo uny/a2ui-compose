@@ -224,6 +224,14 @@ a width no phone has — so `TextField`, `DateTimeInput` and `ChoicePicker` repo
 does. `Tabs` refuses to be asked at all: Material's scrollable tab row *would* answer, by
 subcomposing its tabs, and the subcomposition invalidates the layout that asked.
 
+Two things follow for a host. The container finds each child by a `Modifier.layoutId` on the
+modifier the renderer is handed, and the outermost `layoutId` on a node is the one that counts:
+chain your own after that modifier, never before it, or the child loses its `weight` and its
+traits. And a container that holds a child which cannot be asked refuses the question itself, so
+a surface with a `Tabs`, or a renderer of your own built on a `SubcomposeLayout`, anywhere in it
+cannot sit under a host's `Modifier.height(IntrinsicSize.Min)` or anything else that asks it its
+size — nothing above the surface catches the refusal. Give such a surface explicit bounds.
+
 One deliberate departure from flexbox: a child with an explicit `weight` is measured to exactly
 its share, even below its own minimum. The web would hold it at its min-content and let the row
 overflow; here the agent asked for proportions — `33_financial-data-grid` is four weighted columns

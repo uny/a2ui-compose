@@ -49,7 +49,7 @@ private class ShrinkableNode(var min: Dp) : LayoutModifierNode, Modifier.Node() 
     }
 
     override fun IntrinsicMeasureScope.minIntrinsicWidth(measurable: IntrinsicMeasurable, height: Int): Int =
-        min(min.roundToPx(), measurable.maxIntrinsicWidth(height))
+        min(min.roundToPx(), measurable.minIntrinsicWidth(height))
 
     override fun IntrinsicMeasureScope.maxIntrinsicWidth(measurable: IntrinsicMeasurable, height: Int): Int =
         measurable.maxIntrinsicWidth(height)

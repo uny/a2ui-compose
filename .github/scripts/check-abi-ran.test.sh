@@ -97,5 +97,12 @@ expect "a log without task headers" 1 "$work/rich.log" "$root"
 mkdir -p "$work/no-dumps/a2ui-gallery/src"
 expect "a tree with no api/ directory" 1 "$work/executed.log" "$work/no-dumps"
 
+# ... and says so: an unmatched glob must not end the script under `set -e` before the message.
+set +e
+named=$("$script" "$work/executed.log" "$work/no-dumps" 2>&1 | grep -c 'no <module>/api directory')
+set -e
+if [ "$named" -eq 1 ]; then echo "ok   the missing dumps are named"; else
+  echo "FAIL the missing dumps are not named"; failures=$((failures + 1)); fi
+
 [ "$failures" -eq 0 ] || { echo "$failures case(s) failed"; exit 1; }
 echo "all cases passed"

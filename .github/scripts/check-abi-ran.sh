@@ -40,7 +40,9 @@ fi
 
 # The modules whose dumps exist. `*/api` and not a list: the dump is the thing the check compares
 # against, so a module that has one is a module whose check must run.
-modules=$(cd "$root" && for dir in */api; do [ -d "$dir" ] && echo "${dir%/api}"; done)
+# `|| :` so an unmatched glob does not make the substitution's status non-zero and `set -e`
+# end the script before the message below.
+modules=$(cd "$root" && for dir in */api; do [ -d "$dir" ] && echo "${dir%/api}" || :; done)
 if [ -z "$modules" ]; then
   echo "::error::no <module>/api directory under $root -- the dumps this check guards are not there" >&2
   exit 1

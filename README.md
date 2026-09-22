@@ -48,15 +48,15 @@ CompositionLocalProvider(LocalA2uiMarkdownRenderer provides Material3MarkdownRen
 
 Three floors and one version line, and the one with the clearest error message is the least
 binding of them. All come from what the artifacts were built with, not from anything the library
-does. `a2ui-core` alone carries the first and the last; the Compose floor arrives with
-`a2ui-compose`, and the parser only with `a2ui-material3-markdown`:
+does. `a2ui-core` alone carries the first; the Compose floor and the `compileSdk` 37 arrive
+together with `a2ui-compose`, and the parser only with `a2ui-material3-markdown`:
 
 | Floor | Where it is declared | How it fails for you |
 |:--|:--|:--|
 | **Kotlin 2.3.x** on the klib targets (iOS, macOS, JS, wasm); **2.2.x or later** on JVM and Android | The klib manifest (`compiler_version = 2.3.21`, `abi_version = 2.3.0`); on JVM and Android, `@kotlin.Metadata` 2.3.0 in the class files and `requires: 2.3.21` on `kotlin-stdlib` | A 2.2.x compiler refuses a klib whose ABI version is newer than its own, and the Kotlin plugin version is project-wide -- so a KMP project with any of those targets moves its whole toolchain. Class-file metadata is read one language release ahead (Kotlin's stated best effort, not a guarantee), so a 2.2.x JVM or Android project compiles, with `kotlin-stdlib` moved to 2.3.21 the same silent way Compose is below. A KSP processor in the build does not move the floor: since KSP2, KSP releases are decoupled from your Kotlin version. |
 | **Compose Multiplatform 1.12.0** | `requires: 1.12.0` on `org.jetbrains.compose.runtime:runtime` / `org.jetbrains.compose.ui:ui` in the Gradle module metadata; `a2ui-material3` adds `requires: 1.9.0` on `org.jetbrains.compose.material3:material3`, which ships on its own version line | **Silently.** Under Gradle's default conflict resolution the highest version wins, so a project on 1.10.0 is moved to 1.12.0 without being told. Holding the older version with `strictly` on your own declaration does not fail either: it downgrades the library's `requires` to 1.10.0, and the code compiled against 1.12.0 breaks at runtime instead. |
 | **`org.jetbrains:markdown` 0.7.14** (`a2ui-material3-markdown` only) | `requires: 0.7.14` on `org.jetbrains:markdown` in that module's Gradle module metadata. Declared `implementation`, which keeps it off your *compile* class path on JVM, Android, JS and wasmJs -- and not on iOS or macOS, where the Kotlin/Native plugin publishes it in the `iosArm64ApiElements` / `macosArm64ApiElements` variants -- a consumer's compile class path -- while the JS and wasmJs klibs keep it at runtime only (all measured on the local publish). No type of it appears in the module's API either way | **Silently**, the same way as Compose: a project that already depends on an older `org.jetbrains:markdown` is moved up to 0.7.14. The other three modules carry no parser and are unaffected. |
-| **`compileSdk` 37** (Android) | `minCompileSdk=37` in the AAR metadata | AGP fails the build with a clear message. Cheap to fix: `compileSdk` is what you compile against, and `targetSdk` need not move with it. See [Targets](#targets) for why 37. |
+| **`compileSdk` 37** (Android) for the three drawing modules; **`compileSdk` 24** for `a2ui-core` alone | `minCompileSdk=37` in the AAR metadata of `a2ui-compose`, `a2ui-material3` and `a2ui-material3-markdown`; `minCompileSdk=24` in `a2ui-core`'s | AGP fails the build with a clear message. Cheap to fix: `compileSdk` is what you compile against, and `targetSdk` need not move with it. See [Targets](#targets) for why the two numbers. |
 
 `0.1.0` was built with Kotlin 2.4.10, and so carried a 2.4 klib floor. `0.2.0` lowers it to 2.3.x
 under a rule rather than a preference ([#64](https://github.com/uny/a2ui-compose/issues/64)):
@@ -105,7 +105,7 @@ template may call.
 
 | Target | |
 |:--|:--|
-| Android | `minSdk` 24, `compileSdk` 37 |
+| Android | `minSdk` 24; `compileSdk` 37 for the drawing modules, 24 for `a2ui-core` |
 | JVM (desktop) | |
 | iOS | `iosArm64`, `iosSimulatorArm64` |
 | macOS | `macosArm64` |
@@ -115,9 +115,14 @@ Three targets are deliberately absent. `iosX64` (the Intel iOS simulator) is dro
 Multiplatform 1.12.0 does not publish variants for it. `macosX64` is dropped because Kotlin has
 demoted it out of the supported tiers. `linux`/`mingw` are not Compose targets.
 
-The `compileSdk` floor of 37 is not a preference — it is forced by `androidx.compose:1.12.0`, which
-Compose Multiplatform pulls in on Android. It becomes `minCompileSdk` in the published AAR metadata,
-so every Android consumer must compile against 37 or later.
+The `compileSdk` floor is per module kind ([#88](https://github.com/uny/a2ui-compose/issues/88)).
+A module that draws takes what Compose asks: 37 is forced by `androidx.compose:1.12.0`, which
+Compose Multiplatform pulls in on Android, and it becomes `minCompileSdk` in the published AAR
+metadata of `a2ui-compose`, `a2ui-material3` and `a2ui-material3-markdown`, so a consumer of any of
+them must compile against 37 or later. A module that does not draw takes what its own dependencies
+declare, which is `minSdk`: `a2ui-core` publishes `minCompileSdk=24`, so a consumer that takes the
+model without a renderer is not held at 37 by this library. Raising a floor is one-way for a
+consumer; lowering one costs them nothing.
 
 ### What is tested where
 

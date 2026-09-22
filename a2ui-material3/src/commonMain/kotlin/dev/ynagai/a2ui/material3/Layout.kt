@@ -475,9 +475,13 @@ private class FlexMeasurePolicy(
         val crossUsed = placeables.maxOfOrNull { it!!.cross() } ?: 0
         val crossSize = if (horizontal) constraints.constrainHeight(crossUsed) else constraints.constrainWidth(crossUsed)
         val positions = IntArray(sizes.size)
-        when (arrangement) {
-            is Arrangement.Horizontal -> with(arrangement) { arrange(mainSize, sizes, layoutDirection, positions) }
-            is Arrangement.Vertical -> with(arrangement) { arrange(mainSize, sizes, positions) }
+        // Dispatched on the axis, not on the arrangement's type: `Center` and the three `space*`
+        // arrangements are both `Horizontal` and `Vertical`, and the horizontal overload mirrors
+        // under RTL -- a column sent through it read bottom to top.
+        if (horizontal) {
+            with(arrangement as Arrangement.Horizontal) { arrange(mainSize, sizes, layoutDirection, positions) }
+        } else {
+            with(arrangement as Arrangement.Vertical) { arrange(mainSize, sizes, positions) }
         }
         val width = if (horizontal) mainSize else crossSize
         val height = if (horizontal) crossSize else mainSize

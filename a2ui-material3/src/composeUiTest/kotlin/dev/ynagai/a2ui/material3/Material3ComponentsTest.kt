@@ -209,9 +209,12 @@ class Material3ComponentsTest {
         setContent { Surface(HUGE_WEIGHT_BESIDE_ONE, width = PHONE_WIDTH) }
         val root = onRoot().fetchSemanticsNode().boundsInRoot
         val heavy = onNodeWithText("heavy").fetchSemanticsNode().boundsInRoot
-        val light = onNodeWithText("light").fetchSemanticsNode().boundsInRoot
-        assertTrue(heavy.width > 0f && heavy.right <= root.right + 1f, "the weighted child is drawn on screen: $heavy in $root")
-        assertTrue(light.width >= 0f, "the row measured: $light")
+        // The unit-weighted sibling's share is genuinely nothing; the assertion is that the row
+        // measured and the heavy child took the row rather than an unrepresentable width.
+        assertTrue(
+            heavy.width > root.width * 0.8f && heavy.right <= root.right + 1f,
+            "the weighted child takes the row and stays on screen: $heavy in $root",
+        )
     }
 
     @Test
@@ -234,8 +237,9 @@ class Material3ComponentsTest {
         // length. `Constraints` holds at most 2^18 - 2 in one dimension, so a floor past that has
         // to be clamped before it becomes a measurement constraint.
         setContent { Surface(UNBREAKABLE_TOKEN_BESIDE_TEXT, width = PHONE_WIDTH) }
+        val token = onNodeWithText("x".repeat(40_000)).fetchSemanticsNode().boundsInRoot
         val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
-        assertTrue(beside.width >= 0f, "the row measured: $beside")
+        assertTrue(token.width > 0f && beside.width > 0f, "both children measured: $token, $beside")
     }
 
     @Test
@@ -275,6 +279,21 @@ class Material3ComponentsTest {
         setContent { Surface(TABS_IN_A_ROW, width = PHONE_WIDTH) }
         val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
         assertTrue(beside.width > 0f, "the text beside the tabs is drawn: $beside")
+    }
+
+    @Test
+    fun a_spaced_column_under_a_right_to_left_locale_keeps_its_children_in_order() = runComposeUiTest {
+        // `Arrangement.SpaceBetween` and its kin are both `Horizontal` and `Vertical`, so a
+        // dispatch on the arrangement's type sent a column's through the horizontal overload,
+        // which mirrors under RTL -- and the column read bottom to top.
+        setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Surface(SPACED_COLUMN, width = PHONE_WIDTH)
+            }
+        }
+        val first = onNodeWithText("first").fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText("second").fetchSemanticsNode().boundsInRoot
+        assertTrue(first.bottom <= second.top, "the first child stays above the second: $first, $second")
     }
 
     @Test
@@ -960,6 +979,12 @@ class Material3ComponentsTest {
             {"id":"inner_tabs","component":"Tabs","tabs":[{"title":"Two","child":"two"}]},
             {"id":"two","component":"Text","text":"two"},
             {"id":"beside","component":"Text","text":"beside"}
+        ]"""
+
+        val SPACED_COLUMN = """[
+            {"id":"root","component":"Column","children":["a","b"],"justify":"spaceBetween"},
+            {"id":"a","component":"Text","text":"first"},
+            {"id":"b","component":"Text","text":"second"}
         ]"""
 
         val TWO_LONG_TEXTS = """[

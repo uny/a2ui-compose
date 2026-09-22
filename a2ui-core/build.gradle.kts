@@ -80,7 +80,9 @@ kotlin {
 
     android {
         namespace = "dev.ynagai.a2ui.core"
-        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        // The model module's own floor, not the drawing modules' 37: nothing here depends on
+        // Compose, and its Android dependencies declare `minCompileSdk = 1` (#88). See the catalog.
+        compileSdk = libs.versions.android.coreCompileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 
         // Runs `commonTest` on the JVM against the Android variant. Without it the warning the

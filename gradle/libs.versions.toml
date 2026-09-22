@@ -19,10 +19,17 @@ dokka = "2.2.0"
 # The Markdown parser `a2ui-material3-markdown` builds on. Publishes every target this repository does.
 jetbrainsMarkdown = "0.7.14"
 
-# The published floor: this becomes `minCompileSdk` in the AAR metadata, so it is what every
-# Android consumer must compile against. Kept as low as our own dependencies allow — 37 is forced
-# by androidx.compose 1.12.0, which Compose Multiplatform 1.12.0 pulls in on Android.
+# The published floors: each becomes `minCompileSdk` in that module's AAR metadata, so it is what
+# an Android consumer of the module must compile against. Two keys because the rule is per module
+# kind (#88): a module that draws takes what Compose asks -- 37 is forced by androidx.compose
+# 1.12.0, which Compose Multiplatform 1.12.0 pulls in on Android, and this key moves with it; a
+# module that does not draw takes what its own dependencies declare, which is `minSdk`. `a2ui-core`
+# alone reads the second key; a dependency of it asking for more fails `checkAndroidMainAarMetadata`
+# under `assemble`, so raising it is a decision rather than a discovery. Spelled `coreCompileSdk`
+# and not `compileSdk-core`: the latter makes `android.compileSdk` a non-leaf in the catalog
+# accessor and breaks every other module's `libs.versions.android.compileSdk.get()`.
 android-compileSdk = "37"
+android-coreCompileSdk = "24"
 android-minSdk = "24"
 
 [libraries]

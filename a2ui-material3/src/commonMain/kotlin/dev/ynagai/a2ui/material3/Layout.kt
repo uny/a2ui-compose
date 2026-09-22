@@ -34,6 +34,7 @@ import dev.ynagai.a2ui.compose.rememberString
 import dev.ynagai.a2ui.core.protocol.Component
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -595,7 +596,8 @@ private class FlexMeasurePolicy(
             if (least && spec.fill) continue
             sum += (if (least) this[index].minMain(index, cross) else this[index].maxMain(index, cross))?.toLong() ?: refuse()
         }
-        if (totalWeight > 0.0) sum += (perUnit * totalWeight).coerceAtMost(Int.MAX_VALUE.toDouble()).toLong()
+        // Rounded up: a size the most demanding child needs, one pixel short, is a line cut short.
+        if (totalWeight > 0.0) sum += ceil(perUnit * totalWeight).coerceAtMost(Int.MAX_VALUE.toDouble()).toLong()
         return sum.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     }
 

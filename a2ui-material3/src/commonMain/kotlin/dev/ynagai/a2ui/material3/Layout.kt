@@ -441,7 +441,12 @@ private class FlexMeasurePolicy(
         return layout(width, height) {
             placeables.forEachIndexed { index, placeable ->
                 val across = ((crossSize - placeable!!.cross()) * crossAlignment.fraction).roundToInt()
-                if (horizontal) placeable.placeRelative(positions[index], across)
+                // A horizontal arrangement has already taken the layout direction into account and
+                // handed back physical x positions, so they are placed as they are; `placeRelative`
+                // would mirror them a second time and turn an RTL row back into an LTR one. A
+                // column's cross axis is the one still in need of mirroring, so that `align: start`
+                // sits on the right under RTL as it does in Compose's own `Column`.
+                if (horizontal) placeable.place(positions[index], across)
                 else placeable.placeRelative(across, positions[index])
             }
         }

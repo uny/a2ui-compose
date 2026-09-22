@@ -14,8 +14,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
@@ -181,6 +183,21 @@ class Material3ComponentsTest {
         val field = onNodeWithText("Search").fetchSemanticsNode().boundsInRoot
         // Material's `TextFieldDefaults.MinWidth`, at the harness's density of one.
         assertTrue(field.width <= 280f, "a field with room should take its natural width, not the row: $field")
+    }
+
+    @Test
+    fun a_row_under_a_right_to_left_locale_puts_its_first_child_on_the_right() = runComposeUiTest {
+        // `Arrangement.Horizontal.arrange` already takes the layout direction and hands back
+        // physical x positions; placing those relatively mirrored them a second time, and an RTL
+        // row read left-to-right with `start` and `end` swapped.
+        setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Surface(TWO_SHORT_TEXTS, width = PHONE_WIDTH)
+            }
+        }
+        val first = onNodeWithText("first").fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText("second").fetchSemanticsNode().boundsInRoot
+        assertTrue(first.left >= second.right, "in RTL the first child sits to the right of the second: $first, $second")
     }
 
     @Test
@@ -809,6 +826,12 @@ class Material3ComponentsTest {
             {"id":"long","component":"Text","text":"$LONG_TEXT_A"},
             {"id":"go","component":"Button","child":"go_label","action":{"event":{"name":"go"}}},
             {"id":"go_label","component":"Text","text":"Go"}
+        ]"""
+
+        val TWO_SHORT_TEXTS = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Text","text":"first"},
+            {"id":"b","component":"Text","text":"second"}
         ]"""
 
         val TWO_LONG_TEXTS = """[

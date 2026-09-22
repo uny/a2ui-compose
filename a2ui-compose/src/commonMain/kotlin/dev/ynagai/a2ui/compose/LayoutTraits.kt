@@ -97,16 +97,19 @@ public fun ComponentRenderer(traits: LayoutTraits, render: ComponentRenderer): C
  * nothing, and is measured to it. The image inside draws at no width at all, which is the
  * starvation this all exists to end, one level down from where the container was looking.
  *
- * So a wrapper that declares nothing of its own, and whose children all fill, fills. A card of a
- * banner asks for a share; a card of a banner *and a caption* does not, because the caption has a
- * preferred width and the card can be asked for it. The walk stops at the first child that is
- * content-sized, at a child that declares [MainAxisFit.Fill] itself, and at the depth the renderer
- * itself stops drawing at ([RenderLimits.maxDepth]) -- the same wrapper nested deeper than the
- * surface will draw cannot matter, and a component graph that leads back to itself is caught by
- * the visited set rather than by the depth. A cap of its own would be a second, smaller limit: a
- * banner under nine cards would report the ninth card's padding and starve the text beside it,
- * which is this bug again at a depth nobody thought to look, levels
- * -- which also ends the cycle an agent can build, the same bound `A2uiSurface` draws with.
+ * So a wrapper whose children all fill, fills. A card of a banner asks for a share; a card of a
+ * banner *and a caption* does not, because the caption has a preferred width and the card can be
+ * asked for it. That holds for a renderer that declared [MainAxisFit.Content] as much as for one
+ * that said nothing -- the two are the same value -- so a host wrapper of a fixed size around
+ * only filling children is laid out as a filler too: measured to a share of what its
+ * content-sized siblings leave, which beside a long text can be less than its own size.
+ *
+ * The walk stops at the first child that is content-sized, at a child that declares
+ * [MainAxisFit.Fill] itself, and [RenderLimits.maxDepth] levels below [child], the renderer's own
+ * bound -- a cap smaller than the surface draws would be this bug again, at a depth nobody thought
+ * to look. A component reached twice, under two parents, is walked once and answers the same
+ * both times; one that leads back to one of its own ancestors is a cycle, and stops the walk
+ * there with its declaration.
  *
  * Children are resolved through the surface's catalog, not by property name, so this holds for a
  * host's own wrapper as it does for the ones this library ships.
@@ -117,7 +120,7 @@ public fun A2uiComponentScope.layoutTraitsOf(
     axis: LayoutAxis,
 ): LayoutTraits {
     val surface = surface ?: return LayoutTraits.Content
-    return traitsOf(child.componentId, registry, axis, surface, depth = 0, seen = HashSet())
+    return traitsOf(child.componentId, registry, axis, surface, depth = 0, walking = HashSet(), walked = HashMap())
 }
 
 private fun A2uiComponentScope.traitsOf(
@@ -126,14 +129,18 @@ private fun A2uiComponentScope.traitsOf(
     axis: LayoutAxis,
     surface: SurfaceModel,
     depth: Int,
-    seen: MutableSet<ComponentId>,
+    walking: MutableSet<ComponentId>,
+    walked: MutableMap<ComponentId, LayoutTraits>,
 ): LayoutTraits {
+    walked[id]?.let { return it }
     // A component the surface does not hold, or a type the registry cannot draw, is a placeholder:
     // plain layout, content-sized.
     val component = surface.components[id] ?: return LayoutTraits.Content
     val declared = registry[component.component]?.layoutTraits(component, axis) ?: return LayoutTraits.Content
-    // A cycle, or deeper than the renderer will draw: the declaration is all there is to go on.
-    if (declared.fit == MainAxisFit.Fill || depth >= renderer.renderLimits.maxDepth || !seen.add(id)) {
+    // One of its own ancestors, or deeper than the renderer will draw: the declaration is all
+    // there is to go on. `walking` is the path down to here, not everything seen so far: a
+    // component shared by two parents is not a cycle, and `walked` answers it the second time.
+    if (declared.fit == MainAxisFit.Fill || depth >= renderer.renderLimits.maxDepth || !walking.add(id)) {
         return declared
     }
     val children = runCatching { renderer.childResolver(surface).childrenOf(component) }
@@ -145,7 +152,8 @@ private fun A2uiComponentScope.traitsOf(
                 is ChildReference.Template -> listOf(reference.componentId)
             }
         }
-    if (children.isEmpty()) return declared
-    val all = children.all { traitsOf(it, registry, axis, surface, depth + 1, seen).fit == MainAxisFit.Fill }
-    return if (all) LayoutTraits.Fill else declared
+    val all = children.isNotEmpty() &&
+        children.all { traitsOf(it, registry, axis, surface, depth + 1, walking, walked).fit == MainAxisFit.Fill }
+    walking.remove(id)
+    return (if (all) LayoutTraits.Fill else declared).also { walked[id] = it }
 }

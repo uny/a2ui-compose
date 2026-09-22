@@ -26,6 +26,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -238,6 +239,21 @@ class Material3ComponentsTest {
         val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
         assertTrue(beside.width > 0f, "the text beside the cards is drawn: $beside")
         assertTrue(beside.right <= root.right + 1f, "and stays on the row: $beside in $root")
+    }
+
+    @Test
+    fun a_wrapper_shared_by_two_cards_answers_for_both() = runComposeUiTest {
+        // One column of a banner drawn in two cards. The walk that asks what a wrapper wraps kept
+        // one visited set for everything it had seen, so the second card found the column already
+        // visited, took it for a cycle and answered with its own declaration: the outer column
+        // was content-sized, measured to its cards' padding, and both banners drew at nothing.
+        setContent { Surface(ONE_BANNER_IN_TWO_CARDS_BESIDE_TEXT, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val banners = onAllNodesWithContentDescription("banner").fetchSemanticsNodes().map { it.boundsInRoot }
+        assertEquals(2, banners.size, "the shared banner is drawn under both cards: $banners")
+        for (banner in banners) {
+            assertTrue(banner.width > root.width / 4, "each banner gets a share of the row: $banner in $root")
+        }
     }
 
     @Test
@@ -1239,6 +1255,17 @@ class Material3ComponentsTest {
             {"id":"root","component":"Row","children":["empty","w"]},
             {"id":"empty","component":"Row","children":[]},
             {"id":"w","component":"Text","text":"takes the rest","weight":1}
+        ]"""
+
+        /** Two cards around the same column, so the trait walk reaches that column twice. */
+        val ONE_BANNER_IN_TWO_CARDS_BESIDE_TEXT = """[
+            {"id":"root","component":"Row","children":["cards","beside"]},
+            {"id":"cards","component":"Column","children":["first","second"]},
+            {"id":"first","component":"Card","child":"shared"},
+            {"id":"second","component":"Card","child":"shared"},
+            {"id":"shared","component":"Column","children":["banner"]},
+            {"id":"banner","component":"Image","url":"https://example.invalid/banner.png","variant":"largeFeature","description":"banner"},
+            {"id":"beside","component":"Text","text":"beside the cards"}
         ]"""
 
         val WRAPPING_ROW_IN_A_SHORT_COLUMN = """[

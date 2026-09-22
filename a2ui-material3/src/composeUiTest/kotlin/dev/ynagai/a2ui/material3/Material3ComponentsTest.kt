@@ -227,6 +227,20 @@ class Material3ComponentsTest {
     }
 
     @Test
+    fun a_banner_under_a_stack_of_cards_still_asks_the_row_for_a_share() = runComposeUiTest {
+        // The same claim below a depth nobody would write by hand, because the walk that answers
+        // it used to stop at eight levels and take the card's own declaration from there: the
+        // ninth card reported the padding of the eight above it, was measured to that, and the
+        // text beside it was pushed off a phone. The renderer draws to twenty-four levels, so
+        // that is how far the question goes.
+        setContent { Surface(BANNER_UNDER_TEN_CARDS, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
+        assertTrue(beside.width > 0f, "the text beside the cards is drawn: $beside")
+        assertTrue(beside.right <= root.right + 1f, "and stays on the row: $beside in $root")
+    }
+
+    @Test
     fun a_field_in_a_wide_row_keeps_its_natural_width() = runComposeUiTest {
         // The other half of a field filling a row: on a screen with room, it takes Material's
         // 280dp and not the whole row, which is what the web renderers draw for a weightless
@@ -1234,6 +1248,14 @@ class Material3ComponentsTest {
             {"id":"price","component":"Text","text":"${'$'}4.50 per portion, which is a wide price"},
             {"id":"after","component":"Text","text":"after"}
         ]"""
+
+        /** Ten `Card`s around a banner image -- past the depth the trait walk used to stop at. */
+        val BANNER_UNDER_TEN_CARDS = buildString {
+            append("""[{"id":"root","component":"Row","children":["w0","beside"]},""")
+            for (i in 0 until 10) append("""{"id":"w$i","component":"Card","child":"w${i + 1}"},""")
+            append("""{"id":"w10","component":"Image","url":"https://example.invalid/b.png","variant":"largeFeature"},""")
+            append("""{"id":"beside","component":"Text","text":"beside"}]""")
+        }
 
         val COLUMN_IN_ROW = """[
             {"id":"root","component":"Row","children":["col","date"]},

@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import dev.ynagai.a2ui.core.protocol.Component
 import dev.ynagai.a2ui.core.protocol.ComponentId
 import dev.ynagai.a2ui.core.surface.ChildReference
+import dev.ynagai.a2ui.core.surface.RenderLimits
 import dev.ynagai.a2ui.core.surface.SurfaceModel
 
 /** The main axis of the `Row` or `Column` a component is being laid out in. */
@@ -99,7 +100,12 @@ public fun ComponentRenderer(traits: LayoutTraits, render: ComponentRenderer): C
  * So a wrapper that declares nothing of its own, and whose children all fill, fills. A card of a
  * banner asks for a share; a card of a banner *and a caption* does not, because the caption has a
  * preferred width and the card can be asked for it. The walk stops at the first child that is
- * content-sized, at a child that declares [MainAxisFit.Fill] itself, and at [TRAIT_DEPTH] levels
+ * content-sized, at a child that declares [MainAxisFit.Fill] itself, and at the depth the renderer
+ * itself stops drawing at ([RenderLimits.maxDepth]) -- the same wrapper nested deeper than the
+ * surface will draw cannot matter, and a component graph that leads back to itself is caught by
+ * the visited set rather than by the depth. A cap of its own would be a second, smaller limit: a
+ * banner under nine cards would report the ninth card's padding and starve the text beside it,
+ * which is this bug again at a depth nobody thought to look, levels
  * -- which also ends the cycle an agent can build, the same bound `A2uiSurface` draws with.
  *
  * Children are resolved through the surface's catalog, not by property name, so this holds for a
@@ -111,11 +117,8 @@ public fun A2uiComponentScope.layoutTraitsOf(
     axis: LayoutAxis,
 ): LayoutTraits {
     val surface = surface ?: return LayoutTraits.Content
-    return traitsOf(child.componentId, registry, axis, surface, depth = 0)
+    return traitsOf(child.componentId, registry, axis, surface, depth = 0, seen = HashSet())
 }
-
-/** How deep [layoutTraitsOf] looks for a wrapper's content before it takes the declaration as given. */
-private const val TRAIT_DEPTH = 8
 
 private fun A2uiComponentScope.traitsOf(
     id: ComponentId,
@@ -123,12 +126,16 @@ private fun A2uiComponentScope.traitsOf(
     axis: LayoutAxis,
     surface: SurfaceModel,
     depth: Int,
+    seen: MutableSet<ComponentId>,
 ): LayoutTraits {
     // A component the surface does not hold, or a type the registry cannot draw, is a placeholder:
     // plain layout, content-sized.
     val component = surface.components[id] ?: return LayoutTraits.Content
     val declared = registry[component.component]?.layoutTraits(component, axis) ?: return LayoutTraits.Content
-    if (declared.fit == MainAxisFit.Fill || depth >= TRAIT_DEPTH) return declared
+    // A cycle, or deeper than the renderer will draw: the declaration is all there is to go on.
+    if (declared.fit == MainAxisFit.Fill || depth >= renderer.renderLimits.maxDepth || !seen.add(id)) {
+        return declared
+    }
     val children = runCatching { renderer.childResolver(surface).childrenOf(component) }
         .getOrDefault(emptyList())
         .flatMap { reference ->
@@ -139,6 +146,6 @@ private fun A2uiComponentScope.traitsOf(
             }
         }
     if (children.isEmpty()) return declared
-    val all = children.all { traitsOf(it, registry, axis, surface, depth + 1).fit == MainAxisFit.Fill }
+    val all = children.all { traitsOf(it, registry, axis, surface, depth + 1, seen).fit == MainAxisFit.Fill }
     return if (all) LayoutTraits.Fill else declared
 }

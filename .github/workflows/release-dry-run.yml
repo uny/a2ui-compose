@@ -118,7 +118,6 @@ jobs:
           esac
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
-      #
       # `--console=plain`, `tee` and the step after: the same guard `build.yml` runs, for the same
       # reason -- a SKIPPED `checkKotlinAbi` exits 0 (#90). `pipefail`, or `tee` would hide a
       # failed build.

@@ -14,8 +14,9 @@ kotlin {
     explicitApi()
 
     // The block form, with `enabled` set: the no-argument `abiValidation()` overload is Kotlin 2.4
-    // only, and on 2.3 the bare `abiValidation {}` leaves `checkKotlinAbi` SKIPPED -- while
-    // `checkLegacyAbi`, the task CI runs, still reports success, so the build stays green (#64).
+    // only, and on 2.3 the bare `abiValidation {}` leaves `checkKotlinAbi` SKIPPED, and a skipped
+    // check exits 0 like an executed one, so the build stays green (#64). CI reads the task's
+    // outcome from the build log and fails on SKIPPED (`.github/scripts/check-abi-ran.sh`, #90).
     @OptIn(org.jetbrains.kotlin.gradle.dsl.abi.ExperimentalAbiValidation::class)
     abiValidation { enabled.set(true) }
 
@@ -80,7 +81,7 @@ kotlin {
             // `implementation`, and kept that way on purpose: no `ASTNode` or element type
             // reaches a public signature, so the parser is this module's choice and not one it
             // makes for every consumer -- which is the reason `a2ui-material3` declines to
-            // carry a parser at all (see `markdownText`'s KDoc there). `checkLegacyAbi` is
+            // carry a parser at all (see `markdownText`'s KDoc there). `checkKotlinAbi` is
             // what would show a type leaking.
             implementation(libs.jetbrains.markdown)
             // Internal, as in `a2ui-material3`: `Column`, `Row`, `padding` and `drawBehind` are

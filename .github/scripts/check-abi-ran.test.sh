@@ -84,6 +84,13 @@ expect "NO-SOURCE is not executed" 1 "$work/no-source.log" "$root"
 plain_log "" "" | grep -v ':a2ui-core:checkKotlinAbi' > "$work/missing.log"
 expect "a dump whose check is absent from the log" 1 "$work/missing.log" "$root"
 
+# ... and named, as the skipped module is: an absent header is the harder failure to locate.
+set +e
+named=$("$script" "$work/missing.log" "$root" 2>&1 | grep -c ':a2ui-core:checkKotlinAbi is not in the log')
+set -e
+if [ "$named" -eq 1 ]; then echo "ok   the absent module is named"; else
+  echo "FAIL the absent module is not named"; failures=$((failures + 1)); fi
+
 : > "$work/empty.log"
 expect "log empty" 1 "$work/empty.log" "$root"
 

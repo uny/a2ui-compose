@@ -349,7 +349,7 @@ private class FlexMeasurePolicy(
     private val horizontal = axis == LayoutAxis.Horizontal
 
     /**
-     * The children that raised on an intrinsic query, by index, and are not asked again.
+     * The children that raised on an intrinsic query, by [keyOf], and are not asked again.
      *
      * A `SubcomposeLayout` anywhere beneath a child -- a `LazyColumn`, a `BoxWithConstraints`,
      * Coil's `SubcomposeAsyncImage`, whatever a host's renderer is built on -- raises
@@ -362,6 +362,16 @@ private class FlexMeasurePolicy(
      */
     private val refused = HashSet<Int>()
 
+    /**
+     * The child's own index, read back from its layout id, rather than its position among the
+     * measurables. A child that has emitted nothing yet -- a component the surface does not hold,
+     * drawn by the default placeholder as nothing -- is absent from that list, so the positions
+     * of everything after it shift when it arrives, while the children list, and with it this
+     * policy, stay the same. A refusal remembered by position would then mark the newcomer.
+     */
+    private fun IntrinsicMeasurable.keyOf(index: Int): Int =
+        ((parentData as? LayoutIdParentData)?.layoutId as? Int) ?: (-1 - index)
+
     /** What the policy knows about one measurable: its child's declaration, or nothing. */
     private class Spec(val weight: Float, val fill: Boolean)
 
@@ -372,11 +382,12 @@ private class FlexMeasurePolicy(
     }
 
     private fun IntrinsicMeasurable.ask(index: Int, query: IntrinsicMeasurable.() -> Int): Int? {
-        if (index in refused) return null
+        val key = keyOf(index)
+        if (key in refused) return null
         return try {
             query()
         } catch (refusal: IllegalStateException) {
-            refused += index
+            refused += key
             null
         }
     }

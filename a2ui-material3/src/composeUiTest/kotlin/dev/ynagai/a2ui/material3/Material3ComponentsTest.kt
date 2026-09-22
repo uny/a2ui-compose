@@ -324,6 +324,42 @@ class Material3ComponentsTest {
     }
 
     @Test
+    fun a_child_that_arrives_late_is_not_charged_with_an_earlier_siblings_refusal() = runComposeUiTest {
+        // The row's first child is a component the surface does not hold yet, drawn by the default
+        // placeholder as nothing at all; its second is a host renderer that refuses intrinsic
+        // queries. When the first arrives, everything after it moves one place along the
+        // measurables, and a refusal remembered by that position lands on the newcomer: a long
+        // text measured as one with nothing to say, held to the half of the row the fallback
+        // shares among such children, when the feed beside it wants a fraction of that.
+        val registry = Material3Components.Basic.with(
+            mapOf(
+                "Feed" to ComponentRenderer { scope, m ->
+                    LazyColumn(m) { item { Text(scope.string("text").orEmpty()) } }
+                },
+            ),
+        )
+        val renderer = rendererFor(LATE_TEXT_BESIDE_A_FEED)
+        setContent {
+            Box(Modifier.size(PHONE_WIDTH, SURFACE_HEIGHT)) {
+                MaterialTheme { A2uiSurface(renderer, SURFACE, registry) }
+            }
+        }
+        waitForIdle()
+        renderer.apply(
+            A2uiJson.strict.decodeFromString(
+                AgentToRendererMessage.serializer(),
+                """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
+                    {"id":"a","component":"Text","text":"$LONG_TEXT_A"}
+                ]}}""",
+            ),
+        )
+        waitForIdle()
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val text = onNodeWithText(LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        assertTrue(text.width > root.width * 0.6f, "the late text gets what the feed leaves, not half the row: $text in $root")
+    }
+
+    @Test
     fun a_field_beside_a_long_text_shrinks_with_it_rather_than_vanishing() = runComposeUiTest {
         // A field is content-sized like the web's `<input>`: 280dp when there is room, less when
         // there is not, in proportion with the text beside it. Measured as a filler it would have
@@ -1066,6 +1102,11 @@ class Material3ComponentsTest {
             {"id":"banner","component":"Image","url":"https://example.invalid/banner.png","variant":"largeFeature"},
             {"id":"caption","component":"Text","text":"in the card"},
             {"id":"beside","component":"Text","text":"beside the card"}
+        ]"""
+
+        val LATE_TEXT_BESIDE_A_FEED = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"b","component":"Feed","text":"feed"}
         ]"""
 
         val TWO_FEEDS = """[

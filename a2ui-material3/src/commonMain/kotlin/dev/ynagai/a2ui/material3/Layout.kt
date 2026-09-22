@@ -597,8 +597,8 @@ private fun shrink(basis: IntArray, floor: IntArray, available: Int): IntArray {
     val target = IntArray(basis.size) { max(basis[it], floor[it]) }
     val pinned = BooleanArray(basis.size)
     while (true) {
-        val deficit = target.sum() - available
-        if (deficit <= 0) break
+        val deficit = target.sumOf { it.toLong() } - available
+        if (deficit <= 0L) break
         val open = target.indices.filter { !pinned[it] }
         if (open.isEmpty()) break
         val weight = open.sumOf { basis[it].toDouble() }
@@ -624,10 +624,10 @@ private fun shrink(basis: IntArray, floor: IntArray, available: Int): IntArray {
     }
     // Rounding can leave a pixel or two over. Take them from the largest child still above its
     // floor rather than let the container overflow by an amount nobody asked for.
-    var over = target.sum() - available
-    while (over > 0) {
+    var over = target.sumOf { it.toLong() } - available
+    while (over > 0L) {
         val i = target.indices.filter { target[it] > floor[it] }.maxByOrNull { target[it] } ?: break
-        val give = min(over, target[i] - floor[i])
+        val give = min(over, (target[i] - floor[i]).toLong()).toInt()
         target[i] -= give
         over -= give
     }

@@ -335,10 +335,11 @@ class Material3ComponentsTest {
         setContent { Surface(CARDED_AND_BARE) }
         val carded = onNodeWithText("carded").fetchSemanticsNode().boundsInRoot
         val bare = onNodeWithText("bare").fetchSemanticsNode().boundsInRoot
-        // The *size* of the inset, not merely its sign. Both texts carry the leaf margin and the
-        // card adds a 1dp outline, so `carded.left > bare.left` holds by 9dp with the card's own
-        // padding deleted -- the assertion passed under the regression it names. The padding is
-        // the only part of the difference worth 16dp.
+        // The *size* of the inset, not merely its sign. Both texts carry the leaf margin and so
+        // does the card, so `carded.left > bare.left` holds by 8dp with the card's own padding
+        // deleted (measured) -- the assertion passed under the regression it names. The padding is
+        // the only part of the difference worth 16dp. The outline takes no layout space and adds
+        // nothing here; `CardOutlineTest` reads it, and the clip, back as pixels.
         val inset = carded.left - bare.left
         assertTrue(
             inset >= CARD_PADDING_PX,

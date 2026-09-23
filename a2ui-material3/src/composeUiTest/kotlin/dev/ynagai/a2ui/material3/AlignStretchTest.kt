@@ -1,6 +1,7 @@
 package dev.ynagai.a2ui.material3
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -167,6 +168,54 @@ class AlignStretchTest {
         assertTrue(bounds("beside").height * 2 < bounds(LONG).height, "nothing is stretched beside the tabs")
     }
 
+    @Test
+    fun a_row_with_one_filler_beside_shrunk_children_is_drawn_as_start() = runComposeUiTest {
+        // A text shrunk to a width may wrap narrower than it, and the filler after it gets the
+        // difference -- so the video's height, and the line, cannot be asked.
+        setContent { Hosted(SHRUNK_TEXTS_BESIDE_A_VIDEO) }
+        assertTrue(bounds("short").height * 2 < bounds("$LONG $LONG").height, "nothing is stretched")
+    }
+
+    @Test
+    fun a_column_in_a_row_that_cannot_be_asked_leaves_a_weighted_sibling_its_share() = runComposeUiTest {
+        // A column that cannot be asked is measured first, against what the row can spare, and
+        // the row reserves nothing for its weighted children. A column as wide as it was offered
+        // took all of it; one as wide as its content leaves the weighted text the rest.
+        setContent { Hosted(REFUSING_COLUMN_BESIDE_WEIGHTED_TEXT, registry = refuserRegistry) }
+        assertTrue(bounds("rest").width > WIDTH / 2, "the weighted text keeps its share: ${bounds("rest")}")
+    }
+
+    @Test
+    fun a_column_placed_by_a_list_is_as_wide_as_its_content() = runComposeUiTest {
+        // A list centring its items has to be able to move them: a column item that filled the
+        // list's width would leave its text at the left edge.
+        setContent { Hosted(CENTRED_LIST_OF_A_COLUMN) }
+        assertTrue(bounds("item").left > WIDTH / 4, "the item is centred: ${bounds("item")}")
+    }
+
+    @Test
+    fun a_column_holding_only_a_banner_in_a_row_still_draws_it() = runComposeUiTest {
+        // Nothing in the column says how wide its line is -- the banner fills across it -- so the
+        // column does not stretch, and the banner fills the column's share as it did.
+        setContent { Hosted(BANNER_COLUMN_BESIDE_TEXT) }
+        val banner = onNodeWithContentDescription("banner").fetchSemanticsNode().boundsInRoot
+        assertTrue(banner.width > WIDTH / 4, "the banner is drawn: $banner")
+    }
+
+    @Test
+    fun a_column_in_a_tab_fills_the_tab_whatever_holds_the_tabs() = runComposeUiTest {
+        // A tab gives its child the tab's width, as a block does. The centred column around the
+        // tabs is not what the column inside them answers to.
+        setContent { Hosted(TABS_IN_A_CENTRED_COLUMN) }
+        val tabs = onNodeWithText("One").fetchSemanticsNode().boundsInRoot
+        val text = bounds("in the tab")
+        assertTrue(text.width > WIDTH / 2, "the column in the tab spans it: $text (tab $tabs)")
+    }
+
+    private val refuserRegistry = Material3Components.Basic.with(
+        mapOf("Refuser" to ComponentRenderer { _, m -> BoxWithConstraints(m) { Box(Modifier.size(40.dp)) } }),
+    )
+
     private fun ComposeUiTest.bounds(text: String): Rect =
         onNodeWithText(text).fetchSemanticsNode().boundsInRoot
 
@@ -262,6 +311,41 @@ class AlignStretchTest {
             {"id":"empty","component":"Row","children":[]},
             {"id":"short","component":"Text","text":"short"},
             {"id":"long","component":"Text","text":"$LONG","weight":1}
+        ]"""
+
+        val SHRUNK_TEXTS_BESIDE_A_VIDEO = """[
+            {"id":"root","component":"Row","children":["short","long","video"]},
+            {"id":"short","component":"Text","text":"short"},
+            {"id":"long","component":"Text","text":"$LONG $LONG"},
+            {"id":"video","component":"Video","url":"https://example.invalid/v.mp4"}
+        ]"""
+
+        val REFUSING_COLUMN_BESIDE_WEIGHTED_TEXT = """[
+            {"id":"root","component":"Row","children":["column","rest"],"align":"start"},
+            {"id":"column","component":"Column","children":["refuser"],"align":"start"},
+            {"id":"refuser","component":"Refuser"},
+            {"id":"rest","component":"Text","text":"rest","weight":1}
+        ]"""
+
+        val CENTRED_LIST_OF_A_COLUMN = """[
+            {"id":"root","component":"Column","children":["list"]},
+            {"id":"list","component":"List","children":["column"],"align":"center"},
+            {"id":"column","component":"Column","children":["item"],"align":"start"},
+            {"id":"item","component":"Text","text":"item"}
+        ]"""
+
+        val BANNER_COLUMN_BESIDE_TEXT = """[
+            {"id":"root","component":"Row","children":["column","x"]},
+            {"id":"column","component":"Column","children":["banner"]},
+            {"id":"banner","component":"Image","url":"","description":"banner"},
+            {"id":"x","component":"Text","text":"x"}
+        ]"""
+
+        val TABS_IN_A_CENTRED_COLUMN = """[
+            {"id":"root","component":"Column","children":["tabs"],"align":"center"},
+            {"id":"tabs","component":"Tabs","tabs":[{"title":"One","child":"column"}]},
+            {"id":"column","component":"Column","children":["text"]},
+            {"id":"text","component":"Text","text":"in the tab"}
         ]"""
 
         val TABS_BESIDE_TEXT = """[

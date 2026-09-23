@@ -14,6 +14,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -119,7 +120,11 @@ public val ModalRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Con
                 // second scrollable of the same axis around it measures the inner one against an
                 // infinite height -- which raises rather than degrades. The dialog's own window
                 // bounds the content instead.
-                scope.rememberChildren("content").forEach { scope.RenderChild(it) }
+                // The dialog gives its content a width of its own, and a column in it fills that
+                // width whatever the container around the trigger does with its children.
+                CompositionLocalProvider(LocalFillsOfferedWidth provides true) {
+                    scope.rememberChildren("content").forEach { scope.RenderChild(it) }
+                }
             }
         }
     }

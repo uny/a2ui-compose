@@ -6,6 +6,7 @@ import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -101,8 +102,11 @@ public val TabsRenderer: ComponentRenderer = ComponentRenderer(
         // The selected tab's child, by the exact property the child resolver named it under. A
         // `Tabs` carries one `Child` per element of `tabs`, so this is a list of at most one --
         // iterated rather than indexed for the reason `Button` iterates its own: an entry standing
-        // in for a child the instance budget did not reach is drawn like any other.
-        scope.rememberChildren(childProperty(index)).forEach { scope.RenderChild(it) }
+        // in for a child the instance budget did not reach is drawn like any other. A tab gives
+        // its child the tab's width, as a dialog does, whatever the container around the tabs.
+        CompositionLocalProvider(LocalFillsOfferedWidth provides true) {
+            scope.rememberChildren(childProperty(index)).forEach { scope.RenderChild(it) }
+        }
     }
 }
 

@@ -123,10 +123,12 @@ public fun ComponentRenderer(traits: LayoutTraits, render: ComponentRenderer): C
  * asked for it. That holds for a renderer that declared [AxisFit.Content] as much as for one
  * that said nothing -- the two are the same value -- so a host wrapper of a fixed size around
  * only filling children is laid out as a filler too: measured to a share of what its
- * content-sized siblings leave, which beside a long text can be less than its own size.
+ * content-sized siblings leave, which beside a long text can be less than its own size. One that
+ * declares [AxisFit.Fixed] is taken at its word.
  *
  * The walk stops at the first child that is content-sized, at a child that declares
- * [AxisFit.Fill] itself, and [RenderLimits.maxDepth] levels below [child], the renderer's own
+ * [AxisFit.Fill] or [AxisFit.Fixed] itself -- a wrapper that says it is fixed is, whatever it
+ * holds -- and [RenderLimits.maxDepth] levels below [child], the renderer's own
  * bound -- a cap smaller than the surface draws would be this bug again, at a depth nobody thought
  * to look. A component reached twice at the same depth, under two parents, is walked once and
  * answers the same both times -- at another depth it is walked again, since the bound may cut it
@@ -164,7 +166,7 @@ private fun A2uiComponentScope.traitsOf(
     // component shared by two parents is not a cycle, and `walked` answers it the second time --
     // keyed by depth too, because the same component nearer the bound may be cut short of the
     // filler it reaches from higher up.
-    if (declared.fit == AxisFit.Fill || depth >= renderer.renderLimits.maxDepth || !walking.add(id)) {
+    if (declared.fit != AxisFit.Content || depth >= renderer.renderLimits.maxDepth || !walking.add(id)) {
         return declared
     }
     val children = runCatching { renderer.childResolver(surface).childrenOf(component) }

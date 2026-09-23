@@ -243,9 +243,13 @@ its share, even below its own minimum. The web would hold it at its min-content 
 overflow; here the agent asked for proportions — `33_financial-data-grid` is four weighted columns
 — and a grid whose widest figure pushes the row off a phone is worse than a cell that wraps.
 
-`align: stretch`, the catalog's default on the cross axis, is still drawn as `start` — see the note
-on `crossAlignment` in `Layout.kt` for why, and for what the container's memory of refusals makes
-possible next.
+`align: stretch`, the catalog's default on the cross axis, stretches a row's and a column's children
+as CSS's `align-items: stretch` does: a column is as wide as it is offered where CSS would make it a
+block, and a row's children are measured to its tallest. A component with a size of its own on an
+axis — an icon, an avatar, a divider's thickness — says so with `AxisFit.Fixed` and is left at it.
+Where a row cannot learn its line before measuring — two children that fill, a filler or a shrunk
+row beside weighted children, a child that refuses an intrinsic query — it is drawn as `start`.
+`List` still draws `stretch` as `start`.
 
 ## Gallery
 

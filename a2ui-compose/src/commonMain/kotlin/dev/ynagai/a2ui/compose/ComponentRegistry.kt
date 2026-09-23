@@ -66,7 +66,7 @@ public class ComponentRegistry(renderers: Map<String, ComponentRenderer>) {
      * was simply gone. What it needed was the `fun interface` implementation behind one call site
      * changing, not anything the renderer itself does wrong, and [A2uiComponent] now keys that
      * call on the renderer, which `RendererSwapTest` pins (#31). `a2ui-material3`'s own
-     * `CardRenderer` still draws a bordered `Box` from before that fix.
+     * `CardRenderer` is an `OutlinedCard` in that shape, and its `CardScrollSwapTest` pins it too.
      */
     public fun with(renderers: Map<String, ComponentRenderer>): ComponentRegistry =
         ComponentRegistry(this.renderers + renderers)

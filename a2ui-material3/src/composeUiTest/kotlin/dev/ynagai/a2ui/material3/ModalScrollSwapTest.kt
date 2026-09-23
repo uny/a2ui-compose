@@ -20,32 +20,18 @@ import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
 import kotlin.test.Test
 
 /**
- * An open `Modal` whose content is replaced -- the other renderer that could have met the
- * conditions [CardScrollSwapTest] pins.
+ * An open `Modal` whose content is replaced by a `Card` -- the swap [CardScrollSwapTest] makes,
+ * landing inside a dialog.
  *
- * `ModalRenderer` reaches the same non-interactive Material 3 `Surface` that `CardRenderer` had to
- * give up, and draws its content through `RenderChild`. So the argument that a modal is unaffected
- * has to come from somewhere else, and the code comment that made it named the `Dialog`: its own
- * window bounds the content, so the unbounded height the crash was thought to need never holds.
+ * It segfaulted Kotlin/Native on macOS until `A2uiComponent` keyed its `Render` call on the
+ * renderer (#31): a [CardRenderer] built on Material 3's `OutlinedCard` arriving as the content,
+ * in a scrolling host and in a bounded one alike. The `Dialog` never protected it, whatever an
+ * earlier note argued -- its window bounds the content's height, and height was not a condition.
  *
- * **That argument does not survive being run, and this test does not rest on it.** A card built the
- * old way -- Material 3's `OutlinedCard`, its child through `RenderChild` -- registered over `Card`
- * as an open modal's content segfaults macOS in a bounded host as readily as in a scrolling one, so
- * the `Dialog` is not what keeps this green. The same swap with that card and no modal anywhere, in
- * a fixed 400x600 box, dies too, which puts the fault outside the height condition altogether.
- *
- * What every reproduction has in common is narrower, and worth saying plainly: **the component
- * *arriving* in the swap is the one built on the `Surface`.** `ModalRenderer`'s own dialog
- * `Surface` is that shape too and stays green here, because a content swap leaves it in place and
- * replaces something below it; [CardRenderer] was the one that arrived, and since it stopped being
- * a `Surface` nothing the catalog draws does.
- *
- * So the two tests below pass for that reason, and this file is a canary that cannot currently
- * fail -- with the shipped catalog there is nothing left to arrive as a `Surface`. It
- * earns its place against the day something does: a host registering its own `Surface`-based
- * renderer, which `ModalRenderer`'s note invites, or a renderer here being rebuilt on one. A modal
- * is where that would land first and least visibly. Until then read this as coverage of the modal
- * *swap* path -- open, replace, assert the content changed -- and not as evidence about a boundary.
+ * So these two tests hold the key on the modal's path, which a modal needs separately: its content
+ * is drawn in a `Dialog`'s own window, and a crash there is the one a host sees least. Both
+ * are **mutation-checked** on `macosArm64`: with the `key` taken off, each dies with "Test running
+ * process exited unexpectedly" when run alone.
  */
 @OptIn(ExperimentalTestApi::class)
 class ModalScrollSwapTest {
@@ -95,9 +81,9 @@ class ModalScrollSwapTest {
                 """{"id":"body","component":"Text","text":"first body"}]}}"""
 
         /**
-         * A `Card`, still: it is what a real modal's content holds, and it was the component the
-         * crash needed. It no longer carries that condition -- [CardRenderer] is a bordered `Box`
-         * now -- so swapping it for a `Text` here would exercise the same path.
+         * A `Card`, because it is what a real modal's content holds and because an `OutlinedCard`
+         * arriving is the shape the key has to hold. A `Text` arriving hands no content lambda to
+         * anything, so it would not meet the conditions the key is there for.
          */
         val REPLACEMENT =
             """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE_ID","components":[""" +

@@ -24,16 +24,18 @@ import kotlin.test.Test
 /**
  * A `Card` arriving in a surface that is redrawn inside a scrolling parent.
  *
- * This is the shape that segfaulted Kotlin/Native for as long as [CardRenderer] was built on
- * Material 3's `OutlinedCard` -- see that renderer's own note for the four conditions and for what
- * each of them alone does not do. The crash was an `EXC_BAD_ACCESS` inside
- * `AtomicInt.compareAndSet` with no unwindable stack, so nothing raised and nothing was reported:
- * the test process died, and on macOS the runner said only "signal 11".
+ * This is the shape that segfaulted Kotlin/Native while [CardRenderer] was built on Material 3's
+ * `OutlinedCard` and `A2uiComponent`'s `Render` call was not keyed on the renderer (#31). The crash
+ * was an `EXC_BAD_ACCESS` inside `AtomicInt.compareAndSet` with no unwindable stack, so nothing
+ * raised and nothing was reported: the test process died, and on macOS the runner said only
+ * "signal 11".
  *
- * A test rather than a comment because of how it failed. A renderer written back onto a Material 3
- * `Surface` would look correct on JVM and on both web targets, pass every other test in this
- * module, and take an iOS app down in the one placement this library documents as usual. This is
- * the only thing standing between that change and a release.
+ * [CardRenderer] is an `OutlinedCard` again, so this is now the swap with the real renderer that
+ * says the key is still there. `RendererSwapTest` pins the same key with a reduction of its own,
+ * but the conditions it names are necessary and not sufficient, and a Material 3 shape passing
+ * there says nothing about this one. **Mutation-checked** on `macosArm64`: with the `key` taken off,
+ * this dies with "Test running process exited unexpectedly". Only the native targets ever
+ * reproduced the crash, so only there does it guard anything.
  *
  * Reaching the assertions at all is most of the claim, but not all of it: they also have to say
  * that the swap *happened*, or a surface that quietly stopped replacing anything would keep this
@@ -47,10 +49,10 @@ class CardScrollSwapTest {
         setContent {
             MaterialTheme {
                 // Unbounded height: the placement a host gives a surface it expects to scroll, and
-                // where the crash was found. Not where it is confined, though -- see the note on
-                // `CardRenderer`: with the `verticalScroll` taken off, an `OutlinedCard`-based
-                // `CardRenderer` segfaults here just the same. Kept because it is the placement
-                // this library documents as usual, not because the height is load-bearing.
+                // where the crash was found. Not where it is confined, though: without the key,
+                // this swap segfaults with the `verticalScroll` taken off just the same. Kept
+                // because it is the placement this library documents as usual, not because the
+                // height is load-bearing.
                 Box(Modifier.requiredSize(400.dp, 600.dp).verticalScroll(rememberScrollState())) {
                     A2uiSurface(renderer, SURFACE_ID, Material3Components.Basic)
                 }

@@ -35,8 +35,9 @@ import kotlin.test.assertNotEquals
  * What a `Card` draws, read back as pixels (#28).
  *
  * `.border` and `.clip` take no layout space, so no bounds assertion can see either of them: each
- * could be deleted from [CardRenderer] with every other test in this module still green. Before
- * #26 they were `OutlinedCard`'s to keep; since then only these two tests keep them.
+ * could be removed from [CardRenderer] with every other test in this module still green. They are
+ * `OutlinedCard`'s `Surface`'s to keep, and were drawn by hand while the card was a bordered `Box`
+ * (#31); these two tests read back that both forms put the outline and the clip in the same place.
  *
  * The card's child is a host renderer that paints far past its own bounds, flooding everything
  * behind the card with [FLOOD] unless something clips it. Nothing a catalog payload can put in a

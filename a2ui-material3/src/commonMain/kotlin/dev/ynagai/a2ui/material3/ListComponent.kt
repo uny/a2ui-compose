@@ -49,9 +49,10 @@ import dev.ynagai.a2ui.compose.rememberString
  * `Column` now stretch. Compose has no stretching `Alignment`, and a `fillMax*` taken inside a
  * scrolling container measures against what the parent offered rather than against this list's
  * own content; `Layout.kt` stretches by measuring each child against a line it learns first, and
- * this list is a plain `Column` that cannot. So a list's items keep their natural width instead of
- * squaring up to the widest -- visible as a ragged edge down a list of `Card`s -- except a
- * `Column` item, which fills the list's width as it would a block's.
+ * this list is a plain `Column` that cannot. So a leaf item keeps its natural width instead of
+ * squaring up to the widest. A `Column` item does fill the list's width, as it would a block's,
+ * and so does one inside a `Card` item, which gives its content no width of its own -- a list of
+ * cards around columns is as even as the catalog's default asks.
  */
 public val ListRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Content) { scope, modifier ->
     val horizontal = scope.rememberString("direction") == "horizontal"

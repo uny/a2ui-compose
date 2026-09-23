@@ -249,7 +249,8 @@ block, and a row's children are measured to its tallest. A component with a size
 axis — an icon, an avatar, a divider's thickness — says so with `AxisFit.Fixed` and is left at it.
 Where a row cannot learn its line before measuring — two children that fill, a filler or a shrunk
 row beside weighted children, a child that refuses an intrinsic query — it is drawn as `start`.
-`List` still draws `stretch` as `start`.
+`List` still draws `stretch` as `start` for a leaf item; a `Column` item, or one inside a `Card`,
+fills the list's width.
 
 ## Gallery
 

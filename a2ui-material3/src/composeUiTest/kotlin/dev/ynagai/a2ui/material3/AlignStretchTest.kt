@@ -20,6 +20,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.A2uiRenderer
@@ -181,8 +182,10 @@ class AlignStretchTest {
         // A column that cannot be asked is measured first, against what the row can spare, and
         // the row reserves nothing for its weighted children. A column as wide as it was offered
         // took all of it; one as wide as its content leaves the weighted text the rest.
-        setContent { Hosted(REFUSING_COLUMN_BESIDE_WEIGHTED_TEXT, registry = refuserRegistry) }
-        assertTrue(bounds("rest").width > WIDTH / 2, "the weighted text keeps its share: ${bounds("rest")}")
+        for (align in listOf(null, "start")) {
+            setContent { Hosted(refusingColumnBesideWeightedText(align), registry = refuserRegistry) }
+            assertTrue(bounds("rest").width > WIDTH / 2, "the weighted text keeps its share ($align): ${bounds("rest")}")
+        }
     }
 
     @Test
@@ -210,6 +213,27 @@ class AlignStretchTest {
         val tabs = onNodeWithText("One").fetchSemanticsNode().boundsInRoot
         val text = bounds("in the tab")
         assertTrue(text.width > WIDTH / 2, "the column in the tab spans it: $text (tab $tabs)")
+    }
+
+    @Test
+    fun a_column_in_a_weighted_card_fills_the_card() = runComposeUiTest {
+        // A weighted card is as wide as its share, and a column inside it is a block there: its
+        // centred text sits in the middle of the card, not at the left of a column its own width.
+        setContent { Hosted(CENTRED_TEXT_IN_A_WEIGHTED_CARD) }
+        val text = bounds("mid")
+        assertTrue(text.left > WIDTH / 4, "the text is centred in the card: $text")
+    }
+
+    @Test
+    fun a_column_in_a_dialog_fills_the_dialog_whatever_holds_the_trigger() = runComposeUiTest {
+        // The close button's row spans the dialog. A column that fills the dialog too puts its
+        // `end`-aligned text under the button; one as wide as the text leaves it where it starts.
+        setContent { Hosted(MODAL_IN_A_CENTRED_COLUMN) }
+        onNodeWithText("open").performClick()
+        waitForIdle()
+        val close = onNodeWithContentDescription("Close").fetchSemanticsNode().boundsInRoot
+        val text = bounds("x")
+        assertTrue(close.right - text.right < DIALOG_EDGE, "the text reaches the dialog's end: $text, close $close")
     }
 
     private val refuserRegistry = Material3Components.Basic.with(
@@ -255,6 +279,9 @@ class AlignStretchTest {
         /** One line of body text, and an avatar's side. */
         const val LINE = 24f
         const val AVATAR = 40f
+
+        /** A text's margin and an icon button's inset, with room to spare, and far short of a dialog. */
+        const val DIALOG_EDGE = 60f
 
         /** Long enough to wrap to several lines in half of [WIDTH]. */
         const val LONG = "a text long enough to wrap onto several lines beside a short one"
@@ -320,9 +347,9 @@ class AlignStretchTest {
             {"id":"video","component":"Video","url":"https://example.invalid/v.mp4"}
         ]"""
 
-        val REFUSING_COLUMN_BESIDE_WEIGHTED_TEXT = """[
-            {"id":"root","component":"Row","children":["column","rest"],"align":"start"},
-            {"id":"column","component":"Column","children":["refuser"],"align":"start"},
+        fun refusingColumnBesideWeightedText(align: String?) = """[
+            {"id":"root","component":"Row","children":["column","rest"]${align(align)}},
+            {"id":"column","component":"Column","children":["refuser"]${align(align)}},
             {"id":"refuser","component":"Refuser"},
             {"id":"rest","component":"Text","text":"rest","weight":1}
         ]"""
@@ -339,6 +366,22 @@ class AlignStretchTest {
             {"id":"column","component":"Column","children":["banner"]},
             {"id":"banner","component":"Image","url":"","description":"banner"},
             {"id":"x","component":"Text","text":"x"}
+        ]"""
+
+        val CENTRED_TEXT_IN_A_WEIGHTED_CARD = """[
+            {"id":"root","component":"Row","children":["card"]},
+            {"id":"card","component":"Card","child":"column","weight":1},
+            {"id":"column","component":"Column","children":["mid"],"align":"center"},
+            {"id":"mid","component":"Text","text":"mid"}
+        ]"""
+
+        val MODAL_IN_A_CENTRED_COLUMN = """[
+            {"id":"root","component":"Column","children":["modal"],"align":"center"},
+            {"id":"modal","component":"Modal","trigger":"open","content":"column"},
+            {"id":"open","component":"Text","text":"open"},
+            {"id":"column","component":"Column","children":["text","wide"],"align":"end"},
+            {"id":"text","component":"Text","text":"x"},
+            {"id":"wide","component":"Text","text":"wider"}
         ]"""
 
         val TABS_IN_A_CENTRED_COLUMN = """[

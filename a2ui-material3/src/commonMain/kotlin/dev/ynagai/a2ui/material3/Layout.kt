@@ -320,10 +320,11 @@ private fun crossAlignment(align: String?): CrossAlignment = when (align) {
  *   it to be filled -- the root of a surface, a card there, a column that stretches, a dialog, a
  *   tab. That is CSS's block width, it holds whatever the column's own `align`, and it needs no
  *   question put to anyone. Inside a column that aligns its children `start`, `center` or `end`,
- *   and inside a row, a column is as wide as its widest child, as CSS shrink-wraps a flex item --
- *   a row has already given it the width the plan chose, and a column that took whatever it was
- *   offered instead would take a cap the plan meant as a limit and leave a weighted sibling
- *   nothing. [LocalFillsOfferedWidth] carries which it is. A row is never block-wide: at the root
+ *   and in a row's content-sized child, a column is as wide as its widest child, as CSS
+ *   shrink-wraps a flex item -- a row has already given that child the width the plan chose, and
+ *   a column that took whatever it was offered instead would take a cap the plan meant as a limit
+ *   and leave a weighted sibling nothing. In a row's weighted or filling child it fills the share.
+ *   [LocalFillsOfferedWidth] carries which it is, per child. A row is never block-wide: at the root
  *   of a surface it is as wide as its children, as it was before `stretch`.
  * - A row's height is its tallest child, so the line is found by asking: the plan is run over the
  *   children's intrinsics once the ones that cannot be asked have been measured, and each child
@@ -364,20 +365,15 @@ private fun Flex(
     val policy = remember(axis, arrangement, crossAlignment, children, session, fillsWidth) {
         FlexMeasurePolicy(axis, arrangement, crossAlignment, children, session, fillsWidth)
     }
-    // A stretching column hands each child its own width. A row hands each the width the plan
-    // chose, which a column child reaches by its own content, and a column aligning its children
-    // anywhere else lets them be as wide as they are.
-    val childrenFillWidth = axis == LayoutAxis.Vertical && crossAlignment == CrossAlignment.Stretch
     Layout(
         content = {
-            CompositionLocalProvider(
-                LocalQuerySession provides session,
-                LocalFillsOfferedWidth provides childrenFillWidth,
-            ) {
+            CompositionLocalProvider(LocalQuerySession provides session) {
                 // The index is the id, and the policy reads it back: a renderer that dropped the
                 // modifier it was handed is measured as a child that said nothing about itself.
                 children.forEachIndexed { index, child ->
-                    scope.RenderChild(child.child, Modifier.layoutId(index))
+                    CompositionLocalProvider(LocalFillsOfferedWidth provides child.fillsOfferedWidth(axis, crossAlignment)) {
+                        scope.RenderChild(child.child, Modifier.layoutId(index))
+                    }
                 }
             }
         },
@@ -385,6 +381,19 @@ private fun Flex(
         measurePolicy = policy,
     )
 }
+
+/**
+ * Whether a column inside this child is as wide as the width the child is offered -- see [Flex].
+ *
+ * A stretching column hands each child its own width to fill. A row hands a content-sized child
+ * the width the plan chose for it, which a column reaches by its own content -- and a column that
+ * took the width instead would take a cap the plan meant as a limit, when the row could not ask
+ * it. A share, though, is a width the row means to be filled: a weighted card's column is as wide
+ * as the card, not as its text, and so is a filling one's. A column aligning its children anywhere
+ * else lets them be as wide as they are.
+ */
+private fun LaidOutChild.fillsOfferedWidth(axis: LayoutAxis, crossAlignment: CrossAlignment): Boolean =
+    if (axis == LayoutAxis.Vertical) crossAlignment == CrossAlignment.Stretch else weight > 0f || traits.fit == AxisFit.Fill
 
 private class FlexMeasurePolicy(
     axis: LayoutAxis,

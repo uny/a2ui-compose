@@ -210,7 +210,7 @@ class GalleryIntegrationTest {
      * The difference is not cosmetic. `applyAll` before the first frame and N separate `apply`s
      * afterwards are different code, and so is a surface *replacing* one already on screen -- which
      * is what selecting the next sample does forty-two times here. That last path is the one that
-     * segfaulted Kotlin/Native until `CardRenderer` stopped being built on a Material 3 `Surface`;
+     * segfaulted Kotlin/Native until `A2uiComponent` keyed its `Render` call on the renderer (#31);
      * this test is what walks it for the whole corpus rather than for the one pair
      * `CardScrollSwapTest` pins. Named rather than linked: that class lives in `a2ui-material3`'s
      * own test source set, which is not on this module's compile classpath, so the reference

@@ -453,12 +453,14 @@ private class FlexMeasurePolicy(
         ((parentData as? LayoutIdParentData)?.layoutId as? Int) ?: (-1 - index)
 
     /** What the policy knows about one measurable: its child's declaration, or nothing. */
-    private class Spec(val weight: Float, val fill: Boolean, val across: AxisFit)
+    private class Spec(val weight: Float, val along: AxisFit, val across: AxisFit) {
+        val fill: Boolean get() = along == AxisFit.Fill
+    }
 
     private fun specOf(measurable: IntrinsicMeasurable): Spec {
         val child = ((measurable.parentData as? LayoutIdParentData)?.layoutId as? Int)?.let(children::getOrNull)
-            ?: return Spec(weight = 0f, fill = false, across = AxisFit.Content)
-        return Spec(weight = child.weight, fill = child.traits.fit == AxisFit.Fill, across = child.across)
+            ?: return Spec(weight = 0f, along = AxisFit.Content, across = AxisFit.Content)
+        return Spec(weight = child.weight, along = child.traits.fit, across = child.across)
     }
 
     private fun IntrinsicMeasurable.ask(index: Int, query: Query, arg: Int): Int? {
@@ -480,6 +482,12 @@ private class FlexMeasurePolicy(
 
     private fun IntrinsicMeasurable.maxMain(index: Int, cross: Int): Int? =
         ask(index, if (horizontal) Query.MaxWidth else Query.MaxHeight, cross)
+
+    /** The size along the axis a child takes whatever it is offered, or null if it has none. */
+    private fun IntrinsicMeasurable.ownMain(index: Int, cross: Int): Int? {
+        val most = maxMain(index, cross) ?: return null
+        return if (minMain(index, cross) == most) most else null
+    }
 
     // Asked at no more than a child can be measured at. A plan that shrinks a row to its children's
     // minimums hands a text the width of its longest word, which the agent chooses, and a text
@@ -637,6 +645,17 @@ private class FlexMeasurePolicy(
         val offered = if (fillsWidth && bounded) crossMax else 0
         var line: Int? = if (stretch && bounded && (crossMin == crossMax || fillsWidth)) crossMax else null
         val learn = stretch && line == null
+        // A row's children that fill its height, when nothing has said how tall the row is: the
+        // height they are offered is the answer the row gave its parent, and that answer is the
+        // tallest the row could be -- see [largestCross] -- not the height its content is drawn
+        // at. A vertical divider stretched to it and left a gap under a pair of videos. So one
+        // that says its width is its own -- fixed along the row, filling across it -- keeps that
+        // width in the plan and is measured last, to the height the others drew. One whose width
+        // is not -- a column spreading its children, a host's component filling both ways -- is
+        // still measured in its turn, to the height offered: what it takes decides what the next
+        // child gets, and the next child's height is what it would be measured to. Rows only: the
+        // mirror, a horizontal divider in a column a row sized, is left as it was.
+        val deferred = LinkedHashMap<Int, Int>()
 
         distribute(
             measurables,
@@ -645,10 +664,18 @@ private class FlexMeasurePolicy(
             measured = { if (learn) line = measurables.line(mainMax, crossMax, placeables)?.coerceIn(crossMin, crossMax) },
         ) { index, min, max ->
             val drawnTo = line
+            val spec = specOf(measurables[index])
+            if (drawnTo == null && horizontal && spec.along == AxisFit.Fixed && spec.across == AxisFit.Fill) {
+                val width = measurables[index].ownMain(index, crossMax)
+                if (width != null && width in min..max) {
+                    deferred[index] = width
+                    return@distribute width
+                }
+            }
             var least = 0
             var most = crossMax
             if (drawnTo != null) {
-                when (specOf(measurables[index]).across) {
+                when (spec.across) {
                     AxisFit.Content -> least = drawnTo
                     AxisFit.Fill -> most = drawnTo
                     AxisFit.Fixed -> Unit
@@ -664,6 +691,15 @@ private class FlexMeasurePolicy(
                 Constraints.fitPrioritizingHeight(minWidth = least, maxWidth = most, minHeight = min, maxHeight = max)
             }
             measurables[index].measure(c).also { placeables[index] = it }.main()
+        }
+        if (deferred.isNotEmpty()) {
+            // Nobody else drawn leaves them the height offered, as before: a row of dividers alone.
+            val drawn = placeables.filterNotNull()
+            val to = if (drawn.isEmpty()) crossMax else drawn.maxOf { it.cross() }.coerceIn(crossMin, crossMax)
+            for ((index, width) in deferred) {
+                val c = Constraints.fitPrioritizingWidth(minWidth = width, maxWidth = width, minHeight = 0, maxHeight = to)
+                placeables[index] = measurables[index].measure(c)
+            }
         }
 
         val sizes = IntArray(placeables.size) { placeables[it]!!.main() }
@@ -800,11 +836,12 @@ private class FlexMeasurePolicy(
         // How much a filler takes cannot be asked, so the maximum is taken over both extremes:
         // every filler taking its share, and every filler taking none of it, and each child is
         // asked at the narrowest and the widest it can be drawn. Too tall costs the column
-        // nothing unless something in the row fills the height it is given -- a vertical divider
-        // beside two videos stretches to the answer and leaves a gap. Nor is it a true bound: a
-        // weighted column of a text and a video can be taller between the two extremes than at
-        // either. Both are tracked; an overlap was the worse of the failures, and this ends the
-        // common ones. The minimum stays with the plan.
+        // nothing unless something in the row fills the height it is given, and a child that does
+        // and whose width is its own -- a vertical divider -- is measured last, to the height the
+        // others drew; see [measure]. One whose width is not still takes the answer. Nor is this a
+        // true bound: a weighted column of a text and a video can be taller between the two
+        // extremes than at either. Both are tracked; an overlap was the worse of the failures, and
+        // this ends the common ones. The minimum stays with the plan.
         if (!least) distribute(this, main, Constraints.Infinity, fillersTakeNothing = true, take = ask)
         return largest
     }

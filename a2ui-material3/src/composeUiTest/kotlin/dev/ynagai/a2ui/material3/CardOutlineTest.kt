@@ -59,6 +59,9 @@ class CardOutlineTest {
         assertEquals(OUTLINE, pixels.at(card.x, midY), "the card's left edge should be its outline")
         // One column in is the content again, or an outline grown to fill the card would pass.
         assertEquals(FLOOD, pixels.at(card.x + 1, midY), "the outline should be one pixel wide")
+        // The bounding box's corner lies outside the 12dp arc, so a rounded outline leaves it
+        // bare. The clip test cannot see this: the border draws outside the clip.
+        assertNotEquals(OUTLINE, pixels.at(card.x, card.y), "the card's outline should be rounded")
     }
 
     @Test

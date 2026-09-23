@@ -41,14 +41,15 @@ public class ComponentRegistry(renderers: Map<String, ComponentRenderer>) {
     /**
      * This registry with [renderers] added, overriding any of the same name.
      *
-     * **One shape to avoid in a renderer you write here: Material 3's non-interactive `Surface`
-     * drawing its children through [RenderChild].** On Kotlin/Native -- macOS and iOS, never JVM
-     * or either web target -- a component of that shape *arriving* in an update, replacing whatever
-     * held its id before, segfaults inside `AtomicInt.compareAndSet` with no unwindable stack:
-     * nothing raises, nothing is reported, the process is simply gone. `a2ui-material3`'s own `CardRenderer` was rebuilt off `OutlinedCard`
-     * onto a bordered `Box` for exactly this, and its note carries the conditions and the
-     * reproductions. A host renderer is now the only way back into it, and a `Modal`'s content is
-     * where it would land least visibly, so it is written down here rather than only there.
+     * **A shape that used to crash, and no longer should.** On Kotlin/Native -- macOS and iOS,
+     * never JVM or either web target -- a renderer that handed a capturing content lambda to a
+     * composable (Material 3's `Surface` drawing its children through [RenderChild] is the shape
+     * it was met in) could segfault when it *arrived* in an update, replacing a renderer of another
+     * type that had `remember`ed something. Nothing raised and nothing was reported; the process
+     * was simply gone. What it needed was the `fun interface` implementation behind one call site
+     * changing, not anything the renderer itself does wrong, and [A2uiComponent] now keys that
+     * call on the renderer, which `RendererSwapTest` pins (#31). `a2ui-material3`'s own
+     * `CardRenderer` still draws a bordered `Box` from before that fix.
      */
     public fun with(renderers: Map<String, ComponentRenderer>): ComponentRegistry =
         ComponentRegistry(this.renderers + renderers)

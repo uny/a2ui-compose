@@ -50,11 +50,11 @@ public val CardRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Cont
         // the card opaque, and a nested card would then be an invisible rectangle inside an
         // identically coloured one.
         //
-        // The content colour is named too, and has to be: the default is `contentColorFor` of the
-        // container, and no theme colour maps from transparent -- so it resolves to `Unspecified`,
-        // which the card then provides as `LocalContentColor` to everything inside it. Inheriting
-        // the surrounding colour instead is also §4's rule of thumb for leaves, applied to the
-        // container that would otherwise overwrite it.
+        // The content colour is named too, though the default reaches the same value today: it is
+        // `contentColorFor` of the container, no theme colour maps from transparent, and the
+        // composable overload then falls back to `LocalContentColor`. Named so that §4's rule of
+        // thumb for leaves -- inherit the surrounding colour -- does not rest on that fallback in
+        // the container that provides `LocalContentColor` to everything inside it.
         colors = CardDefaults.outlinedCardColors(
             containerColor = Color.Transparent,
             contentColor = LocalContentColor.current,

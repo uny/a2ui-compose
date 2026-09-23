@@ -174,6 +174,9 @@ private const val PLAY_GLYPH = "play"
  * The guide asks both media frames to "span the full width of the parent's container", and this
  * module draws them that way -- which takes a row's whole width for the same reason a slider does.
  * So in a row each asks for a share; down a column, filling the width costs a sibling nothing.
+ * Their height is their own -- the frame's follows from its width, the bar's from its content --
+ * and a row that stretches its children leaves it alone: a frame stretched past its ratio is no
+ * longer a frame.
  */
 private fun spansARow(@Suppress("UNUSED_PARAMETER") component: Component, axis: LayoutAxis): LayoutTraits =
-    if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Content
+    if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Fixed

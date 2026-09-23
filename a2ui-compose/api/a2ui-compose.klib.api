@@ -6,6 +6,18 @@
 // - Show declarations: true
 
 // Library unique name: <dev.ynagai.a2ui:a2ui-compose>
+final enum class dev.ynagai.a2ui.compose/AxisFit : kotlin/Enum<dev.ynagai.a2ui.compose/AxisFit> { // dev.ynagai.a2ui.compose/AxisFit|null[0]
+    enum entry Content // dev.ynagai.a2ui.compose/AxisFit.Content|null[0]
+    enum entry Fill // dev.ynagai.a2ui.compose/AxisFit.Fill|null[0]
+    enum entry Fixed // dev.ynagai.a2ui.compose/AxisFit.Fixed|null[0]
+
+    final val entries // dev.ynagai.a2ui.compose/AxisFit.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.ynagai.a2ui.compose/AxisFit> // dev.ynagai.a2ui.compose/AxisFit.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): dev.ynagai.a2ui.compose/AxisFit // dev.ynagai.a2ui.compose/AxisFit.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.ynagai.a2ui.compose/AxisFit> // dev.ynagai.a2ui.compose/AxisFit.values|values#static(){}[0]
+}
+
 final enum class dev.ynagai.a2ui.compose/LayoutAxis : kotlin/Enum<dev.ynagai.a2ui.compose/LayoutAxis> { // dev.ynagai.a2ui.compose/LayoutAxis|null[0]
     enum entry Horizontal // dev.ynagai.a2ui.compose/LayoutAxis.Horizontal|null[0]
     enum entry Vertical // dev.ynagai.a2ui.compose/LayoutAxis.Vertical|null[0]
@@ -15,17 +27,6 @@ final enum class dev.ynagai.a2ui.compose/LayoutAxis : kotlin/Enum<dev.ynagai.a2u
 
     final fun valueOf(kotlin/String): dev.ynagai.a2ui.compose/LayoutAxis // dev.ynagai.a2ui.compose/LayoutAxis.valueOf|valueOf#static(kotlin.String){}[0]
     final fun values(): kotlin/Array<dev.ynagai.a2ui.compose/LayoutAxis> // dev.ynagai.a2ui.compose/LayoutAxis.values|values#static(){}[0]
-}
-
-final enum class dev.ynagai.a2ui.compose/MainAxisFit : kotlin/Enum<dev.ynagai.a2ui.compose/MainAxisFit> { // dev.ynagai.a2ui.compose/MainAxisFit|null[0]
-    enum entry Content // dev.ynagai.a2ui.compose/MainAxisFit.Content|null[0]
-    enum entry Fill // dev.ynagai.a2ui.compose/MainAxisFit.Fill|null[0]
-
-    final val entries // dev.ynagai.a2ui.compose/MainAxisFit.entries|#static{}entries[0]
-        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.ynagai.a2ui.compose/MainAxisFit> // dev.ynagai.a2ui.compose/MainAxisFit.entries.<get-entries>|<get-entries>#static(){}[0]
-
-    final fun valueOf(kotlin/String): dev.ynagai.a2ui.compose/MainAxisFit // dev.ynagai.a2ui.compose/MainAxisFit.valueOf|valueOf#static(kotlin.String){}[0]
-    final fun values(): kotlin/Array<dev.ynagai.a2ui.compose/MainAxisFit> // dev.ynagai.a2ui.compose/MainAxisFit.values|values#static(){}[0]
 }
 
 abstract fun interface dev.ynagai.a2ui.compose/A2uiClock { // dev.ynagai.a2ui.compose/A2uiClock|null[0]
@@ -274,10 +275,10 @@ final class dev.ynagai.a2ui.compose/ComponentRegistry { // dev.ynagai.a2ui.compo
 }
 
 final class dev.ynagai.a2ui.compose/LayoutTraits { // dev.ynagai.a2ui.compose/LayoutTraits|null[0]
-    constructor <init>(dev.ynagai.a2ui.compose/MainAxisFit) // dev.ynagai.a2ui.compose/LayoutTraits.<init>|<init>(dev.ynagai.a2ui.compose.MainAxisFit){}[0]
+    constructor <init>(dev.ynagai.a2ui.compose/AxisFit) // dev.ynagai.a2ui.compose/LayoutTraits.<init>|<init>(dev.ynagai.a2ui.compose.AxisFit){}[0]
 
     final val fit // dev.ynagai.a2ui.compose/LayoutTraits.fit|{}fit[0]
-        final fun <get-fit>(): dev.ynagai.a2ui.compose/MainAxisFit // dev.ynagai.a2ui.compose/LayoutTraits.fit.<get-fit>|<get-fit>(){}[0]
+        final fun <get-fit>(): dev.ynagai.a2ui.compose/AxisFit // dev.ynagai.a2ui.compose/LayoutTraits.fit.<get-fit>|<get-fit>(){}[0]
 
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.compose/LayoutTraits.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.compose/LayoutTraits.hashCode|hashCode(){}[0]
@@ -288,6 +289,8 @@ final class dev.ynagai.a2ui.compose/LayoutTraits { // dev.ynagai.a2ui.compose/La
             final fun <get-Content>(): dev.ynagai.a2ui.compose/LayoutTraits // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Content.<get-Content>|<get-Content>(){}[0]
         final val Fill // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Fill|{}Fill[0]
             final fun <get-Fill>(): dev.ynagai.a2ui.compose/LayoutTraits // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Fill.<get-Fill>|<get-Fill>(){}[0]
+        final val Fixed // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Fixed|{}Fixed[0]
+            final fun <get-Fixed>(): dev.ynagai.a2ui.compose/LayoutTraits // dev.ynagai.a2ui.compose/LayoutTraits.Companion.Fixed.<get-Fixed>|<get-Fixed>(){}[0]
     }
 }
 

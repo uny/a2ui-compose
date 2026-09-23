@@ -35,8 +35,11 @@ import kotlinx.serialization.json.JsonObject
  * than as nothing. The catalog closes the enum, so an unknown name is a payload the schema already
  * refuses -- `CatalogValidator` is what reports it -- and a renderer that collapsed the space would
  * shift every sibling in the row as well.
+ *
+ * [LayoutTraits.Fixed] along both axes: a glyph is its square, and a row or column that stretches
+ * its children leaves it at that rather than centring it in a box it does not fill.
  */
-public val IconRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Content) { scope, modifier ->
+public val IconRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Fixed) { scope, modifier ->
     // The `svgPath` form, read before the string form. Resolved through `dynamicString` rather
     // than read as a literal, because the catalog types `svgPath` as a `DynamicString` like any
     // other -- it sits nested inside an object property, which is the one place a binding needs

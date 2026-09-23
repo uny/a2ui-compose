@@ -101,10 +101,11 @@ public val ImageRenderer: ComponentRenderer = ComponentRenderer(
     // including the default: `mediumFeature`'s 300dp cap bounds the image but does not save the
     // sibling, because a phone-width row has less than 300dp to give. So those ask a row for a
     // share. The three fixed-size variants ask for a square and are content-sized; and down a
-    // column, filling the width costs a sibling nothing.
+    // column, filling the width costs a sibling nothing. Every variant names its height, and the
+    // fixed ones their width too, so a row or column stretching its children leaves those alone.
     traits = { component, axis ->
         val fixed = (component.enumProperty("variant") ?: "mediumFeature") in FIXED_SIZE_IMAGE_VARIANTS
-        if (axis == LayoutAxis.Horizontal && !fixed) LayoutTraits.Fill else LayoutTraits.Content
+        if (axis == LayoutAxis.Horizontal && !fixed) LayoutTraits.Fill else LayoutTraits.Fixed
     },
 ) { scope, modifier ->
     val url = scope.rememberString("url")

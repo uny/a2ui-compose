@@ -15,12 +15,11 @@ import dev.ynagai.a2ui.compose.A2uiSurface
 import kotlin.test.Test
 
 /**
- * A host swapping [LocalA2uiImageLoader] while an `Image` is drawn -- the same swap as
- * [MarkdownRendererSwapTest], behind [ImageRenderer]'s call. `VideoRenderer`'s poster goes through
- * the same interface and is keyed the same way; this pins the one that every image payload reaches.
+ * A host swapping [LocalA2uiImageLoader] while an `Image` or a `Video`'s poster is drawn -- the same
+ * swap as [MarkdownRendererSwapTest], behind [ImageRenderer]'s call and [VideoRenderer]'s.
  *
- * **Mutation-checked** on `macosArm64`: with [ImageRenderer]'s call unkeyed, this dies with "Test
- * running process exited unexpectedly". On JVM it passes either way.
+ * **Mutation-checked** on `macosArm64`: with either call unkeyed, its test dies with "Test running
+ * process exited unexpectedly". On JVM they pass either way.
  */
 @OptIn(ExperimentalTestApi::class)
 class ImageLoaderSwapTest {
@@ -50,6 +49,36 @@ class ImageLoaderSwapTest {
 
         onNodeWithText("after").assertIsDisplayed()
         // Replaced, not composed alongside, or a swap that never happened would keep this green.
+        onNodeWithText("before").assertDoesNotExist()
+    }
+
+    @Test
+    fun a_video_posters_loader_may_replace_another_at_runtime() = runComposeUiTest {
+        var loader by mutableStateOf(
+            A2uiImageLoader { url, _, _, _ ->
+                val text = remember(url, "text") { "before" }
+                val variant = remember(url, "variant") { "x" }
+                BasicText(text + variant.take(0))
+            },
+        )
+        val renderer = hostSwapSurfaceWith(
+            """{"id":"root","component":"Video","url":"https://example.com/a.mp4","posterUrl":"https://example.com/p.png"}""",
+        )
+        setContent {
+            MaterialTheme {
+                CompositionLocalProvider(LocalA2uiImageLoader provides loader) {
+                    A2uiSurface(renderer, "s", Material3Components.Basic)
+                }
+            }
+        }
+        onNodeWithText("before").assertIsDisplayed()
+
+        loader = A2uiImageLoader { url, _, _, _ ->
+            val children = remember(url, "child") { listOf("after") }
+            HostSwapWrapper { children.forEach { BasicText(it) } }
+        }
+
+        onNodeWithText("after").assertIsDisplayed()
         onNodeWithText("before").assertDoesNotExist()
     }
 }

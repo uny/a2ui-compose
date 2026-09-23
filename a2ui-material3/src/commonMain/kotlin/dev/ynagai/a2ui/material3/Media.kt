@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,7 +90,8 @@ public val VideoRenderer: ComponentRenderer = ComponentRenderer(traits = ::spans
             // the size wherever they put it -- a loader that wraps its image in a `Crossfade` or
             // any layout of its own would hand that parent data to the wrong parent and draw a
             // poster of zero size.
-            loader.Image(poster, null, ContentScale.Crop, Modifier.fillMaxSize())
+            // Keyed on the loader, as `ImageRenderer`'s call is (#31).
+            key(loader) { loader.Image(poster, null, ContentScale.Crop, Modifier.fillMaxSize()) }
         }
         PlayGlyph(size = VIDEO_GLYPH)
     }

@@ -36,6 +36,10 @@ public const val ROOT_COMPONENT_ID: String = Surface.ROOT_ID
  * type this registry does not know is a catalog the host has not fully implemented. Making them
  * visible is the point -- a renderer that drew nothing would be indistinguishable from one that
  * drew correctly and had nothing to show.
+ *
+ * **Hand over the same instance every time**, as with [ComponentRenderer]. Every call to [Render]
+ * is keyed on the placeholder instance (#31), so one rebuilt on every recomposition -- written
+ * inline without `remember` -- drops whatever it `remember`ed each time. A top-level `val` keeps it.
  */
 public fun interface A2uiPlaceholder {
     @Composable
@@ -240,7 +244,7 @@ public fun A2uiComponent(
             }
         }
         if (cost is RenderCost.Exceeds) {
-            placeholder.Render(A2uiPlaceholderReason.BudgetExceeded(componentId, cost.limit), modifier)
+            placeholder.RenderKeyed(A2uiPlaceholderReason.BudgetExceeded(componentId, cost.limit), modifier)
             return
         }
         // An exact estimate that fits has already counted what this subtree composes, so there is
@@ -254,25 +258,25 @@ public fun A2uiComponent(
     }
     when {
         path?.contains(componentId) == true -> {
-            placeholder.Render(A2uiPlaceholderReason.Cycle(componentId), modifier)
+            placeholder.RenderKeyed(A2uiPlaceholderReason.Cycle(componentId), modifier)
             return
         }
 
         (path?.depth ?: 0) >= limits.maxDepth -> {
-            placeholder.Render(A2uiPlaceholderReason.TooDeep(componentId), modifier)
+            placeholder.RenderKeyed(A2uiPlaceholderReason.TooDeep(componentId), modifier)
             return
         }
     }
 
     val component = renderer.state.surfaces[surfaceId]?.components?.get(componentId)
     if (component == null) {
-        placeholder.Render(A2uiPlaceholderReason.MissingComponent(componentId), modifier)
+        placeholder.RenderKeyed(A2uiPlaceholderReason.MissingComponent(componentId), modifier)
         return
     }
 
     val componentRenderer = registry[component.component]
     if (componentRenderer == null) {
-        placeholder.Render(A2uiPlaceholderReason.UnknownType(componentId, component.component), modifier)
+        placeholder.RenderKeyed(A2uiPlaceholderReason.UnknownType(componentId, component.component), modifier)
         return
     }
 
@@ -342,6 +346,18 @@ public fun A2uiComponent(
 }
 
 /**
+ * [A2uiPlaceholder.Render], keyed on the placeholder for the reason [A2uiComponent]'s own `Render`
+ * call is keyed on the renderer (#31). A host that swaps the placeholder it hands [A2uiSurface] --
+ * a debug toggle, say -- swaps the `fun interface` implementation behind these call sites, and on
+ * Kotlin/Native the arriving one could pick up what the outgoing one remembered. The same
+ * placeholder instance keeps its group, so a host that holds on to one pays nothing for this.
+ */
+@Composable
+private fun A2uiPlaceholder.RenderKeyed(reason: A2uiPlaceholderReason, modifier: Modifier) {
+    key(this) { Render(reason, modifier) }
+}
+
+/**
  * Draws [child] under this scope.
  *
  * A container's renderer calls this for each entry of [rememberChildren]. The child's evaluation
@@ -355,7 +371,7 @@ public fun A2uiComponentScope.RenderChild(child: A2uiChild, modifier: Modifier =
     // in place of the children its budget did not reach, so every container reports a shortened
     // list without its author having to know the budget exists.
     if (child.dropped > 0) {
-        LocalA2uiPlaceholder.current.Render(
+        LocalA2uiPlaceholder.current.RenderKeyed(
             A2uiPlaceholderReason.TooManyChildren(component.id, child.dropped),
             modifier,
         )

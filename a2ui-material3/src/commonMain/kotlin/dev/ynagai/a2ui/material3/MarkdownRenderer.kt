@@ -48,6 +48,11 @@ import androidx.compose.ui.text.TextStyle
  * keep; nothing here can keep them on its behalf. [Inline] reduces a link to its label so an agent
  * has no way to open a URL that bypasses `openUrl` and its user-gesture rule, and a host renderer
  * that makes links tappable hands the agent exactly that.
+ *
+ * **Hand over the same instance every time.** `Text`'s call to [Markdown] is keyed on the renderer
+ * instance (#31), so one rebuilt on every recomposition of the scope providing it drops whatever it
+ * `remember`ed each time -- [Inline]'s parse, or a host renderer's layout state. A top-level `val`,
+ * or one built once and held, keeps it.
  */
 @Stable
 public fun interface A2uiMarkdownRenderer {

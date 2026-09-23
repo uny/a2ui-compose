@@ -140,7 +140,8 @@ private data class LaidOutChild(
  * container to every write the surface takes -- including data model writes, which cannot change
  * a weight. Inside a `derivedStateOf` the recomputation still happens and the equal result is
  * discarded without invalidating anyone, which is the granularity the adapter layer buys and this
- * would otherwise spend.
+ * would otherwise spend. [Flex] recomposes on a components update as well, to forget refusals --
+ * see [FlexMeasurePolicy.refused] -- and on a data model write still does not.
  */
 @Composable
 private fun A2uiComponentScope.rememberLaidOutChildren(axis: LayoutAxis): List<LaidOutChild> {
@@ -362,7 +363,12 @@ private fun Flex(
     // it; a second surface, on another window or another thread, has one of its own.
     val session = LocalQuerySession.current ?: remember { QuerySession() }
     val fillsWidth = axis == LayoutAxis.Vertical && LocalFillsOfferedWidth.current
-    val policy = remember(axis, arrangement, crossAlignment, children, session, fillsWidth) {
+    // What is drawn beneath this container, as far as the policy's refusals are concerned: the
+    // surface's components and the renderers that draw them. A new policy forgets its refusals --
+    // see [FlexMeasurePolicy.refused] -- and a new one is taken whenever either is replaced.
+    val components by remember(scope) { derivedStateOf { ByIdentity(scope.surface?.components) } }
+    val registry = LocalA2uiRegistry.current
+    val policy = remember(axis, arrangement, crossAlignment, children, session, fillsWidth, components, registry) {
         FlexMeasurePolicy(axis, arrangement, crossAlignment, children, session, fillsWidth)
     }
     Layout(
@@ -417,11 +423,22 @@ private class FlexMeasurePolicy(
      * A `SubcomposeLayout` anywhere beneath a child -- a `LazyColumn`, a `BoxWithConstraints`,
      * Coil's `SubcomposeAsyncImage`, whatever a host's renderer is built on -- raises
      * `IllegalStateException` from the query, and does so without touching any layout state: the
-     * query is refused, not half-answered. So the container asks once, remembers the refusal for
-     * as long as it has these children (a new list is a new policy), and measures that child as
-     * one with nothing to say. The one exception per child is the whole cost, and it is what
-     * makes a wrong guess about a renderer's layout a lost fair share rather than a crashed
-     * surface.
+     * query is refused, not half-answered. So the container asks once, remembers the refusal, and
+     * measures that child as one with nothing to say. The one exception per child is the whole
+     * cost, and it is what makes a wrong guess about a renderer's layout a lost fair share rather
+     * than a crashed surface.
+     *
+     * Remembered for as long as this policy lives, and [Flex] takes a new one when its children,
+     * the surface's components or the registry are replaced. Not the children alone: a refusal
+     * comes from anywhere beneath a child, and is passed up as the container's own, so a feed
+     * replaced by a text inside a card or a nested row leaves this container's children as they
+     * were while the refusal it holds is no longer true. An `updateComponents` therefore costs
+     * every container on the surface a new policy, a measure pass, and one exception again for
+     * each child that still refuses; a data model write costs none of that. What this does not
+     * notice is a subtree that changes without either being replaced -- a host renderer choosing
+     * a `LazyColumn` or a plain column from its data, a template whose items come and go, a
+     * surface drawn inside one of this surface's components. Such a child is asked again at the
+     * next components update, and until then keeps the share of one that cannot be asked.
      */
     private val refused = HashSet<Int>()
 
@@ -832,6 +849,17 @@ private enum class Query {
  * a width of its own -- a dialog, a tab, a list's items -- sets it again. See [Flex].
  */
 internal val LocalFillsOfferedWidth = staticCompositionLocalOf { true }
+
+/**
+ * [value], equal to another only when it is the same instance. A surface's components are a map a
+ * components update replaces -- unless it carries none -- and a data model write never does, so
+ * identity is the question, and it is answered without walking the map as `equals` would, in
+ * every container on every update.
+ */
+private class ByIdentity(val value: Any?) {
+    override fun equals(other: Any?): Boolean = other is ByIdentity && other.value === value
+    override fun hashCode(): Int = 0
+}
 
 /** The [QuerySession] of the outermost [Flex] above, or none at the top of a tree. */
 private val LocalQuerySession = staticCompositionLocalOf<QuerySession?> { null }

@@ -336,8 +336,13 @@ class AlignStretchTest {
         /** A text's margin and an icon button's inset, with room to spare, and far short of a dialog. */
         const val DIALOG_EDGE = 60f
 
-        /** Long enough to wrap to several lines in half of [WIDTH]. */
-        const val LONG = "a text long enough to wrap onto several lines beside a short one"
+        /**
+         * Long enough to wrap to at least three lines beside a short text in [WIDTH], in every
+         * font the tests run with. A browser's is narrower than the JVM's, and a text that took
+         * three lines on one took two on the other -- and was then no taller than two short ones.
+         */
+        const val LONG = "a text long enough to wrap onto several lines beside a short one, " +
+            "and long enough again to do so in the narrowest font a test is drawn with"
 
         fun align(value: String?) = if (value == null) "" else ""","align":"$value""""
 

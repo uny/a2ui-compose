@@ -197,6 +197,16 @@ class AlignStretchTest {
     }
 
     @Test
+    fun a_column_holding_only_a_capped_image_in_a_row_is_as_wide_as_the_image() = runComposeUiTest {
+        // A filler takes up to its share. A column around a 300dp image, told to fill the share
+        // instead, is as wide as the share, and the weighted text beside it loses the difference.
+        setContent { Hosted(CAPPED_IMAGE_COLUMN_BESIDE_WEIGHTED_TEXT, width = WIDE) }
+        val rest = bounds("rest")
+        // The image and its margins, then the text's own.
+        assertTrue(rest.width > WIDE - 300f - 4 * LEAF_MARGIN - 1, "the weighted text gets what the image leaves: $rest")
+    }
+
+    @Test
     fun a_column_holding_only_a_banner_in_a_row_still_draws_it() = runComposeUiTest {
         // Nothing in the column says how wide its line is -- the banner fills across it -- so the
         // column does not stretch, and the banner fills the column's share as it did.
@@ -246,9 +256,13 @@ class AlignStretchTest {
     private fun near(a: Float, b: Float): Boolean = abs(a - b) <= 1f
 
     @Composable
-    private fun Hosted(components: String, registry: ComponentRegistry = Material3Components.Basic) {
+    private fun Hosted(
+        components: String,
+        registry: ComponentRegistry = Material3Components.Basic,
+        width: Float = WIDTH,
+    ) {
         // Bounded, and no minimum: the constraints an app's `Column` or `Scaffold` hands a surface.
-        Box(Modifier.testTag(HOST).widthIn(max = WIDTH.dp).heightIn(max = HEIGHT.dp)) {
+        Box(Modifier.testTag(HOST).widthIn(max = width.dp).heightIn(max = HEIGHT.dp)) {
             MaterialTheme { A2uiSurface(surfaceWith(components), SURFACE_ID, registry) }
         }
     }
@@ -274,6 +288,9 @@ class AlignStretchTest {
         /** A phone. The harness draws at a density of 1, so a dp is a pixel. */
         const val WIDTH = 320f
         const val HEIGHT = 600f
+
+        /** A width at which a 300dp image cap leaves a share unfilled. */
+        const val WIDE = 800f
         const val LEAF_MARGIN = 8f
 
         /** One line of body text, and an avatar's side. */
@@ -359,6 +376,13 @@ class AlignStretchTest {
             {"id":"list","component":"List","children":["column"],"align":"center"},
             {"id":"column","component":"Column","children":["item"],"align":"start"},
             {"id":"item","component":"Text","text":"item"}
+        ]"""
+
+        val CAPPED_IMAGE_COLUMN_BESIDE_WEIGHTED_TEXT = """[
+            {"id":"root","component":"Row","children":["column","rest"]},
+            {"id":"column","component":"Column","children":["image"]},
+            {"id":"image","component":"Image","url":"","description":"image"},
+            {"id":"rest","component":"Text","text":"rest","weight":1}
         ]"""
 
         val BANNER_COLUMN_BESIDE_TEXT = """[

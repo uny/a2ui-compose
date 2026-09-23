@@ -323,7 +323,7 @@ private fun crossAlignment(align: String?): CrossAlignment = when (align) {
  *   and in a row's content-sized child, a column is as wide as its widest child, as CSS
  *   shrink-wraps a flex item -- a row has already given that child the width the plan chose, and
  *   a column that took whatever it was offered instead would take a cap the plan meant as a limit
- *   and leave a weighted sibling nothing. In a row's weighted or filling child it fills the share.
+ *   and leave a weighted sibling nothing. In a row's weighted child it fills the share.
  *   [LocalFillsOfferedWidth] carries which it is, per child. A row is never block-wide: at the root
  *   of a surface it is as wide as its children, as it was before `stretch`.
  * - A row's height is its tallest child, so the line is found by asking: the plan is run over the
@@ -388,12 +388,13 @@ private fun Flex(
  * A stretching column hands each child its own width to fill. A row hands a content-sized child
  * the width the plan chose for it, which a column reaches by its own content -- and a column that
  * took the width instead would take a cap the plan meant as a limit, when the row could not ask
- * it. A share, though, is a width the row means to be filled: a weighted card's column is as wide
- * as the card, not as its text, and so is a filling one's. A column aligning its children anywhere
- * else lets them be as wide as they are.
+ * it. A weighted share, though, is a width the row means to be filled: a weighted card's column is
+ * as wide as the card, not as its text. A filling child is not told to fill -- it fills *up to*
+ * its share, and a column holding only a capped image is as wide as the image. A column aligning
+ * its children anywhere else lets them be as wide as they are.
  */
 private fun LaidOutChild.fillsOfferedWidth(axis: LayoutAxis, crossAlignment: CrossAlignment): Boolean =
-    if (axis == LayoutAxis.Vertical) crossAlignment == CrossAlignment.Stretch else weight > 0f || traits.fit == AxisFit.Fill
+    if (axis == LayoutAxis.Vertical) crossAlignment == CrossAlignment.Stretch else weight > 0f
 
 private class FlexMeasurePolicy(
     axis: LayoutAxis,

@@ -5,6 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -322,7 +323,21 @@ public fun A2uiComponent(
     // costs O(1) and is built once per component instance.
     val childPath = remember(componentId, path) { RenderPath(componentId, path) }
     CompositionLocalProvider(LocalRenderPath provides childPath) {
-        componentRenderer.Render(scope, modifier)
+        // Keyed on the renderer, and that is a crash fix rather than a reset policy (#31). `Render`
+        // is a `fun interface` method, so a component replaced by one of another type swaps the
+        // implementation behind this one call site, and on Kotlin/Native the arriving renderer
+        // could then pick up what the outgoing one remembered as its own -- a segfault on macOS and
+        // iOS, and nothing at all on JVM. The key gives each renderer its own group. Nothing is
+        // lost by it: a different renderer never had a claim on the old one's state, and the same
+        // renderer instance keeps its group through every recomposition and data model write. What
+        // it does cost is a host that hands over a *new instance* for the same type on every
+        // recomposition -- `ComponentRenderer { }` written inline without `remember`: that host
+        // used to pay a recomposition of the subtree, through the static `LocalA2uiRegistry`, and
+        // now loses the state inside it as well. Keying on `component.component` instead would
+        // spare that host and leave a registry swapped at runtime exposed, so the renderer it is.
+        key(componentRenderer) {
+            componentRenderer.Render(scope, modifier)
+        }
     }
 }
 

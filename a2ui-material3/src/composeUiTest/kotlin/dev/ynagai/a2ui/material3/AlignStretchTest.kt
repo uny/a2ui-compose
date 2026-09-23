@@ -136,17 +136,13 @@ class AlignStretchTest {
     @Test
     fun a_vertical_divider_spans_the_row_rather_than_what_the_row_was_offered() = runComposeUiTest {
         // A vertical divider fills the height it is given, and a row at the root of a surface is
-        // given the surface's. Measured up to the line instead, it is as tall as the text.
+        // given the surface's. Measured up to the line instead, it is as tall as the text -- and
+        // unstretched too, measured after the text to the height the text drew.
         for (align in listOf(null, "start")) {
             setContent { Hosted(dividerRow(align)) }
             val row = onNodeWithTag(HOST).fetchSemanticsNode().boundsInRoot
             val text = bounds("two\nlines").height + 2 * LEAF_MARGIN
-            if (align == null) {
-                assertTrue(near(row.height, text), "the row is as tall as its text: $row for $text")
-            } else {
-                // The control: unstretched, the divider takes what the row was offered.
-                assertTrue(near(row.height, HEIGHT), "the divider takes the surface: $row")
-            }
+            assertTrue(near(row.height, text), "the row is as tall as its text (align=$align): $row for $text")
         }
     }
 

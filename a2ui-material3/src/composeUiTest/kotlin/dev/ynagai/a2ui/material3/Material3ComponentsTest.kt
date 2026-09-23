@@ -3,6 +3,7 @@ package dev.ynagai.a2ui.material3
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -30,6 +32,7 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -42,6 +45,7 @@ import dev.ynagai.a2ui.compose.A2uiRendererConfig
 import dev.ynagai.a2ui.compose.A2uiSurface
 import dev.ynagai.a2ui.compose.BasicCatalog
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.ActionMessage
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
@@ -49,6 +53,7 @@ import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
 import dev.ynagai.a2ui.core.surface.JsonPointer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -342,6 +347,42 @@ class Material3ComponentsTest {
             assertTrue(after.height > 0f, "the text after the row is drawn (weighted=$weighted): $after")
             assertTrue(after.top <= x.bottom + 48f, "and follows the row (weighted=$weighted): $after after $x")
         }
+    }
+
+    @Test
+    fun a_row_of_a_divider_and_two_videos_is_as_tall_as_the_videos_in_a_column() = runComposeUiTest {
+        // The row answers its maximum height over what its fillers may take, and here that is
+        // the taller extreme: each video at the whole row. Drawn, they share it, and a divider
+        // measured to the height the row was offered stretched to that answer and left a gap
+        // under the videos. Measured after them, it is as tall as they are, and the text follows
+        // the videos as closely as it does with no divider there at all.
+        fun gapUnderTheVideos(divider: Boolean): Float {
+            setContent { Surface(dividerAndTwoVideosAboveText(divider), width = PHONE_WIDTH) }
+            val videos = onAllNodesWithContentDescription("Video").fetchSemanticsNodes().map { it.boundsInRoot }
+            val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+            assertEquals(2, videos.size)
+            return after.top - videos.maxOf { it.bottom }
+        }
+        val without = gapUnderTheVideos(divider = false)
+        val with = gapUnderTheVideos(divider = true)
+        assertTrue(abs(with - without) <= 1f, "the divider leaves no gap: $with under the videos, $without without it")
+    }
+
+    @Test
+    fun a_host_component_filling_both_ways_keeps_its_share_of_a_row() = runComposeUiTest {
+        // Only a child whose width is its own waits for the row's height: a host's box filling
+        // both ways has no width of its own, and its intrinsic answer of nothing is not one.
+        val registry = Material3Components.Basic.with(
+            mapOf("Fills" to ComponentRenderer(traits = { _, _ -> LayoutTraits.Fill }) { _, m -> Box(m.fillMaxSize().testTag("fills")) }),
+        )
+        setContent {
+            Box(Modifier.size(PHONE_WIDTH, SURFACE_HEIGHT)) {
+                MaterialTheme { A2uiSurface(rendererFor(TEXT_BESIDE_A_BOX_FILLING_BOTH_WAYS), SURFACE, registry) }
+            }
+        }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val fills = onNodeWithTag("fills").fetchSemanticsNode().boundsInRoot
+        assertTrue(fills.width >= root.width / 3, "the box keeps a share of the row: $fills in $root")
     }
 
     private fun ComposeUiTest.assertVideoAboveText() {
@@ -1422,6 +1463,21 @@ class Material3ComponentsTest {
             {"id":"a","component":"Image","url":"https://example.invalid/a.png","variant":"header","description":"a"},
             {"id":"b","component":"Image","url":"https://example.invalid/b.png","variant":"header","description":"b"},
             {"id":"rest","component":"Text","text":"takes the rest","weight":1},
+            {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        val TEXT_BESIDE_A_BOX_FILLING_BOTH_WAYS = """[
+            {"id":"root","component":"Row","align":"start","children":["x","fills"]},
+            {"id":"x","component":"Text","text":"x"},
+            {"id":"fills","component":"Fills"}
+        ]"""
+
+        fun dividerAndTwoVideosAboveText(divider: Boolean) = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":[${if (divider) "\"divider\"," else ""}"a","b"]},
+            {"id":"divider","component":"Divider","axis":"vertical"},
+            {"id":"a","component":"Video","url":"https://example.invalid/a.mp4"},
+            {"id":"b","component":"Video","url":"https://example.invalid/b.mp4"},
             {"id":"after","component":"Text","text":"after"}
         ]"""
 

@@ -288,6 +288,31 @@ class Material3ComponentsTest {
         assertVideoAboveText()
     }
 
+    @Test
+    fun a_row_holding_a_filler_is_held_to_its_answer_beside_a_weighted_sibling() = runComposeUiTest {
+        // The other side of the video: a row with one filler answers exactly, so it is held to
+        // its answer. Let it grow into the room instead and its full-width image takes the whole
+        // row, and the weighted text beside it is measured at nothing.
+        setContent { Surface(ROW_WITH_A_BANNER_BESIDE_WEIGHTED_TEXT, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val rest = onNodeWithText("takes the rest").fetchSemanticsNode().boundsInRoot
+        assertTrue(rest.width >= root.width / 2, "the weighted text keeps its share: $rest in $root")
+    }
+
+    @Test
+    fun a_row_holding_a_vertical_divider_is_held_to_its_height_in_a_column() = runComposeUiTest {
+        // A vertical divider fills whatever height it is offered. Offered the column's room, the
+        // row it sits in is as tall as the screen, and the text after it -- weighted or not --
+        // is pushed to the bottom or measured at nothing.
+        for (weighted in listOf(false, true)) {
+            setContent { Surface(rowWithADividerAboveText(weighted), width = PHONE_WIDTH) }
+            val x = onNodeWithText("x").fetchSemanticsNode().boundsInRoot
+            val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+            assertTrue(after.height > 0f, "the text after the row is drawn (weighted=$weighted): $after")
+            assertTrue(after.top <= x.bottom + 48f, "and follows the row (weighted=$weighted): $after after $x")
+        }
+    }
+
     private fun ComposeUiTest.assertVideoAboveText() {
         val root = onRoot().fetchSemanticsNode().boundsInRoot
         val video = onNodeWithContentDescription("Video").fetchSemanticsNode().boundsInRoot
@@ -1331,6 +1356,22 @@ class Material3ComponentsTest {
             {"id":"image","component":"Image","url":"https://example.invalid/i.png","description":"image"},
             {"id":"video","component":"Video","url":"https://example.invalid/v.mp4"},
             {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        val ROW_WITH_A_BANNER_BESIDE_WEIGHTED_TEXT = """[
+            {"id":"root","component":"Row","children":["row","rest"]},
+            {"id":"row","component":"Row","children":["x","banner"]},
+            {"id":"x","component":"Text","text":"x"},
+            {"id":"banner","component":"Image","url":"https://example.invalid/b.png","variant":"header","description":"banner"},
+            {"id":"rest","component":"Text","text":"takes the rest","weight":1}
+        ]"""
+
+        fun rowWithADividerAboveText(weighted: Boolean) = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["x","divider"]},
+            {"id":"x","component":"Text","text":"x"},
+            {"id":"divider","component":"Divider","axis":"vertical"},
+            {"id":"after","component":"Text","text":"after"${if (weighted) ""","weight":1""" else ""}}
         ]"""
 
         val WRAPPING_ROW_IN_A_SHORT_COLUMN = """[

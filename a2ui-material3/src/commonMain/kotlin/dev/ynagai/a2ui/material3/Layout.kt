@@ -413,21 +413,18 @@ private class FlexMeasurePolicy(
 
     /**
      * The plan: hands each child, in the order it must be measured, the least and the most it may
-     * take along the axis and the size the plan counts it at, and learns from [take] what it took.
-     * See [Flex] for the four steps.
+     * take along the axis, and learns from [take] what it took. See [Flex] for the four steps.
      *
      * [take] is the measure pass's `measure`, or, when a parent is asking this layout's intrinsic
-     * size, an estimate from the child's own intrinsics at the planned size -- the plan is the
-     * same either way, which is the point. It is still an estimate: a filler that takes less than
-     * its share leaves the next one more than the plan gave it, which is why the measure pass
-     * lets a content-sized child grow past its target when the axis has the room.
+     * size, an estimate from the child's own intrinsics -- the plan is the same either way, which
+     * is the point. Returns how many children it treated as fillers.
      */
     private fun distribute(
         measurables: List<IntrinsicMeasurable>,
         mainMax: Int,
         crossMax: Int,
-        take: (index: Int, min: Int, max: Int, planned: Int) -> Int,
-    ) {
+        take: (index: Int, min: Int, max: Int) -> Int,
+    ): Int {
         val specs = measurables.map(::specOf)
         val bounded = mainMax != Constraints.Infinity
         var remaining = mainMax
@@ -466,30 +463,15 @@ private class FlexMeasurePolicy(
         unasked.forEachIndexed { slot, index ->
             val left = unasked.size - slot
             val cap = if (bounded) ((remaining - reserve).coerceAtLeast(0L) / left).toInt() else Constraints.Infinity
-            spend(take(index, 0, cap, cap))
+            spend(take(index, 0, cap))
         }
 
         // 2. The askable ones, at their preferred size or a fair shrink of it.
         if (askable.isNotEmpty()) {
             val basis = IntArray(askable.size) { preferred.getValue(askable[it]) }
             val floor = IntArray(askable.size) { minimum.getValue(askable[it]) }
-            val shrinking = bounded && basis.sumOf { it.toLong() } > remaining
-            val targets = if (shrinking) shrink(basis, floor, remaining) else basis
-            // Measured up to its target when the axis is short, and otherwise up to what the ones
-            // after it leave: a child's answer is an estimate -- a row asked its height answers
-            // for the plan, and a filler in it may take less than the plan gave it and leave a
-            // video beside it wider, and taller, than the answer -- and a child held to an
-            // estimate that came out short is drawn over whatever follows it.
-            var after = targets.sumOf { it.toLong() }
-            askable.forEachIndexed { slot, index ->
-                after -= targets[slot]
-                val most = when {
-                    shrinking -> targets[slot]
-                    bounded -> max(targets[slot].toLong(), remaining - after).toInt()
-                    else -> Constraints.Infinity
-                }
-                spend(take(index, 0, most, targets[slot]))
-            }
+            val targets = if (bounded && basis.sumOf { it.toLong() } > remaining) shrink(basis, floor, remaining) else basis
+            askable.forEachIndexed { slot, index -> spend(take(index, 0, targets[slot])) }
         }
 
         // 3. The fillers, each up to an equal share of what is left -- counted against the
@@ -501,7 +483,7 @@ private class FlexMeasurePolicy(
             fillers.forEachIndexed { slot, index ->
                 val left = fillers.size - slot
                 val cap = if (bounded) (remaining / (left + totalWeight)).roundToInt() else Constraints.Infinity
-                spend(take(index, 0, cap, cap))
+                spend(take(index, 0, cap))
             }
         }
 
@@ -527,12 +509,13 @@ private class FlexMeasurePolicy(
                     // `33_financial-data-grid` is four weighted columns -- and a grid whose widest
                     // figure pushes the row off a phone is worse than a cell that wraps its figure.
                     // A deliberate departure, and the one place this layout is not flexbox.
-                    take(index, share, share, share)
+                    take(index, share, share)
                 }
             } else {
-                for (index in weighted) take(index, 0, Constraints.Infinity, Constraints.Infinity)
+                for (index in weighted) take(index, 0, Constraints.Infinity)
             }
         }
+        return fillers.size
     }
 
     override fun MeasureScope.measure(measurables: List<Measurable>, constraints: Constraints): MeasureResult {
@@ -540,7 +523,7 @@ private class FlexMeasurePolicy(
         val crossMax = if (horizontal) constraints.maxHeight else constraints.maxWidth
         val placeables = arrayOfNulls<Placeable>(measurables.size)
 
-        distribute(measurables, mainMax, crossMax) { index, min, max, _ ->
+        distribute(measurables, mainMax, crossMax) { index, min, max ->
             // `fitPrioritizing*` rather than the constructor, which throws past 2^18 - 2 in a
             // dimension. A text's minimum intrinsic width is its longest word, and the agent
             // chooses the words; a floor that outgrows what `Constraints` can hold is clamped to
@@ -625,14 +608,21 @@ private class FlexMeasurePolicy(
 
     private fun List<IntrinsicMeasurable>.largestCross(main: Int, least: Boolean): Int {
         var largest = 0
-        distribute(this, main, Constraints.Infinity) { index, _, _, planned ->
+        val fillers = distribute(this, main, Constraints.Infinity) { index, _, max ->
             // The room the plan gives this child, and what the child would take of it: its
             // preferred size when that fits, the room when it does not, all of it for a filler.
-            val given = if (planned == Constraints.Infinity) this[index].maxMain(index, Constraints.Infinity) ?: refuse() else planned
+            val given = if (max == Constraints.Infinity) this[index].maxMain(index, Constraints.Infinity) ?: refuse() else max
             val across = if (least) this[index].minCross(index, given) else this[index].maxCross(index, given)
             largest = max(largest, across ?: refuse())
             given
         }
+        // The plan counts a filler at its whole share; drawn, it may take less -- an empty row
+        // takes nothing, the default image stops at 300dp -- and leave the next filler more.
+        // With one filler that changes nothing but the slack; with two, the second is wider than
+        // it was asked at, and a video twice as wide is twice as tall. There is no asking what a
+        // filler will take, so a layout whose answer rests on it has none, and is measured as it
+        // comes: a column that held such a row to the plan drew the video over the text below.
+        if (fillers > 1) refuse()
         return largest
     }
 

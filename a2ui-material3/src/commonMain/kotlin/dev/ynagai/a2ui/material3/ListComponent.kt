@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,13 +45,14 @@ import dev.ynagai.a2ui.compose.rememberString
  * and `List` contribute zero spacing so that nesting them does not multiply it. The items carry
  * their own.
  *
- * **`align` falls through to `start`, including the catalog's `stretch` default**, which is the
- * same divergence `Layout.kt` takes for `Row` and `Column` and is recorded here rather than left
- * to be rediscovered. Compose has no stretching `Alignment`: a cross axis is stretched by the
- * children filling it, and a `fillMax*` taken inside a scrolling container measures against what
- * the parent offered rather than against this list's own content. So a list's items keep their
- * natural width instead of squaring up to the widest -- visible as a ragged edge down a list of
- * `Card`s, and the one place this renderer knowingly does not draw what the catalog's default says.
+ * **`align: stretch`, the catalog's default, is drawn as `start` here**, though `Row` and
+ * `Column` now stretch. Compose has no stretching `Alignment`, and a `fillMax*` taken inside a
+ * scrolling container measures against what the parent offered rather than against this list's
+ * own content; `Layout.kt` stretches by measuring each child against a line it learns first, and
+ * this list is a plain `Column` that cannot. So a leaf item keeps its natural width instead of
+ * squaring up to the widest. A `Column` item does fill the list's width, as it would a block's,
+ * and so does one inside a `Card` item, which gives its content no width of its own -- a list of
+ * cards around columns is as even as the catalog's default asks.
  */
 public val ListRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Content) { scope, modifier ->
     val horizontal = scope.rememberString("direction") == "horizontal"
@@ -74,7 +76,10 @@ public val ListRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Cont
             // with an unbounded width, so a child that fills the width it is offered -- a `Text`
             // long enough to want one, a `Card` around a column -- would otherwise take the whole
             // of it and leave the row one item wide.
-            children.forEach { scope.RenderChild(it, Modifier.widthIn(max = HORIZONTAL_ITEM_MAX)) }
+            // Each item is as wide as its content, then, as a row's are.
+            CompositionLocalProvider(LocalFillsOfferedWidth provides false) {
+                children.forEach { scope.RenderChild(it, Modifier.widthIn(max = HORIZONTAL_ITEM_MAX)) }
+            }
         }
     } else {
         Column(
@@ -85,7 +90,12 @@ public val ListRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Cont
                 else -> Alignment.Start
             },
         ) {
-            children.forEach { scope.RenderChild(it) }
+            // A column item fills the list's width under the default `align`, and is as wide as
+            // its content where the list places its items -- the list's own alignment would
+            // otherwise have nothing to move.
+            CompositionLocalProvider(LocalFillsOfferedWidth provides (align !in PLACED)) {
+                children.forEach { scope.RenderChild(it) }
+            }
         }
     }
 }
@@ -136,3 +146,6 @@ private const val SCROLL_AXIS_MAX = 32767
  * width on a phone, which is what a horizontal list of cards is for.
  */
 private val HORIZONTAL_ITEM_MAX = 280.dp
+
+/** The `align` values under which a vertical list places its items rather than stretching them. */
+private val PLACED = setOf("start", "center", "end")

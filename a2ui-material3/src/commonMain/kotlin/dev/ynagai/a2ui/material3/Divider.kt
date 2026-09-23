@@ -23,11 +23,11 @@ public val DividerRenderer: ComponentRenderer = ComponentRenderer(
     // A divider fills the axis it is drawn along -- `HorizontalDivider` is a `fillMaxWidth` box and
     // `VerticalDivider` a `fillMaxHeight` one. Along a container running the same way, "the width
     // of the container" is the whole container, and a hairline that took all of it left every
-    // sibling measuring at zero; so along its own axis it asks for a share. A divider drawn across
-    // a container claims nothing and is left alone.
+    // sibling measuring at zero; so along its own axis it asks for a share. Across it, a divider is
+    // its thickness, which a container stretching its children leaves alone.
     traits = { component, axis ->
         val vertical = component.enumProperty("axis") == "vertical"
-        if (vertical == (axis == LayoutAxis.Vertical)) LayoutTraits.Fill else LayoutTraits.Content
+        if (vertical == (axis == LayoutAxis.Vertical)) LayoutTraits.Fill else LayoutTraits.Fixed
     },
 ) { scope, modifier ->
     val axis = scope.rememberString("axis")

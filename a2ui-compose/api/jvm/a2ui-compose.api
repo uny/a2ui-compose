@@ -209,6 +209,15 @@ public final class dev/ynagai/a2ui/compose/A2uiSurfaceKt {
 	public static final fun getNoPlaceholder ()Ldev/ynagai/a2ui/compose/A2uiPlaceholder;
 }
 
+public final class dev/ynagai/a2ui/compose/AxisFit : java/lang/Enum {
+	public static final field Content Ldev/ynagai/a2ui/compose/AxisFit;
+	public static final field Fill Ldev/ynagai/a2ui/compose/AxisFit;
+	public static final field Fixed Ldev/ynagai/a2ui/compose/AxisFit;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/ynagai/a2ui/compose/AxisFit;
+	public static fun values ()[Ldev/ynagai/a2ui/compose/AxisFit;
+}
+
 public final class dev/ynagai/a2ui/compose/BasicCatalog {
 	public static final field $stable I
 	public static final field INSTANCE Ldev/ynagai/a2ui/compose/BasicCatalog;
@@ -257,9 +266,9 @@ public final class dev/ynagai/a2ui/compose/LayoutAxis : java/lang/Enum {
 public final class dev/ynagai/a2ui/compose/LayoutTraits {
 	public static final field $stable I
 	public static final field Companion Ldev/ynagai/a2ui/compose/LayoutTraits$Companion;
-	public fun <init> (Ldev/ynagai/a2ui/compose/MainAxisFit;)V
+	public fun <init> (Ldev/ynagai/a2ui/compose/AxisFit;)V
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getFit ()Ldev/ynagai/a2ui/compose/MainAxisFit;
+	public final fun getFit ()Ldev/ynagai/a2ui/compose/AxisFit;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -267,20 +276,13 @@ public final class dev/ynagai/a2ui/compose/LayoutTraits {
 public final class dev/ynagai/a2ui/compose/LayoutTraits$Companion {
 	public final fun getContent ()Ldev/ynagai/a2ui/compose/LayoutTraits;
 	public final fun getFill ()Ldev/ynagai/a2ui/compose/LayoutTraits;
+	public final fun getFixed ()Ldev/ynagai/a2ui/compose/LayoutTraits;
 }
 
 public final class dev/ynagai/a2ui/compose/LayoutTraitsKt {
 	public static final fun ComponentRenderer (Ldev/ynagai/a2ui/compose/LayoutTraits;Ldev/ynagai/a2ui/compose/ComponentRenderer;)Ldev/ynagai/a2ui/compose/ComponentRenderer;
 	public static final fun ComponentRenderer (Lkotlin/jvm/functions/Function2;Ldev/ynagai/a2ui/compose/ComponentRenderer;)Ldev/ynagai/a2ui/compose/ComponentRenderer;
 	public static final fun layoutTraitsOf (Ldev/ynagai/a2ui/compose/A2uiComponentScope;Ldev/ynagai/a2ui/compose/A2uiChild;Ldev/ynagai/a2ui/compose/ComponentRegistry;Ldev/ynagai/a2ui/compose/LayoutAxis;)Ldev/ynagai/a2ui/compose/LayoutTraits;
-}
-
-public final class dev/ynagai/a2ui/compose/MainAxisFit : java/lang/Enum {
-	public static final field Content Ldev/ynagai/a2ui/compose/MainAxisFit;
-	public static final field Fill Ldev/ynagai/a2ui/compose/MainAxisFit;
-	public static fun getEntries ()Lkotlin/enums/EnumEntries;
-	public static fun valueOf (Ljava/lang/String;)Ldev/ynagai/a2ui/compose/MainAxisFit;
-	public static fun values ()[Ldev/ynagai/a2ui/compose/MainAxisFit;
 }
 
 public final class dev/ynagai/a2ui/compose/PlatformUrlOpener_jvmKt {

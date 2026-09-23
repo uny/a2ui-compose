@@ -26,11 +26,11 @@ import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import dev.ynagai.a2ui.compose.A2uiChild
 import dev.ynagai.a2ui.compose.A2uiComponentScope
+import dev.ynagai.a2ui.compose.AxisFit
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.LayoutAxis
 import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.LocalA2uiRegistry
-import dev.ynagai.a2ui.compose.MainAxisFit
 import dev.ynagai.a2ui.compose.RenderChild
 import dev.ynagai.a2ui.compose.layoutTraitsOf
 import dev.ynagai.a2ui.compose.rememberString
@@ -98,7 +98,7 @@ public val ColumnRenderer: ComponentRenderer = ComponentRenderer(
  * against a share of it. So a nested row asking for `center` measured itself across the whole outer
  * row and left its siblings at zero width: the sibling vanished, and nothing reported it. The
  * parent is the only one that can settle this, and it does so by giving the asking child a share
- * ([MainAxisFit.Fill]) instead of letting it take the lot. Across the other axis -- a `Column` in a
+ * ([AxisFit.Fill]) instead of letting it take the lot. Across the other axis -- a `Column` in a
  * `Row` -- spanning takes width from nobody, and the container is content-sized like anything else.
  *
  * A `justify` that is not a plain string is one this side cannot read. The catalog types it as a
@@ -121,13 +121,15 @@ private fun containerTraits(component: Component, axis: LayoutAxis, own: LayoutA
  *
  * `weight` is a property of the *child* but only a row or a column can act on it, which is why the
  * container reads it off each child on the child's behalf. [traits] are the child renderer's own
- * word on how it fits the axis -- see [LayoutTraits].
+ * word on how it fits the axis -- see [LayoutTraits] -- and [across] its word on the other one,
+ * which is what `align: stretch` may do to it.
  */
 @Immutable
 private data class LaidOutChild(
     val child: A2uiChild,
     val weight: Float,
     val traits: LayoutTraits,
+    val across: AxisFit,
 )
 
 /**
@@ -153,12 +155,16 @@ private fun A2uiComponentScope.rememberLaidOutChildren(axis: LayoutAxis): List<L
                     // What the child and everything it wraps say together: a card holding only an
                     // image that fills asks for a share, rather than for the width of its padding.
                     traits = layoutTraitsOf(child, registry, axis),
+                    across = layoutTraitsOf(child, registry, axis.other()).fit,
                 )
             }
         }
     }
     return value
 }
+
+private fun LayoutAxis.other(): LayoutAxis =
+    if (this == LayoutAxis.Horizontal) LayoutAxis.Vertical else LayoutAxis.Horizontal
 
 /**
  * The `weight` [component] declared, or 0 when it declared none.
@@ -241,30 +247,30 @@ private fun verticalArrangement(justify: String?): Arrangement.Vertical = when (
     else -> Arrangement.Top
 }
 
-/** Where a child sits across the axis, as a fraction of the slack: `start` is 0, `end` is 1. */
-private enum class CrossAlignment(val fraction: Float) { Start(0f), Center(0.5f), End(1f) }
+/**
+ * Where a child sits across the axis, as a fraction of the slack: `start` is 0, `end` is 1.
+ * [Stretch] places at the start too -- what it changes is how the child is measured, and a child
+ * it leaves alone sits where `start` would put it.
+ */
+private enum class CrossAlignment(val fraction: Float) { Start(0f), Center(0.5f), End(1f), Stretch(0f) }
 
 /**
- * `align`, the cross axis. `stretch` -- the catalog's default -- falls through to `start`, and
- * that is a decision rather than an omission.
+ * `align`, the cross axis, as CSS's `align-items`. `stretch` is the catalog's default, and a value
+ * this side cannot read degrades to it, as every other enum in this module degrades to its
+ * catalog default.
  *
- * Compose has no stretching `Alignment`: a cross axis is stretched by the children filling it, and
- * a `fillMax*` taken inside a container resolves against the space the *parent* offered rather
- * than against this container's content. Written the obvious way it therefore swelled the
- * container to its parent's full extent and left every later sibling measuring at zero -- a `Row`
- * inside a `Column` hid everything below it, and a `Column` inside a `Row` hid everything after it.
- *
- * The Compose idiom that fixes that is `height(IntrinsicSize.Min)` on the container, which makes
- * *every descendant* answer intrinsic measurement queries; a `SubcomposeLayout` cannot, and raises.
- * [Flex] now learns which children can be asked and remembers the ones that cannot, so a stretch
- * that asks only where asking is safe, and degrades to `start` elsewhere, is the next step and
- * not this one. Until then the children keep their natural cross-axis size and the container
- * wraps them, and a column of cards squares up to the widest only by accident of its content.
+ * Compose has no stretching `Alignment`: a child is stretched by being measured at least as large
+ * as the line, which means knowing the line before measuring anyone -- see [Flex] for how that is
+ * learned, and for the rows where it cannot be and `stretch` is drawn as `start`. The obvious
+ * `fillMax*` is not it: a `fillMax*` taken inside a container resolves against the space the
+ * *parent* offered rather than the container's line, and swelled a `Row` inside a `Column` to hide
+ * everything below it.
  */
 private fun crossAlignment(align: String?): CrossAlignment = when (align) {
+    "start" -> CrossAlignment.Start
     "center" -> CrossAlignment.Center
     "end" -> CrossAlignment.End
-    else -> CrossAlignment.Start
+    else -> CrossAlignment.Stretch
 }
 
 /**
@@ -292,7 +298,7 @@ private fun crossAlignment(align: String?): CrossAlignment = when (align) {
  *    taken from each in proportion to its preferred size, no child going below its minimum, the
  *    ones pinned at their minimum dropping out and the rest absorbing their share -- the
  *    flex-shrink algorithm. Order plays no part.
- * 3. Children that fill -- a renderer that says it [MainAxisFit.Fill]s, or one whose preferred
+ * 3. Children that fill -- a renderer that says it [AxisFit.Fill]s, or one whose preferred
  *    size is nothing at all, like a `Card` around a banner image -- are measured *up to* a share of
  *    what remains: a filler takes the room when the row has it and its share when it does not,
  *    which is the web's `flex: 0 1 auto` for something whose preferred size is the room, and
@@ -305,6 +311,36 @@ private fun crossAlignment(align: String?): CrossAlignment = when (align) {
  * child gets its preferred size and a filling or weighted one is measured loosely. `justify` is
  * applied through Compose's own `Arrangement`s, so the spacing semantics are the ones `Row` has;
  * `align` is [crossAlignment].
+ *
+ * `stretch` measures every child at least as large across the axis as the line, the largest of
+ * them, which has to be known before the first is measured. CSS sizes the two axes differently,
+ * and so does this:
+ *
+ * - A column's width is the width it is offered, when that is bounded and whoever offered it meant
+ *   it to be filled -- the root of a surface, a card there, a column that stretches and is a
+ *   block itself, a dialog, a tab. That is CSS's block width, it holds whatever the column's own `align`, and it needs no
+ *   question put to anyone. Inside a column that aligns its children `start`, `center` or `end`,
+ *   and in a row's content-sized child, a column is as wide as its widest child, as CSS
+ *   shrink-wraps a flex item -- a row has already given that child the width the plan chose, and
+ *   a column that took whatever it was offered instead would take a cap the plan meant as a limit
+ *   and leave a weighted sibling nothing. In a row's weighted child it fills the share.
+ *   [LocalFillsOfferedWidth] carries which it is, per child. A row is never block-wide: at the root
+ *   of a surface it is as wide as its children, as it was before `stretch`.
+ * - A row's height is its tallest child, so the line is found by asking: the plan is run over the
+ *   children's intrinsics once the ones that cannot be asked have been measured, and each child
+ *   asked how tall it is at the width the plan gives it. Where the plan cannot foretell what the
+ *   children will take -- two fillers, a filler or a shrunk row beside weighted children, a child
+ *   that refuses a question -- the answer would be a guess, and a guess too tall leaves a gap
+ *   under every child while one too short leaves them ragged. That row is drawn as `start`
+ *   instead. So is a column shrink-wrapping its children under the same conditions, and a
+ *   container whose children all fill across it, which leaves nobody to say how large the line
+ *   is.
+ *
+ * A child that [AxisFit.Fill]s across the axis -- a vertical divider in a row -- is measured *up
+ * to* the line and does not count towards it, so it spans the row rather than whatever the row was
+ * offered. One that is [AxisFit.Fixed] counts towards the line and is left at its own size. A
+ * child that cannot be asked is measured before the line is known and is not stretched unless the
+ * line was known without asking; it still counts towards it.
  *
  * The layout answers its parent's questions from the same plan. Along the axis it is a sum --
  * preferred sizes for the maximum, minimums for the minimum, where a filling or weighted child
@@ -325,8 +361,9 @@ private fun Flex(
     // The outermost container of a tree opens the session, and every one nested inside it shares
     // it; a second surface, on another window or another thread, has one of its own.
     val session = LocalQuerySession.current ?: remember { QuerySession() }
-    val policy = remember(axis, arrangement, crossAlignment, children, session) {
-        FlexMeasurePolicy(axis, arrangement, crossAlignment, children, session)
+    val fillsWidth = axis == LayoutAxis.Vertical && LocalFillsOfferedWidth.current
+    val policy = remember(axis, arrangement, crossAlignment, children, session, fillsWidth) {
+        FlexMeasurePolicy(axis, arrangement, crossAlignment, children, session, fillsWidth)
     }
     Layout(
         content = {
@@ -334,7 +371,9 @@ private fun Flex(
                 // The index is the id, and the policy reads it back: a renderer that dropped the
                 // modifier it was handed is measured as a child that said nothing about itself.
                 children.forEachIndexed { index, child ->
-                    scope.RenderChild(child.child, Modifier.layoutId(index))
+                    CompositionLocalProvider(LocalFillsOfferedWidth provides child.fillsOfferedWidth(axis, crossAlignment, fillsWidth)) {
+                        scope.RenderChild(child.child, Modifier.layoutId(index))
+                    }
                 }
             }
         },
@@ -343,12 +382,32 @@ private fun Flex(
     )
 }
 
+/**
+ * Whether a column inside this child is as wide as the width the child is offered -- see [Flex].
+ *
+ * A stretching column that is itself as wide as it is offered hands each child that width to fill.
+ * One that shrink-wraps does not: what it was offered is a limit, not its width, and a column
+ * inside that took it would take the cap its parent meant it to stay within, and drag the
+ * shrink-wrapping column out to it -- a weighted sibling of the outer one left nothing, a centred
+ * one pinned to the edge. Its children reach its width through the line instead. A row hands a content-sized child
+ * the width the plan chose for it, which a column reaches by its own content -- and a column that
+ * took the width instead would take a cap the plan meant as a limit, when the row could not ask
+ * it. A weighted share, though, is a width the row means to be filled: a weighted card's column is
+ * as wide as the card, not as its text. A filling child is not told to fill -- it fills *up to*
+ * its share, and a column holding only a capped image is as wide as the image. A column aligning
+ * its children anywhere else lets them be as wide as they are.
+ */
+private fun LaidOutChild.fillsOfferedWidth(axis: LayoutAxis, crossAlignment: CrossAlignment, fillsWidth: Boolean): Boolean =
+    if (axis == LayoutAxis.Vertical) fillsWidth && crossAlignment == CrossAlignment.Stretch else weight > 0f
+
 private class FlexMeasurePolicy(
     axis: LayoutAxis,
     private val arrangement: Any,
     private val crossAlignment: CrossAlignment,
     private val children: List<LaidOutChild>,
     private val session: QuerySession,
+    /** A column that is as wide as it is offered -- see [Flex]. */
+    private val fillsWidth: Boolean,
 ) : MeasurePolicy {
     private val horizontal = axis == LayoutAxis.Horizontal
 
@@ -377,12 +436,12 @@ private class FlexMeasurePolicy(
         ((parentData as? LayoutIdParentData)?.layoutId as? Int) ?: (-1 - index)
 
     /** What the policy knows about one measurable: its child's declaration, or nothing. */
-    private class Spec(val weight: Float, val fill: Boolean)
+    private class Spec(val weight: Float, val fill: Boolean, val across: AxisFit)
 
     private fun specOf(measurable: IntrinsicMeasurable): Spec {
         val child = ((measurable.parentData as? LayoutIdParentData)?.layoutId as? Int)?.let(children::getOrNull)
-            ?: return Spec(weight = 0f, fill = false)
-        return Spec(weight = child.weight, fill = child.traits.fit == MainAxisFit.Fill)
+            ?: return Spec(weight = 0f, fill = false, across = AxisFit.Content)
+        return Spec(weight = child.weight, fill = child.traits.fit == AxisFit.Fill, across = child.across)
     }
 
     private fun IntrinsicMeasurable.ask(index: Int, query: Query, arg: Int): Int? {
@@ -405,11 +464,18 @@ private class FlexMeasurePolicy(
     private fun IntrinsicMeasurable.maxMain(index: Int, cross: Int): Int? =
         ask(index, if (horizontal) Query.MaxWidth else Query.MaxHeight, cross)
 
+    // Asked at no more than a child can be measured at. A plan that shrinks a row to its children's
+    // minimums hands a text the width of its longest word, which the agent chooses, and a text
+    // asked its height at a width `Constraints` cannot hold raises -- not as a refusal, and not
+    // caught. The measure pass clamps the same width the same way, so the answer is for the size
+    // the child is drawn at.
     private fun IntrinsicMeasurable.minCross(index: Int, main: Int): Int? =
-        ask(index, if (horizontal) Query.MinHeight else Query.MinWidth, main)
+        ask(index, if (horizontal) Query.MinHeight else Query.MinWidth, drawable(main))
 
     private fun IntrinsicMeasurable.maxCross(index: Int, main: Int): Int? =
-        ask(index, if (horizontal) Query.MaxHeight else Query.MaxWidth, main)
+        ask(index, if (horizontal) Query.MaxHeight else Query.MaxWidth, drawable(main))
+
+    private fun drawable(main: Int): Int = if (main == Constraints.Infinity) main else min(main, LARGEST_DIMENSION)
 
     /**
      * The plan: hands each child, in the order it must be measured, the least and the most it may
@@ -418,15 +484,24 @@ private class FlexMeasurePolicy(
      * [take] is the measure pass's `measure`, or, when a parent is asking this layout's intrinsic
      * size, an estimate from the child's own intrinsics -- the plan is the same either way, which
      * is the point. With [fillersTakeNothing] the plan counts each filler as taking none of its
-     * share, the other extreme of what a filler may do; see [largestCross].
+     * share, the other extreme of what a filler may do; see [largestCross]. [measured] runs once
+     * the children that cannot be asked are measured and before anyone else is.
+     *
+     * Returns whether the plan is *foreseeable*: whether what each child will take follows from
+     * the questions it answered, so that running the plan over those answers gives the widths the
+     * children will be drawn at. It does not when two fillers or a filler and a weighted child
+     * share the room -- how much a filler takes cannot be asked, and it decides what the next one
+     * gets -- nor when shrunk children sit beside a filler or weighted ones, since a text shrunk to
+     * a width may wrap narrower than it and leave the difference to them.
      */
     private fun distribute(
         measurables: List<IntrinsicMeasurable>,
         mainMax: Int,
         crossMax: Int,
         fillersTakeNothing: Boolean = false,
+        measured: () -> Unit = {},
         take: (index: Int, min: Int, max: Int) -> Int,
-    ) {
+    ): Boolean {
         val specs = measurables.map(::specOf)
         val bounded = mainMax != Constraints.Infinity
         var remaining = mainMax
@@ -467,12 +542,15 @@ private class FlexMeasurePolicy(
             val cap = if (bounded) ((remaining - reserve).coerceAtLeast(0L) / left).toInt() else Constraints.Infinity
             spend(take(index, 0, cap))
         }
+        measured()
 
         // 2. The askable ones, at their preferred size or a fair shrink of it.
+        var shrunk = false
         if (askable.isNotEmpty()) {
             val basis = IntArray(askable.size) { preferred.getValue(askable[it]) }
             val floor = IntArray(askable.size) { minimum.getValue(askable[it]) }
-            val targets = if (bounded && basis.sumOf { it.toLong() } > remaining) shrink(basis, floor, remaining) else basis
+            shrunk = bounded && basis.sumOf { it.toLong() } > remaining
+            val targets = if (shrunk) shrink(basis, floor, remaining) else basis
             askable.forEachIndexed { slot, index -> spend(take(index, 0, targets[slot])) }
         }
 
@@ -480,6 +558,11 @@ private class FlexMeasurePolicy(
         //    weighted children's shares too, so that a filler that takes less leaves the rest to
         //    them rather than to nobody.
         val weighted = specs.indices.filter { specs[it].weight > 0f }
+        val foreseeable = when {
+            fillers.size > 1 -> false
+            fillers.size == 1 -> weighted.isEmpty() && !shrunk
+            else -> weighted.isEmpty() || !shrunk
+        }
         if (fillers.isNotEmpty()) {
             val totalWeight = weighted.sumOf { specs[it].weight.toDouble() }
             fillers.forEachIndexed { slot, index ->
@@ -518,22 +601,50 @@ private class FlexMeasurePolicy(
                 for (index in weighted) take(index, 0, Constraints.Infinity)
             }
         }
+        return foreseeable
     }
 
     override fun MeasureScope.measure(measurables: List<Measurable>, constraints: Constraints): MeasureResult {
         val mainMax = if (horizontal) constraints.maxWidth else constraints.maxHeight
+        val crossMin = if (horizontal) constraints.minHeight else constraints.minWidth
         val crossMax = if (horizontal) constraints.maxHeight else constraints.maxWidth
         val placeables = arrayOfNulls<Placeable>(measurables.size)
 
-        distribute(measurables, mainMax, crossMax) { index, min, max ->
+        // The line `stretch` measures children to, when it is known before anyone is measured --
+        // see [Flex] -- or else learned once the children that cannot be asked are measured.
+        // Null leaves every child to its own size, which is `start`.
+        val stretch = crossAlignment == CrossAlignment.Stretch
+        val bounded = crossMax != Constraints.Infinity
+        // A column as wide as it is offered is that wide however it aligns its children: `center`
+        // centres them across that width, as it does across a block in CSS.
+        val offered = if (fillsWidth && bounded) crossMax else 0
+        var line: Int? = if (stretch && bounded && (crossMin == crossMax || fillsWidth)) crossMax else null
+        val learn = stretch && line == null
+
+        distribute(
+            measurables,
+            mainMax,
+            crossMax,
+            measured = { if (learn) line = measurables.line(mainMax, crossMax, placeables)?.coerceIn(crossMin, crossMax) },
+        ) { index, min, max ->
+            val drawnTo = line
+            var least = 0
+            var most = crossMax
+            if (drawnTo != null) {
+                when (specOf(measurables[index]).across) {
+                    AxisFit.Content -> least = drawnTo
+                    AxisFit.Fill -> most = drawnTo
+                    AxisFit.Fixed -> Unit
+                }
+            }
             // `fitPrioritizing*` rather than the constructor, which throws past 2^18 - 2 in a
             // dimension. A text's minimum intrinsic width is its longest word, and the agent
             // chooses the words; a floor that outgrows what `Constraints` can hold is clamped to
             // it -- the text is measured as wide as anything can be, and wraps from there.
             val c = if (horizontal) {
-                Constraints.fitPrioritizingWidth(minWidth = min, maxWidth = max, minHeight = 0, maxHeight = crossMax)
+                Constraints.fitPrioritizingWidth(minWidth = min, maxWidth = max, minHeight = least, maxHeight = most)
             } else {
-                Constraints.fitPrioritizingHeight(minWidth = 0, maxWidth = crossMax, minHeight = min, maxHeight = max)
+                Constraints.fitPrioritizingHeight(minWidth = least, maxWidth = most, minHeight = min, maxHeight = max)
             }
             measurables[index].measure(c).also { placeables[index] = it }.main()
         }
@@ -541,7 +652,7 @@ private class FlexMeasurePolicy(
         val sizes = IntArray(placeables.size) { placeables[it]!!.main() }
         val used = sizes.sumOf { it.toLong() }.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         val mainSize = if (horizontal) constraints.constrainWidth(used) else constraints.constrainHeight(used)
-        val crossUsed = placeables.maxOfOrNull { it!!.cross() } ?: 0
+        val crossUsed = maxOf(placeables.maxOfOrNull { it!!.cross() } ?: 0, line ?: 0, offered)
         val crossSize = if (horizontal) constraints.constrainHeight(crossUsed) else constraints.constrainWidth(crossUsed)
         val positions = IntArray(sizes.size)
         // Dispatched on the axis, not on the arrangement's type: `Center` and the three `space*`
@@ -566,6 +677,52 @@ private class FlexMeasurePolicy(
                 else placeable.placeRelative(across, positions[index])
             }
         }
+    }
+
+    /**
+     * The line a stretching row or column measures its children to, learned by running the plan
+     * over the children's answers: the largest of them across the axis, each asked at the size
+     * along it that the plan will give it. The children that cannot be asked are already measured
+     * in [placeables] and count as they were drawn. A child that fills across the axis is not
+     * asked, having no size there of its own -- a video would answer with the height of the width
+     * it was offered.
+     *
+     * Null when the answer would be a guess: the plan is not foreseeable, or a child refused a
+     * question the measure pass had not put to it. Null too when every child fills across the
+     * axis and nobody is left to say how large the line is -- a column holding only a banner
+     * would otherwise draw it at no width at all.
+     */
+    private fun List<Measurable>.line(mainMax: Int, crossMax: Int, placeables: Array<Placeable?>): Int? {
+        var answered = true
+        var counted = false
+        val largest = session.run {
+            var largest = 0
+            val foreseeable = distribute(this, mainMax, crossMax) { index, _, max ->
+                val drawn = placeables[index]
+                val across = specOf(this[index]).across
+                if (drawn != null) {
+                    if (across != AxisFit.Fill) {
+                        largest = max(largest, drawn.cross())
+                        counted = true
+                    }
+                    return@distribute drawn.main()
+                }
+                val given = if (max == Constraints.Infinity) this[index].maxMain(index, Constraints.Infinity) else max
+                if (given == null) {
+                    answered = false
+                    return@distribute 0
+                }
+                if (across != AxisFit.Fill) {
+                    val size = this[index].maxCross(index, given)
+                    if (size == null) answered = false else largest = max(largest, size)
+                    counted = true
+                }
+                given
+            }
+            if (!foreseeable) answered = false
+            largest
+        }
+        return if (answered && counted) largest else null
     }
 
     private fun Placeable.main() = if (horizontal) width else height
@@ -652,6 +809,9 @@ private class FlexMeasurePolicy(
     }
 }
 
+/** The largest size `Constraints` holds in one dimension while the other is small: 2^18 - 2. */
+private const val LARGEST_DIMENSION = (1 shl 18) - 2
+
 /** One of the four intrinsic questions, so that an answer can be remembered under it. */
 private enum class Query {
     MinWidth, MaxWidth, MinHeight, MaxHeight;
@@ -663,6 +823,15 @@ private enum class Query {
         MaxHeight -> measurable.maxIntrinsicHeight(arg)
     }
 }
+
+/**
+ * Whether a column drawn here is as wide as the width it is offered, rather than as its widest
+ * child -- CSS's block width against its shrink-to-fit width. True outside any [Flex], at the root
+ * of a surface as for a block; each [Flex] sets it for what it holds, so it reaches a column
+ * through a card, which has no width of its own to give. A component that does give its content
+ * a width of its own -- a dialog, a tab, a list's items -- sets it again. See [Flex].
+ */
+internal val LocalFillsOfferedWidth = staticCompositionLocalOf { true }
 
 /** The [QuerySession] of the outermost [Flex] above, or none at the top of a tree. */
 private val LocalQuerySession = staticCompositionLocalOf<QuerySession?> { null }

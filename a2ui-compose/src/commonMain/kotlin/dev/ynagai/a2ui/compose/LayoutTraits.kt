@@ -12,22 +12,39 @@ import dev.ynagai.a2ui.core.surface.SurfaceModel
 /** The main axis of the `Row` or `Column` a component is being laid out in. */
 public enum class LayoutAxis { Horizontal, Vertical }
 
-/** How a component takes space along its container's main axis. */
-public enum class MainAxisFit {
+/**
+ * How a component takes space along one axis.
+ *
+ * A container asks it of each child twice: along its own main axis, to share that axis out, and
+ * across it, to decide what `align: stretch` may do to the child.
+ */
+public enum class AxisFit {
     /**
-     * As much as its content wants, shrinking towards its minimum when the container is short of
-     * room -- CSS's `flex: 0 1 auto`. Text, inputs, and containers of them are this: anything with
-     * a preferred size of its own.
+     * As much as its content wants. Along a main axis it shrinks towards its minimum when the
+     * container is short of room -- CSS's `flex: 0 1 auto`; across one it is stretched to the
+     * line, as CSS stretches an item whose cross size is `auto`. Text, inputs, and containers of
+     * them are this: anything with a preferred size of its own.
      */
     Content,
 
     /**
-     * A share of whatever is left once the [Content] children are measured, up to that share --
-     * CSS's `flex: 0 1 auto` for something whose preferred size *is* the room it is given. A
-     * slider's track, a divider drawn along the axis, an image that fills its container: leaves
-     * with no size of their own along that axis, which starve a sibling if measured as content.
+     * Whatever room it is given. Along a main axis, a share of what is left once the [Content]
+     * children are measured, up to that share -- CSS's `flex: 0 1 auto` for something whose
+     * preferred size *is* the room it is given; across one, up to the line and never beyond it,
+     * with no say in how tall or wide the line is. A slider's track, a divider drawn along the
+     * axis, an image that fills its container: leaves with no size of their own along that axis,
+     * which starve a sibling if measured as content.
      */
     Fill,
+
+    /**
+     * A size of its own that nothing around it changes -- an icon's square, a banner's height, a
+     * divider's thickness. Along a main axis it is [Content]; across one it counts towards the
+     * line and is not stretched to it, as CSS leaves an item whose cross size is definite. A
+     * stretched avatar is a pill, and a stretched glyph sits in the middle of a box it does not
+     * fill.
+     */
+    Fixed,
 }
 
 /**
@@ -40,11 +57,12 @@ public enum class MainAxisFit {
  * `SubcomposeLayout` (a `LazyColumn`, a `BoxWithConstraints`) raises on the question, the
  * container catches that, and measures the child without asking from then on.
  *
- * A renderer that says nothing is [Content]: content-sized, asked its size, and measured as it
- * comes if it cannot answer. That is right for most of what a host draws.
+ * A renderer that says nothing is [Content]: content-sized, asked its size, measured as it comes
+ * if it cannot answer, and stretched across a container that stretches. That is right for most of
+ * what a host draws; a host component of a fixed size says [Fixed] across the axis it is fixed on.
  */
 @Immutable
-public class LayoutTraits(public val fit: MainAxisFit) {
+public class LayoutTraits(public val fit: AxisFit) {
     // A value, compared by its fields. A container remembers what it knows about each child and
     // recomputes it inside a `derivedStateOf`, which discards an equal result without invalidating
     // anyone; a renderer that builds its traits fresh on every call would otherwise never compare
@@ -57,10 +75,13 @@ public class LayoutTraits(public val fit: MainAxisFit) {
 
     public companion object {
         /** Content-sized: the default for a renderer that says nothing. */
-        public val Content: LayoutTraits = LayoutTraits(MainAxisFit.Content)
+        public val Content: LayoutTraits = LayoutTraits(AxisFit.Content)
 
         /** Fills its share of the axis. */
-        public val Fill: LayoutTraits = LayoutTraits(MainAxisFit.Fill)
+        public val Fill: LayoutTraits = LayoutTraits(AxisFit.Fill)
+
+        /** A size of its own along the axis, which stretching leaves alone. */
+        public val Fixed: LayoutTraits = LayoutTraits(AxisFit.Fixed)
     }
 }
 
@@ -91,7 +112,7 @@ public fun ComponentRenderer(traits: LayoutTraits, render: ComponentRenderer): C
  * What [child] and everything it wraps say, together, about how it fits [axis].
  *
  * A renderer speaks for its own component, and a wrapper -- a `Card`, a `Column` holding one thing
- * -- has no size of its own to declare. Its renderer says [MainAxisFit.Content] truthfully and the
+ * -- has no size of its own to declare. Its renderer says [AxisFit.Content] truthfully and the
  * container then asks it a question its content cannot answer: a card around an image that fills
  * whatever it is given reports the width of its own padding, sixty-four pixels of margin around
  * nothing, and is measured to it. The image inside draws at no width at all, which is the
@@ -99,13 +120,15 @@ public fun ComponentRenderer(traits: LayoutTraits, render: ComponentRenderer): C
  *
  * So a wrapper whose children all fill, fills. A card of a banner asks for a share; a card of a
  * banner *and a caption* does not, because the caption has a preferred width and the card can be
- * asked for it. That holds for a renderer that declared [MainAxisFit.Content] as much as for one
+ * asked for it. That holds for a renderer that declared [AxisFit.Content] as much as for one
  * that said nothing -- the two are the same value -- so a host wrapper of a fixed size around
  * only filling children is laid out as a filler too: measured to a share of what its
- * content-sized siblings leave, which beside a long text can be less than its own size.
+ * content-sized siblings leave, which beside a long text can be less than its own size. One that
+ * declares [AxisFit.Fixed] is taken at its word.
  *
  * The walk stops at the first child that is content-sized, at a child that declares
- * [MainAxisFit.Fill] itself, and [RenderLimits.maxDepth] levels below [child], the renderer's own
+ * [AxisFit.Fill] or [AxisFit.Fixed] itself -- a wrapper that says it is fixed is, whatever it
+ * holds -- and [RenderLimits.maxDepth] levels below [child], the renderer's own
  * bound -- a cap smaller than the surface draws would be this bug again, at a depth nobody thought
  * to look. A component reached twice at the same depth, under two parents, is walked once and
  * answers the same both times -- at another depth it is walked again, since the bound may cut it
@@ -143,7 +166,7 @@ private fun A2uiComponentScope.traitsOf(
     // component shared by two parents is not a cycle, and `walked` answers it the second time --
     // keyed by depth too, because the same component nearer the bound may be cut short of the
     // filler it reaches from higher up.
-    if (declared.fit == MainAxisFit.Fill || depth >= renderer.renderLimits.maxDepth || !walking.add(id)) {
+    if (declared.fit != AxisFit.Content || depth >= renderer.renderLimits.maxDepth || !walking.add(id)) {
         return declared
     }
     val children = runCatching { renderer.childResolver(surface).childrenOf(component) }
@@ -156,7 +179,7 @@ private fun A2uiComponentScope.traitsOf(
             }
         }
     val all = children.isNotEmpty() &&
-        children.all { traitsOf(it, registry, axis, surface, depth + 1, walking, walked).fit == MainAxisFit.Fill }
+        children.all { traitsOf(it, registry, axis, surface, depth + 1, walking, walked).fit == AxisFit.Fill }
     walking.remove(id)
     return (if (all) LayoutTraits.Fill else declared).also { walked[id to depth] = it }
 }

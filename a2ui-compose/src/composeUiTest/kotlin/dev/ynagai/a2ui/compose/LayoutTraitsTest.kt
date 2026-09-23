@@ -38,6 +38,34 @@ class LayoutTraitsTest {
         assertEquals(LayoutTraits.Content, answers.last(), "the branch cut at the bound decides: $answers")
     }
 
+    @Test
+    fun a_wrapper_that_says_it_is_fixed_is_not_made_a_filler_by_what_it_holds() = runComposeUiTest {
+        // A wrapper whose children all fill is taken for a filler -- unless it declared a size of
+        // its own, which a container stretching it would otherwise take away.
+        for ((declared, expected) in listOf(LayoutTraits.Content to LayoutTraits.Fill, LayoutTraits.Fixed to LayoutTraits.Fixed)) {
+            val answers = mutableListOf<LayoutTraits>()
+            val registry = ComponentRegistry(
+                mapOf(
+                    "Row" to ComponentRenderer { scope, _ ->
+                        for (child in scope.rememberAllChildren()) {
+                            answers += scope.layoutTraitsOf(child, LocalA2uiRegistry.current, LayoutAxis.Horizontal)
+                        }
+                    },
+                    "Column" to ComponentRenderer(declared) { _, _ -> },
+                    "Divider" to ComponentRenderer(LayoutTraits.Fill) { _, _ -> },
+                ),
+            )
+            val components = """[
+                {"id":"$ROOT_COMPONENT_ID","component":"Row","children":["wrapper"]},
+                {"id":"wrapper","component":"Column","children":["leaf"]},
+                {"id":"leaf","component":"Divider"}
+            ]"""
+            setContent { A2uiSurface(rendererFor(components), SURFACE, registry) }
+            waitForIdle()
+            assertEquals(expected, answers.last(), "a wrapper declared ${declared.fit}: $answers")
+        }
+    }
+
     /** `top -> [x, d1 -> ... -> d(MAX_DEPTH - 1) -> x]`, `x -> leaf`, so the second `x` is at the bound. */
     private fun sharedAtTheBound(): String = buildString {
         append("""[{"id":"$ROOT_COMPONENT_ID","component":"Row","children":["top"]},""")

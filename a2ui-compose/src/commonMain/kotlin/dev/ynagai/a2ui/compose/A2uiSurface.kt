@@ -329,10 +329,12 @@ public fun A2uiComponent(
         // could then pick up what the outgoing one remembered as its own -- a segfault on macOS and
         // iOS, and nothing at all on JVM. The key gives each renderer its own group. Nothing is
         // lost by it: a different renderer never had a claim on the old one's state, and the same
-        // renderer instance keeps its group through every recomposition and data model write. The
-        // one new reset is a host handing over a *new instance* for the same type -- a registry
-        // rebuilt with capturing lambdas -- which already invalidated the subtree through the
-        // static `LocalA2uiRegistry` and now also drops that renderer's own `remember`s.
+        // renderer instance keeps its group through every recomposition and data model write. What
+        // it does cost is a host that hands over a *new instance* for the same type on every
+        // recomposition -- `ComponentRenderer { }` written inline without `remember`: that host
+        // used to pay a recomposition of the subtree, through the static `LocalA2uiRegistry`, and
+        // now loses the state inside it as well. Keying on `component.component` instead would
+        // spare that host and leave a registry swapped at runtime exposed, so the renderer it is.
         key(componentRenderer) {
             componentRenderer.Render(scope, modifier)
         }

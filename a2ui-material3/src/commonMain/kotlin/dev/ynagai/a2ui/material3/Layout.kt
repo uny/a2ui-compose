@@ -317,8 +317,8 @@ private fun crossAlignment(align: String?): CrossAlignment = when (align) {
  * and so does this:
  *
  * - A column's width is the width it is offered, when that is bounded and whoever offered it meant
- *   it to be filled -- the root of a surface, a card there, a column that stretches, a dialog, a
- *   tab. That is CSS's block width, it holds whatever the column's own `align`, and it needs no
+ *   it to be filled -- the root of a surface, a card there, a column that stretches and is a
+ *   block itself, a dialog, a tab. That is CSS's block width, it holds whatever the column's own `align`, and it needs no
  *   question put to anyone. Inside a column that aligns its children `start`, `center` or `end`,
  *   and in a row's content-sized child, a column is as wide as its widest child, as CSS
  *   shrink-wraps a flex item -- a row has already given that child the width the plan chose, and
@@ -371,7 +371,7 @@ private fun Flex(
                 // The index is the id, and the policy reads it back: a renderer that dropped the
                 // modifier it was handed is measured as a child that said nothing about itself.
                 children.forEachIndexed { index, child ->
-                    CompositionLocalProvider(LocalFillsOfferedWidth provides child.fillsOfferedWidth(axis, crossAlignment)) {
+                    CompositionLocalProvider(LocalFillsOfferedWidth provides child.fillsOfferedWidth(axis, crossAlignment, fillsWidth)) {
                         scope.RenderChild(child.child, Modifier.layoutId(index))
                     }
                 }
@@ -385,7 +385,11 @@ private fun Flex(
 /**
  * Whether a column inside this child is as wide as the width the child is offered -- see [Flex].
  *
- * A stretching column hands each child its own width to fill. A row hands a content-sized child
+ * A stretching column that is itself as wide as it is offered hands each child that width to fill.
+ * One that shrink-wraps does not: what it was offered is a limit, not its width, and a column
+ * inside that took it would take the cap its parent meant it to stay within, and drag the
+ * shrink-wrapping column out to it -- a weighted sibling of the outer one left nothing, a centred
+ * one pinned to the edge. Its children reach its width through the line instead. A row hands a content-sized child
  * the width the plan chose for it, which a column reaches by its own content -- and a column that
  * took the width instead would take a cap the plan meant as a limit, when the row could not ask
  * it. A weighted share, though, is a width the row means to be filled: a weighted card's column is
@@ -393,8 +397,8 @@ private fun Flex(
  * its share, and a column holding only a capped image is as wide as the image. A column aligning
  * its children anywhere else lets them be as wide as they are.
  */
-private fun LaidOutChild.fillsOfferedWidth(axis: LayoutAxis, crossAlignment: CrossAlignment): Boolean =
-    if (axis == LayoutAxis.Vertical) crossAlignment == CrossAlignment.Stretch else weight > 0f
+private fun LaidOutChild.fillsOfferedWidth(axis: LayoutAxis, crossAlignment: CrossAlignment, fillsWidth: Boolean): Boolean =
+    if (axis == LayoutAxis.Vertical) fillsWidth && crossAlignment == CrossAlignment.Stretch else weight > 0f
 
 private class FlexMeasurePolicy(
     axis: LayoutAxis,

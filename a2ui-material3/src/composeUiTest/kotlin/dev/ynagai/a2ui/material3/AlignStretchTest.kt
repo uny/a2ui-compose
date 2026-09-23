@@ -91,6 +91,16 @@ class AlignStretchTest {
     }
 
     @Test
+    fun a_column_two_levels_inside_a_centred_column_does_not_undo_the_centring() = runComposeUiTest {
+        // The inner column is the child of one that shrink-wraps. Told to fill what that one was
+        // offered, it is as wide as the screen, and so is everything around it.
+        setContent { Hosted(TWICE_NESTED_CENTRED_COLUMN) }
+        val wide = bounds("a wider text")
+        assertTrue(wide.width < WIDTH / 2, "the nested columns are as wide as their widest child: $wide")
+        assertTrue(wide.left > WIDTH / 4, "and are centred: $wide")
+    }
+
+    @Test
     fun a_fixed_size_child_is_not_stretched() = runComposeUiTest {
         // An avatar is a 40dp square. Stretched to the text beside it, it is a pill; stretched to
         // the column, a bar.
@@ -150,6 +160,13 @@ class AlignStretchTest {
     }
 
     @Test
+    fun a_row_with_two_fillers_is_drawn_as_start() = runComposeUiTest {
+        // What the second filler gets depends on what the first one takes, which cannot be asked.
+        setContent { Hosted(TWO_FILLERS_BESIDE_TEXTS) }
+        assertTrue(bounds("short").height * 1.5f < bounds("two\nlines").height, "nothing is stretched")
+    }
+
+    @Test
     fun a_row_holding_a_child_that_cannot_be_asked_still_draws_everything() = runComposeUiTest {
         // Tabs are a `SubcomposeLayout`, and fill a row: the line cannot be learned from them, so
         // the row is drawn as `start` -- the short text beside them keeps its own height. The
@@ -189,11 +206,30 @@ class AlignStretchTest {
     }
 
     @Test
+    fun a_column_nested_in_a_row_that_cannot_be_asked_leaves_a_weighted_sibling_its_share() = runComposeUiTest {
+        // The same, one column further down. The outer column is as wide as its content, and a
+        // column inside it has no wider width to take than that: taking what the outer one was
+        // offered is taking the row's whole cap again.
+        for (align in listOf(null, "start")) {
+            setContent { Hosted(nestedRefusingColumnBesideWeightedText(align), registry = refuserRegistry) }
+            assertTrue(bounds("rest").width > WIDTH / 2, "the weighted text keeps its share ($align): ${bounds("rest")}")
+        }
+    }
+
+    @Test
     fun a_column_placed_by_a_list_is_as_wide_as_its_content() = runComposeUiTest {
         // A list centring its items has to be able to move them: a column item that filled the
         // list's width would leave its text at the left edge.
         setContent { Hosted(CENTRED_LIST_OF_A_COLUMN) }
         assertTrue(bounds("item").left > WIDTH / 4, "the item is centred: ${bounds("item")}")
+    }
+
+    @Test
+    fun a_column_in_a_horizontal_list_is_as_wide_as_its_content() = runComposeUiTest {
+        // A horizontal list caps each item's width, and a column that took the cap would leave
+        // the list one wide item where the agent sent a few small ones.
+        setContent { Hosted(HORIZONTAL_LIST_OF_A_COLUMN) }
+        assertTrue(bounds("a wider text").width < WIDTH / 2, "the item is as wide as its text: ${bounds("a wider text")}")
     }
 
     @Test
@@ -324,6 +360,29 @@ class AlignStretchTest {
             {"id":"wide","component":"Text","text":"a wider text"}
         ]"""
 
+        val TWICE_NESTED_CENTRED_COLUMN = """[
+            {"id":"root","component":"Column","children":["outer"],"align":"center"},
+            {"id":"outer","component":"Column","children":["inner"]},
+            {"id":"inner","component":"Column","children":["a","wide"]},
+            {"id":"a","component":"Text","text":"a"},
+            {"id":"wide","component":"Text","text":"a wider text"}
+        ]"""
+
+        val TWO_FILLERS_BESIDE_TEXTS = """[
+            {"id":"root","component":"Row","children":["one","two","short","lines"]},
+            {"id":"one","component":"Row","children":[]},
+            {"id":"two","component":"Row","children":[]},
+            {"id":"short","component":"Text","text":"short"},
+            {"id":"lines","component":"Text","text":"two\nlines"}
+        ]"""
+
+        val HORIZONTAL_LIST_OF_A_COLUMN = """[
+            {"id":"root","component":"List","children":["column"],"direction":"horizontal"},
+            {"id":"column","component":"Column","children":["a","wide"]},
+            {"id":"a","component":"Text","text":"a"},
+            {"id":"wide","component":"Text","text":"a wider text"}
+        ]"""
+
         val AVATAR_BESIDE_AND_ABOVE_LONG_TEXT = """[
             {"id":"root","component":"Column","children":["row","avatar2"]},
             {"id":"row","component":"Row","children":["avatar1","long"]},
@@ -367,6 +426,14 @@ class AlignStretchTest {
         fun refusingColumnBesideWeightedText(align: String?) = """[
             {"id":"root","component":"Row","children":["column","rest"]${align(align)}},
             {"id":"column","component":"Column","children":["refuser"]${align(align)}},
+            {"id":"refuser","component":"Refuser"},
+            {"id":"rest","component":"Text","text":"rest","weight":1}
+        ]"""
+
+        fun nestedRefusingColumnBesideWeightedText(align: String?) = """[
+            {"id":"root","component":"Row","children":["outer","rest"]${align(align)}},
+            {"id":"outer","component":"Column","children":["inner"]${align(align)}},
+            {"id":"inner","component":"Column","children":["refuser"]${align(align)}},
             {"id":"refuser","component":"Refuser"},
             {"id":"rest","component":"Text","text":"rest","weight":1}
         ]"""

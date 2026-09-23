@@ -9,6 +9,12 @@ import androidx.compose.ui.Modifier
  *
  * The [Modifier] is passed in rather than built inside, because the parent decides how a child sits
  * in its layout -- a `Row` giving a child a weight cannot do so through the catalog.
+ *
+ * **Hand over the same instance every time.** [A2uiComponent] keys its call to [Render] on the
+ * renderer instance (#31), so a renderer rebuilt on every recomposition -- `ComponentRenderer { }`
+ * written inline in a composable without `remember` -- starts from nothing each time: whatever it
+ * and everything under it `remember`ed, focus and scroll position included, is dropped. A top-level
+ * `val`, or one built once and held, keeps it.
  */
 public fun interface ComponentRenderer {
     @Composable

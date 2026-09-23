@@ -107,9 +107,10 @@ public fun ComponentRenderer(traits: LayoutTraits, render: ComponentRenderer): C
  * The walk stops at the first child that is content-sized, at a child that declares
  * [MainAxisFit.Fill] itself, and [RenderLimits.maxDepth] levels below [child], the renderer's own
  * bound -- a cap smaller than the surface draws would be this bug again, at a depth nobody thought
- * to look. A component reached twice, under two parents, is walked once and answers the same
- * both times; one that leads back to one of its own ancestors is a cycle, and stops the walk
- * there with its declaration.
+ * to look. A component reached twice at the same depth, under two parents, is walked once and
+ * answers the same both times -- at another depth it is walked again, since the bound may cut it
+ * there; one that leads back to one of its own ancestors is a cycle, and stops the walk there
+ * with its declaration.
  *
  * Children are resolved through the surface's catalog, not by property name, so this holds for a
  * host's own wrapper as it does for the ones this library ships.
@@ -130,16 +131,18 @@ private fun A2uiComponentScope.traitsOf(
     surface: SurfaceModel,
     depth: Int,
     walking: MutableSet<ComponentId>,
-    walked: MutableMap<ComponentId, LayoutTraits>,
+    walked: MutableMap<Pair<ComponentId, Int>, LayoutTraits>,
 ): LayoutTraits {
-    walked[id]?.let { return it }
+    walked[id to depth]?.let { return it }
     // A component the surface does not hold, or a type the registry cannot draw, is a placeholder:
     // plain layout, content-sized.
     val component = surface.components[id] ?: return LayoutTraits.Content
     val declared = registry[component.component]?.layoutTraits(component, axis) ?: return LayoutTraits.Content
     // One of its own ancestors, or deeper than the renderer will draw: the declaration is all
     // there is to go on. `walking` is the path down to here, not everything seen so far: a
-    // component shared by two parents is not a cycle, and `walked` answers it the second time.
+    // component shared by two parents is not a cycle, and `walked` answers it the second time --
+    // keyed by depth too, because the same component nearer the bound may be cut short of the
+    // filler it reaches from higher up.
     if (declared.fit == MainAxisFit.Fill || depth >= renderer.renderLimits.maxDepth || !walking.add(id)) {
         return declared
     }
@@ -155,5 +158,5 @@ private fun A2uiComponentScope.traitsOf(
     val all = children.isNotEmpty() &&
         children.all { traitsOf(it, registry, axis, surface, depth + 1, walking, walked).fit == MainAxisFit.Fill }
     walking.remove(id)
-    return (if (all) LayoutTraits.Fill else declared).also { walked[id] = it }
+    return (if (all) LayoutTraits.Fill else declared).also { walked[id to depth] = it }
 }

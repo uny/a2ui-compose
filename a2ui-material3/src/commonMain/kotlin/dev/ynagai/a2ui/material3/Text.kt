@@ -4,6 +4,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.rememberString
 
 /**
@@ -21,7 +22,7 @@ import dev.ynagai.a2ui.compose.rememberString
  * caption inside a filled `Button` sits on the primary colour and a surface colour there would be
  * unreadable.
  */
-public val TextRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val TextRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Content) { scope, modifier ->
     val source = scope.rememberString("text")
     val caption = scope.rememberString("variant") == "caption"
     LocalA2uiMarkdownRenderer.current.Markdown(

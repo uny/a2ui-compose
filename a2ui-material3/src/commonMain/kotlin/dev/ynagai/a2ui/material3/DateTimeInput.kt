@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.firstMessage
 import dev.ynagai.a2ui.compose.hasError
 import dev.ynagai.a2ui.compose.rememberBoolean
@@ -58,7 +59,10 @@ import kotlinx.serialization.json.JsonPrimitive
  * an input that collected an answer and dropped it is [TextFieldRenderer]'s broken renderer again.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer(
+    // Content-sized and shrinkable, as [TextFieldRenderer] is and for the same reason.
+    LayoutTraits.Content,
+) { scope, modifier ->
     val label = scope.rememberString("label")
     val value = scope.rememberString("value").orEmpty()
     val wantsDate = scope.rememberBoolean("enableDate") ?: false
@@ -80,7 +84,7 @@ public val DateTimeInputRenderer: ComponentRenderer = ComponentRenderer { scope,
     var stage by remember(scope) { mutableStateOf(Stage.NONE) }
     var pickedDay by remember(scope) { mutableStateOf<Long?>(null) }
 
-    Column(modifier = modifier.leafMargin()) {
+    Column(modifier = modifier.leafMargin().shrinkableTo(INPUT_MIN_WIDTH)) {
         OutlinedTextField(
             value = value,
             // Read-only, so this is never called; required by the API. The field's own text comes

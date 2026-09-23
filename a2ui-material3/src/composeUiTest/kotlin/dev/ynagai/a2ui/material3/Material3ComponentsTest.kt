@@ -1,9 +1,11 @@
 package dev.ynagai.a2ui.material3
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -14,20 +16,24 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.v2.runComposeUiTest
 import dev.ynagai.a2ui.compose.A2uiPlaceholder
 import dev.ynagai.a2ui.compose.A2uiPlaceholderReason
@@ -117,6 +123,482 @@ class Material3ComponentsTest {
             val date = onNodeWithText("date").fetchSemanticsNode().boundsInRoot
             assertTrue(date.width > 0f, "the trailing text should have been given room: $date")
         }
+    }
+
+    @Test
+    fun a_long_text_in_a_row_shares_the_width_rather_than_taking_it() = runComposeUiTest {
+        // The specification's `13_coffee-order` shape -- a `spaceBetween` row holding a column of
+        // texts and a price -- with an item name long enough to wrap. Compose's own `Row` measures
+        // the column first against the whole width, the name wraps at that width, and the price
+        // measures at zero. The upstream issue (a2ui-project/a2ui#2710) calls it main-axis space
+        // starvation, and it is the case `claimsMainAxis` could not reach: nothing here fills.
+        setContent { Surface(LONG_NAME_BESIDE_PRICE, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val price = onNodeWithText("$4.50").fetchSemanticsNode().boundsInRoot
+        assertTrue(price.width > 0f, "the price should have been given room: $price")
+        assertTrue(
+            price.right <= root.right && price.left > root.left + root.width / 2f,
+            "the price should sit in the right half, on screen: $price within $root",
+        )
+    }
+
+    @Test
+    fun a_long_text_does_not_starve_a_leaf_that_comes_after_it() = runComposeUiTest {
+        // The same failure with a `Button` as the sibling. A leaf with a size of its own is exactly
+        // what a sequential measure hands nothing to once a wrapping text has taken the width first.
+        setContent { Surface(LONG_TEXT_THEN_BUTTON, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val button = onNodeWithText("Go").fetchSemanticsNode().boundsInRoot
+        assertTrue(button.width > 0f && button.right <= root.right, "the button should be drawn on screen: $button in $root")
+    }
+
+    @Test
+    fun two_long_texts_in_a_row_both_get_room() = runComposeUiTest {
+        // Neither has a claim on the other: both wrap, so both shrink, and the second is not left
+        // with what the first did not want. Flexbox's answer, which is the web renderers'.
+        setContent { Surface(TWO_LONG_TEXTS, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val first = onNodeWithText(LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText(LONG_TEXT_B).fetchSemanticsNode().boundsInRoot
+        assertTrue(first.width > 0f && second.width > 0f, "both texts should be drawn: $first, $second")
+        assertTrue(second.right <= root.right + 1f, "the second text should not run off the row: $second in $root")
+        assertTrue(second.left >= first.right, "the texts should not overlap: $first then $second")
+    }
+
+    @Test
+    fun a_card_around_a_banner_image_is_not_measured_to_nothing() = runComposeUiTest {
+        // A `largeFeature` image fills whatever width it is given, so the card around it has no
+        // preferred width to report -- an intrinsic query answers zero. A layout that shared the
+        // row from preferred sizes alone measured the card to zero and it vanished, text and all.
+        setContent { Surface(CARD_OF_BANNER_BESIDE_TEXT, width = PHONE_WIDTH) }
+        val caption = onNodeWithText("in the card").fetchSemanticsNode().boundsInRoot
+        val beside = onNodeWithText("beside the card").fetchSemanticsNode().boundsInRoot
+        assertTrue(caption.width > 0f, "the card's own text should be drawn: $caption")
+        assertTrue(beside.width > 0f && beside.left >= caption.right, "the text beside it should keep its place: $beside after $caption")
+    }
+
+    @Test
+    fun a_weighted_child_is_not_cut_to_a_share_of_the_preferred_sizes_it_shares_with() = runComposeUiTest {
+        // A column asks an inner column how tall it would like to be, and measures it to the
+        // answer. The inner column measures its weighted children to their shares, so the sum of
+        // their preferred sizes is not the answer: at that height a `weight: 1` text beside a
+        // `weight: 9` one is handed a tenth of what it asked for and cut to nothing. The answer
+        // is the height at which the most demanding child's share reaches its preferred size.
+        setContent { Surface(WEIGHTED_COLUMN_IN_A_COLUMN, width = PHONE_WIDTH) }
+        val a = onNodeWithText(LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        val b = onNodeWithText("short").fetchSemanticsNode().boundsInRoot
+        val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+        assertTrue(a.height >= 40f, "the weighted text keeps its lines: $a")
+        assertTrue(after.top >= b.bottom, "the text after the column sits below it: $after under $b")
+    }
+
+    @Test
+    fun a_text_under_two_dozen_nested_containers_is_laid_out_in_a_moment() = runComposeUiTest {
+        // Alternating rows and columns, one inside the next, as deep as a surface may nest. A
+        // container asked its size asks each child three questions and a child container asks
+        // its own the same, which is three to the depth unless the answers are shared down the
+        // chain: eighteen levels took forty seconds before they were. Wall-clock bounds are not
+        // asserted; without the sharing this test does not finish, which is assertion enough.
+        val depth = 22
+        val components = buildString {
+            append("""[{"id":"root","component":"Column","children":["w0","after"]},""")
+            for (i in 0 until depth) {
+                append("""{"id":"w$i","component":"${if (i % 2 == 0) "Row" else "Column"}","children":["w${i + 1}"]},""")
+            }
+            append("""{"id":"w$depth","component":"Text","text":"leaf"},""")
+            append("""{"id":"after","component":"Text","text":"after"}]""")
+        }
+        setContent { Surface(components, width = PHONE_WIDTH) }
+        val leaf = onNodeWithText("leaf").fetchSemanticsNode().boundsInRoot
+        val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+        assertTrue(leaf.width > 0f && after.top >= leaf.bottom, "the leaf is drawn and the text after it below: $leaf, $after")
+    }
+
+    @Test
+    fun a_card_of_only_a_banner_asks_the_row_for_a_share() = runComposeUiTest {
+        // A card has no size of its own: it is its content plus padding. Around an image that
+        // fills whatever it is given, that is sixty-four pixels of margin around nothing, and a
+        // row that took the number at face value measured the card to it -- the image inside drew
+        // at no width at all. What the child says has to include what it wraps.
+        setContent { Surface(CARD_OF_ONLY_A_BANNER_BESIDE_TEXT, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val image = onNodeWithContentDescription("banner").fetchSemanticsNode().boundsInRoot
+        val beside = onNodeWithText("beside the card").fetchSemanticsNode().boundsInRoot
+        assertTrue(image.width > root.width / 4, "the banner gets a share of the row: $image in $root")
+        assertTrue(beside.width > 0f && beside.left >= image.right, "the text keeps its place: $beside after $image")
+    }
+
+    @Test
+    fun a_banner_under_a_stack_of_cards_still_asks_the_row_for_a_share() = runComposeUiTest {
+        // The same claim below a depth nobody would write by hand, because the walk that answers
+        // it used to stop at eight levels and take the card's own declaration from there: the
+        // ninth card reported the padding of the eight above it, was measured to that, and the
+        // text beside it was pushed off a phone. The renderer draws to twenty-four levels, so
+        // that is how far the question goes.
+        setContent { Surface(BANNER_UNDER_TEN_CARDS, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
+        assertTrue(beside.width > 0f, "the text beside the cards is drawn: $beside")
+        assertTrue(beside.right <= root.right + 1f, "and stays on the row: $beside in $root")
+    }
+
+    @Test
+    fun a_wrapper_shared_by_two_cards_answers_for_both() = runComposeUiTest {
+        // One column of a banner drawn in two cards. The walk that asks what a wrapper wraps kept
+        // one visited set for everything it had seen, so the second card found the column already
+        // visited, took it for a cycle and answered with its own declaration: the outer column
+        // was content-sized, measured to its cards' padding, and both banners drew at nothing.
+        setContent { Surface(ONE_BANNER_IN_TWO_CARDS_BESIDE_TEXT, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val banners = onAllNodesWithContentDescription("banner").fetchSemanticsNodes().map { it.boundsInRoot }
+        assertEquals(2, banners.size, "the shared banner is drawn under both cards: $banners")
+        for (banner in banners) {
+            assertTrue(banner.width > root.width / 4, "each banner gets a share of the row: $banner in $root")
+        }
+    }
+
+    @Test
+    fun a_weighted_child_is_held_to_its_share_below_its_own_minimum() = runComposeUiTest {
+        // The one place the layout is not flexbox, on purpose. A web renderer would hold the
+        // weighted text with the unbreakable word at its min-content and push its sibling off the
+        // row; here both keep the half the agent asked for, and the long word is cut instead.
+        setContent { Surface(WEIGHTED_TEXTS_ONE_UNBREAKABLE, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val short = onNodeWithText("short").fetchSemanticsNode().boundsInRoot
+        val long = onNodeWithText(UNBREAKABLE_WORD).fetchSemanticsNode().boundsInRoot
+        assertTrue(long.width <= root.width * 0.55f, "the long word is held to its share: $long in $root")
+        assertTrue(short.width >= root.width * 0.45f, "its sibling keeps its share: $short in $root")
+        assertTrue(short.right <= root.right + 1f, "and stays on the row: $short in $root")
+    }
+
+    @Test
+    fun a_row_sized_for_a_column_leaves_the_video_its_real_height() = runComposeUiTest {
+        // A column asks a row how tall it will be. The row answered for a plan in which an empty
+        // row beside a video takes half the width; drawn, the empty row takes nothing, the video
+        // takes the row, and a video twice as wide is twice as tall -- over the text below it.
+        setContent { Surface(EMPTY_ROW_AND_VIDEO_ABOVE_TEXT, width = PHONE_WIDTH) }
+        assertVideoAboveText()
+    }
+
+    @Test
+    fun a_row_sized_for_a_column_counts_a_capped_image_at_its_cap() = runComposeUiTest {
+        // The same answer from the other kind of filler: the default image stops at 300dp, and
+        // on a wide screen the plan's equal share for it is far more than it takes.
+        setContent { Surface(CAPPED_IMAGE_AND_VIDEO_ABOVE_TEXT, width = 1000.dp) }
+        assertVideoAboveText()
+    }
+
+    @Test
+    fun a_row_holding_a_filler_is_held_to_its_answer_beside_a_weighted_sibling() = runComposeUiTest {
+        // The other side of the video: a row with one filler answers exactly, so it is held to
+        // its answer. Let it grow into the room instead and its full-width image takes the whole
+        // row, and the weighted text beside it is measured at nothing.
+        setContent { Surface(ROW_WITH_A_BANNER_BESIDE_WEIGHTED_TEXT, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val rest = onNodeWithText("takes the rest").fetchSemanticsNode().boundsInRoot
+        assertTrue(rest.width >= root.width / 2, "the weighted text keeps its share: $rest in $root")
+    }
+
+    @Test
+    fun a_row_holding_a_vertical_divider_is_held_to_its_height_in_a_column() = runComposeUiTest {
+        // A vertical divider fills whatever height it is offered. Offered the column's room, the
+        // row it sits in is as tall as the screen, and the text after it -- weighted or not --
+        // is pushed to the bottom or measured at nothing.
+        for (weighted in listOf(false, true)) {
+            setContent { Surface(rowWithADividerAboveText(weighted), width = PHONE_WIDTH) }
+            val x = onNodeWithText("x").fetchSemanticsNode().boundsInRoot
+            val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+            assertTrue(after.height > 0f, "the text after the row is drawn (weighted=$weighted): $after")
+            assertTrue(after.top <= x.bottom + 48f, "and follows the row (weighted=$weighted): $after after $x")
+        }
+    }
+
+    @Test
+    fun a_row_sized_for_a_column_leaves_a_weighted_video_its_real_height() = runComposeUiTest {
+        // A filler before the weighted children is counted at its share before theirs is cut;
+        // an empty row takes none of it, and the weighted video is drawn at twice the width.
+        setContent { Surface(EMPTY_ROW_AND_WEIGHTED_VIDEO_ABOVE_TEXT, width = PHONE_WIDTH) }
+        assertVideoAboveText()
+    }
+
+    @Test
+    fun a_row_of_two_banners_in_a_column_still_leaves_its_weighted_sibling_room() = runComposeUiTest {
+        // Two fillers in the inner row, and a column around the outer one asking its height: the
+        // inner row's height is uncertain, its width is not, and the weighted text keeps a share.
+        setContent { Surface(TWO_BANNERS_BESIDE_WEIGHTED_TEXT_IN_A_COLUMN, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val rest = onNodeWithText("takes the rest").fetchSemanticsNode().boundsInRoot
+        assertTrue(rest.width >= root.width / 4, "the weighted text keeps a share: $rest in $root")
+    }
+
+    @Test
+    fun a_row_of_a_divider_and_two_empty_rows_is_held_to_its_height_in_a_column() = runComposeUiTest {
+        // Two fillers beside a vertical divider: the row's height is the text's, and a divider
+        // offered more would take the column.
+        for (weighted in listOf(false, true)) {
+            setContent { Surface(rowWithADividerAndTwoEmptyRowsAboveText(weighted), width = PHONE_WIDTH) }
+            val x = onNodeWithText("x").fetchSemanticsNode().boundsInRoot
+            val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+            assertTrue(after.height > 0f, "the text after the row is drawn (weighted=$weighted): $after")
+            assertTrue(after.top <= x.bottom + 48f, "and follows the row (weighted=$weighted): $after after $x")
+        }
+    }
+
+    private fun ComposeUiTest.assertVideoAboveText() {
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val video = onNodeWithContentDescription("Video").fetchSemanticsNode().boundsInRoot
+        val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+        assertTrue(video.top >= root.top - 1f, "the video starts inside the surface: $video in $root")
+        assertTrue(after.top >= video.bottom - 1f, "the text below starts below the video: $after under $video")
+    }
+
+    @Test
+    fun a_field_in_a_wide_row_keeps_its_natural_width() = runComposeUiTest {
+        // The other half of a field filling a row: on a screen with room, it takes Material's
+        // 280dp and not the whole row, which is what the web renderers draw for a weightless
+        // input (`flex: 0 1 auto`) and what leaves `justify` something to arrange. Drawn at the
+        // harness's own width, which is wide.
+        setContent { Surface(FIELD_AND_BUTTON) }
+        val field = onNodeWithText("Search").fetchSemanticsNode().boundsInRoot
+        // Material's `TextFieldDefaults.MinWidth`, at the harness's density of one.
+        assertTrue(field.width <= 280f, "a field with room should take its natural width, not the row: $field")
+    }
+
+    @Test
+    fun a_row_under_a_right_to_left_locale_puts_its_first_child_on_the_right() = runComposeUiTest {
+        // `Arrangement.Horizontal.arrange` already takes the layout direction and hands back
+        // physical x positions; placing those relatively mirrored them a second time, and an RTL
+        // row read left-to-right with `start` and `end` swapped.
+        setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Surface(TWO_SHORT_TEXTS, width = PHONE_WIDTH)
+            }
+        }
+        val first = onNodeWithText("first").fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText("second").fetchSemanticsNode().boundsInRoot
+        assertTrue(first.left >= second.right, "in RTL the first child sits to the right of the second: $first, $second")
+    }
+
+    @Test
+    fun an_enormous_weight_does_not_crash_the_row() = runComposeUiTest {
+        // `1e38` passes `weightOf` -- it is a finite `Float` -- and multiplied by the free width it
+        // overflowed to infinity, which `roundToInt` saturates to `Int.MAX_VALUE`, a width
+        // `Constraints` cannot hold. The share arithmetic is done in doubles now.
+        setContent { Surface(HUGE_WEIGHT_BESIDE_ONE, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val heavy = onNodeWithText("heavy").fetchSemanticsNode().boundsInRoot
+        // The unit-weighted sibling's share is genuinely nothing; the assertion is that the row
+        // measured and the heavy child took the row rather than an unrepresentable width.
+        assertTrue(
+            heavy.width > root.width * 0.8f && heavy.right <= root.right + 1f,
+            "the weighted child takes the row and stays on screen: $heavy in $root",
+        )
+    }
+
+    @Test
+    fun two_very_long_texts_still_share_the_row_fairly() = runComposeUiTest {
+        // Long enough that the deficit times a preferred width passes `Int.MAX_VALUE`: the
+        // proportional cut was computed in `Int` and wrapped, so nobody was pinned, the loop
+        // stopped, and the rounding clean-up drained the first text to its floor.
+        setContent { Surface(TWO_VERY_LONG_TEXTS, width = PHONE_WIDTH) }
+        val first = onNodeWithText(VERY_LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText(VERY_LONG_TEXT_B).fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            first.width > 60f && second.width > 60f,
+            "both texts should keep a fair share of the row: $first, $second",
+        )
+    }
+
+    @Test
+    fun an_unbreakable_token_wider_than_constraints_can_hold_does_not_crash_the_row() = runComposeUiTest {
+        // A text's minimum intrinsic width is its longest word, and an agent can make that any
+        // length. `Constraints` holds at most 2^18 - 2 in one dimension, so a floor past that has
+        // to be clamped before it becomes a measurement constraint.
+        setContent { Surface(UNBREAKABLE_TOKEN_BESIDE_TEXT, width = PHONE_WIDTH) }
+        val token = onNodeWithText("x".repeat(40_000)).fetchSemanticsNode().boundsInRoot
+        val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
+        assertTrue(token.width > 0f && beside.width > 0f, "both children measured: $token, $beside")
+    }
+
+    @Test
+    fun a_host_markdown_renderer_that_cannot_be_asked_does_not_crash_a_row() = runComposeUiTest {
+        // What a `Text` draws is the host's. A renderer built on a `SubcomposeLayout` --
+        // `BoxWithConstraints` is one -- raises on the intrinsic query, from inside the row's own
+        // measure pass; the row catches it, remembers, and measures the text without asking.
+        setContent {
+            CompositionLocalProvider(LocalA2uiMarkdownRenderer provides SubcomposingMarkdown) {
+                Surface(TWO_SHORT_TEXTS, width = PHONE_WIDTH)
+            }
+        }
+        val first = onNodeWithText("first").fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText("second").fetchSemanticsNode().boundsInRoot
+        assertTrue(first.width > 0f && second.width > 0f, "both texts drawn: $first, $second")
+    }
+
+    @Test
+    fun a_host_image_loader_that_cannot_be_asked_does_not_crash_a_row() = runComposeUiTest {
+        // The same seam for `Image` and a `Video`'s poster: Coil's `SubcomposeAsyncImage` is a
+        // `SubcomposeLayout`, and the row survives the refusal the same way. A filling image is
+        // never asked directly, so the fixture asks through a fixed-size one and a card.
+        setContent {
+            CompositionLocalProvider(LocalA2uiImageLoader provides SubcomposingImageLoader) {
+                Surface(IMAGE_AND_VIDEO_BESIDE_TEXT, width = PHONE_WIDTH)
+            }
+        }
+        val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
+        assertTrue(beside.width > 0f, "the text beside the media is drawn: $beside")
+    }
+
+    @Test
+    fun a_tabs_inside_a_row_leaves_room_for_the_text_beside_it() = runComposeUiTest {
+        // A tab strip measures itself across whatever it is offered, so in a row it is a filler.
+        // It sits in a row beside a text, and inside a card in the same row, so that the container
+        // above it and the one above that both have to share around it.
+        setContent { Surface(TABS_IN_A_ROW, width = PHONE_WIDTH) }
+        val beside = onNodeWithText("beside").fetchSemanticsNode().boundsInRoot
+        assertTrue(beside.width > 0f, "the text beside the tabs is drawn: $beside")
+    }
+
+    @Test
+    fun a_spaced_column_under_a_right_to_left_locale_keeps_its_children_in_order() = runComposeUiTest {
+        // `Arrangement.SpaceBetween` and its kin are both `Horizontal` and `Vertical`, so a
+        // dispatch on the arrangement's type sent a column's through the horizontal overload,
+        // which mirrors under RTL -- and the column read bottom to top.
+        setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Surface(SPACED_COLUMN, width = PHONE_WIDTH)
+            }
+        }
+        val first = onNodeWithText("first").fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText("second").fetchSemanticsNode().boundsInRoot
+        assertTrue(first.bottom <= second.top, "the first child stays above the second: $first, $second")
+    }
+
+    @Test
+    fun two_children_that_cannot_be_asked_share_the_row_between_them() = runComposeUiTest {
+        // Two host renderers built on a `LazyColumn`, side by side. Neither can be asked its
+        // size, so the row measures them as they come -- but sharing what is left between the
+        // ones still to come, not handing the first the lot: measured in order against the whole
+        // width, the first wraps its text at the row and the second measures at zero, which is the
+        // starvation this layout exists to end, back again by a different door.
+        val registry = Material3Components.Basic.with(
+            mapOf(
+                "Feed" to ComponentRenderer { scope, m ->
+                    LazyColumn(m) { item { Text(scope.string("text").orEmpty()) } }
+                },
+            ),
+        )
+        setContent {
+            Box(Modifier.size(PHONE_WIDTH, SURFACE_HEIGHT)) {
+                MaterialTheme { A2uiSurface(rendererFor(TWO_FEEDS), SURFACE, registry) }
+            }
+        }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val first = onNodeWithText(LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        val second = onNodeWithText(LONG_TEXT_B).fetchSemanticsNode().boundsInRoot
+        assertTrue(first.width > 0f && second.width > 0f, "both feeds drawn: $first, $second")
+        assertTrue(second.right <= root.right + 1f, "the second feed stays on the row: $second in $root")
+        assertTrue(second.left >= first.right, "the feeds do not overlap: $first then $second")
+    }
+
+    @Test
+    fun a_child_that_arrives_late_is_not_charged_with_an_earlier_siblings_refusal() = runComposeUiTest {
+        // The row's first child is a component the surface does not hold yet, drawn by the default
+        // placeholder as nothing at all; its second is a host renderer that refuses intrinsic
+        // queries. When the first arrives, everything after it moves one place along the
+        // measurables, and a refusal remembered by that position lands on the newcomer: a long
+        // text measured as one with nothing to say, held to the half of the row the fallback
+        // shares among such children, when the feed beside it wants a fraction of that.
+        val registry = Material3Components.Basic.with(
+            mapOf(
+                "Feed" to ComponentRenderer { scope, m ->
+                    LazyColumn(m) { item { Text(scope.string("text").orEmpty()) } }
+                },
+            ),
+        )
+        val renderer = rendererFor(LATE_TEXT_BESIDE_A_FEED)
+        setContent {
+            Box(Modifier.size(PHONE_WIDTH, SURFACE_HEIGHT)) {
+                MaterialTheme { A2uiSurface(renderer, SURFACE, registry) }
+            }
+        }
+        waitForIdle()
+        renderer.apply(
+            A2uiJson.strict.decodeFromString(
+                AgentToRendererMessage.serializer(),
+                """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
+                    {"id":"a","component":"Text","text":"$LONG_TEXT_A"}
+                ]}}""",
+            ),
+        )
+        waitForIdle()
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val text = onNodeWithText(LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        assertTrue(text.width > root.width * 0.6f, "the late text gets what the feed leaves, not half the row: $text in $root")
+    }
+
+    @Test
+    fun a_row_with_a_child_that_cannot_be_asked_is_not_cut_to_its_siblings_height() = runComposeUiTest {
+        // A column asks its rows how tall they would be, and measures each to its answer. A row
+        // holding a host renderer that refuses the question has no answer to give for that child,
+        // and one that counts it as nothing is cut to the text beside it: a three-line feed
+        // squeezed into one line, and the text below the row drawn over the two it hid. The row
+        // refuses too, and the column measures it as it comes.
+        val registry = Material3Components.Basic.with(
+            mapOf(
+                "Feed" to ComponentRenderer { _, m ->
+                    LazyColumn(m) { items(listOf("line one", "line two", "line three")) { Text(it) } }
+                },
+            ),
+        )
+        setContent {
+            Box(Modifier.size(PHONE_WIDTH, SURFACE_HEIGHT)) {
+                MaterialTheme { A2uiSurface(rendererFor(FEED_ROW_IN_A_COLUMN), SURFACE, registry) }
+            }
+        }
+        val last = onNodeWithText("line three").fetchSemanticsNode().boundsInRoot
+        val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+        assertTrue(last.height > 0f, "the feed keeps its height: $last")
+        assertTrue(after.top >= last.bottom, "the text after the row sits below the whole feed: $after under $last")
+    }
+
+    @Test
+    fun a_field_beside_a_long_text_shrinks_with_it_rather_than_vanishing() = runComposeUiTest {
+        // A field is content-sized like the web's `<input>`: 280dp when there is room, less when
+        // there is not, in proportion with the text beside it. Measured as a filler it would have
+        // been handed what the text left, and a text that wraps at the row leaves nothing.
+        setContent { Surface(FIELD_BESIDE_LONG_TEXT, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val field = onNodeWithText("Search").fetchSemanticsNode().boundsInRoot
+        val text = onNodeWithText(LONG_TEXT_A).fetchSemanticsNode().boundsInRoot
+        assertTrue(field.width >= 100f, "the field keeps a usable width: $field")
+        assertTrue(text.width > 0f && text.right <= root.right + 1f, "the text is drawn beside it: $text in $root")
+    }
+
+    @Test
+    fun an_empty_row_does_not_take_a_share_from_a_weighted_sibling() = runComposeUiTest {
+        // A child whose preferred size is nothing is measured as a filler, up to a share -- and
+        // an empty row takes none of it. What it did not take goes to the weighted sibling, not
+        // to nobody: the shares are cut from what is left after the fillers, not alongside them.
+        setContent { Surface(EMPTY_ROW_AND_WEIGHTED_TEXT, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val weighted = onNodeWithText("takes the rest").fetchSemanticsNode().boundsInRoot
+        assertTrue(weighted.width >= root.width * 0.8f, "the weighted text should get nearly the row: $weighted in $root")
+    }
+
+    @Test
+    fun a_column_short_of_height_sizes_a_row_by_the_text_as_it_will_wrap() = runComposeUiTest {
+        // A column that is short of height asks each row how tall it would like to be. Asked at
+        // the column's full width, a row answers for a text laid out on that width -- two lines --
+        // while the text, given its share of the row beside a price, wraps to four. A row sized
+        // from the first answer cuts the text; the plan the row measures by is the plan it
+        // answers by, so the height is the four-line one.
+        setContent { Surface(WRAPPING_ROW_IN_A_SHORT_COLUMN, width = PHONE_WIDTH, height = 200.dp) }
+        val text = onNodeWithText(LONG_TEXT_B).fetchSemanticsNode().boundsInRoot
+        val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+        // `after` is one line, so it is the ruler: the wrapped text should stand at least three of it.
+        assertTrue(text.height >= after.height * 3f - 1f, "the text should be laid out on the lines its share needs, not cut: $text against a line of ${after.height}")
+        assertTrue(after.top >= text.bottom - 1f, "the text after the row sits below all of it: $after under $text")
     }
 
     @Test
@@ -608,8 +1090,8 @@ class Material3ComponentsTest {
      * test drawn at the default size passes with or without the fix that makes it true.
      */
     @Composable
-    private fun Surface(components: String, width: Dp) {
-        Box(Modifier.size(width, SURFACE_HEIGHT)) { Surface(components) }
+    private fun Surface(components: String, width: Dp, height: Dp = SURFACE_HEIGHT) {
+        Box(Modifier.size(width, height)) { Surface(components) }
     }
 
     @Composable
@@ -727,6 +1209,247 @@ class Material3ComponentsTest {
             {"id":"bbb","component":"Text","text":"bbb"},
             {"id":"after","component":"Text","text":"AFTER"}
         ]"""
+
+        const val LONG_TEXT_A = "A first sentence that is comfortably longer than half a phone screen"
+        const val LONG_TEXT_B = "And a second one that is longer still, so neither fits beside the other"
+
+        val LONG_NAME_BESIDE_PRICE = """[
+            {"id":"root","component":"Row","children":["item_details","item_price"],
+             "justify":"spaceBetween","align":"start"},
+            {"id":"item_details","component":"Column","children":["item_name","item_size"]},
+            {"id":"item_name","component":"Text","variant":"body",
+             "text":"Caramel Macchiato with oat milk, extra shot, no foam, light ice, in a reusable cup"},
+            {"id":"item_size","component":"Text","text":"Large","variant":"caption"},
+            {"id":"item_price","component":"Text","text":"${'$'}4.50","variant":"body"}
+        ]"""
+
+        val LONG_TEXT_THEN_BUTTON = """[
+            {"id":"root","component":"Row","children":["long","go"]},
+            {"id":"long","component":"Text","text":"$LONG_TEXT_A"},
+            {"id":"go","component":"Button","child":"go_label","action":{"event":{"name":"go"}}},
+            {"id":"go_label","component":"Text","text":"Go"}
+        ]"""
+
+        val TWO_SHORT_TEXTS = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Text","text":"first"},
+            {"id":"b","component":"Text","text":"second"}
+        ]"""
+
+        val VERY_LONG_TEXT_A = (1..900).joinToString(" ") { "alpha" }
+        val VERY_LONG_TEXT_B = (1..900).joinToString(" ") { "omega" }
+
+        val HUGE_WEIGHT_BESIDE_ONE = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Text","text":"heavy","weight":1e38},
+            {"id":"b","component":"Text","text":"light","weight":1}
+        ]"""
+
+        val TWO_VERY_LONG_TEXTS = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Text","text":"$VERY_LONG_TEXT_A"},
+            {"id":"b","component":"Text","text":"$VERY_LONG_TEXT_B"}
+        ]"""
+
+        val UNBREAKABLE_TOKEN_BESIDE_TEXT = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Text","text":"${"x".repeat(40_000)}"},
+            {"id":"b","component":"Text","text":"beside"}
+        ]"""
+
+        // An avatar is content-sized, so a row asks it; a video fills, so a row does not ask it
+        // directly -- but the card around it is content, and the query recurses through the card.
+        val IMAGE_AND_VIDEO_BESIDE_TEXT = """[
+            {"id":"root","component":"Row","children":["pic","card","beside"]},
+            {"id":"pic","component":"Image","url":"https://example.invalid/a.png","variant":"avatar"},
+            {"id":"card","component":"Card","child":"clip"},
+            {"id":"clip","component":"Video","url":"https://example.invalid/a.mp4","posterUrl":"https://example.invalid/p.png"},
+            {"id":"beside","component":"Text","text":"beside"}
+        ]"""
+
+        /** A Markdown renderer whose layout is a `SubcomposeLayout`, as a host's may be. */
+        val SubcomposingMarkdown = A2uiMarkdownRenderer { source, style, color, modifier ->
+            BoxWithConstraints(modifier) { Text(source, style = style, color = color) }
+        }
+
+        /** An image loader whose layout is a `SubcomposeLayout`, as Coil's `SubcomposeAsyncImage` is. */
+        val SubcomposingImageLoader = A2uiImageLoader { _, _, _, modifier ->
+            BoxWithConstraints(modifier) { Box(Modifier.size(maxWidth, 10.dp)) }
+        }
+
+        val TABS_IN_A_ROW = """[
+            {"id":"root","component":"Row","children":["tabs","card","beside"]},
+            {"id":"tabs","component":"Tabs","tabs":[{"title":"One","child":"one"}]},
+            {"id":"one","component":"Text","text":"one"},
+            {"id":"card","component":"Card","child":"inner_tabs"},
+            {"id":"inner_tabs","component":"Tabs","tabs":[{"title":"Two","child":"two"}]},
+            {"id":"two","component":"Text","text":"two"},
+            {"id":"beside","component":"Text","text":"beside"}
+        ]"""
+
+        val SPACED_COLUMN = """[
+            {"id":"root","component":"Column","children":["a","b"],"justify":"spaceBetween"},
+            {"id":"a","component":"Text","text":"first"},
+            {"id":"b","component":"Text","text":"second"}
+        ]"""
+
+        val TWO_LONG_TEXTS = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Text","text":"$LONG_TEXT_A"},
+            {"id":"b","component":"Text","text":"$LONG_TEXT_B"}
+        ]"""
+
+        val WEIGHTED_COLUMN_IN_A_COLUMN = """[
+            {"id":"root","component":"Column","children":["inner","after"]},
+            {"id":"inner","component":"Column","children":["a","b"]},
+            {"id":"a","component":"Text","text":"$LONG_TEXT_A","weight":1},
+            {"id":"b","component":"Text","text":"short","weight":9},
+            {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        val CARD_OF_ONLY_A_BANNER_BESIDE_TEXT = """[
+            {"id":"root","component":"Row","children":["card","beside"]},
+            {"id":"card","component":"Card","child":"banner"},
+            {"id":"banner","component":"Image","url":"https://example.invalid/banner.png","variant":"largeFeature","description":"banner"},
+            {"id":"beside","component":"Text","text":"beside the card"}
+        ]"""
+
+        val CARD_OF_BANNER_BESIDE_TEXT = """[
+            {"id":"root","component":"Row","children":["card","beside"]},
+            {"id":"card","component":"Card","child":"card_col"},
+            {"id":"card_col","component":"Column","children":["banner","caption"]},
+            {"id":"banner","component":"Image","url":"https://example.invalid/banner.png","variant":"largeFeature"},
+            {"id":"caption","component":"Text","text":"in the card"},
+            {"id":"beside","component":"Text","text":"beside the card"}
+        ]"""
+
+        val LATE_TEXT_BESIDE_A_FEED = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"b","component":"Feed","text":"feed"}
+        ]"""
+
+        val FEED_ROW_IN_A_COLUMN = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["feed","beside"]},
+            {"id":"feed","component":"Feed"},
+            {"id":"beside","component":"Text","text":"beside"},
+            {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        val TWO_FEEDS = """[
+            {"id":"root","component":"Row","children":["a","b"]},
+            {"id":"a","component":"Feed","text":"$LONG_TEXT_A"},
+            {"id":"b","component":"Feed","text":"$LONG_TEXT_B"}
+        ]"""
+
+        val FIELD_BESIDE_LONG_TEXT = """[
+            {"id":"root","component":"Row","children":["f","t"]},
+            {"id":"f","component":"TextField","label":"Search","value":{"path":"/typed"}},
+            {"id":"t","component":"Text","text":"$LONG_TEXT_A"}
+        ]"""
+
+        val EMPTY_ROW_AND_WEIGHTED_TEXT = """[
+            {"id":"root","component":"Row","children":["empty","w"]},
+            {"id":"empty","component":"Row","children":[]},
+            {"id":"w","component":"Text","text":"takes the rest","weight":1}
+        ]"""
+
+        /** A word far wider than half a phone, with nowhere to break it. */
+        const val UNBREAKABLE_WORD = "Pneumonoultramicroscopicsilicovolcanoconiosis_Pneumonoultramicroscopic"
+
+        val WEIGHTED_TEXTS_ONE_UNBREAKABLE = """[
+            {"id":"root","component":"Row","children":["long","short"]},
+            {"id":"long","component":"Text","text":"$UNBREAKABLE_WORD","weight":1},
+            {"id":"short","component":"Text","text":"short","weight":1}
+        ]"""
+
+        /** Two cards around the same column, so the trait walk reaches that column twice. */
+        val ONE_BANNER_IN_TWO_CARDS_BESIDE_TEXT = """[
+            {"id":"root","component":"Row","children":["cards","beside"]},
+            {"id":"cards","component":"Column","children":["first","second"]},
+            {"id":"first","component":"Card","child":"shared"},
+            {"id":"second","component":"Card","child":"shared"},
+            {"id":"shared","component":"Column","children":["banner"]},
+            {"id":"banner","component":"Image","url":"https://example.invalid/banner.png","variant":"largeFeature","description":"banner"},
+            {"id":"beside","component":"Text","text":"beside the cards"}
+        ]"""
+
+        val EMPTY_ROW_AND_VIDEO_ABOVE_TEXT = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["empty","video"]},
+            {"id":"empty","component":"Row","children":[]},
+            {"id":"video","component":"Video","url":"https://example.invalid/v.mp4"},
+            {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        val CAPPED_IMAGE_AND_VIDEO_ABOVE_TEXT = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["image","video"]},
+            {"id":"image","component":"Image","url":"https://example.invalid/i.png","description":"image"},
+            {"id":"video","component":"Video","url":"https://example.invalid/v.mp4"},
+            {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        val ROW_WITH_A_BANNER_BESIDE_WEIGHTED_TEXT = """[
+            {"id":"root","component":"Row","children":["row","rest"]},
+            {"id":"row","component":"Row","children":["x","banner"]},
+            {"id":"x","component":"Text","text":"x"},
+            {"id":"banner","component":"Image","url":"https://example.invalid/b.png","variant":"header","description":"banner"},
+            {"id":"rest","component":"Text","text":"takes the rest","weight":1}
+        ]"""
+
+        fun rowWithADividerAboveText(weighted: Boolean) = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["x","divider"]},
+            {"id":"x","component":"Text","text":"x"},
+            {"id":"divider","component":"Divider","axis":"vertical"},
+            {"id":"after","component":"Text","text":"after"${if (weighted) ""","weight":1""" else ""}}
+        ]"""
+
+        val EMPTY_ROW_AND_WEIGHTED_VIDEO_ABOVE_TEXT = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["empty","video"]},
+            {"id":"empty","component":"Row","children":[]},
+            {"id":"video","component":"Video","url":"https://example.invalid/v.mp4","weight":1},
+            {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        val TWO_BANNERS_BESIDE_WEIGHTED_TEXT_IN_A_COLUMN = """[
+            {"id":"root","component":"Column","children":["outer","after"]},
+            {"id":"outer","component":"Row","children":["inner","rest"]},
+            {"id":"inner","component":"Row","children":["x","a","b"]},
+            {"id":"x","component":"Text","text":"x"},
+            {"id":"a","component":"Image","url":"https://example.invalid/a.png","variant":"header","description":"a"},
+            {"id":"b","component":"Image","url":"https://example.invalid/b.png","variant":"header","description":"b"},
+            {"id":"rest","component":"Text","text":"takes the rest","weight":1},
+            {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        fun rowWithADividerAndTwoEmptyRowsAboveText(weighted: Boolean) = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["x","divider","e1","e2"]},
+            {"id":"x","component":"Text","text":"x"},
+            {"id":"divider","component":"Divider","axis":"vertical"},
+            {"id":"e1","component":"Row","children":[]},
+            {"id":"e2","component":"Row","children":[]},
+            {"id":"after","component":"Text","text":"after"${if (weighted) ""","weight":1""" else ""}}
+        ]"""
+
+        val WRAPPING_ROW_IN_A_SHORT_COLUMN = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["long","price"],"justify":"spaceBetween"},
+            {"id":"long","component":"Text","text":"$LONG_TEXT_B"},
+            {"id":"price","component":"Text","text":"${'$'}4.50 per portion, which is a wide price"},
+            {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        /** Ten `Card`s around a banner image -- past the depth the trait walk used to stop at. */
+        val BANNER_UNDER_TEN_CARDS = buildString {
+            append("""[{"id":"root","component":"Row","children":["w0","beside"]},""")
+            for (i in 0 until 10) append("""{"id":"w$i","component":"Card","child":"w${i + 1}"},""")
+            append("""{"id":"w10","component":"Image","url":"https://example.invalid/b.png","variant":"largeFeature"},""")
+            append("""{"id":"beside","component":"Text","text":"beside"}]""")
+        }
 
         val COLUMN_IN_ROW = """[
             {"id":"root","component":"Row","children":["col","date"]},

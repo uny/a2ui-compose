@@ -3,6 +3,7 @@ package dev.ynagai.a2ui.compose
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
+import dev.ynagai.a2ui.core.protocol.Component
 
 /**
  * Draws one kind of component.
@@ -13,6 +14,16 @@ import androidx.compose.ui.Modifier
 public fun interface ComponentRenderer {
     @Composable
     public fun Render(scope: A2uiComponentScope, modifier: Modifier)
+
+    /**
+     * How a component of this kind sits along the main axis of the `Row` or `Column` holding it.
+     *
+     * [LayoutTraits.Content] unless overridden, which is the reading a lambda registered by a host
+     * gets. See [LayoutTraits] for what the container does with the answer, and the
+     * `ComponentRenderer(traits, render)` constructors for declaring one without spelling out an
+     * object.
+     */
+    public fun layoutTraits(component: Component, axis: LayoutAxis): LayoutTraits = LayoutTraits.Content
 }
 
 /**

@@ -13,6 +13,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.RenderChild
 import dev.ynagai.a2ui.compose.rememberAllChildren
 import dev.ynagai.a2ui.compose.rememberString
@@ -51,7 +52,7 @@ import dev.ynagai.a2ui.compose.rememberString
  * natural width instead of squaring up to the widest -- visible as a ragged edge down a list of
  * `Card`s, and the one place this renderer knowingly does not draw what the catalog's default says.
  */
-public val ListRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val ListRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Content) { scope, modifier ->
     val horizontal = scope.rememberString("direction") == "horizontal"
     val align = scope.rememberString("align")
     val children = scope.rememberAllChildren()

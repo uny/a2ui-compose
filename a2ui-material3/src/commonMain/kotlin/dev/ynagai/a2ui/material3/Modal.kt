@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.RenderChild
 import dev.ynagai.a2ui.compose.rememberChildren
 
@@ -81,7 +82,7 @@ import dev.ynagai.a2ui.compose.rememberChildren
  * **Open-ness is the renderer's state, like `Tabs`'s selected index.** The catalog gives a `Modal`
  * nothing to bind it to, so an agent can neither open one nor learn that it is open.
  */
-public val ModalRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val ModalRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Content) { scope, modifier ->
     var open by remember(scope) { mutableStateOf(false) }
     val trigger = scope.rememberChildren("trigger")
     val strings = LocalA2uiStrings.current

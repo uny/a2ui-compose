@@ -8,6 +8,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.firstMessage
 import dev.ynagai.a2ui.compose.hasError
 import dev.ynagai.a2ui.compose.rememberCheckFailures
@@ -28,7 +29,13 @@ import kotlinx.serialization.json.JsonPrimitive
  * an absent `value` gives the field nowhere to write, and a writable-looking field that discards
  * every keystroke reads as a broken renderer rather than as a payload that asked for one.
  */
-public val TextFieldRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val TextFieldRenderer: ComponentRenderer = ComponentRenderer(
+    // Content-sized, like the web's `<input>`: its preferred width is Material's 280dp, and it
+    // shrinks below it in proportion with its siblings when the row is short of room -- down to
+    // [INPUT_MIN_WIDTH], which [shrinkableTo] reports in place of the 280dp the field would
+    // otherwise insist on as a minimum. See the note there.
+    LayoutTraits.Content,
+) { scope, modifier ->
     val label = scope.rememberString("label")
     val placeholder = scope.rememberString("placeholder")
     val variant = scope.rememberString("variant")
@@ -48,7 +55,7 @@ public val TextFieldRenderer: ComponentRenderer = ComponentRenderer { scope, mod
         // width. A `Column` with the catalog's default `align` already stretches its children, so
         // the common case still fills; letting the container decide is what makes the uncommon
         // one survive.
-        modifier = modifier.leafMargin(),
+        modifier = modifier.leafMargin().shrinkableTo(INPUT_MIN_WIDTH),
         readOnly = target == null,
         label = label?.let { { Text(it) } },
         placeholder = placeholder?.let { { Text(it) } },

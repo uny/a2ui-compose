@@ -19,6 +19,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutAxis
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.rememberString
 
 /**
@@ -94,7 +96,17 @@ public val LocalA2uiImageLoader: ProvidableCompositionLocal<A2uiImageLoader?> =
  * the default variant has one and the two banner variants, which the guide means to sit alone at
  * the top of a surface, do not.
  */
-public val ImageRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val ImageRenderer: ComponentRenderer = ComponentRenderer(
+    // The variants that fill their container do to a row what an uncapped `fillMaxWidth` does,
+    // including the default: `mediumFeature`'s 300dp cap bounds the image but does not save the
+    // sibling, because a phone-width row has less than 300dp to give. So those ask a row for a
+    // share. The three fixed-size variants ask for a square and are content-sized; and down a
+    // column, filling the width costs a sibling nothing.
+    traits = { component, axis ->
+        val fixed = (component.enumProperty("variant") ?: "mediumFeature") in FIXED_SIZE_IMAGE_VARIANTS
+        if (axis == LayoutAxis.Horizontal && !fixed) LayoutTraits.Fill else LayoutTraits.Content
+    },
+) { scope, modifier ->
     val url = scope.rememberString("url")
     val description = scope.rememberString("description")
     val variant = scope.rememberString("variant")
@@ -138,6 +150,9 @@ internal fun String.isFetchable(): Boolean =
 
 /** The schemes an agent's `Image` may name, matching the core's own `openUrl` allowlist. */
 private val FETCHABLE_SCHEMES = setOf("http", "https")
+
+/** The `Image` variants that name a fixed square, and so cannot claim a row -- see [ImageRenderer]. */
+private val FIXED_SIZE_IMAGE_VARIANTS = setOf("icon", "avatar", "smallFeature")
 
 /** The size the guide gives each `variant`; `mediumFeature` is the catalog's default. */
 private fun Modifier.variantSize(variant: String?): Modifier = when (variant) {

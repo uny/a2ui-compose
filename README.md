@@ -183,6 +183,70 @@ own `ComponentRenderer`s, and pays nothing for a Material 3 it does not use.
 Transport is deliberately absent: the library stays transport-free, so you can drive it from SSE,
 AG-UI, a WebSocket, or a local agent loop without the library taking an opinion.
 
+### A row shares its width the way the web renderers do
+
+`Row` and `Column` are not Compose's `Row` and `Column`. The official renderers are CSS flexbox: a
+weightless child is `flex: 0 1 auto` — drawn at its preferred size, shrunk in proportion when the
+container is short of room, never below its minimum — and a weighted child grows into what is
+left. Compose's `Row` measures weightless children in order, each against whatever its
+predecessors left, so a column of text that wraps at the row's full width leaves the price beside
+it measuring at zero: the specification's `13_coffee-order` with a long item name, and every
+label/value pair in the corpus once the label is long enough
+([a2ui-project/a2ui#2710](https://github.com/a2ui-project/a2ui/issues/2710)). The two containers
+here are a `Layout` that asks its children their preferred and minimum sizes first and shares the
+axis from those, which is the flexbox algorithm; the tests hold every one of the specification's
+examples to "every text has room at 320dp".
+
+Asking a child its size is an intrinsic measurement query, and a `SubcomposeLayout` — a
+`LazyColumn`, a `BoxWithConstraints`, Coil's `SubcomposeAsyncImage`, whatever a host's renderer is
+built on — cannot answer one and raises. The container catches that, remembers which child
+refused, and measures it as it comes from then on: first, in order, sharing what the askable
+children's minimums leave with any other child that refused. A wrong guess about a renderer's
+layout costs a fair share, never a surface, and there is nothing to declare. What a renderer does
+declare is which of two things it is, as `LayoutTraits`:
+
+```kotlin
+val registry = Material3Components.Basic.with(
+    mapOf(
+        // Content-sized: drawn at its preferred size, shrunk in proportion when the row is short.
+        // Also what a renderer registered as a plain lambda gets.
+        "Badge" to ComponentRenderer(LayoutTraits.Content) { scope, modifier -> /* … */ },
+        // Fills: no preferred width of its own, like a slider's track, so it takes a share of what
+        // the content-sized children leave -- up to that share, so that a wide row keeps its slack.
+        "Chart" to ComponentRenderer(
+            traits = { _, axis -> if (axis == LayoutAxis.Horizontal) LayoutTraits.Fill else LayoutTraits.Content },
+        ) { scope, modifier -> /* … */ },
+    ),
+)
+```
+
+Of the shipped renderers, `Divider` (along its axis), `Image` (the container-filling variants),
+`Slider`, `Video`, `AudioPlayer` and `Tabs` fill a row; everything else is content, including the
+three inputs. A Material text field is 280dp wide unless given less and takes less without
+complaint, but *reports* that 280dp as its minimum, which would pin every row a field sits in at
+a width no phone has — so `TextField`, `DateTimeInput` and `ChoicePicker` report a minimum of
+120dp instead, and shrink in proportion with the text beside them the way a browser's `<input>`
+does. `Tabs` refuses to be asked at all: Material's scrollable tab row *would* answer, by
+subcomposing its tabs, and the subcomposition invalidates the layout that asked.
+
+Two things follow for a host. The container finds each child by a `Modifier.layoutId` on the
+modifier the renderer is handed, and the outermost `layoutId` on a node is the one that counts:
+chain your own after that modifier, never before it, or the child loses its `weight` and its
+traits — or, if your id is an `Int`, takes another child's. And a container that holds a child
+which cannot be asked refuses the question itself, so a surface with a `Tabs`, or a renderer of
+your own built on a `SubcomposeLayout`, anywhere in it cannot sit under a host's
+`Modifier.height(IntrinsicSize.Min)` or anything else that asks it its size — nothing above the
+surface catches the refusal. Give such a surface explicit bounds.
+
+One deliberate departure from flexbox: a child with an explicit `weight` is measured to exactly
+its share, even below its own minimum. The web would hold it at its min-content and let the row
+overflow; here the agent asked for proportions — `33_financial-data-grid` is four weighted columns
+— and a grid whose widest figure pushes the row off a phone is worse than a cell that wraps.
+
+`align: stretch`, the catalog's default on the cross axis, is still drawn as `start` — see the note
+on `crossAlignment` in `Layout.kt` for why, and for what the container's memory of refusals makes
+possible next.
+
 ## Gallery
 
 `a2ui-gallery` is the reference environment the A2UI framework adapter blueprint asks every renderer

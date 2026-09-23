@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dev.ynagai.a2ui.compose.A2uiComponentScope
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.RenderChild
 import dev.ynagai.a2ui.compose.hasError
 import dev.ynagai.a2ui.compose.rememberAction
@@ -37,7 +38,7 @@ import dev.ynagai.a2ui.compose.rememberString
  * taking the action away. The button shows no message of its own: the inputs the checks are about
  * carry theirs, and a greyed button captioned with the reason would say it twice.
  */
-public val ButtonRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val ButtonRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Content) { scope, modifier ->
     val variant = scope.rememberString("variant")
     val action = scope.rememberAction("action")
     val enabled = !scope.rememberCheckFailures().hasError()

@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.vector.PathNode
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.compose.rememberString
 import kotlinx.serialization.json.JsonObject
 
@@ -35,7 +36,7 @@ import kotlinx.serialization.json.JsonObject
  * refuses -- `CatalogValidator` is what reports it -- and a renderer that collapsed the space would
  * shift every sibling in the row as well.
  */
-public val IconRenderer: ComponentRenderer = ComponentRenderer { scope, modifier ->
+public val IconRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Content) { scope, modifier ->
     // The `svgPath` form, read before the string form. Resolved through `dynamicString` rather
     // than read as a literal, because the catalog types `svgPath` as a `DynamicString` like any
     // other -- it sits nested inside an object property, which is the one place a binding needs

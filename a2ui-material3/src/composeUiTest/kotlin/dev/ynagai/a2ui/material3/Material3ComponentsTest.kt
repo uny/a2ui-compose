@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -268,6 +269,31 @@ class Material3ComponentsTest {
         assertTrue(long.width <= root.width * 0.55f, "the long word is held to its share: $long in $root")
         assertTrue(short.width >= root.width * 0.45f, "its sibling keeps its share: $short in $root")
         assertTrue(short.right <= root.right + 1f, "and stays on the row: $short in $root")
+    }
+
+    @Test
+    fun a_row_sized_for_a_column_leaves_the_video_its_real_height() = runComposeUiTest {
+        // A column asks a row how tall it will be. The row answered for a plan in which an empty
+        // row beside a video takes half the width; drawn, the empty row takes nothing, the video
+        // takes the row, and a video twice as wide is twice as tall -- over the text below it.
+        setContent { Surface(EMPTY_ROW_AND_VIDEO_ABOVE_TEXT, width = PHONE_WIDTH) }
+        assertVideoAboveText()
+    }
+
+    @Test
+    fun a_row_sized_for_a_column_counts_a_capped_image_at_its_cap() = runComposeUiTest {
+        // The same answer from the other kind of filler: the default image stops at 300dp, and
+        // on a wide screen the plan's equal share for it is far more than it takes.
+        setContent { Surface(CAPPED_IMAGE_AND_VIDEO_ABOVE_TEXT, width = 1000.dp) }
+        assertVideoAboveText()
+    }
+
+    private fun ComposeUiTest.assertVideoAboveText() {
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val video = onNodeWithContentDescription("Video").fetchSemanticsNode().boundsInRoot
+        val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+        assertTrue(video.top >= root.top - 1f, "the video starts inside the surface: $video in $root")
+        assertTrue(after.top >= video.bottom - 1f, "the text below starts below the video: $after under $video")
     }
 
     @Test
@@ -1289,6 +1315,22 @@ class Material3ComponentsTest {
             {"id":"shared","component":"Column","children":["banner"]},
             {"id":"banner","component":"Image","url":"https://example.invalid/banner.png","variant":"largeFeature","description":"banner"},
             {"id":"beside","component":"Text","text":"beside the cards"}
+        ]"""
+
+        val EMPTY_ROW_AND_VIDEO_ABOVE_TEXT = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["empty","video"]},
+            {"id":"empty","component":"Row","children":[]},
+            {"id":"video","component":"Video","url":"https://example.invalid/v.mp4"},
+            {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        val CAPPED_IMAGE_AND_VIDEO_ABOVE_TEXT = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["image","video"]},
+            {"id":"image","component":"Image","url":"https://example.invalid/i.png","description":"image"},
+            {"id":"video","component":"Video","url":"https://example.invalid/v.mp4"},
+            {"id":"after","component":"Text","text":"after"}
         ]"""
 
         val WRAPPING_ROW_IN_A_SHORT_COLUMN = """[

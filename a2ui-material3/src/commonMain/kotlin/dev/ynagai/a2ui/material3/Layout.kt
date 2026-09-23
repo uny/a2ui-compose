@@ -432,7 +432,7 @@ private class FlexMeasurePolicy(
      * the surface's components or the registry are replaced. Not the children alone: a refusal
      * comes from anywhere beneath a child, and is passed up as the container's own, so a feed
      * replaced by a text inside a card or a nested row leaves this container's children as they
-     * were while the refusal it holds is no longer true. Any `updateComponents` therefore costs
+     * were while the refusal it holds is no longer true. An `updateComponents` therefore costs
      * every container on the surface a new policy, a measure pass, and one exception again for
      * each child that still refuses; a data model write costs none of that. What this does not
      * notice is a subtree that changes without either being replaced -- a host renderer choosing
@@ -852,9 +852,9 @@ internal val LocalFillsOfferedWidth = staticCompositionLocalOf { true }
 
 /**
  * [value], equal to another only when it is the same instance. A surface's components are a map a
- * components update always replaces and a data model write never does, so identity is the
- * question, and it is answered without walking the map as `equals` would, in every container on
- * every update.
+ * components update replaces -- unless it carries none -- and a data model write never does, so
+ * identity is the question, and it is answered without walking the map as `equals` would, in
+ * every container on every update.
  */
 private class ByIdentity(val value: Any?) {
     override fun equals(other: Any?): Boolean = other is ByIdentity && other.value === value

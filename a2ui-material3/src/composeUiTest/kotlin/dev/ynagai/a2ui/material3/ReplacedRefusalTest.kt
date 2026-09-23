@@ -236,7 +236,7 @@ class ReplacedRefusalTest {
     /** Refuses every intrinsic query, as a `SubcomposeLayout` does, counting each one. */
     private class Refusing(private val onAsked: () -> Unit) : MeasurePolicy {
         override fun MeasureScope.measure(measurables: List<Measurable>, constraints: Constraints): MeasureResult =
-            layout(constraints.constrainWidth(40), constraints.constrainHeight(40)) {}
+            40.dp.roundToPx().let { side -> layout(constraints.constrainWidth(side), constraints.constrainHeight(side)) {} }
 
         private fun refuse(): Nothing {
             onAsked()

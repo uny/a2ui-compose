@@ -2,6 +2,7 @@ package dev.ynagai.a2ui.material3
 
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.key
 import androidx.compose.ui.graphics.Color
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.LayoutTraits
@@ -25,15 +26,21 @@ import dev.ynagai.a2ui.compose.rememberString
 public val TextRenderer: ComponentRenderer = ComponentRenderer(LayoutTraits.Content) { scope, modifier ->
     val source = scope.rememberString("text")
     val caption = scope.rememberString("variant") == "caption"
-    LocalA2uiMarkdownRenderer.current.Markdown(
-        source = source.orEmpty(),
-        modifier = modifier.leafMargin(),
-        style = with(MaterialTheme.typography) { if (caption) bodySmall else bodyLarge },
-        // Unspecified is not "no colour": it tells the renderer -- the default's `Text` -- to take
-        // the colour from the style, and from `LocalContentColor` through it. Naming one here
-        // would break the inheritance a `Button` relies on to colour its label.
-        color = if (caption) LocalContentColor.current.copy(alpha = CAPTION_ALPHA) else Color.Unspecified,
-    )
+    // Keyed on the Markdown renderer for #31's reason: a host swapping it at runtime swaps the
+    // `fun interface` implementation behind this call, and on Kotlin/Native the arriving one could
+    // pick up what the outgoing one remembered -- the default `Inline` remembers its parse.
+    val markdown = LocalA2uiMarkdownRenderer.current
+    key(markdown) {
+        markdown.Markdown(
+            source = source.orEmpty(),
+            modifier = modifier.leafMargin(),
+            style = with(MaterialTheme.typography) { if (caption) bodySmall else bodyLarge },
+            // Unspecified is not "no colour": it tells the renderer -- the default's `Text` -- to
+            // take the colour from the style, and from `LocalContentColor` through it. Naming one
+            // here would break the inheritance a `Button` relies on to colour its label.
+            color = if (caption) LocalContentColor.current.copy(alpha = CAPTION_ALPHA) else Color.Unspecified,
+        )
+    }
 }
 
 private const val CAPTION_ALPHA = 0.7f

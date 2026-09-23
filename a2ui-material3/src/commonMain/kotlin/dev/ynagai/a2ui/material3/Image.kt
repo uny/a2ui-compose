@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +59,11 @@ import dev.ynagai.a2ui.compose.rememberString
  *
  * `data:` is refused too, so a host that wants inline images registers its own `Image` renderer --
  * the same escape hatch `Icon` offers for a host that wants the real Material Symbols set.
+ *
+ * **Hand over the same instance every time.** `Image`'s and `Video`'s calls to [Image] are keyed on
+ * the loader instance (#31), so a loader rebuilt on every recomposition of the scope providing it
+ * -- the example above, if that scope recomposes -- drops whatever it `remember`ed for each image,
+ * its request state included. Hoist it to a top-level `val` or `remember` it.
  */
 @Stable
 public fun interface A2uiImageLoader {
@@ -119,7 +125,10 @@ public val ImageRenderer: ComponentRenderer = ComponentRenderer(
         .clip(if (variant == "avatar") CircleShape else MaterialTheme.shapes.small)
     val loader = LocalA2uiImageLoader.current
     if (loader != null && url != null && url.isFetchable()) {
-        loader.Image(url, description, contentScale(fit), sized)
+        // Keyed on the loader for #31's reason: a host swapping loaders at runtime swaps the
+        // `fun interface` implementation behind this call, and on Kotlin/Native the arriving one
+        // could pick up what the outgoing one remembered.
+        key(loader) { loader.Image(url, description, contentScale(fit), sized) }
     } else {
         Box(
             sized

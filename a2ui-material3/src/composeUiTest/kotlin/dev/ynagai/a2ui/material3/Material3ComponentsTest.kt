@@ -313,6 +313,37 @@ class Material3ComponentsTest {
         }
     }
 
+    @Test
+    fun a_row_sized_for_a_column_leaves_a_weighted_video_its_real_height() = runComposeUiTest {
+        // A filler before the weighted children is counted at its share before theirs is cut;
+        // an empty row takes none of it, and the weighted video is drawn at twice the width.
+        setContent { Surface(EMPTY_ROW_AND_WEIGHTED_VIDEO_ABOVE_TEXT, width = PHONE_WIDTH) }
+        assertVideoAboveText()
+    }
+
+    @Test
+    fun a_row_of_two_banners_in_a_column_still_leaves_its_weighted_sibling_room() = runComposeUiTest {
+        // Two fillers in the inner row, and a column around the outer one asking its height: the
+        // inner row's height is uncertain, its width is not, and the weighted text keeps a share.
+        setContent { Surface(TWO_BANNERS_BESIDE_WEIGHTED_TEXT_IN_A_COLUMN, width = PHONE_WIDTH) }
+        val root = onRoot().fetchSemanticsNode().boundsInRoot
+        val rest = onNodeWithText("takes the rest").fetchSemanticsNode().boundsInRoot
+        assertTrue(rest.width >= root.width / 4, "the weighted text keeps a share: $rest in $root")
+    }
+
+    @Test
+    fun a_row_of_a_divider_and_two_empty_rows_is_held_to_its_height_in_a_column() = runComposeUiTest {
+        // Two fillers beside a vertical divider: the row's height is the text's, and a divider
+        // offered more would take the column.
+        for (weighted in listOf(false, true)) {
+            setContent { Surface(rowWithADividerAndTwoEmptyRowsAboveText(weighted), width = PHONE_WIDTH) }
+            val x = onNodeWithText("x").fetchSemanticsNode().boundsInRoot
+            val after = onNodeWithText("after").fetchSemanticsNode().boundsInRoot
+            assertTrue(after.height > 0f, "the text after the row is drawn (weighted=$weighted): $after")
+            assertTrue(after.top <= x.bottom + 48f, "and follows the row (weighted=$weighted): $after after $x")
+        }
+    }
+
     private fun ComposeUiTest.assertVideoAboveText() {
         val root = onRoot().fetchSemanticsNode().boundsInRoot
         val video = onNodeWithContentDescription("Video").fetchSemanticsNode().boundsInRoot
@@ -1371,6 +1402,35 @@ class Material3ComponentsTest {
             {"id":"row","component":"Row","children":["x","divider"]},
             {"id":"x","component":"Text","text":"x"},
             {"id":"divider","component":"Divider","axis":"vertical"},
+            {"id":"after","component":"Text","text":"after"${if (weighted) ""","weight":1""" else ""}}
+        ]"""
+
+        val EMPTY_ROW_AND_WEIGHTED_VIDEO_ABOVE_TEXT = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["empty","video"]},
+            {"id":"empty","component":"Row","children":[]},
+            {"id":"video","component":"Video","url":"https://example.invalid/v.mp4","weight":1},
+            {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        val TWO_BANNERS_BESIDE_WEIGHTED_TEXT_IN_A_COLUMN = """[
+            {"id":"root","component":"Column","children":["outer","after"]},
+            {"id":"outer","component":"Row","children":["inner","rest"]},
+            {"id":"inner","component":"Row","children":["x","a","b"]},
+            {"id":"x","component":"Text","text":"x"},
+            {"id":"a","component":"Image","url":"https://example.invalid/a.png","variant":"header","description":"a"},
+            {"id":"b","component":"Image","url":"https://example.invalid/b.png","variant":"header","description":"b"},
+            {"id":"rest","component":"Text","text":"takes the rest","weight":1},
+            {"id":"after","component":"Text","text":"after"}
+        ]"""
+
+        fun rowWithADividerAndTwoEmptyRowsAboveText(weighted: Boolean) = """[
+            {"id":"root","component":"Column","children":["row","after"]},
+            {"id":"row","component":"Row","children":["x","divider","e1","e2"]},
+            {"id":"x","component":"Text","text":"x"},
+            {"id":"divider","component":"Divider","axis":"vertical"},
+            {"id":"e1","component":"Row","children":[]},
+            {"id":"e2","component":"Row","children":[]},
             {"id":"after","component":"Text","text":"after"${if (weighted) ""","weight":1""" else ""}}
         ]"""
 

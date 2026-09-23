@@ -417,14 +417,16 @@ private class FlexMeasurePolicy(
      *
      * [take] is the measure pass's `measure`, or, when a parent is asking this layout's intrinsic
      * size, an estimate from the child's own intrinsics -- the plan is the same either way, which
-     * is the point. Returns how many children it treated as fillers.
+     * is the point. With [fillersTakeNothing] the plan counts each filler as taking none of its
+     * share, the other extreme of what a filler may do; see [largestCross].
      */
     private fun distribute(
         measurables: List<IntrinsicMeasurable>,
         mainMax: Int,
         crossMax: Int,
+        fillersTakeNothing: Boolean = false,
         take: (index: Int, min: Int, max: Int) -> Int,
-    ): Int {
+    ) {
         val specs = measurables.map(::specOf)
         val bounded = mainMax != Constraints.Infinity
         var remaining = mainMax
@@ -483,7 +485,8 @@ private class FlexMeasurePolicy(
             fillers.forEachIndexed { slot, index ->
                 val left = fillers.size - slot
                 val cap = if (bounded) (remaining / (left + totalWeight)).roundToInt() else Constraints.Infinity
-                spend(take(index, 0, cap))
+                val taken = take(index, 0, cap)
+                if (!fillersTakeNothing) spend(taken)
             }
         }
 
@@ -515,7 +518,6 @@ private class FlexMeasurePolicy(
                 for (index in weighted) take(index, 0, Constraints.Infinity)
             }
         }
-        return fillers.size
     }
 
     override fun MeasureScope.measure(measurables: List<Measurable>, constraints: Constraints): MeasureResult {
@@ -608,7 +610,7 @@ private class FlexMeasurePolicy(
 
     private fun List<IntrinsicMeasurable>.largestCross(main: Int, least: Boolean): Int {
         var largest = 0
-        val fillers = distribute(this, main, Constraints.Infinity) { index, _, max ->
+        val ask = { index: Int, _: Int, max: Int ->
             // The room the plan gives this child, and what the child would take of it: its
             // preferred size when that fits, the room when it does not, all of it for a filler.
             val given = if (max == Constraints.Infinity) this[index].maxMain(index, Constraints.Infinity) ?: refuse() else max
@@ -616,13 +618,20 @@ private class FlexMeasurePolicy(
             largest = max(largest, across ?: refuse())
             given
         }
-        // The plan counts a filler at its whole share; drawn, it may take less -- an empty row
-        // takes nothing, the default image stops at 300dp -- and leave the next filler more.
-        // With one filler that changes nothing but the slack; with two, the second is wider than
-        // it was asked at, and a video twice as wide is twice as tall. There is no asking what a
-        // filler will take, so a layout whose answer rests on it has none, and is measured as it
-        // comes: a column that held such a row to the plan drew the video over the text below.
-        if (fillers > 1) refuse()
+        distribute(this, main, Constraints.Infinity, take = ask)
+        // The plan counts a filler at its whole share, and drawn it may take less -- an empty row
+        // takes nothing, the default image stops at 300dp -- which leaves the next filler, and
+        // the weighted children, wider than the plan said. A video twice as wide is twice as
+        // tall, and a column that sized a row by the plan drew its video over the text below.
+        // How much a filler takes cannot be asked, so the maximum is taken over both extremes:
+        // every filler taking its share, and every filler taking none of it, and each child is
+        // asked at the narrowest and the widest it can be drawn. Too tall costs the column
+        // nothing unless something in the row fills the height it is given -- a vertical divider
+        // beside two videos stretches to the answer and leaves a gap. Nor is it a true bound: a
+        // weighted column of a text and a video can be taller between the two extremes than at
+        // either. Both are tracked; an overlap was the worse of the failures, and this ends the
+        // common ones. The minimum stays with the plan.
+        if (!least) distribute(this, main, Constraints.Infinity, fillersTakeNothing = true, take = ask)
         return largest
     }
 

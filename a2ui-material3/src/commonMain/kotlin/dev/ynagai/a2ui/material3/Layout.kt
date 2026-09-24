@@ -1017,7 +1017,6 @@ private class FlexMeasurePolicy(
                 val high = IntArray(basis.size) { max(basis[it], floor[it]) }
                 visit(from, high, true)
                 visit(shrunkTo, low, true)
-                for (slot in basis.indices) narrowest[slot] = min(narrowest[slot], low[slot])
             }
         }
 

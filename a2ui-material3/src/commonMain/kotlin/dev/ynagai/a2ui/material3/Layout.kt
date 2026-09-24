@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.constrainWidth
 import dev.ynagai.a2ui.compose.A2uiChild
 import dev.ynagai.a2ui.compose.A2uiComponentScope
 import dev.ynagai.a2ui.compose.AxisFit
+import dev.ynagai.a2ui.compose.ComponentRegistry
 import dev.ynagai.a2ui.compose.ComponentRenderer
 import dev.ynagai.a2ui.compose.LayoutAxis
 import dev.ynagai.a2ui.compose.LayoutTraits
@@ -122,7 +123,8 @@ private fun containerTraits(component: Component, axis: LayoutAxis, own: LayoutA
  * `weight` is a property of the *child* but only a row or a column can act on it, which is why the
  * container reads it off each child on the child's behalf. [traits] are the child renderer's own
  * word on how it fits the axis -- see [LayoutTraits] -- and [across] its word on the other one,
- * which is what `align: stretch` may do to it.
+ * which is what `align: stretch` may do to it. [band] is the row or column that answers for it over
+ * a range of widths -- see [QuerySession.band] -- or null when the child is asked at single widths.
  */
 @Immutable
 private data class LaidOutChild(
@@ -130,6 +132,7 @@ private data class LaidOutChild(
     val weight: Float,
     val traits: LayoutTraits,
     val across: AxisFit,
+    val band: String?,
 )
 
 /**
@@ -157,11 +160,38 @@ private fun A2uiComponentScope.rememberLaidOutChildren(axis: LayoutAxis): List<L
                     // image that fills asks for a share, rather than for the width of its padding.
                     traits = layoutTraitsOf(child, registry, axis),
                     across = layoutTraitsOf(child, registry, axis.other()).fit,
+                    band = flexAnswering(child.componentId, surface?.components, registry),
                 )
             }
         }
     }
     return value
+}
+
+/**
+ * The row or column that answers for [id] when it is asked its height over a range of widths --
+ * see [QuerySession.band] -- or null when nothing can be trusted to carry the range there.
+ *
+ * This module's row and column answer for themselves. Its card holds its child inside padding,
+ * which narrows every width by the same amount, so the range arrives shifted and whole. Anything
+ * else -- a host's renderer, or one of these swapped for another -- may narrow a width by anything,
+ * and is asked at single widths. Compared by identity, not by type name, because a host can
+ * register a `Card` of its own. A card whose `child` is not a plain id -- which the catalog does not
+ * allow -- is not followed, nor is one that leads back to a card already walked.
+ */
+private fun flexAnswering(id: String, components: Map<String, Component>?, registry: ComponentRegistry): String? {
+    val walked = HashSet<String>()
+    var current = id
+    while (walked.add(current)) {
+        val component = components?.get(current) ?: return null
+        val renderer = registry[component.component]
+        current = when {
+            renderer === RowRenderer || renderer === ColumnRenderer -> return current
+            renderer === CardRenderer -> component.enumProperty("child") ?: return null
+            else -> return null
+        }
+    }
+    return null
 }
 
 private fun LayoutAxis.other(): LayoutAxis =
@@ -348,7 +378,10 @@ private fun crossAlignment(align: String?): CrossAlignment = when (align) {
  * counts for nothing in the minimum because it is measured to what its siblings leave. Across the
  * axis it is the largest child *at the width the plan would give it*: a text that wraps in its
  * share is taller than the same text asked at the row's full width, and a column sizing its rows
- * from the latter would cut them short.
+ * from the latter would cut them short. Where the plan cannot foretell that width -- a filler that
+ * may take less than its share, a shrunk text that may wrap narrower than its target -- a row's
+ * height is the tallest each child is drawn at over every width it can be given; see
+ * [FlexMeasurePolicy.largestCross].
  */
 @Composable
 private fun Flex(
@@ -368,8 +401,9 @@ private fun Flex(
     // see [FlexMeasurePolicy.refused] -- and a new one is taken whenever either is replaced.
     val components by remember(scope) { derivedStateOf { ByIdentity(scope.surface?.components) } }
     val registry = LocalA2uiRegistry.current
-    val policy = remember(axis, arrangement, crossAlignment, children, session, fillsWidth, components, registry) {
-        FlexMeasurePolicy(axis, arrangement, crossAlignment, children, session, fillsWidth)
+    val id = scope.component.id
+    val policy = remember(axis, arrangement, crossAlignment, children, session, fillsWidth, components, registry, id) {
+        FlexMeasurePolicy(axis, arrangement, crossAlignment, children, session, fillsWidth, id)
     }
     Layout(
         content = {
@@ -414,6 +448,8 @@ private class FlexMeasurePolicy(
     private val session: QuerySession,
     /** A column that is as wide as it is offered -- see [Flex]. */
     private val fillsWidth: Boolean,
+    /** This container's component, which a range of widths is addressed to -- see [QuerySession.band]. */
+    private val id: String,
 ) : MeasurePolicy {
     private val horizontal = axis == LayoutAxis.Horizontal
 
@@ -453,27 +489,34 @@ private class FlexMeasurePolicy(
         ((parentData as? LayoutIdParentData)?.layoutId as? Int) ?: (-1 - index)
 
     /** What the policy knows about one measurable: its child's declaration, or nothing. */
-    private class Spec(val weight: Float, val along: AxisFit, val across: AxisFit) {
+    private class Spec(val weight: Float, val along: AxisFit, val across: AxisFit, val band: String?) {
         val fill: Boolean get() = along == AxisFit.Fill
     }
 
     private fun specOf(measurable: IntrinsicMeasurable): Spec {
         val child = ((measurable.parentData as? LayoutIdParentData)?.layoutId as? Int)?.let(children::getOrNull)
-            ?: return Spec(weight = 0f, along = AxisFit.Content, across = AxisFit.Content)
-        return Spec(weight = child.weight, along = child.traits.fit, across = child.across)
+            ?: return Spec(weight = 0f, along = AxisFit.Content, across = AxisFit.Content, band = null)
+        return Spec(weight = child.weight, along = child.traits.fit, across = child.across, band = child.band)
     }
 
-    private fun IntrinsicMeasurable.ask(index: Int, query: Query, arg: Int): Int? {
+    // [band] rides along with this one question and no other: set for its duration, and put back
+    // however it ends, a refusal included. Every other question clears it, so that a range meant
+    // for one child never reaches a sibling or anything asked after it.
+    private fun IntrinsicMeasurable.ask(index: Int, query: Query, arg: Int, band: Band? = null): Int? {
         val key = keyOf(index)
         if (key in refused) return null
         val answers = session.answers
-        val cacheKey = if (answers == null) null else Asked(this, query, arg)
+        val cacheKey = if (answers == null) null else Asked(this, query, arg, band?.slack ?: 0)
         cacheKey?.let { answers!![it] }?.let { return it }
+        val held = session.band
+        session.band = band
         return try {
             query.of(this, arg).also { if (cacheKey != null) answers!![cacheKey] = it }
         } catch (refusal: IllegalStateException) {
             refused += key
             null
+        } finally {
+            session.band = held
         }
     }
 
@@ -792,7 +835,13 @@ private class FlexMeasurePolicy(
         "This layout holds a child whose intrinsic size cannot be asked, so its own cannot be either.",
     )
 
-    private fun List<IntrinsicMeasurable>.sumMain(cross: Int, least: Boolean): Int {
+    // A column asked over a range of widths -- [slack] below [cross] -- offers every child the
+    // same range, and each child counts at the tallest it is drawn anywhere in it.
+    private fun List<IntrinsicMeasurable>.sumMain(cross: Int, least: Boolean, slack: Int = 0): Int {
+        val banded = slack > 0 && cross != Constraints.Infinity
+        val preferredOf = { index: Int ->
+            if (banded) this[index].tallestOver(index, cross - slack, cross) else this[index].maxMain(index, cross)
+        }
         var sum = 0L
         // The weighted children are measured to their shares, so what they need together is the
         // size at which the share of the most demanding one reaches its preferred size -- the
@@ -805,20 +854,20 @@ private class FlexMeasurePolicy(
             val spec = specOf(this[index])
             if (spec.weight > 0f) {
                 if (least) continue
-                val preferred = this[index].maxMain(index, cross) ?: refuse()
+                val preferred = preferredOf(index) ?: refuse()
                 perUnit = max(perUnit, preferred / spec.weight.toDouble())
                 totalWeight += spec.weight
                 continue
             }
             if (least && spec.fill) continue
-            sum += (if (least) this[index].minMain(index, cross) else this[index].maxMain(index, cross))?.toLong() ?: refuse()
+            sum += (if (least) this[index].minMain(index, cross) else preferredOf(index))?.toLong() ?: refuse()
         }
         // Rounded up: a size the most demanding child needs, one pixel short, is a line cut short.
         if (totalWeight > 0.0) sum += ceil(perUnit * totalWeight).coerceAtMost(Int.MAX_VALUE.toDouble()).toLong()
         return sum.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     }
 
-    private fun List<IntrinsicMeasurable>.largestCross(main: Int, least: Boolean): Int {
+    private fun List<IntrinsicMeasurable>.largestCross(main: Int, least: Boolean, slack: Int = 0): Int {
         var largest = 0
         val ask = { index: Int, _: Int, max: Int ->
             // The room the plan gives this child, and what the child would take of it: its
@@ -833,38 +882,211 @@ private class FlexMeasurePolicy(
         // takes nothing, the default image stops at 300dp -- which leaves the next filler, and
         // the weighted children, wider than the plan said. A video twice as wide is twice as
         // tall, and a column that sized a row by the plan drew its video over the text below.
-        // How much a filler takes cannot be asked, so the maximum is taken over both extremes:
-        // every filler taking its share, and every filler taking none of it, and each child is
-        // asked at the narrowest and the widest it can be drawn. Too tall costs the column
-        // nothing unless something in the row fills the height it is given, and a child that does
-        // and whose width is its own -- a vertical divider -- is measured last, to the height the
-        // others drew; see [measure]. One whose width is not still takes the answer. Nor is this a
-        // true bound: a weighted column of a text and a video can be taller between the two
-        // extremes than at either. Both are tracked; an overlap was the worse of the failures, and
-        // this ends the common ones. The minimum stays with the plan.
-        if (!least) distribute(this, main, Constraints.Infinity, fillersTakeNothing = true, take = ask)
+        // How much a filler takes cannot be asked. Nor can what a shrunk text takes of its
+        // target, which it may wrap narrower than. So a row's height is also the tallest each
+        // child is drawn at over every width it can be given -- see [tallestOverBand] -- and it
+        // is kept at least as tall as the plan's two extremes, every filler taking its share and
+        // every filler taking none, whatever that finds: the widths the plan names are asked
+        // as they are, and a child that is tallest at exactly one of them is still answered for.
+        //
+        // An upper bound as long as each leaf grows or shrinks steadily with its width, and a
+        // loose one: a column over a range counts each child at its own tallest, a text at the
+        // narrowest and a video at the widest, which no single width draws. Too tall costs a
+        // column with room nothing -- it measures the row to the answer and spends what the row
+        // draws -- and costs one short of room a share its siblings would have had. Inside the row
+        // it costs a gap under anything that fills the height it is given: a child that does and
+        // whose width is its own -- a vertical divider -- is measured last, to the height the
+        // others drew; see [measure]. One whose width is not -- a column spreading its children
+        // -- still takes the answer. The minimum stays with the plan.
+        if (!least) {
+            distribute(this, main, Constraints.Infinity, fillersTakeNothing = true, take = ask)
+            if (horizontal && main != Constraints.Infinity) largest = max(largest, tallestOverBand(main, slack))
+        }
         return largest
     }
 
+    /**
+     * The tallest [index] is drawn when offered any width from [from] to [to].
+     *
+     * A row or a column of this module answers for the whole range itself, handed it through
+     * [QuerySession.band]; anything else is asked at both ends, which is the range for a leaf
+     * whose height only grows or only shrinks with its width -- a text, a video, an image.
+     */
+    private fun IntrinsicMeasurable.tallestOver(index: Int, from: Int, to: Int): Int? {
+        val widest = drawable(to)
+        val narrowest = drawable(max(0, min(from, to)))
+        if (narrowest >= widest) return ask(index, Query.MaxHeight, widest)
+        specOf(this).band?.let { target ->
+            return ask(index, Query.MaxHeight, widest, Band(widest - narrowest, target))
+        }
+        val atNarrowest = ask(index, Query.MaxHeight, narrowest) ?: return null
+        val atWidest = ask(index, Query.MaxHeight, widest) ?: return null
+        return max(atNarrowest, atWidest)
+    }
+
+    /**
+     * The tallest this row is drawn when offered any width from `main - slack` to [main]: the
+     * tallest child over every width the plan can give it there.
+     *
+     * The plan hands a child the most it may take, and a child is as tall as what it is handed,
+     * not as what it takes of it -- a text handed 400 wraps at 400 however narrow its widest line
+     * -- so the range to cover is of what each child is handed:
+     *
+     * - A content-sized child is handed its preferred width, or its share of a shrink, which
+     *   depends on nothing but the room. Over a range of rooms it is found by running the shrink
+     *   at each: the shrink's own rounding is not monotone -- a pixel more room can hand a child
+     *   two pixels less -- and it is plain arithmetic, cheaper than the question it saves. Past
+     *   [LARGEST_BAND] rooms it is bounded instead, by the floor and the preferred width either
+     *   side of it.
+     * - A filler is handed an equal share of what is left. Least when the content-sized children
+     *   took all they were handed and the fillers before it all of theirs; most when a shrunk
+     *   child took only its minimum -- a text wraps narrower than its target, and leaves the
+     *   difference behind it -- and the fillers before it nothing.
+     * - A weighted child is handed its share of what the fillers leave, by the same two extremes,
+     *   and a pixel either side: the shares are rounded cumulatively, so that they sum to the
+     *   room, and a share is within a pixel of its exact value but not monotone in the room.
+     *
+     * A content-sized child that was not shrunk is taken to take what it is handed: its preferred
+     * width. One that takes less anyway leaves this short -- and the plan's own extremes, asked
+     * beside it, are the floor under that.
+     */
+    private fun List<IntrinsicMeasurable>.tallestOverBand(main: Int, slack: Int): Int {
+        val specs = map(::specOf)
+        val from = max(0, main - slack)
+        val askable = ArrayList<Int>()
+        val fillers = ArrayList<Int>()
+        val weighted = ArrayList<Int>()
+        val basisOf = ArrayList<Int>()
+        val floorOf = ArrayList<Int>()
+        // Sorted as [distribute] sorts them, in the same order.
+        for (index in indices) {
+            val spec = specs[index]
+            when {
+                spec.weight > 0f -> weighted += index
+                spec.fill -> fillers += index
+                else -> {
+                    val most = this[index].maxMain(index, Constraints.Infinity) ?: refuse()
+                    val least = this[index].minMain(index, Constraints.Infinity) ?: refuse()
+                    if (most == 0) {
+                        fillers += index
+                    } else {
+                        askable += index
+                        basisOf += most
+                        floorOf += least
+                    }
+                }
+            }
+        }
+
+        // What the content-sized children are handed over the range, and the least and the most
+        // they leave behind them.
+        val basis = basisOf.toIntArray()
+        val floor = floorOf.toIntArray()
+        val narrowest = IntArray(basis.size) { Int.MAX_VALUE }
+        val widest = IntArray(basis.size)
+        var leftLeast = Int.MAX_VALUE
+        var leftMost = 0
+        val visit = { room: Int, targets: IntArray, shrunk: Boolean ->
+            var took = 0L
+            var tookLeast = 0L
+            for (slot in targets.indices) {
+                narrowest[slot] = min(narrowest[slot], targets[slot])
+                widest[slot] = max(widest[slot], targets[slot])
+                took += targets[slot]
+                tookLeast += if (shrunk) min(floor[slot], targets[slot]) else targets[slot]
+            }
+            leftLeast = min(leftLeast, (room - took).coerceAtLeast(0L).toInt())
+            leftMost = max(leftMost, (room - tookLeast).coerceAtLeast(0L).toInt())
+        }
+        val preferred = basis.sumOf { it.toLong() }
+        // Every room from the preferred sum up hands out the preferred widths, and leaves the
+        // most at the widest room and the least at the narrowest of them.
+        if (main >= preferred) {
+            visit(max(from.toLong(), preferred).toInt(), basis, false)
+            visit(main, basis, false)
+        }
+        val shrunkTo = min(main.toLong(), preferred - 1).toInt()
+        if (from <= shrunkTo) {
+            if (shrunkTo - from < LARGEST_BAND) {
+                for (room in from..shrunkTo) visit(room, shrink(basis, floor, room), true)
+            } else {
+                // Too many rooms to run: whatever the shrink hands a child lies between its floor
+                // and its preferred width -- it starts at the larger, only ever cuts, and never
+                // below the floor.
+                val low = IntArray(basis.size) { min(basis[it], floor[it]) }
+                val high = IntArray(basis.size) { max(basis[it], floor[it]) }
+                visit(from, high, true)
+                visit(shrunkTo, low, true)
+                for (slot in basis.indices) narrowest[slot] = min(narrowest[slot], low[slot])
+            }
+        }
+
+        var tallest = 0
+        askable.forEachIndexed { slot, index ->
+            tallest = max(tallest, this[index].tallestOver(index, narrowest[slot], widest[slot]) ?: refuse())
+        }
+        val totalWeight = weighted.sumOf { specs[it].weight.toDouble() }
+        var freeLeast = leftLeast
+        fillers.forEachIndexed { slot, index ->
+            val left = fillers.size - slot
+            val least = (freeLeast / (left + totalWeight)).roundToInt()
+            val most = (leftMost / (left + totalWeight)).roundToInt()
+            freeLeast = max(0, freeLeast - least)
+            tallest = max(tallest, this[index].tallestOver(index, least, most) ?: refuse())
+        }
+        // A room that cannot vary hands out exactly its shares, and a pixel either side of one
+        // would ask a text a width it is never drawn at.
+        val rounding = if (freeLeast == leftMost) 0 else 1
+        var cumulative = 0.0
+        for (index in weighted) {
+            val before = cumulative
+            cumulative += specs[index].weight
+            val atLeast = share(freeLeast, before, cumulative, totalWeight)
+            val atMost = share(leftMost, before, cumulative, totalWeight)
+            val least = (min(atLeast, atMost) - rounding).coerceAtLeast(0)
+            val most = (max(atLeast, atMost) + rounding).coerceAtMost(leftMost)
+            tallest = max(tallest, this[index].tallestOver(index, least, most) ?: refuse())
+        }
+        return tallest
+    }
+
+    // Only a maximum height is ever asked over a range of widths. The other three questions clear
+    // one that reached them, which no question this module puts does, and answer at a single width.
     override fun IntrinsicMeasureScope.minIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int = session.run {
+        session.claim(null)
         if (horizontal) measurables.sumMain(height, least = true) else measurables.largestCross(height, least = true)
     }
 
     override fun IntrinsicMeasureScope.maxIntrinsicWidth(measurables: List<IntrinsicMeasurable>, height: Int): Int = session.run {
+        session.claim(null)
         if (horizontal) measurables.sumMain(height, least = false) else measurables.largestCross(height, least = false)
     }
 
     override fun IntrinsicMeasureScope.minIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int = session.run {
+        session.claim(null)
         if (horizontal) measurables.largestCross(width, least = true) else measurables.sumMain(width, least = true)
     }
 
     override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int): Int = session.run {
-        if (horizontal) measurables.largestCross(width, least = false) else measurables.sumMain(width, least = false)
+        val slack = session.claim(id)
+        if (horizontal) measurables.largestCross(width, least = false, slack) else measurables.sumMain(width, least = false, slack)
     }
 }
 
 /** The largest size `Constraints` holds in one dimension while the other is small: 2^18 - 2. */
 private const val LARGEST_DIMENSION = (1 shl 18) - 2
+
+/** The most rooms [FlexMeasurePolicy.tallestOverBand] runs the shrink at before it bounds it instead. */
+private const val LARGEST_BAND = 4096
+
+/**
+ * The share of [free] a weighted child between [before] and [after] of [total] weight is handed:
+ * cumulative rounding, as the plan's own step 4 does it.
+ */
+private fun share(free: Int, before: Double, after: Double, total: Double): Int {
+    fun upTo(cumulative: Double) = (free.toDouble() * cumulative / total).roundToInt().coerceIn(0, free)
+    return upTo(after) - upTo(before)
+}
 
 /** One of the four intrinsic questions, so that an answer can be remembered under it. */
 private enum class Query {
@@ -901,8 +1123,25 @@ private class ByIdentity(val value: Any?) {
 /** The [QuerySession] of the outermost [Flex] above, or none at the top of a tree. */
 private val LocalQuerySession = staticCompositionLocalOf<QuerySession?> { null }
 
-/** A question put to one child, as the key its answer is remembered under for the session. */
-private data class Asked(val measurable: IntrinsicMeasurable, val query: Query, val arg: Int)
+/**
+ * A question put to one child, as the key its answer is remembered under for the session: the
+ * same height over a range of widths is another question than at the widest of them.
+ */
+private data class Asked(val measurable: IntrinsicMeasurable, val query: Query, val arg: Int, val slack: Int)
+
+/**
+ * A range of widths, handed to the one row or column [target] through the single-width
+ * question a parent can put -- "how tall at the widest of them", with [slack] the widths
+ * below it it may also be given.
+ *
+ * Relative on purpose: a card's padding narrows every width by the same amount, so the widest
+ * arrives narrowed and the range beneath it whole. Addressed, so that a container the range was
+ * not meant for answers at a single width, and cleared on the way in -- see [QuerySession.claim]
+ * -- so that it reaches nothing below its target. Carried by [QuerySession.band], and declared
+ * here rather than inside it: the Compose compiler publishes a nested class's stability into the
+ * module's ABI, and a private top-level one's it does not.
+ */
+private class Band(val slack: Int, val target: String)
 
 /**
  * The answers gathered while one intrinsic query works its way down through nested [Flex]es.
@@ -922,6 +1161,16 @@ private data class Asked(val measurable: IntrinsicMeasurable, val query: Query, 
 private class QuerySession {
     var answers: HashMap<Asked, Int>? = null
         private set
+
+    /** The [Band] handed with the question being asked, if it carries one. */
+    var band: Band? = null
+
+    /** Takes the range handed to [id], or none, and clears it either way. */
+    fun claim(id: String?): Int {
+        val handed = band
+        band = null
+        return if (handed != null && handed.target == id) handed.slack else 0
+    }
 
     inline fun run(query: () -> Int): Int {
         val opened = answers == null

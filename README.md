@@ -2,7 +2,7 @@
 
 A renderer for the [A2UI protocol](https://a2ui.org/) built on **Compose Multiplatform** — Android, iOS, desktop (JVM), macOS, and web (JS + wasmJs) from a single `commonMain`.
 
-> **Status: `0.1.0` is on Maven Central, and the API is not stable.** A `0.x` line: expect
+> **Status: `0.2.0` is on Maven Central, and the API is not stable.** A `0.x` line: expect
 > breaking changes between minor versions. See [Installation](#installation) and
 > [Roadmap](#roadmap).
 
@@ -14,7 +14,7 @@ boundary, and it lives in your binary.
 
 ```kotlin
 dependencies {
-    implementation("dev.ynagai.a2ui:a2ui-material3:0.1.0")
+    implementation("dev.ynagai.a2ui:a2ui-material3:0.2.0")
 }
 ```
 
@@ -24,8 +24,8 @@ with your own design system, `a2ui-core` for the protocol alone, which carries n
 at all:
 
 ```kotlin
-implementation("dev.ynagai.a2ui:a2ui-compose:0.1.0")
-implementation("dev.ynagai.a2ui:a2ui-core:0.1.0")
+implementation("dev.ynagai.a2ui:a2ui-compose:0.2.0")
+implementation("dev.ynagai.a2ui:a2ui-core:0.2.0")
 ```
 
 And one above, for the Markdown a `Text` draws. `a2ui-material3` renders headings, emphasis and
@@ -35,7 +35,7 @@ that does it (`org.jetbrains:markdown`) -- which is why it is a separate artifac
 default:
 
 ```kotlin
-implementation("dev.ynagai.a2ui:a2ui-material3-markdown:0.1.0")
+implementation("dev.ynagai.a2ui:a2ui-material3-markdown:0.2.0")
 ```
 
 ```kotlin

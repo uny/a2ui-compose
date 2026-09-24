@@ -200,6 +200,13 @@ jobs:
       - name: Check every published file is signed
         run: sh .github/scripts/check-published-signed.sh "$HOME/.m2/repository/dev/ynagai/a2ui"
 
+      # Central also refuses a POM without a project name, description, URL, licence, developer or
+      # SCM URL, and neither the local publish nor the consumer gate reads those. `0.2.0` was
+      # uploaded without the fourth module's name and description and failed in the portal. The
+      # same script `release-dry-run.yml` runs, on the same directory as the check above.
+      - name: Check every published POM carries what Central requires
+        run: sh .github/scripts/check-published-poms.sh "$HOME/.m2/repository/dev/ynagai/a2ui"
+
       # Uploads and validates; it does not release. The last step is a button in the Central
       # Portal, held by the person whose account it is -- which is the right place for it while
       # `publishAndReleaseToMavenCentral` exists and this is the first version to go out.

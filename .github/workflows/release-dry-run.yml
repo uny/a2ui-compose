@@ -237,11 +237,6 @@ jobs:
       - name: Check every published file is signed
         run: sh .github/scripts/check-published-signed.sh "${RUNNER_TEMP}/dry-run-m2"
 
-      # And every POM carries the fields Central validates -- see the script's header for the
-      # release that went up without them. The same file `cd.yml` runs.
-      - name: Check every published POM carries what Central requires
-        run: sh .github/scripts/check-published-poms.sh "${RUNNER_TEMP}/dry-run-m2"
-
       - name: Summarise
         if: always()
         env:
@@ -266,9 +261,9 @@ jobs:
             echo '  half is nowhere — a signature Central could not verify even if something'
             echo '  uploaded it.'
             echo
-            echo 'Not covered: the rest of Central'"'"'s own validation. The required POM fields'
-            echo 'are checked above; the staging bundle, and whether the release key is on a'
-            echo 'keyserver, are only exercised by a real upload.'
+            echo 'Not covered: Central'"'"'s own validation. The required POM fields, the staging'
+            echo 'bundle, and whether the release key is on a keyserver are only exercised by a'
+            echo 'real upload.'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload reports

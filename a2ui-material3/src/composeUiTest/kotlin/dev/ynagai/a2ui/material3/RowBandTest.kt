@@ -131,6 +131,32 @@ class RowBandTest {
         )
     }
 
+    @Test
+    fun a_weighted_column_spreading_its_children_is_as_tall_as_the_row_draws() = runComposeUiTest {
+        // A column that spreads its children fills the height it is given, and the row's answer is
+        // an upper bound on what the row draws (#106). Measured to it, the column left a gap in the
+        // row: 41px at 1200 and 89px at 1900, where it is and is not the tallest child (#107).
+        for (width in listOf(1200.dp, 1900.dp)) {
+            val spreading = rendererFor(spreadingRow("center"))
+            val stacked = rendererFor(spreadingRow("start"))
+            setContent {
+                MaterialTheme {
+                    Box {
+                        Box(Modifier.requiredSize(width, HEIGHT).testTag(IN_COLUMN)) {
+                            A2uiSurface(spreading, SURFACE, Material3Components.Basic)
+                        }
+                        Box(Modifier.requiredSize(width, HEIGHT).testTag(ALONE)) {
+                            A2uiSurface(stacked, SURFACE, Material3Components.Basic)
+                        }
+                    }
+                }
+            }
+            val below = boundsIn(IN_COLUMN, hasText(BELOW))
+            val want = boundsIn(ALONE, hasText(BELOW))
+            assertTrue(abs(below.top - want.top) <= 1f, "at $width the row is as tall as under start, ending at ${want.top}: $below")
+        }
+    }
+
     /**
      * Draws a column of [row] above a text, and [row] on its own with nothing asking it anything,
      * and asserts every video sits alike in both and the text starts where the row drawn on its own
@@ -244,6 +270,21 @@ class RowBandTest {
         override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurables: List<IntrinsicMeasurable>, width: Int) = heightAt(width)
     }
 
+    /** #107's tree: a row of an image, a column with [justify] and a column of a text and a video. */
+    private fun spreadingRow(justify: String) = """[
+        {"id":"root","component":"Column","children":["row","below"]},
+        {"id":"row","component":"Row","children":["image","col","col2"]},
+        {"id":"image","component":"Image","url":"https://example.invalid/i.png","description":"image"},
+        {"id":"col","component":"Column","weight":1,"justify":"$justify","children":["inner","after"]},
+        {"id":"inner","component":"Row","children":["t"]},
+        {"id":"t","component":"Text","text":"$LONG"},
+        {"id":"after","component":"Text","text":"AFTER"},
+        {"id":"col2","component":"Column","weight":1,"children":["t2","video"]},
+        {"id":"t2","component":"Text","text":"${List(20) { "betabetabeta" }.joinToString(" ")}"},
+        {"id":"video","component":"Video","url":"https://example.invalid/v.mp4"},
+        {"id":"below","component":"Text","text":"$BELOW"}
+    ]"""
+
     private fun rendererFor(components: String): A2uiRenderer = A2uiRenderer().also { renderer ->
         renderer.applyAll(
             listOf(
@@ -273,6 +314,7 @@ class RowBandTest {
         fun long(words: Int) = List(words) { "alphaalphaalphaalpha" }.joinToString(" ")
         val LONG = long(36)
         val AFTER = List(16) { "after" }.joinToString(" ")
+        const val BELOW = "BELOW"
         val LONG_AND_VIDEO = """
             {"id":"long","component":"Text","text":"$LONG"},
             {"id":"video","component":"Video","url":"https://example.invalid/v.mp4"}

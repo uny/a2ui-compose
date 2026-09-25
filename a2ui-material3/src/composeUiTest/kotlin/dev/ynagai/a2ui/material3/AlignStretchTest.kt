@@ -2,8 +2,10 @@ package dev.ynagai.a2ui.material3
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,6 +30,7 @@ import dev.ynagai.a2ui.compose.A2uiSurface
 import dev.ynagai.a2ui.compose.BasicCatalog
 import dev.ynagai.a2ui.compose.ComponentRegistry
 import dev.ynagai.a2ui.compose.ComponentRenderer
+import dev.ynagai.a2ui.compose.LayoutAxis
 import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
@@ -144,6 +147,17 @@ class AlignStretchTest {
             val text = bounds("two\nlines").height + 2 * LEAF_MARGIN
             assertTrue(near(row.height, text), "the row is as tall as its text (align=$align): $row for $text")
         }
+    }
+
+    @Test
+    fun a_filler_of_its_own_width_has_no_say_in_how_tall_the_row_is() = runComposeUiTest {
+        // Measured last, like the divider, to the height the text drew: a child that fills the
+        // row's height is not asked what its content would like, or a host's fixed-width box
+        // around a long text makes the whole row as tall as that text wrapped at its width.
+        setContent { Hosted(NARROW_FILLER_ROW, registry = narrowFillerRegistry) }
+        val row = onNodeWithTag(HOST).fetchSemanticsNode().boundsInRoot
+        val text = bounds("short").height + 2 * LEAF_MARGIN
+        assertTrue(near(row.height, text), "the row is as tall as its text: $row for $text")
     }
 
     @Test
@@ -282,6 +296,14 @@ class AlignStretchTest {
         mapOf("Refuser" to ComponentRenderer { _, m -> BoxWithConstraints(m) { Box(Modifier.size(40.dp)) } }),
     )
 
+    private val narrowFillerRegistry = Material3Components.Basic.with(
+        mapOf(
+            "NarrowFiller" to ComponentRenderer(
+                traits = { _, axis -> if (axis == LayoutAxis.Horizontal) LayoutTraits.Fixed else LayoutTraits.Fill },
+            ) { _, m -> Box(m.width(48.dp).fillMaxHeight()) { Text(LONG) } },
+        ),
+    )
+
     private fun ComposeUiTest.bounds(text: String): Rect =
         onNodeWithText(text).fetchSemanticsNode().boundsInRoot
 
@@ -408,6 +430,12 @@ class AlignStretchTest {
             {"id":"root","component":"Row","children":["text","divider"]${align(align)}},
             {"id":"text","component":"Text","text":"two\nlines"},
             {"id":"divider","component":"Divider","axis":"vertical"}
+        ]"""
+
+        val NARROW_FILLER_ROW = """[
+            {"id":"root","component":"Row","children":["short","filler"],"align":"start"},
+            {"id":"short","component":"Text","text":"short"},
+            {"id":"filler","component":"NarrowFiller"}
         ]"""
 
         val UNFORESEEABLE_ROW = """[

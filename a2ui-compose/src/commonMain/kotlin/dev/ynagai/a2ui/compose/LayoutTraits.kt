@@ -31,9 +31,11 @@ public enum class AxisFit {
      * Whatever room it is given. Along a main axis, a share of what is left once the [Content]
      * children are measured, up to that share -- CSS's `flex: 0 1 auto` for something whose
      * preferred size *is* the room it is given; across one, up to the line and never beyond it,
-     * with no say in how tall or wide the line is. A slider's track, a divider drawn along the
-     * axis, an image that fills its container: leaves with no size of their own along that axis,
-     * which starve a sibling if measured as content.
+     * with no say in how tall or wide the line is -- unless it is weighted in a row, where its
+     * width is its share before it is drawn and what it needs at that width counts towards the
+     * row's height, or a column spreading its children would spill. A slider's track, a divider
+     * drawn along the axis, an image that fills its container: leaves with no size of their own
+     * along that axis, which starve a sibling if measured as content.
      */
     Fill,
 

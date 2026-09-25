@@ -13,20 +13,23 @@ on:
 permissions:
   contents: read
 
-# Two tags pushed close together must not publish concurrently. `cancel-in-progress: false`
-# protects the *running* release: by the time a second tag arrives the first may already have
-# uploaded, and Central neither re-uploads nor deletes, so there is nothing to roll back to.
+# Two tags pushed close together must not publish concurrently. All three keys below are
+# load-bearing, and two of them guard different runs:
 #
-# `uny/autograph` additionally sets `queue: max`, because it publishes with
-# `automaticRelease = true` and a dropped pending run there is a release that silently never
-# happens. This workflow stops at the upload and the portal holds each deployment separately, so a
-# dropped run costs less here. Left at the default until that changes -- but know what the default
-# does: `single` holds ONE pending run and cancels it when a third tag arrives, so pushing
-# `v0.1.0`, `v0.1.1`, `v0.1.2` in quick succession drops `v0.1.1` entirely, and a cancelled run
-# sends no failure notification.
+#  - `cancel-in-progress: false` protects the *running* release. By the time a second tag arrives
+#    the first may already have been released, and Central neither re-uploads nor deletes, so
+#    there is nothing to roll back to.
+#  - `queue: max` protects the *pending* ones, which that flag does not. The default `single`
+#    holds ONE pending run and cancels it when a third tag arrives, so pushing `v0.1.0`, `v0.1.1`,
+#    `v0.1.2` in quick succession would drop `v0.1.1` entirely -- and since this workflow releases
+#    rather than stopping at an upload, a dropped run is a release that silently never happens. A
+#    cancelled run sends no failure notification. `max` queues up to 100 and runs them in order,
+#    as `uny/autograph` does. actionlint rejects `queue` as an unknown key; its schema predates
+#    the feature, GitHub accepts it (verified in `uny/autograph`), and `.github/actionlint.yaml`
+#    ignores that one message here.
 #
-# Recovering that is a re-run of the cancelled run from the Actions UI, NOT a re-push of the tag:
-# `git push` of a tag the remote already has reports "Everything up-to-date" and delivers no
+# If a run is cancelled anyway, recovering it is a re-run from the Actions UI, NOT a re-push of the
+# tag: `git push` of a tag the remote already has reports "Everything up-to-date" and delivers no
 # event, so nothing restarts. If the run is past its retention window and no longer re-runnable,
 # `git push --delete origin <tag>` and push it again -- deleting first is what makes the second
 # push a new event. What does not work is the plain re-push, and `workflow_dispatch` is absent
@@ -34,6 +37,7 @@ permissions:
 concurrency:
   group: release
   cancel-in-progress: false
+  queue: max
 
 # Actions pinned to a commit, matching `build.yml`. To move one deliberately:
 #
@@ -200,10 +204,12 @@ jobs:
       - name: Check every published file is signed
         run: sh .github/scripts/check-published-signed.sh "$HOME/.m2/repository/dev/ynagai/a2ui"
 
-      # Uploads and validates; it does not release. The last step is a button in the Central
-      # Portal, held by the person whose account it is -- which is the right place for it while
-      # `publishAndReleaseToMavenCentral` exists and this is the first version to go out.
-      - name: Upload to Maven Central
+      # Uploads, validates, and releases once Central's validation passes. A deployment that fails
+      # validation is not released: drop it in the Central Portal, delete and re-push the tag, same
+      # version. The human gate is the `release` environment above, before any of this runs. The
+      # Portal's Publish button was a second one while no version had gone out; after `0.1.0`,
+      # `0.2.0` and `0.2.1` it only held each release until someone pressed it.
+      - name: Upload and release to Maven Central
         env:
           VERSION: ${{ steps.version.outputs.value }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -211,7 +217,7 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.GPG_KEY_ID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.GPG_PASSPHRASE }}
-        run: ./gradlew publishToMavenCentral -PVERSION_NAME="$VERSION" --stacktrace
+        run: ./gradlew publishAndReleaseToMavenCentral -PVERSION_NAME="$VERSION" --stacktrace
 
       - name: Upload reports
         if: failure()

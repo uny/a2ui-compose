@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.IntrinsicMeasurable
@@ -34,6 +37,7 @@ import dev.ynagai.a2ui.compose.LayoutTraits
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -155,6 +159,45 @@ class RowBandTest {
             val want = boundsIn(ALONE, hasText(BELOW))
             assertTrue(abs(below.top - want.top) <= 1f, "at $width the row is as tall as under start, ending at ${want.top}: $below")
         }
+    }
+
+    @Test
+    fun a_weighted_column_of_a_text_and_a_video_answers_close_to_the_tallest_it_is_drawn() = runComposeUiTest {
+        // Beside the image, 900 wide, the column is offered anything from 449 to 900: its text is
+        // tallest at the narrowest and its video at the widest, and each counted at its own
+        // tallest came to 961, 199 over the tallest the column is drawn at any of those widths
+        // (#106). Drawn alone at each of them, the column is never taller than the row's answer,
+        // and the answer is not far over it.
+        val renderer = rendererFor("""[
+            {"id":"root","component":"Row","children":["image","col"]},
+            {"id":"image","component":"Image","url":"https://example.invalid/i.png","description":"image"},
+            {"id":"col","component":"Column","weight":1,"children":["long","video"]},
+            $LONG_AND_VIDEO
+        ]""")
+        val column = rendererFor("""[{"id":"root","component":"Column","children":["long","video"]}, $LONG_AND_VIDEO]""")
+        var width by mutableStateOf(BAND_ROW_PX)
+        var asked = 0
+        var drawn = 0
+        setContent {
+            MaterialTheme {
+                Box {
+                    Box(Modifier.requiredSize(BAND_ROW_PX.dp, HEIGHT)) {
+                        Answering({ asked = it }) { A2uiSurface(renderer, SURFACE, Material3Components.Basic) }
+                    }
+                    Box(Modifier.requiredSize(width.dp, HEIGHT)) {
+                        Drawn({ drawn = it }) { A2uiSurface(column, SURFACE, Material3Components.Basic) }
+                    }
+                }
+            }
+        }
+        var tallest = 0
+        for (offered in BAND_ROW_PX / 2 - 1..BAND_ROW_PX) {
+            width = offered
+            waitForIdle()
+            tallest = max(tallest, drawn)
+        }
+        assertTrue(asked >= tallest, "the row answers $asked, and its column is drawn $tallest tall")
+        assertTrue(asked - tallest <= 24, "the row answers $asked, and its column is drawn at most $tallest tall")
     }
 
     /**
@@ -303,6 +346,9 @@ class RowBandTest {
 
         /** The issue's width: the image takes 316 of it, and the weighted column is offered anything from 380 to 760 and drawn at 444. */
         val WIDTH = 760.dp
+
+        /** A row an image and a weighted column share, which offers the column from 449 to 900. */
+        const val BAND_ROW_PX = 900
 
         /** Tall enough that the column around the row has the room its children ask for; checked, not assumed. */
         val HEIGHT: Dp = 1600.dp

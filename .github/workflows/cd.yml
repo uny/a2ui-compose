@@ -24,9 +24,8 @@ permissions:
 #    `v0.1.2` in quick succession would drop `v0.1.1` entirely -- and since this workflow releases
 #    rather than stopping at an upload, a dropped run is a release that silently never happens. A
 #    cancelled run sends no failure notification. `max` queues up to 100 and runs them in order,
-#    as `uny/autograph` does. actionlint rejects `queue` as an unknown key; its schema predates
-#    the feature, GitHub accepts it (verified in `uny/autograph`), and `.github/actionlint.yaml`
-#    ignores that one message here.
+#    as `uny/autograph` does. actionlint 1.7.12 does not know the key; `.github/actionlint.yaml`
+#    says why that one message is ignored, and when to stop ignoring it.
 #
 # If a run is cancelled anyway, recovering it is a re-run from the Actions UI, NOT a re-push of the
 # tag: `git push` of a tag the remote already has reports "Everything up-to-date" and delivers no

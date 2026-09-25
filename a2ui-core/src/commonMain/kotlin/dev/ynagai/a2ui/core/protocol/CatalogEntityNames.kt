@@ -300,26 +300,26 @@ private fun requireNoSystemCall(subschema: JsonElement, owner: String) {
  * Rule 3, "Restricted `$ref` Targets".
  *
  * A local target must name a top-level component, function or `$defs` entry of this catalog, or a
- * `$defs` entry of one of those; an external one must name a `$defs` entry of `common_types.json`.
- * The document may be left implicit (`#/…`), written as the placeholder `catalog.json#/…`, or
- * spelled out in full with this catalog's own `$id` or `catalogId`. This is the rule that lets
- * [checkSchema] decline to walk a region: what is not a schema position cannot be turned into one
- * by a pointer.
+ * `$defs` entry of one of those; an external one must name one of the [PERMITTED_COMMON_TYPES]
+ * the prose lists. The local document may be left implicit (`#/…`), written as the placeholder
+ * `catalog.json#/…`, or spelled out in full with this catalog's own `$id` or `catalogId` -- unless
+ * that name is itself a `common_types.json` spelling, which is read as the external form first.
+ * This is the rule that lets [checkSchema] decline to walk a region: what is not a schema position
+ * cannot be turned into one by a pointer.
  *
- * The prose narrows external targets further, to eleven named `common_types.json` schemas, and
- * that half is deliberately not enforced: **the specification's own `basic.json` violates it**,
- * referencing `Child`, `DataBinding` and `FunctionCall`, none of which are on the list, while
- * `testing.json` writes the relative `common_types.json#/$defs/…` rather than the absolute URL
- * the prose gives. Enforcing the list literally would refuse the catalogs the specification
- * ships.
+ * The prose also says the external form MUST be the relative `common_types.json#/$defs/…`, and
+ * that half is not enforced: catalogs written before the specification switched to it (#2466
+ * upstream) spell the document's full URL instead. Both reach the library's `common_types.json`
+ * -- the bare name through `COMMON_TYPES_NAME`, the full URL by being that document's `$id`.
  *
- * What is restricted is therefore the *depth* of the pointer, not the document it names. The
+ * What is restricted is therefore what a pointer names, not how it spells the document. The
  * external form matches on the filename alone, and the name a document is registered under can be
  * its `catalogId` -- a free agent-supplied string -- so a second inlined catalog claiming
- * `catalogId: "https://…/common_types.json"` will answer a reference spelled that way. That is
- * schema substitution between two catalogs the same agent supplied, not an escape from this pass:
- * both went through [checkEntityNames], and `SchemaEvaluator`'s `pattern` trust gate keys on
- * `ProtocolSchemas.libraryUris`, which no such name is in. Anchoring the external form to
+ * `catalogId: "https://…/other/common_types.json"` will answer a reference spelled that way. The
+ * bare name cannot be taken like this, since the registry answers it before any registration.
+ * That is schema substitution between two catalogs the same agent supplied, not an escape from
+ * this pass: both went through [checkEntityNames], and `SchemaEvaluator`'s `pattern` trust gate
+ * keys on `ProtocolSchemas.libraryUris`, which no such name is in. Anchoring the external form to
  * `ProtocolSchemas.COMMON_TYPES_URI` would close it, at the cost of refusing spellings that
  * resolve correctly today.
  */
@@ -328,6 +328,19 @@ private fun requirePermittedReference(target: JsonElement, owner: String, selfNa
         ?: throw A2uiFormatException(
             "CatalogDefinition: a `$REF` in $owner must be a string.",
         )
+    // Judged before the self names are stripped: a catalog whose `catalogId` or `$id` is
+    // `common_types.json` would otherwise have `common_types.json#/$defs/Surface` read as its
+    // own `#/$defs/Surface`, while the registry sends that reference to the library's document.
+    val common = COMMON_TYPES_REFERENCE.matchEntire(reference)?.groupValues?.get(1)
+    if (common != null && common !in PERMITTED_COMMON_TYPES) {
+        throw A2uiFormatException(
+            "CatalogDefinition: `${reference.take(ERROR_EXCERPT)}` in $owner names " +
+                "`common_types.json`'s `${common.take(ERROR_EXCERPT)}`, which is not one of the " +
+                "schemas the specification permits a catalog to reference: " +
+                "${PERMITTED_COMMON_TYPES.joinToString { "`$it`" }}.",
+        )
+    }
+    if (common != null) return
     // A reference that names this catalog's own document is a local one wearing a full address,
     // so the prefix is dropped before the shape is judged rather than a second pattern being
     // written for it. `catalog.json` is handled inside [LOCAL_REFERENCE] because it is a name
@@ -335,11 +348,7 @@ private fun requirePermittedReference(target: JsonElement, owner: String, selfNa
     val local = selfNames.firstOrNull { reference.startsWith("$it#") }
         ?.let { reference.removePrefix(it) }
         ?: reference
-    // Both patterns are tried rather than dispatched on a leading `#`: `catalog.json#/$defs/X`
-    // is a local target wearing a document name, and testing it as an external one refused it.
-    val permitted =
-        LOCAL_REFERENCE.matches(local) || COMMON_TYPES_REFERENCE.matches(reference)
-    if (!permitted) {
+    if (!LOCAL_REFERENCE.matches(local)) {
         throw A2uiFormatException(
             "CatalogDefinition: `${reference.take(ERROR_EXCERPT)}` in $owner is not a permitted " +
                 "`$REF` target; the specification restricts a local one to a top-level " +
@@ -457,7 +466,32 @@ private val LOCAL_REFERENCE: Regex =
 
 /** `common_types.json#/$defs/<name>`, however the catalog spells the document's location. */
 private val COMMON_TYPES_REFERENCE: Regex =
-    Regex("^(?:[^#]*/)?common_types\\.json#/\\\$defs/[^/]+$")
+    Regex("^(?:[^#]*/)?common_types\\.json#/\\\$defs/([^/]+)$")
+
+/**
+ * The `common_types.json` schemas rule 3 lets a catalog reference, in the prose's order.
+ *
+ * The list the specification shipped with left out `Child`, `DataBinding` and `FunctionCall`,
+ * which its own basic catalog references, so enforcing it would have refused that catalog; the
+ * three were added upstream in #2708. The rest of `common_types.json` -- `FunctionCommon`,
+ * `ComponentCommon`, `Surface` and the like -- is protocol plumbing a catalog does not build on.
+ */
+private val PERMITTED_COMMON_TYPES: Set<String> = linkedSetOf(
+    "ComponentId",
+    "Child",
+    "ChildList",
+    "DynamicString",
+    "DynamicNumber",
+    "DynamicBoolean",
+    "DynamicStringList",
+    "DynamicValue",
+    "AccessibilityAttributes",
+    "CheckRule",
+    "Checkable",
+    "Action",
+    "DataBinding",
+    "FunctionCall",
+)
 
 /** The prefix `a2ui_protocol.md`'s System Namespace Rule reserves. */
 private const val SYSTEM_FUNCTION_PREFIX: String = "@"

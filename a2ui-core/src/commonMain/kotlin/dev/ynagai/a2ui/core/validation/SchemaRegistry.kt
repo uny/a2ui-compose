@@ -41,6 +41,21 @@ public data class SchemaLocation(
 internal const val CATALOG_PLACEHOLDER: String = "catalog.json"
 
 /**
+ * The name a catalog writes for the protocol's `common_types.json`: `common_types.json#/$defs/…`.
+ *
+ * The specification made this the required spelling in upstream #2466, and resolved as a URI it
+ * breaks for any catalog whose `$id` is not a sibling of `common_types.json` -- the basic
+ * catalog's `.../v1_0/catalogs/basic/catalog.json` joins it to
+ * `.../catalogs/basic/common_types.json`, which nothing publishes. The same change says what a
+ * validator does instead: it "MUST register the active protocol version's `common_types_schema`
+ * under the root relative key `"common_types.json"`", so the reference resolves "regardless of
+ * the catalog's base `$id` URI" (`blueprints/modules/a2ui_core.blueprint.md`). [SchemaRegistry]
+ * answers the bare name with [ProtocolSchemas.COMMON_TYPES_URI] before joining, and only the bare
+ * name, for the reason [CATALOG_PLACEHOLDER] gives.
+ */
+internal const val COMMON_TYPES_NAME: String = "common_types.json"
+
+/**
  * The documents `$ref` may reach, keyed by the URI each one publishes as its `$id`.
  *
  * A catalog is not self-contained: nearly every property in one refers to `common_types.json`, and
@@ -152,6 +167,9 @@ public class SchemaRegistry private constructor(
         // short-circuit and the placeholder would join to that reserved name, reaching such a
         // catalog only by coincidence of `$id` and a *different* bound catalog not at all.
         if (uriPart == CATALOG_PLACEHOLDER && activeCatalogUri != null) return activeCatalogUri
+        // The library's own document, so `document` answers it from `libraryUris` and the
+        // `pattern` trust gate sees the URI it trusts, whatever a registered catalog claims.
+        if (uriPart == COMMON_TYPES_NAME) return ProtocolSchemas.COMMON_TYPES_URI
         // Anything else names a document, registered or not; only the bare spelling is the
         // placeholder (#41, see [CATALOG_PLACEHOLDER]).
         return if (uriPart.contains("://")) uriPart else joinRelative(uriPart, baseUri)

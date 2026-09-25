@@ -14,6 +14,6 @@ validated against.
 
 | File | Source | Revision |
 |:--|:--|:--|
-| `v1_0/basic.json` | [`a2ui-project/a2ui`](https://github.com/a2ui-project/a2ui) `specification/v1_0/catalogs/basic/catalog.json` | `676a8999` |
+| `v1_0/basic.json` | [`a2ui-project/a2ui`](https://github.com/a2ui-project/a2ui) `catalogs/basic/v1/catalog.json` | `df58ff0b` |
 
 Licensed under the Apache License 2.0. See the repository's `NOTICE`.

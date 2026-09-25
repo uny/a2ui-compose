@@ -770,6 +770,32 @@ class CatalogIdentityTest {
     }
 
     @Test
+    fun the_bare_common_types_name_reaches_the_librarys_document_from_any_catalog() {
+        // Upstream #2466 made `common_types.json#/$defs/…` the spelling a catalog must write, and
+        // the basic catalog's `$id` sits two directories below `common_types.json`, so joining
+        // the name as a URI reached a document nobody publishes. A namesake registered at exactly
+        // that joined URI must not answer it either.
+        val nested = "https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json"
+        val namesake = """{"${'$'}id": "${nested.substringBeforeLast('/')}/common_types.json",
+            "${'$'}defs": {"DynamicString": {}}}"""
+        val registry = SchemaRegistry.of(listOf(parseObject(namesake)) + ProtocolSchemas.documents)
+        val resolved = registry.resolve(
+            "common_types.json#/${'$'}defs/DynamicString",
+            SchemaLocation(nested, ""),
+        )
+        assertEquals(
+            SchemaLocation(ProtocolSchemas.COMMON_TYPES_URI, "/${'$'}defs/DynamicString"),
+            resolved?.location,
+        )
+        // Only the bare name: a path in front of it names a document and is joined as one.
+        val pathed = registry.resolve(
+            "sub/common_types.json#/${'$'}defs/DynamicString",
+            SchemaLocation(nested, ""),
+        )
+        assertNull(pathed, "a pathed `common_types.json` was taken for the protocol's own")
+    }
+
+    @Test
     fun a_catalog_named_after_the_placeholder_is_still_checked_against_when_it_is_the_one_in_play() {
         // The reservation withholds a *name*, not the catalog. Named explicitly, this one is in
         // play and answers the placeholder as any catalog does -- and it is the agent's own

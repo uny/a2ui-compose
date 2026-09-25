@@ -800,8 +800,8 @@ private class FlexMeasurePolicy(
      * along it that the plan will give it. The children that cannot be asked are already measured
      * in [placeables] and count as they were drawn. A child that fills across the axis is not
      * asked, having no size there of its own -- a video would answer with the height of the width
-     * it was offered -- unless it is a row's weighted child, whose width is its share before it is
-     * drawn: it is asked what it needs there, a column spreading its children being the case, and
+     * it was offered -- unless it is a row's weighted child, such as a column spreading its
+     * children, whose width is its share before it is drawn: it is asked what it needs there, and
      * counts towards the line without making it known.
      *
      * Null when the answer would be a guess: the plan is not foreseeable, or a child refused a

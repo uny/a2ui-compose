@@ -302,9 +302,10 @@ private fun requireNoSystemCall(subschema: JsonElement, owner: String) {
  * A local target must name a top-level component, function or `$defs` entry of this catalog, or a
  * `$defs` entry of one of those; an external one must name one of the [PERMITTED_COMMON_TYPES]
  * the prose lists. The local document may be left implicit (`#/…`), written as the placeholder
- * `catalog.json#/…`, or spelled out in full with this catalog's own `$id` or `catalogId`. This is
- * the rule that lets [checkSchema] decline to walk a region: what is not a schema position cannot
- * be turned into one by a pointer.
+ * `catalog.json#/…`, or spelled out in full with this catalog's own `$id` or `catalogId` -- unless
+ * that name is itself a `common_types.json` spelling, which is read as the external form first.
+ * This is the rule that lets [checkSchema] decline to walk a region: what is not a schema position
+ * cannot be turned into one by a pointer.
  *
  * The prose also says the external form MUST be the relative `common_types.json#/$defs/…`, and
  * that half is not enforced: catalogs written before the specification switched to it (#2466
@@ -327,16 +328,9 @@ private fun requirePermittedReference(target: JsonElement, owner: String, selfNa
         ?: throw A2uiFormatException(
             "CatalogDefinition: a `$REF` in $owner must be a string.",
         )
-    // A reference that names this catalog's own document is a local one wearing a full address,
-    // so the prefix is dropped before the shape is judged rather than a second pattern being
-    // written for it. `catalog.json` is handled inside [LOCAL_REFERENCE] because it is a name
-    // every catalog may write, not one this catalog happens to have.
-    val local = selfNames.firstOrNull { reference.startsWith("$it#") }
-        ?.let { reference.removePrefix(it) }
-        ?: reference
-    // Both patterns are tried rather than dispatched on a leading `#`: `catalog.json#/$defs/X`
-    // is a local target wearing a document name, and testing it as an external one refused it.
-    if (LOCAL_REFERENCE.matches(local)) return
+    // Judged before the self names are stripped: a catalog whose `catalogId` or `$id` is
+    // `common_types.json` would otherwise have `common_types.json#/$defs/Surface` read as its
+    // own `#/$defs/Surface`, while the registry sends that reference to the library's document.
     val common = COMMON_TYPES_REFERENCE.matchEntire(reference)?.groupValues?.get(1)
     if (common != null && common !in PERMITTED_COMMON_TYPES) {
         throw A2uiFormatException(
@@ -346,7 +340,15 @@ private fun requirePermittedReference(target: JsonElement, owner: String, selfNa
                 "${PERMITTED_COMMON_TYPES.joinToString { "`$it`" }}.",
         )
     }
-    if (common == null) {
+    if (common != null) return
+    // A reference that names this catalog's own document is a local one wearing a full address,
+    // so the prefix is dropped before the shape is judged rather than a second pattern being
+    // written for it. `catalog.json` is handled inside [LOCAL_REFERENCE] because it is a name
+    // every catalog may write, not one this catalog happens to have.
+    val local = selfNames.firstOrNull { reference.startsWith("$it#") }
+        ?.let { reference.removePrefix(it) }
+        ?: reference
+    if (!LOCAL_REFERENCE.matches(local)) {
         throw A2uiFormatException(
             "CatalogDefinition: `${reference.take(ERROR_EXCERPT)}` in $owner is not a permitted " +
                 "`$REF` target; the specification restricts a local one to a top-level " +

@@ -542,6 +542,35 @@ class CatalogEntityNamesTest {
     }
 
     @Test
+    fun a_catalog_named_after_common_types_cannot_take_an_off_list_schema_as_its_own() {
+        // The registry sends the bare name, and the protocol's URL, to the library's document
+        // whatever the catalog calls itself, so neither may be read as a self-reference.
+        val names = listOf("common_types.json", "https://a2ui.org/specification/v1_0/common_types.json")
+        names.forEach { name ->
+            val identities = listOf(
+                """"catalogId": "$name"""",
+                """"catalogId": "example.com:testing", "${'$'}id": "$name"""",
+            )
+            identities.forEach { identity ->
+                val reference = "$name#/${'$'}defs/Surface"
+                val catalog = """
+                    {
+                      $identity,
+                      "components": {"Text": {"type":"object","allOf":[{"${'$'}ref":"$reference"}]}}
+                    }
+                """.trimIndent()
+                val failure = assertFailsWith<A2uiFormatException>("`$identity` let `Surface` in") {
+                    json.decodeFromString<CatalogDefinition>(catalog)
+                }
+                assertTrue(
+                    failure.message.orEmpty().contains("not one of the schemas"),
+                    "`$reference` was refused for the wrong reason: ${failure.message}",
+                )
+            }
+        }
+    }
+
+    @Test
     fun a_region_the_walk_does_not_enter_cannot_be_reached_by_a_pointer() {
         // The two halves are only correct together. Declining to walk vendor data is what stops a
         // catalog being refused for the JSON a vendor put in its own extension block; the

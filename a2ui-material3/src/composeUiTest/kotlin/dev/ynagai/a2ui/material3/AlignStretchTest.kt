@@ -205,6 +205,22 @@ class AlignStretchTest {
     }
 
     @Test
+    fun a_weighted_column_spreading_its_children_counts_towards_the_line() = runComposeUiTest {
+        // A column that spreads its children fills the row's height, and was not asked how tall
+        // its content is: the row learned its line from the short text alone, and the column's
+        // content spilled past the row, over the text below it (#111). Under `start` the column
+        // does not fill, is asked, and the row is as tall as it -- which is where `center` ends too.
+        val below = listOf("center", "start").map { justify ->
+            setContent { Hosted(spreadingColumnBesideText(justify)) }
+            val tail = bounds("TAIL")
+            val after = bounds("BELOW")
+            assertTrue(after.top >= tail.bottom, "the text below starts under the column ($justify): $after under $tail")
+            after.top
+        }
+        assertTrue(near(below[0], below[1]), "the row is as tall under center as under start: $below")
+    }
+
+    @Test
     fun a_column_in_a_row_that_cannot_be_asked_leaves_a_weighted_sibling_its_share() = runComposeUiTest {
         // A column that cannot be asked is measured first, against what the row can spare, and
         // the row reserves nothing for its weighted children. A column as wide as it was offered
@@ -430,6 +446,16 @@ class AlignStretchTest {
             {"id":"root","component":"Row","children":["text","divider"]${align(align)}},
             {"id":"text","component":"Text","text":"two\nlines"},
             {"id":"divider","component":"Divider","axis":"vertical"}
+        ]"""
+
+        fun spreadingColumnBesideText(justify: String) = """[
+            {"id":"root","component":"Column","children":["row","below"]},
+            {"id":"row","component":"Row","children":["short","column"]},
+            {"id":"short","component":"Text","text":"short"},
+            {"id":"column","component":"Column","weight":1,"justify":"$justify","children":["long","tail"]},
+            {"id":"long","component":"Text","text":"$LONG"},
+            {"id":"tail","component":"Text","text":"TAIL"},
+            {"id":"below","component":"Text","text":"BELOW"}
         ]"""
 
         val NARROW_FILLER_ROW = """[

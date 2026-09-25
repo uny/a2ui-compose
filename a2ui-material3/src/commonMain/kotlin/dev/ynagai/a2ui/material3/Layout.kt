@@ -369,9 +369,11 @@ private fun crossAlignment(align: String?): CrossAlignment = when (align) {
  *
  * A child that [AxisFit.Fill]s across the axis -- a vertical divider in a row -- is measured *up
  * to* the line and does not count towards it, so it spans the row rather than whatever the row was
- * offered. One that is [AxisFit.Fixed] counts towards the line and is left at its own size. A
- * child that cannot be asked is measured before the line is known and is not stretched unless the
- * line was known without asking; it still counts towards it.
+ * offered. A weighted one in a row is asked at its share and does count what it needs there, or a
+ * column spreading its children spills its content past a row drawn at its siblings' height. One
+ * that is [AxisFit.Fixed] counts towards the line and is left at its own size. A child that cannot
+ * be asked is measured before the line is known and is not stretched unless the line was known
+ * without asking; it still counts towards it.
  *
  * The layout answers its parent's questions from the same plan. Along the axis it is a sum --
  * preferred sizes for the maximum, minimums for the minimum, where a filling or weighted child
@@ -798,7 +800,9 @@ private class FlexMeasurePolicy(
      * along it that the plan will give it. The children that cannot be asked are already measured
      * in [placeables] and count as they were drawn. A child that fills across the axis is not
      * asked, having no size there of its own -- a video would answer with the height of the width
-     * it was offered.
+     * it was offered -- unless it is a row's weighted child, such as a column spreading its
+     * children, whose width is its share before it is drawn: it is asked what it needs there, and
+     * counts towards the line without making it known.
      *
      * Null when the answer would be a guess: the plan is not foreseeable, or a child refused a
      * question the measure pass had not put to it. Null too when every child fills across the
@@ -812,7 +816,8 @@ private class FlexMeasurePolicy(
             var largest = 0
             val foreseeable = distribute(this, mainMax, crossMax) { index, _, max ->
                 val drawn = placeables[index]
-                val across = specOf(this[index]).across
+                val spec = specOf(this[index])
+                val across = spec.across
                 if (drawn != null) {
                     if (across != AxisFit.Fill) {
                         largest = max(largest, drawn.cross())
@@ -829,6 +834,11 @@ private class FlexMeasurePolicy(
                     val size = this[index].maxCross(index, given)
                     if (size == null) answered = false else largest = max(largest, size)
                     counted = true
+                } else if (horizontal && spec.weight > 0f) {
+                    // As when it is measured last -- see [measure] -- except that one that cannot
+                    // be asked counts for nothing here, as it did, rather than for the height
+                    // offered.
+                    this[index].maxCross(index, given)?.let { largest = max(largest, it) }
                 }
                 given
             }

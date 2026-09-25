@@ -863,11 +863,39 @@ private class FlexMeasurePolicy(
     )
 
     // A column asked over a range of widths -- [slack] below [cross] -- offers every child the
-    // same range, and each child counts at the tallest it is drawn anywhere in it.
+    // same width, somewhere in it. Each child counted at the tallest it is drawn anywhere in the
+    // range is a sum no single width draws -- a text at the narrowest and a video at the widest
+    // (#106) -- so the range is split in [BAND_PARTS], each summed on its own, and the column
+    // answers the tallest of those: children counted at their tallest only over widths close
+    // enough to be drawn together. The parts share their ends, so every width is in one.
+    //
+    // Only the outermost column split in one question splits: each part hands its range on, and a
+    // column below splitting it again multiplies the questions by the parts at every level -- a
+    // row of an image and a weighted column, nested eleven deep, took twelve times as long. A
+    // column below is handed a part, already that much closer.
     private fun List<IntrinsicMeasurable>.sumMain(cross: Int, least: Boolean, slack: Int = 0): Int {
-        val banded = slack > 0 && cross != Constraints.Infinity
+        if (least || slack <= 0 || cross == Constraints.Infinity) return sumMainOver(cross, cross, least)
+        val from = max(0, cross - slack)
+        if (session.splitting) return sumMainOver(from, cross, least = false)
+        session.splitting = true
+        try {
+            var tallest = 0
+            for (part in 0 until BAND_PARTS) {
+                val low = from + ((cross - from).toLong() * part / BAND_PARTS).toInt()
+                val high = from + ((cross - from).toLong() * (part + 1) / BAND_PARTS).toInt()
+                tallest = max(tallest, sumMainOver(low, high, least = false))
+            }
+            return tallest
+        } finally {
+            session.splitting = false
+        }
+    }
+
+    // The sum along the axis, each child counted at the most it is drawn offered anything from
+    // [from] to [cross] across it -- at [cross] alone when the two are the same.
+    private fun List<IntrinsicMeasurable>.sumMainOver(from: Int, cross: Int, least: Boolean): Int {
         val preferredOf = { index: Int ->
-            if (banded) this[index].tallestOver(index, cross - slack, cross) else this[index].maxMain(index, cross)
+            if (from < cross) this[index].tallestOver(index, from, cross) else this[index].maxMain(index, cross)
         }
         var sum = 0L
         // The weighted children are measured to their shares, so what they need together is the
@@ -917,8 +945,9 @@ private class FlexMeasurePolicy(
         // as they are, and a child that is tallest at exactly one of them is still answered for.
         //
         // An upper bound as long as each leaf grows or shrinks steadily with its width, and a
-        // loose one: a column over a range counts each child at its own tallest, a text at the
-        // narrowest and a video at the widest, which no single width draws. Too tall costs a
+        // loose one: a column over a range counts each child at its own tallest within each part
+        // of it -- see [sumMain] -- and a row over a range is as tall as the tallest width in it,
+        // which is not the one the row is drawn at. Too tall costs a
         // column with room nothing -- it measures the row to the answer and spends what the row
         // draws -- and costs one short of room a share its siblings would have had. Inside the row
         // it costs a gap under anything that fills the height it is given: a child that does and
@@ -1108,6 +1137,13 @@ private const val LARGEST_DIMENSION = (1 shl 18) - 2
 private const val LARGEST_BAND = 4096
 
 /**
+ * The parts a column splits a range of widths in, to sum its children over each (#106). A power of
+ * two: parts that halve the ones of a smaller count only ever tighten the answer, and three parts
+ * answered taller than two on a text beside a video.
+ */
+private const val BAND_PARTS = 4
+
+/**
  * The share of [free] a weighted child between [before] and [after] of [total] weight is handed:
  * cumulative rounding, as the plan's own step 4 does it.
  */
@@ -1192,6 +1228,9 @@ private class QuerySession {
 
     /** The [Band] handed with the question being asked, if it carries one. */
     var band: Band? = null
+
+    /** Whether a column above is summing the parts of a range, which the ones below do not split. */
+    var splitting = false
 
     /** Takes the range handed to [id], or none, and clears it either way. */
     fun claim(id: String?): Int {

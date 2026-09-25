@@ -1,0 +1,8 @@
+# actionlint 1.7.12 rejects `queue` as an unknown key for `concurrency`: its schema predates the
+# feature, and it is wrong -- GitHub accepts the key (verified in `uny/autograph`, which runs the
+# same block). Ignored for that one message in the one file that uses it, so any other syntax error
+# there is still reported. Remove this once `ACTIONLINT_VERSION` in `build.yml` knows the key.
+paths:
+  .github/workflows/cd.yml:
+    ignore:
+      - 'unexpected key "queue" for "concurrency" section'

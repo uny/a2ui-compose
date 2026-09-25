@@ -369,8 +369,8 @@ private fun crossAlignment(align: String?): CrossAlignment = when (align) {
  *
  * A child that [AxisFit.Fill]s across the axis -- a vertical divider in a row -- is measured *up
  * to* the line and does not count towards it, so it spans the row rather than whatever the row was
- * offered. A weighted one in a row -- a column spreading its children at its share -- does count
- * what its content needs, or that content spills past a row drawn at its siblings' height. One
+ * offered. A weighted one in a row is asked at its share and does count what it needs there, or a
+ * column spreading its children spills its content past a row drawn at its siblings' height. One
  * that is [AxisFit.Fixed] counts towards the line and is left at its own size. A child that cannot
  * be asked is measured before the line is known and is not stretched unless the line was known
  * without asking; it still counts towards it.
@@ -800,9 +800,9 @@ private class FlexMeasurePolicy(
      * along it that the plan will give it. The children that cannot be asked are already measured
      * in [placeables] and count as they were drawn. A child that fills across the axis is not
      * asked, having no size there of its own -- a video would answer with the height of the width
-     * it was offered -- unless it is a row's weighted child: a column spreading its children at
-     * its share is asked what its content needs there, and counts towards the line without making
-     * it known.
+     * it was offered -- unless it is a row's weighted child, whose width is its share before it is
+     * drawn: it is asked what it needs there, a column spreading its children being the case, and
+     * counts towards the line without making it known.
      *
      * Null when the answer would be a guess: the plan is not foreseeable, or a child refused a
      * question the measure pass had not put to it. Null too when every child fills across the
@@ -835,12 +835,9 @@ private class FlexMeasurePolicy(
                     if (size == null) answered = false else largest = max(largest, size)
                     counted = true
                 } else if (horizontal && spec.weight > 0f) {
-                    // A weighted column spreading its children fills the line, and may be the
-                    // tallest child all the same: measured up to a line its content was not asked
-                    // about, the content spilled past the row. So what it needs at its share counts,
-                    // as it does when it is measured last -- see [measure]. It does not make the
-                    // line known on its own, and one that cannot be asked counts for nothing, as
-                    // it did. Rows only, as there.
+                    // As when it is measured last -- see [measure] -- except that one that cannot
+                    // be asked counts for nothing here, as it did, rather than for the height
+                    // offered.
                     this[index].maxCross(index, given)?.let { largest = max(largest, it) }
                 }
                 given

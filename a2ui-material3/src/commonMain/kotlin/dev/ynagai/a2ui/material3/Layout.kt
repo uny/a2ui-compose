@@ -695,10 +695,10 @@ private class FlexMeasurePolicy(
         // weighted column spreading its children one inside itself. So a child whose width is
         // known before it is drawn -- a weighted one, measured to exactly its share, or one that
         // says its width is its own -- keeps that width in the plan and is measured last, to the
-        // height the others drew or its own content's, whichever is taller. Any other -- a
-        // content-sized column spreading its children, a filler -- is still measured in its turn,
-        // to the height offered: what it takes decides what the next child gets. Rows only: the
-        // mirror, a horizontal divider in a column a row sized, is left as it was.
+        // height the others drew, or a weighted one's own content's if that is taller. Any other
+        // -- a content-sized column spreading its children, a filler -- is still measured in its
+        // turn, to the height offered: what it takes decides what the next child gets. Rows only:
+        // the mirror, a horizontal divider in a column a row sized, is left as it was.
         val deferred = LinkedHashMap<Int, Int>()
 
         distribute(
@@ -710,7 +710,11 @@ private class FlexMeasurePolicy(
             val drawnTo = line
             val spec = specOf(measurables[index])
             if (drawnTo == null && horizontal && spec.across == AxisFit.Fill) {
-                val width = if (min == max) min else if (spec.along == AxisFit.Fixed) measurables[index].ownMain(index, crossMax) else null
+                val width = when {
+                    spec.weight > 0f && min == max -> min
+                    spec.along == AxisFit.Fixed -> measurables[index].ownMain(index, crossMax)
+                    else -> null
+                }
                 if (width != null && width in min..max) {
                     deferred[index] = width
                     return@distribute width
@@ -737,13 +741,19 @@ private class FlexMeasurePolicy(
             measurables[index].measure(c).also { placeables[index] = it }.main()
         }
         if (deferred.isNotEmpty()) {
-            // Nobody else drawn leaves them the height offered, as before: a row of dividers alone.
-            // A column spreading its children may be the tallest child itself, so what its content
-            // needs at its width counts too; one that cannot be asked leaves the height offered.
+            // Nobody else drawn leaves them the height offered, as before: a row of dividers, or of
+            // weighted columns, alone. A weighted column spreading its children may be the tallest
+            // child itself, so what its content needs at its share counts too; one that cannot be
+            // asked leaves the height offered. One whose width is its own is not asked: across the
+            // row it fills, and a child that fills has no say in how tall the row is.
             val drawn = placeables.filterNotNull()
             val to = if (drawn.isEmpty()) crossMax else session.run {
                 var tallest = drawn.maxOf { it.cross() }
-                for ((index, width) in deferred) tallest = max(tallest, measurables[index].maxCross(index, width) ?: crossMax)
+                for ((index, width) in deferred) {
+                    if (specOf(measurables[index]).weight > 0f) {
+                        tallest = max(tallest, measurables[index].maxCross(index, width) ?: crossMax)
+                    }
+                }
                 tallest
             }.coerceIn(crossMin, crossMax)
             for ((index, width) in deferred) {
@@ -903,9 +913,10 @@ private class FlexMeasurePolicy(
         // draws -- and costs one short of room a share its siblings would have had. Inside the row
         // it costs a gap under anything that fills the height it is given: a child that does and
         // whose width is known before it is drawn -- a vertical divider, a weighted column
-        // spreading its children -- is measured last, to the height the others and its own
-        // content drew; see [measure]. One whose width is not -- a content-sized column spreading
-        // its children -- still takes the answer. The minimum stays with the plan.
+        // spreading its children -- is measured last, to the height the others drew, or the
+        // column's own content's if that is taller; see [measure]. One whose width is not -- a
+        // content-sized column spreading its children -- still takes the answer. The minimum stays
+        // with the plan.
         if (!least) {
             distribute(this, main, Constraints.Infinity, fillersTakeNothing = true, take = ask)
             if (horizontal && main != Constraints.Infinity) largest = max(largest, tallestOverBand(main, slack))

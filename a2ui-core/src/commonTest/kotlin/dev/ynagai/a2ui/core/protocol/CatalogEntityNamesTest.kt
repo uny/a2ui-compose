@@ -508,6 +508,40 @@ class CatalogEntityNamesTest {
     }
 
     @Test
+    fun an_external_reference_may_name_only_the_schemas_the_specification_lists() {
+        // Rule 3's list, retyped rather than read from the implementation so that a name dropped
+        // there is caught here. `Child`, `DataBinding` and `FunctionCall` are the three the list
+        // gained upstream in #2708; the basic catalog references all three.
+        val permitted = listOf(
+            "ComponentId", "Child", "ChildList", "DynamicString", "DynamicNumber",
+            "DynamicBoolean", "DynamicStringList", "DynamicValue", "AccessibilityAttributes",
+            "CheckRule", "Checkable", "Action", "DataBinding", "FunctionCall",
+        )
+        val spellings = listOf("", "https://a2ui.org/specification/v1_0/")
+        permitted.forEach { name ->
+            spellings.forEach { prefix ->
+                val reference = "${prefix}common_types.json#/${'$'}defs/$name"
+                val body = """{"type":"object","allOf":[{"${'$'}ref":"$reference"}]}"""
+                json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+            }
+        }
+        // Real `common_types.json` schemas, so the refusal is the list and not a missing target.
+        listOf("FunctionCommon", "ComponentCommon", "Surface", "Extensions").forEach { name ->
+            spellings.forEach { prefix ->
+                val reference = "${prefix}common_types.json#/${'$'}defs/$name"
+                val body = """{"type":"object","allOf":[{"${'$'}ref":"$reference"}]}"""
+                val failure = assertFailsWith<A2uiFormatException>("`$reference` was permitted") {
+                    json.decodeFromString<CatalogDefinition>(catalogWithComponentBody(body))
+                }
+                assertTrue(
+                    failure.message.orEmpty().contains("not one of the schemas"),
+                    "`$reference` was refused for the wrong reason: ${failure.message}",
+                )
+            }
+        }
+    }
+
+    @Test
     fun a_region_the_walk_does_not_enter_cannot_be_reached_by_a_pointer() {
         // The two halves are only correct together. Declining to walk vendor data is what stops a
         // catalog being refused for the JSON a vendor put in its own extension block; the

@@ -308,14 +308,17 @@ private fun requireNoSystemCall(subschema: JsonElement, owner: String) {
  *
  * The prose also says the external form MUST be the relative `common_types.json#/$defs/…`, and
  * that half is not enforced: catalogs written before the specification switched to it (#2466
- * upstream) spell the document's full URL, and this pass judges what a reference names, not how.
+ * upstream) spell the document's full URL instead. Both reach the library's `common_types.json`
+ * -- the bare name through `COMMON_TYPES_NAME`, the full URL by being that document's `$id`.
  *
- * The external form matches on the filename alone, and the name a document is registered under can
- * be its `catalogId` -- a free agent-supplied string -- so a second inlined catalog claiming
- * `catalogId: "https://…/common_types.json"` will answer a reference spelled that way. That is
- * schema substitution between two catalogs the same agent supplied, not an escape from this pass:
- * both went through [checkEntityNames], and `SchemaEvaluator`'s `pattern` trust gate keys on
- * `ProtocolSchemas.libraryUris`, which no such name is in. Anchoring the external form to
+ * What is restricted is therefore what a pointer names, not how it spells the document. The
+ * external form matches on the filename alone, and the name a document is registered under can be
+ * its `catalogId` -- a free agent-supplied string -- so a second inlined catalog claiming
+ * `catalogId: "https://…/other/common_types.json"` will answer a reference spelled that way. The
+ * bare name cannot be taken like this, since the registry answers it before any registration.
+ * That is schema substitution between two catalogs the same agent supplied, not an escape from
+ * this pass: both went through [checkEntityNames], and `SchemaEvaluator`'s `pattern` trust gate
+ * keys on `ProtocolSchemas.libraryUris`, which no such name is in. Anchoring the external form to
  * `ProtocolSchemas.COMMON_TYPES_URI` would close it, at the cost of refusing spellings that
  * resolve correctly today.
  */

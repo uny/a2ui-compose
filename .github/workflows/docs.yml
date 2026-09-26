@@ -46,7 +46,8 @@ jobs:
     # `cd.yml` -- still named `CD`, but triggered by `pull_request` -- whose success fires this
     # workflow in the upstream's context, with `head_sha` pointing at the fork's commit. The build
     # would then run that commit's Gradle scripts with write access to `main`'s Actions cache, and
-    # `deploy` would publish its output. Only a tag pushed to this repository is a release.
+    # `deploy` would publish its output. Only a push to this repository -- for `CD`, of a tag -- is
+    # a release.
     if: >-
       github.event_name == 'workflow_dispatch' || (
         github.event.workflow_run.conclusion == 'success' &&

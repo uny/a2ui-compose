@@ -1,0 +1,110 @@
+name: API docs
+
+# The Dokka HTML of the four published modules, aggregated by the root project, on GitHub Pages at
+# https://uny.github.io/a2ui-compose/.
+#
+# After a release, not on a tag. `workflow_run` fires when `CD` finishes, and the job below runs only
+# if it succeeded, so the site never describes a version that did not reach Central -- a failed
+# release leaves the previous version's pages up. Pushes to `main` do not publish: the site is the
+# API of the version a consumer can depend on, not of whatever was merged since.
+#
+# `workflow_dispatch` is for publishing by hand: the first time, and after a run that failed. It
+# builds the ref it was dispatched on, and takes the version as an input because a branch name is
+# not one. A tag made before this workflow existed has no aggregation in its root build script and
+# cannot be built this way. `v0.3.0` is one: publish it by dispatching on `main` while the module
+# sources there are still the tag's (`git diff --quiet v0.3.0 -- 'a2ui-*/src'`).
+on:
+  workflow_run:
+    workflows: [CD]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version the pages are labelled with, without the `v` (e.g. 0.3.0)
+        required: true
+
+# Read-only by default. The `deploy` job alone gets the two permissions Pages needs; the job that
+# runs this repository's Gradle scripts does not hold an OIDC token.
+permissions:
+  contents: read
+
+# One deployment at a time, and the newer release wins. Cancelling a queued deploy loses nothing:
+# the next one replaces the whole site anyway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+# Actions pinned to a commit, matching `build.yml`. To move one deliberately:
+#
+#   gh api repos/<owner>/<repo>/commits/<tag> --jq .sha
+#
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # macOS, for the reason `cd.yml` gives: on Linux the Apple targets are silently skipped, and
+    # Dokka would document fewer platforms than the javadoc jars on Central do. Nothing public
+    # would vanish -- every Apple-only declaration is the `actual` of a `commonMain` `expect` --
+    # but the pages would stop listing iOS and macOS among the platforms that have them.
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      # `CD` ran on a tag push, so `head_branch` is the tag's name and `head_sha` its commit. The
+      # checkout would otherwise be of the default branch, which is where `workflow_run` runs.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      # The same charset check `cd.yml` makes on the tag, and for its reason: a tag name is
+      # attacker-shaped input, and so is a dispatch input.
+      - name: Read the version
+        id: version
+        env:
+          TAG: ${{ github.event.workflow_run.head_branch }}
+          INPUT: ${{ inputs.version }}
+        run: |
+          if [ -n "$INPUT" ]; then version="$INPUT"; else version="${TAG#v}"; fi
+          case "$version" in
+            "" | *[!0-9A-Za-z.-]* )
+              echo "Refusing version '$version': it must be non-empty [0-9A-Za-z.-]" >&2
+              exit 1
+              ;;
+          esac
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Generate
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: ./gradlew :dokkaGenerate -PVERSION_NAME="$VERSION" --stacktrace
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: build/dokka/html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    # Created by GitHub when Pages is set to deploy from Actions. Its branch policy, if left at the
+    # default, admits only the default branch -- which is where a `workflow_run` runs, and where a
+    # dispatch should be made.
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

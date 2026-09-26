@@ -12,7 +12,7 @@ name: API docs
 # builds the ref it was dispatched on, and takes the version as an input because a branch name is
 # not one. A tag made before this workflow existed has no aggregation in its root build script and
 # cannot be built this way. `v0.3.0` is one: publish it by dispatching on `main` while the module
-# sources there are still the tag's (`git diff --quiet v0.3.0 -- 'a2ui-*/src'`).
+# sources there are still the tag's (`git diff --quiet v0.3.0 -- 'a2ui-*/src' ':!a2ui-gallery'`).
 on:
   workflow_run:
     workflows: [CD]
@@ -28,8 +28,10 @@ on:
 permissions:
   contents: read
 
-# One deployment at a time, and the newer release wins. Cancelling a queued deploy loses nothing:
-# the next one replaces the whole site anyway.
+# One deployment at a time, and the last to finish wins. `CD` releases one tag at a time, in order,
+# so that is the newest release -- unless an older release's `CD` run is re-run after a newer one
+# succeeded, which republishes the older pages; dispatch the current version afterwards. Cancelling
+# a queued deploy loses nothing: the next one replaces the whole site anyway.
 concurrency:
   group: pages
   cancel-in-progress: false

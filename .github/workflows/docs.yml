@@ -45,14 +45,14 @@ jobs:
     # `workflow_run` matches `CD` by name alone, and a fork's pull request can carry its own
     # `cd.yml` -- still named `CD`, but triggered by `pull_request` -- whose success fires this
     # workflow in the upstream's context, with `head_sha` pointing at the fork's commit. The build
-    # would then run that commit's Gradle scripts with write access to `main`'s Actions cache, and
-    # `deploy` would publish its output. Only a push to this repository -- for `CD`, of a tag -- is
-    # a release.
+    # would then run that commit's Gradle scripts, and `deploy` would publish its output. Only a
+    # push to this repository -- for `CD`, of a tag -- is a release.
     if: >-
       github.event_name == 'workflow_dispatch' || (
         github.event.workflow_run.conclusion == 'success' &&
         github.event.workflow_run.event == 'push' &&
-        github.event.workflow_run.head_repository.full_name == github.repository
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        startsWith(github.event.workflow_run.head_branch, 'v')
       )
     # macOS, for the reason `cd.yml` gives: on Linux the Apple targets are silently skipped, and
     # Dokka would document fewer platforms than the javadoc jars on Central do. Nothing public
@@ -60,8 +60,32 @@ jobs:
     # but the pages would stop listing iOS and macOS among the platforms that have them.
     runs-on: macos-15
     timeout-minutes: 30
+    # `actions: read` for the approval check below, and nothing else.
+    permissions:
+      contents: read
+      actions: read
 
     steps:
+      # The `if` above is not enough on its own: anyone who can push here can push a `v*` tag whose
+      # `cd.yml` is still named `CD` but no longer names the `release` environment, and it succeeds
+      # without a reviewer. What such a run cannot have is an approval for `release` -- the same
+      # human gate that stands between a tag and Central -- so that is what is checked, before any
+      # of the tagged commit's Gradle scripts run.
+      - name: Check the release was approved
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        # `! [ -gt 0 ]` rather than `[ -eq 0 ]`: an empty count fails the check instead of passing.
+        run: |
+          path=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" --jq .path)
+          approved=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/approvals" --jq \
+            '[.[] | select(.state == "approved" and any(.environments[]; .name == "release"))] | length')
+          if [ "$path" != .github/workflows/cd.yml ] || ! [ "$approved" -gt 0 ] 2>/dev/null; then
+            echo "::error::Run $RUN_ID ($path) is not a release approved on 'release'" >&2
+            exit 1
+          fi
+
       # `CD` ran on a tag push, so `head_branch` is the tag's name and `head_sha` its commit. The
       # checkout would otherwise be of the default branch, which is where `workflow_run` runs.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -83,6 +107,10 @@ jobs:
               echo "Refusing version '$version': it must be non-empty [0-9A-Za-z.-]" >&2
               exit 1
               ;;
+            *-SNAPSHOT )
+              echo "Refusing version '$version': a snapshot is never on Central" >&2
+              exit 1
+              ;;
           esac
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
@@ -91,7 +119,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      # Read-only: `workflow_run` runs in the default branch's context, where this action would
+      # otherwise write the tagged commit's Gradle home into the cache `build.yml` restores on `main`.
       - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-read-only: true
 
       - name: Generate
         env:

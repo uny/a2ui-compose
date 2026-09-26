@@ -11,7 +11,8 @@ name: Release dry run
 #
 # What it proves: the version is a usable coordinate, every module's publication assembles, signs,
 # and lands in a repository; a consumer resolves all three artifacts from that repository on each
-# target the consumer build names; and every deployed file carries a detached signature.
+# target the consumer build names; every deployed file carries a detached signature; and the
+# aggregated API docs `docs.yml` publishes after the release generate.
 #
 # What it cannot prove:
 #
@@ -129,6 +130,14 @@ jobs:
 
       - name: Check the ABI check executed
         run: sh .github/scripts/check-abi-ran.sh "${RUNNER_TEMP}/gradle-build.log" .
+
+      # The root's aggregated Dokka site, which `docs.yml` builds only after `CD` has succeeded --
+      # by then the version is on Central, so an aggregation that fails there leaves the pages a
+      # release behind. Nothing else in this workflow, `build.yml` or `cd.yml` runs it.
+      - name: Generate the API docs
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: ./gradlew :dokkaGenerate -PVERSION_NAME="$VERSION" --stacktrace
 
       # `cd.yml`'s "Publish to the local repository" step, aimed at a directory the later steps can
       # inspect and nothing else can have written to. `~/.m2` would work on a fresh runner and hide

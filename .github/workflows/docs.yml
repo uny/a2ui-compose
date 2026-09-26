@@ -40,7 +40,17 @@ concurrency:
 #
 jobs:
   build:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # `workflow_run` matches `CD` by name alone, and a fork's pull request can carry its own
+    # `cd.yml` -- still named `CD`, but triggered by `pull_request` -- whose success fires this
+    # workflow in the upstream's context, with `head_sha` pointing at the fork's commit. The build
+    # would then run that commit's Gradle scripts with write access to `main`'s Actions cache, and
+    # `deploy` would publish its output. Only a tag pushed to this repository is a release.
+    if: >-
+      github.event_name == 'workflow_dispatch' || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      )
     # macOS, for the reason `cd.yml` gives: on Linux the Apple targets are silently skipped, and
     # Dokka would document fewer platforms than the javadoc jars on Central do. Nothing public
     # would vanish -- every Apple-only declaration is the `actual` of a `commonMain` `expect` --

@@ -6,6 +6,8 @@ A renderer for the [A2UI protocol](https://a2ui.org/) built on **Compose Multipl
 > breaking changes between minor versions. See [Installation](#installation) and
 > [Roadmap](#roadmap).
 
+The API reference for the released version is at <https://uny.github.io/a2ui-compose/>.
+
 A2UI lets an agent describe a user interface as a stream of JSON, which the client renders with its
 own native widgets. The agent never ships code — the catalog of renderable components is the trust
 boundary, and it lives in your binary.

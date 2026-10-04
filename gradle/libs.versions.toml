@@ -17,7 +17,7 @@ serialization = "1.11.0"
 publish = "0.37.0"
 dokka = "2.2.0"
 # The Markdown parser `a2ui-material3-markdown` builds on. Publishes every target this repository does.
-jetbrainsMarkdown = "0.7.14"
+jetbrainsMarkdown = "0.7.16"
 
 # The published floors: each becomes `minCompileSdk` in that module's AAR metadata, so it is what
 # an Android consumer of the module must compile against. Two keys because the rule is per module

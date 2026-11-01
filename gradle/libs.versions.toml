@@ -8,16 +8,16 @@
 # the `api/jvm` dumps re-dumped (the two tools list different lines, #89), and
 # `kotlin-js-store/yarn.lock` regenerated (`kotlinUpgradeYarnLock`), which moves with the plugin.
 kotlin = "2.3.21"
-agp = "9.4.1"
+agp = "9.5.0"
 composeMultiplatform = "1.12.0"
 # material3 ships on its own version line, independent of the Compose Multiplatform release.
 composeMaterial3 = "1.9.0"
 coroutines = "1.11.0"
-serialization = "1.11.0"
+serialization = "1.12.0"
 publish = "0.37.0"
 dokka = "2.2.0"
 # The Markdown parser `a2ui-material3-markdown` builds on. Publishes every target this repository does.
-jetbrainsMarkdown = "0.7.14"
+jetbrainsMarkdown = "0.7.18"
 
 # The published floors: each becomes `minCompileSdk` in that module's AAR metadata, so it is what
 # an Android consumer of the module must compile against. Two keys because the rule is per module

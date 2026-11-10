@@ -152,7 +152,7 @@ class A2uiRenderBudgetTest {
 
         renderer.applyAll(
             listOf(
-                """{"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","path":"/items/-",
+                """{"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","path":"/items/3",
                    "value":{"label":"row3","cells":[]}}}""",
             ).map { A2uiJson.strict.decodeFromString(AgentToRendererMessage.serializer(), it) },
         )

@@ -175,11 +175,14 @@ class A2uiComponentScopeTest {
     fun a_write_the_data_model_cannot_take_leaves_it_unchanged_rather_than_raising() {
         val renderer = renderer()
         val before = renderer.state.surfaces.getValue(SURFACE).dataModel
-        // `/items` holds three entries, so index 9 would leave a gap and `JsonObject.write` refuses
-        // it. The address is the agent's -- it arrives as a component's `path` -- and this is what
-        // an input callback calls on every keystroke, so raising here would turn one malformed
+        // `/user/name` holds a string, so a write through it is refused by `JsonObject.write`. The
+        // address is the agent's -- it arrives as a component's `path` -- and this is what an
+        // input callback calls on every keystroke, so raising here would turn one malformed
         // binding into a crash on the first character typed.
-        renderer.write(SURFACE, JsonPointer.parse("/items/9/label"), JsonPrimitive("x"))
+        renderer.write(SURFACE, JsonPointer.parse("/user/name/first"), JsonPrimitive("x"))
+        assertEquals(before, renderer.state.surfaces.getValue(SURFACE).dataModel)
+        // So is a non-numeric token on an array.
+        renderer.write(SURFACE, JsonPointer.parse("/items/-"), JsonPrimitive("x"))
         assertEquals(before, renderer.state.surfaces.getValue(SURFACE).dataModel)
         // A root write of a non-object is the other branch that refuses.
         renderer.write(SURFACE, JsonPointer.parse("/"), JsonPrimitive("not an object"))

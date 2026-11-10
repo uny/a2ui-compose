@@ -174,9 +174,18 @@ public data class A2uiComponentScope internal constructor(
      */
     public fun number(name: String): Double? = (value(name) as? JsonPrimitive)?.doubleOrNull
 
-    /** Property [name] as a boolean. */
-    public fun boolean(name: String): Boolean? = value(name)?.let {
-        (it as? JsonPrimitive)?.booleanOrNull
+    /**
+     * Property [name] as a boolean.
+     *
+     * A `DynamicBoolean` may be a call returning a `ValidationResult`, and `a2ui_protocol.md`
+     * coerces that object "to `result.valid`" -- so `CheckBox.value` bound to `required(...)`
+     * reads as the check's outcome rather than as unreadable. Only that object shape is coerced
+     * here; the rest of the coercion table (strings, numbers, other objects) is not yet applied.
+     */
+    public fun boolean(name: String): Boolean? = when (val resolved = value(name)) {
+        is JsonPrimitive -> resolved.booleanOrNull
+        is JsonObject -> (resolved["valid"] as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
+        else -> null
     }
 
     /**

@@ -36,6 +36,14 @@ class A2uiComponentScopeTest {
     }
 
     @Test
+    fun a_boolean_bound_to_a_validation_result_reads_as_its_valid_flag() {
+        // a2ui_protocol.md: a DynamicBoolean resolving to a ValidationResult "is coerced to
+        // `result.valid`". Read as unreadable, a CheckBox bound to a check drew unchecked.
+        assertEquals(true, scopeFor("checked").boolean("value"))
+        assertEquals(false, scopeFor("unchecked").boolean("value"))
+    }
+
+    @Test
     fun a_bound_property_resolves_through_the_data_model() {
         val scope = scopeFor("bound")
         assertEquals("Ada", scope.string("text"))
@@ -386,7 +394,9 @@ class A2uiComponentScopeTest {
               {"id":"list","component":"List","children":{"componentId":"row","path":"/items"}},
               {"id":"row","component":"Text","text":{"@path":"label"}},
               {"id":"button","component":"Button","child":"title","action":{"event":{"name":"noop"}}},
-              {"id":"money","component":"Text","text":{"@call":"formatCurrency","args":{"value":1234.5,"currency":"JPY"}}}
+              {"id":"money","component":"Text","text":{"@call":"formatCurrency","args":{"value":1234.5,"currency":"JPY"}}},
+              {"id":"checked","component":"CheckBox","label":"x","value":{"@call":"required","args":{"value":"present"}}},
+              {"id":"unchecked","component":"CheckBox","label":"x","value":{"@call":"required","args":{"value":""}}}
             ]}}
             """.trimIndent(),
             """

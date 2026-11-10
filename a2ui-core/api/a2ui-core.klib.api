@@ -1752,8 +1752,6 @@ final class dev.ynagai.a2ui.core.surface/JsonPointer { // dev.ynagai.a2ui.core.s
         final const val MAX_TOKENS // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.MAX_TOKENS|{}MAX_TOKENS[0]
             final fun <get-MAX_TOKENS>(): kotlin/Int // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.MAX_TOKENS.<get-MAX_TOKENS>|<get-MAX_TOKENS>(){}[0]
 
-        final val FORBIDDEN_TOKENS // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.FORBIDDEN_TOKENS|{}FORBIDDEN_TOKENS[0]
-            final fun <get-FORBIDDEN_TOKENS>(): kotlin.collections/Set<kotlin/String> // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.FORBIDDEN_TOKENS.<get-FORBIDDEN_TOKENS>|<get-FORBIDDEN_TOKENS>(){}[0]
         final val ROOT // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.ROOT|{}ROOT[0]
             final fun <get-ROOT>(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.ROOT.<get-ROOT>|<get-ROOT>(){}[0]
 

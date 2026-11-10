@@ -185,6 +185,13 @@ class JsonPointerTest {
                 JsonPrimitive(1),
             )
         }
+        // Past Int as well: still an index, still refused, never an object key.
+        assertFailsWith<A2uiStateException> {
+            JsonObject(emptyMap()).write(JsonPointer.parse("/ys/99999999999"), JsonPrimitive(1))
+        }
+        assertFailsWith<A2uiStateException> {
+            data.write(JsonPointer.parse("/xs/99999999999"), JsonPrimitive(1))
+        }
     }
 
     @Test
@@ -219,7 +226,7 @@ class JsonPointerTest {
     @Test
     fun `a forbidden segment is refused on reads and writes`() {
         // data_model.yaml `test_data_model_rejects_forbidden_path_segments`; blueprint rule 4.
-        for (token in JsonPointer.FORBIDDEN_TOKENS) {
+        for (token in listOf("__proto__", "constructor", "prototype")) {
             assertFailsWith<A2uiFormatException> { JsonPointer.parse("/$token/x") }
             assertFailsWith<A2uiStateException> {
                 JsonObject(emptyMap()).write(JsonPointer.of(token), JsonPrimitive(1))

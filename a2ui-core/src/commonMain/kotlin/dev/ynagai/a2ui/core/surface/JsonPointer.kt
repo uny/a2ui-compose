@@ -102,7 +102,7 @@ public class JsonPointer private constructor(
          * agent whose writes to `/constructor` land on Kotlin renderers and fail on JavaScript
          * ones would be relying on which renderer it happened to reach.
          */
-        public val FORBIDDEN_TOKENS: Set<String> = setOf("__proto__", "constructor", "prototype")
+        internal val FORBIDDEN_TOKENS: Set<String> = setOf("__proto__", "constructor", "prototype")
 
         /**
          * The most tokens a pointer may carry.
@@ -280,7 +280,7 @@ private fun writeIn(
     val token = tokens[depth]
     val last = depth == tokens.lastIndex
     val container: JsonElement = when (node) {
-        null, JsonNull -> if (arrayIndex(token) != null) JsonArray(emptyList()) else JsonObject(emptyMap())
+        null, JsonNull -> if (isNumericToken(token)) JsonArray(emptyList()) else JsonObject(emptyMap())
         is JsonArray, is JsonObject -> node
         is JsonPrimitive -> throw A2uiStateException(
             "updateDataModel `$pointer`: `${pointer.prefix(depth)}` holds a primitive, so the " +
@@ -289,8 +289,16 @@ private fun writeIn(
     }
     return when (container) {
         is JsonArray -> {
+            // A digit string too long for an Int is still an index, just one past the bound;
+            // reading it as a non-index would vivify `{"99999999999": …}` where every upstream
+            // data model raises.
             val index = arrayIndex(token) ?: throw A2uiStateException(
-                "updateDataModel `$pointer`: `$token` is not an array index.",
+                if (isNumericToken(token)) {
+                    "updateDataModel `$pointer`: index $token exceeds the maximum of " +
+                        "${JsonPointer.MAX_ARRAY_INDEX}."
+                } else {
+                    "updateDataModel `$pointer`: `$token` is not an array index."
+                },
             )
             if (index > JsonPointer.MAX_ARRAY_INDEX) {
                 throw A2uiStateException(
@@ -327,6 +335,14 @@ private fun writeIn(
 /** The first [count] tokens of this pointer, as an absolute pointer string. */
 private fun JsonPointer.prefix(count: Int): String =
     JsonPointer.of(*tokens.subList(0, count).toTypedArray()).toString()
+
+/**
+ * Whether [token] is spelled as an array index (`0`, or digits with no leading zero), whatever
+ * its magnitude. Rule 2's "the next segment is numeric" is this test, not [arrayIndex], which
+ * also refuses a value too large for an [Int].
+ */
+private fun isNumericToken(token: String): Boolean =
+    token == "0" || (token.isNotEmpty() && token[0] in '1'..'9' && token.all { it in '0'..'9' })
 
 /**
  * [token] as an array index, or null when it is not one.

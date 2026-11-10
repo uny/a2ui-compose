@@ -1470,7 +1470,6 @@ public final class dev/ynagai/a2ui/core/surface/JsonPointer {
 }
 
 public final class dev/ynagai/a2ui/core/surface/JsonPointer$Companion {
-	public final fun getFORBIDDEN_TOKENS ()Ljava/util/Set;
 	public final fun getROOT ()Ldev/ynagai/a2ui/core/surface/JsonPointer;
 	public final fun of ([Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/JsonPointer;
 	public final fun parse (Ljava/lang/String;)Ldev/ynagai/a2ui/core/surface/JsonPointer;

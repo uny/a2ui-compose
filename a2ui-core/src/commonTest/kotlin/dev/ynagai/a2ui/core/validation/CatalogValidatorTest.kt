@@ -486,7 +486,7 @@ class CatalogValidatorTest {
         assertTrue(good.isValid, good.violations.toString())
         assertEquals(emptySet(), good.unsupportedKeywords)
 
-        // `v1.0` is the envelope's spelling; a catalog says `1.0`, and the pattern is what says so.
+        // `v1.0` was the envelope's spelling in the earlier draft; the catalog pattern refuses the prefix.
         val bad = verdict(""""v1.0"""")
         assertFalse(bad.isValid, "the semver pattern was not applied")
         assertEquals(emptySet(), bad.unsupportedKeywords)

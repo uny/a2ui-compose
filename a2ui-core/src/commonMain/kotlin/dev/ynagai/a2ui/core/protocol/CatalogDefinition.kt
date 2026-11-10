@@ -222,6 +222,8 @@ public data class CatalogDefinition(
     public val components: Map<String, ComponentDefinition> = emptyMap(),
     public val functions: Map<String, FunctionDefinition> = emptyMap(),
     public val schemaKeywords: Map<String, JsonElement> = emptyMap(),
+    /** The catalog's `metadata.extensions` (upstream #3757), carried through unread. */
+    public val metadata: Metadata? = null,
 ) {
     init {
         checkEntityNames(catalogId, components, functions, schemaKeywords)
@@ -394,7 +396,7 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
     private val SCHEMA_KEYWORDS = setOf("\$schema", "\$id", "\$defs")
     private val KEYS = SCHEMA_KEYWORDS + setOf(
         "protocolVersion", "title", "description", "catalogId", "instructions", "components",
-        "functions",
+        "functions", "metadata",
     )
 
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
@@ -413,8 +415,7 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
                 if (!PROTOCOL_VERSION_PATTERN.matches(it)) {
                     throw A2uiFormatException(
                         "CatalogDefinition: `$it` is not a protocol version; the schema's pattern " +
-                            "takes an unprefixed `major.minor[.patch]` (note that a catalog says " +
-                            "`1.0` where an envelope says `v1.0`).",
+                            "takes an unprefixed `major.minor[.patch]`, such as `1.0`.",
                     )
                 }
             }
@@ -433,6 +434,7 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
                     json.decodeFromJsonElement(FunctionDefinitionSerializer, element)
                 },
             schemaKeywords = obj.filterKeys { it in SCHEMA_KEYWORDS },
+            metadata = obj["metadata"]?.let { json.decodeFromJsonElement(Metadata.serializer(), it) },
         )
     }
 
@@ -447,6 +449,7 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
                 value.title?.let { put("title", JsonPrimitive(it)) }
                 value.description?.let { put("description", JsonPrimitive(it)) }
                 value.instructions?.let { put("instructions", JsonPrimitive(it)) }
+                value.metadata?.let { put("metadata", json.json.encodeToJsonElement(Metadata.serializer(), it)) }
                 if (value.components.isNotEmpty()) {
                     put(
                         "components",

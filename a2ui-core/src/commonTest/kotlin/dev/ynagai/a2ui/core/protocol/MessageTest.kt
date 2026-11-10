@@ -27,6 +27,7 @@ class MessageTest {
             """{"version":"1.0","updateDataModel":{"surfaceId":"s","path":"/user/name","value":"Alice"}}""",
             """{"version":"1.0","deleteSurface":{"surfaceId":"s"}}""",
             """{"version":"1.0","callRendererFunction":{"functionCallId":"c1","callFunction":{"@call":"openUrl","catalogId":"cat","args":{"url":"https://example.com"}}}}""",
+            """{"version":"1.0","callRendererFunction":{"functionCallId":"c2","callFunction":{"@call":"openUrl","catalogId":"cat","args":{"url":"https://example.com"}},"surfaceId":"main"}}""",
             """{"version":"1.0","agentFunctionResponse":{"functionCallId":"c1","value":42}}""",
         )
         for (case in cases) {

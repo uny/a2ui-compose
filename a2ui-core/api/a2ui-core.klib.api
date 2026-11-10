@@ -681,16 +681,19 @@ sealed interface dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2u
     }
 
     final class RendererFunctionRequested : dev.ynagai.a2ui.core.surface/RendererEffect { // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested|null[0]
-        constructor <init>(kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionCall) // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.<init>|<init>(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+        constructor <init>(kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionCall, kotlin/String? = ...) // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.<init>|<init>(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall;kotlin.String?){}[0]
 
         final val call // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.call|{}call[0]
             final fun <get-call>(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.call.<get-call>|<get-call>(){}[0]
         final val functionCallId // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.functionCallId|{}functionCallId[0]
             final fun <get-functionCallId>(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.functionCallId.<get-functionCallId>|<get-functionCallId>(){}[0]
+        final val surfaceId // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.surfaceId|{}surfaceId[0]
+            final fun <get-surfaceId>(): kotlin/String? // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
 
         final fun component1(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.component1|component1(){}[0]
         final fun component2(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.component2|component2(){}[0]
-        final fun copy(kotlin/String = ..., dev.ynagai.a2ui.core.protocol/FunctionCall = ...): dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.copy|copy(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+        final fun component3(): kotlin/String? // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.component3|component3(){}[0]
+        final fun copy(kotlin/String = ..., dev.ynagai.a2ui.core.protocol/FunctionCall = ..., kotlin/String? = ...): dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.copy|copy(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall;kotlin.String?){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // dev.ynagai.a2ui.core.surface/RendererEffect.RendererFunctionRequested.toString|toString(){}[0]
@@ -1090,16 +1093,19 @@ final class dev.ynagai.a2ui.core.protocol/CallAgentFunctionMessage : dev.ynagai.
 }
 
 final class dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage : dev.ynagai.a2ui.core.protocol/AgentToRendererMessage { // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage|null[0]
-    constructor <init>(kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionCall) // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.<init>|<init>(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+    constructor <init>(kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionCall, kotlin/String? = ...) // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.<init>|<init>(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall;kotlin.String?){}[0]
 
     final val callFunction // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.callFunction|{}callFunction[0]
         final fun <get-callFunction>(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.callFunction.<get-callFunction>|<get-callFunction>(){}[0]
     final val functionCallId // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.functionCallId|{}functionCallId[0]
         final fun <get-functionCallId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.functionCallId.<get-functionCallId>|<get-functionCallId>(){}[0]
+    final val surfaceId // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.surfaceId|{}surfaceId[0]
+        final fun <get-surfaceId>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.surfaceId.<get-surfaceId>|<get-surfaceId>(){}[0]
 
     final fun component1(): kotlin/String // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.component1|component1(){}[0]
     final fun component2(): dev.ynagai.a2ui.core.protocol/FunctionCall // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.component2|component2(){}[0]
-    final fun copy(kotlin/String = ..., dev.ynagai.a2ui.core.protocol/FunctionCall = ...): dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.copy|copy(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall){}[0]
+    final fun component3(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.component3|component3(){}[0]
+    final fun copy(kotlin/String = ..., dev.ynagai.a2ui.core.protocol/FunctionCall = ..., kotlin/String? = ...): dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.copy|copy(kotlin.String;dev.ynagai.a2ui.core.protocol.FunctionCall;kotlin.String?){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage.toString|toString(){}[0]
@@ -1119,7 +1125,7 @@ final class dev.ynagai.a2ui.core.protocol/CallRendererFunctionMessage : dev.ynag
 }
 
 final class dev.ynagai.a2ui.core.protocol/CatalogDefinition { // dev.ynagai.a2ui.core.protocol/CatalogDefinition|null[0]
-    constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/ComponentDefinition> = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionDefinition> = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...) // dev.ynagai.a2ui.core.protocol/CatalogDefinition.<init>|<init>(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.ComponentDefinition>;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.FunctionDefinition>;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
+    constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/ComponentDefinition> = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionDefinition> = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ..., dev.ynagai.a2ui.core.protocol/Metadata? = ...) // dev.ynagai.a2ui.core.protocol/CatalogDefinition.<init>|<init>(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.ComponentDefinition>;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.FunctionDefinition>;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>;dev.ynagai.a2ui.core.protocol.Metadata?){}[0]
 
     final val catalogId // dev.ynagai.a2ui.core.protocol/CatalogDefinition.catalogId|{}catalogId[0]
         final fun <get-catalogId>(): kotlin/String // dev.ynagai.a2ui.core.protocol/CatalogDefinition.catalogId.<get-catalogId>|<get-catalogId>(){}[0]
@@ -1133,6 +1139,8 @@ final class dev.ynagai.a2ui.core.protocol/CatalogDefinition { // dev.ynagai.a2ui
         final fun <get-functions>(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionDefinition> // dev.ynagai.a2ui.core.protocol/CatalogDefinition.functions.<get-functions>|<get-functions>(){}[0]
     final val instructions // dev.ynagai.a2ui.core.protocol/CatalogDefinition.instructions|{}instructions[0]
         final fun <get-instructions>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.instructions.<get-instructions>|<get-instructions>(){}[0]
+    final val metadata // dev.ynagai.a2ui.core.protocol/CatalogDefinition.metadata|{}metadata[0]
+        final fun <get-metadata>(): dev.ynagai.a2ui.core.protocol/Metadata? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.metadata.<get-metadata>|<get-metadata>(){}[0]
     final val protocolVersion // dev.ynagai.a2ui.core.protocol/CatalogDefinition.protocolVersion|{}protocolVersion[0]
         final fun <get-protocolVersion>(): kotlin/String? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.protocolVersion.<get-protocolVersion>|<get-protocolVersion>(){}[0]
     final val schemaKeywords // dev.ynagai.a2ui.core.protocol/CatalogDefinition.schemaKeywords|{}schemaKeywords[0]
@@ -1148,7 +1156,8 @@ final class dev.ynagai.a2ui.core.protocol/CatalogDefinition { // dev.ynagai.a2ui
     final fun component6(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/ComponentDefinition> // dev.ynagai.a2ui.core.protocol/CatalogDefinition.component6|component6(){}[0]
     final fun component7(): kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionDefinition> // dev.ynagai.a2ui.core.protocol/CatalogDefinition.component7|component7(){}[0]
     final fun component8(): kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> // dev.ynagai.a2ui.core.protocol/CatalogDefinition.component8|component8(){}[0]
-    final fun copy(kotlin/String = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/ComponentDefinition> = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionDefinition> = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ...): dev.ynagai.a2ui.core.protocol/CatalogDefinition // dev.ynagai.a2ui.core.protocol/CatalogDefinition.copy|copy(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.ComponentDefinition>;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.FunctionDefinition>;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>){}[0]
+    final fun component9(): dev.ynagai.a2ui.core.protocol/Metadata? // dev.ynagai.a2ui.core.protocol/CatalogDefinition.component9|component9(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/ComponentDefinition> = ..., kotlin.collections/Map<kotlin/String, dev.ynagai.a2ui.core.protocol/FunctionDefinition> = ..., kotlin.collections/Map<kotlin/String, kotlinx.serialization.json/JsonElement> = ..., dev.ynagai.a2ui.core.protocol/Metadata? = ...): dev.ynagai.a2ui.core.protocol/CatalogDefinition // dev.ynagai.a2ui.core.protocol/CatalogDefinition.copy|copy(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.String?;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.ComponentDefinition>;kotlin.collections.Map<kotlin.String,dev.ynagai.a2ui.core.protocol.FunctionDefinition>;kotlin.collections.Map<kotlin.String,kotlinx.serialization.json.JsonElement>;dev.ynagai.a2ui.core.protocol.Metadata?){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.ynagai.a2ui.core.protocol/CatalogDefinition.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.ynagai.a2ui.core.protocol/CatalogDefinition.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.ynagai.a2ui.core.protocol/CatalogDefinition.toString|toString(){}[0]

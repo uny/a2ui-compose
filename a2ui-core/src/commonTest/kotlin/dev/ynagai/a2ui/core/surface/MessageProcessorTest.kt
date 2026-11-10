@@ -217,6 +217,17 @@ class MessageProcessorTest {
         val effect = assertIs<RendererEffect.RendererFunctionRequested>(result.effects.single())
         assertEquals("1", effect.functionCallId)
         assertEquals("openUrl", effect.call.call)
+        // No surface named: the isolated empty context, never a fallback to an open surface.
+        assertNull(effect.surfaceId)
+    }
+
+    @Test
+    fun `callRendererFunction carries the surface it names`() {
+        val result = fold(
+            """{"version": "1.0", "callRendererFunction": {"functionCallId": "1", "surfaceId": "s", "callFunction": {"@call": "openUrl", "catalogId": "c"}}}""",
+        )
+        val effect = assertIs<RendererEffect.RendererFunctionRequested>(result.effects.single())
+        assertEquals("s", effect.surfaceId)
     }
 
     @Test

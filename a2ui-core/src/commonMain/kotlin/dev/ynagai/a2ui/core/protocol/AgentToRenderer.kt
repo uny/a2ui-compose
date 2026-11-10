@@ -100,12 +100,18 @@ public data class DeleteSurfaceMessage(
  * Asks the renderer to run a function locally on the agent's behalf.
  *
  * Unlike a [FunctionCall] embedded in a component, [callFunction] must name its `catalogId`
- * explicitly: there is no surface in scope to inherit a default from.
+ * explicitly, even when [surfaceId] names a surface: the schema requires it either way.
+ *
+ * [surfaceId] (upstream #3110) names the surface whose data model the call's bindings resolve
+ * against. When it is null the call runs in "a surface-independent root context with an isolated
+ * empty data model", and a renderer "MUST NOT resolve it against any existing surface's data
+ * model" -- so a host must not fall back to some surface it happens to have open.
  */
 @Serializable
 public data class CallRendererFunctionMessage(
     public val functionCallId: CallId,
     public val callFunction: FunctionCall,
+    public val surfaceId: String? = null,
 ) : AgentToRendererMessage {
     init {
         if (callFunction.catalogId == null) {

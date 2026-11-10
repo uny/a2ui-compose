@@ -2,6 +2,8 @@ package dev.ynagai.a2ui.core.conformance
 
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
+import dev.ynagai.a2ui.core.protocol.CatalogDefinition
+import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
 import dev.ynagai.a2ui.core.surface.MessageProcessor
 import dev.ynagai.a2ui.core.surface.RendererState
 import dev.ynagai.a2ui.core.validation.CatalogFixtures
@@ -85,6 +87,30 @@ class ConformanceTest {
     fun all_four_target_documents_are_exercised() {
         val targets = CONFORMANCE_CASES.map { it.suite.target }.distinct()
         assertEquals(4, targets.size, "expected all four documents to be in play, got $targets")
+    }
+
+    @Test
+    fun every_message_the_suite_accepts_also_decodes() {
+        // The cases are validated against the schema, not decoded -- so a field the schema gained
+        // and the model did not (`callRendererFunction.surfaceId`, upstream #3110) passed the
+        // suite above while the strict decoder refused the same message. A host decodes before it
+        // does anything else, so what the specification accepts has to survive this too.
+        val refused = CONFORMANCE_CASES
+            .filter { it.expectedValid }
+            .mapNotNull { case ->
+                runCatching {
+                    when (case.suite.target) {
+                        SchemaTarget.AgentToRenderer -> A2uiJson.strict
+                            .decodeFromJsonElement(AgentToRendererMessage.serializer(), case.data)
+                        SchemaTarget.RendererToAgent -> A2uiJson.strict
+                            .decodeFromJsonElement(RendererToAgentMessage.serializer(), case.data)
+                        SchemaTarget.CatalogDefinitionDocument -> A2uiJson.strict
+                            .decodeFromJsonElement(CatalogDefinition.serializer(), case.data)
+                        SchemaTarget.AgentCapabilitiesDocument -> Unit
+                    }
+                }.exceptionOrNull()?.let { "$case\n    ${it.message?.take(200)}" }
+            }
+        assertTrue(refused.isEmpty(), "${refused.size} accepted message(s) do not decode:\n" + refused.joinToString("\n"))
     }
 
     @Test

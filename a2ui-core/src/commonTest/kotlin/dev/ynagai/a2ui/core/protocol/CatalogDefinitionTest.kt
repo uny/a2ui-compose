@@ -68,6 +68,15 @@ class CatalogDefinitionTest {
     }
 
     @Test
+    fun `a catalog carries its metadata extensions through`() {
+        // catalog_schema_relaxation.json #0; upstream #3757.
+        val text = """{"catalogId":"c","metadata":{"extensions":{"google_material":{"version":"3.0"}}}}"""
+        val decoded = json.decodeFromString<CatalogDefinition>(text)
+        assertEquals(setOf("google_material"), decoded.metadata?.extensions?.keys)
+        assertEquals(text, json.encodeToString(CatalogDefinition.serializer(), decoded))
+    }
+
+    @Test
     fun `the schema defaults apply when a catalog omits them`() {
         val minimal = json.decodeFromString<CatalogDefinition>(
             """{"catalogId":"c","functions":{"f":{"type":"object","properties":{"@call":{"const":"f"}},"required":["@call"],"returnType":"any"}}}""",

@@ -1,6 +1,14 @@
 package dev.ynagai.a2ui.core.conformance
 
+import dev.ynagai.a2ui.core.protocol.A2uiJson
+import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
+import dev.ynagai.a2ui.core.surface.MessageProcessor
+import dev.ynagai.a2ui.core.surface.RendererState
+import dev.ynagai.a2ui.core.validation.CatalogFixtures
+import dev.ynagai.a2ui.core.validation.MessageDirection
 import dev.ynagai.a2ui.core.validation.ValidationLimits
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -77,6 +85,30 @@ class ConformanceTest {
     fun all_four_target_documents_are_exercised() {
         val targets = CONFORMANCE_CASES.map { it.suite.target }.distinct()
         assertEquals(4, targets.size, "expected all four documents to be in play, got $targets")
+    }
+
+    @Test
+    fun the_contact_form_stream_validates_and_builds_a_surface() {
+        // `run_tests.py`'s `validate_jsonl_example`: every line must be a valid message. Applying
+        // them in order on top of that is what a renderer does with the stream.
+        val messages = Json.parseToJsonElement(CatalogFixtures.CONTACT_FORM_STREAM) as JsonArray
+        assertEquals(4, messages.size)
+        messages.forEachIndexed { index, message ->
+            val result = validatorAt(ValidationLimits.DEFAULT).validateMessage(
+                message = message,
+                direction = MessageDirection.AGENT_TO_RENDERER,
+                catalogId = BASIC.catalogId,
+            )
+            assertTrue(result.isValid, "line $index: ${result.violations.take(3)}")
+        }
+        val decoded = messages.map {
+            A2uiJson.strict.decodeFromJsonElement(AgentToRendererMessage.serializer(), it)
+        }
+        // The stream ends by deleting the surface, so look at it one message before that.
+        val built = MessageProcessor.applyAll(RendererState(), decoded.dropLast(1)).state
+        assertTrue(built.surface("contact_form_1")?.isRenderable == true)
+        val ended = MessageProcessor.apply(built, decoded.last()).state
+        assertEquals(null, ended.surface("contact_form_1"))
     }
 }
 

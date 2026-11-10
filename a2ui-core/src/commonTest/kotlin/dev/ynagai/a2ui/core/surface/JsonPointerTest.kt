@@ -57,10 +57,14 @@ class JsonPointerTest {
     }
 
     @Test
-    fun `an empty reference token addresses the empty-string key`() {
-        // RFC 6901: "/" is root per A2UI, but "//a" still has one empty token before "a".
-        assertEquals(listOf("", "a"), JsonPointer.parse("//a").tokens)
-        assertEquals(JsonPrimitive(1), model("""{"": {"a": 1}}""").resolve(JsonPointer.parse("//a")))
+    fun `empty reference tokens are dropped as upstream does`() {
+        // Not RFC 6901, under which "//a" has an empty token before "a". data_model.yaml
+        // `test_data_model_normalizes_empty_path_segments` and `..._trailing_slash`.
+        assertEquals(listOf("a"), JsonPointer.parse("//a").tokens)
+        assertEquals(JsonPointer.parse("/a/b"), JsonPointer.parse("//a///b//"))
+        assertEquals(JsonPointer.parse("/foo"), JsonPointer.parse("/foo/"))
+        assertTrue(JsonPointer.parse("///").isRoot)
+        assertEquals(JsonPrimitive(1), model("""{"a": 1}""").resolve(JsonPointer.parse("//a")))
     }
 
     @Test

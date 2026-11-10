@@ -22,9 +22,16 @@ import kotlinx.serialization.json.JsonPrimitive
  * **Deviation from RFC 6901, required by the specification.** Under the RFC, `/` is a pointer to
  * the member whose name is the empty string, and only `""` addresses the whole document. A2UI
  * instead says of `updateDataModel.path`: "If omitted, or set to `/`, refers to the entire data
- * model." This type follows A2UI, so `""` and `/` both parse to [ROOT] and there is no way to
- * write a pointer to a top-level `""` key. The alternative — following the RFC and reading `/` as
- * a key — would silently write agent payloads into the wrong place.
+ * model." This type follows A2UI, so `""` and `/` both parse to [ROOT]. The alternative —
+ * following the RFC and reading `/` as a key — would silently write agent payloads into the wrong
+ * place.
+ *
+ * **Empty tokens are dropped.** `//a///b//` is `/a/b`, and a trailing slash is not a distinct
+ * path. That is what every upstream data model does (`web_core`, Python `a2ui_core`, Swift
+ * `A2UICore`) and what `data_model.yaml`'s `test_data_model_normalizes_empty_path_segments` and
+ * `..._trailing_slash` pin, so an agent writing `/user/` reaches the same member on every
+ * renderer. The cost is the RFC's empty-string key, which no pointer can address; the root rule
+ * above already gave up the top-level one.
  */
 public class JsonPointer private constructor(
     public val tokens: List<String>,
@@ -118,7 +125,8 @@ public class JsonPointer private constructor(
             if (raw.isEmpty() || raw == "/") return ROOT
             val absolute = raw.startsWith('/')
             val body = if (absolute) raw.substring(1) else raw
-            val split = body.split('/')
+            val split = body.split('/').filter { it.isNotEmpty() }
+            if (split.isEmpty()) return if (absolute) ROOT else JsonPointer(emptyList(), false)
             if (split.size > MAX_TOKENS) {
                 // Counted before unescaping, so an oversized pointer costs one split rather
                 // than a pass over every token, and truncated in the message so a megabyte of

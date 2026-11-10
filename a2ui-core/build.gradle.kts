@@ -38,6 +38,8 @@ val generateCatalogFixtures = embedSpecDocuments(
     documents = mapOf(
         "BASIC" to "v1_0/catalogs/basic.json",
         "TESTING" to "v1_0/catalogs/testing.json",
+        // `run_tests.py`'s JSONL example, as a JSON array; see `spec/README.md`.
+        "CONTACT_FORM_STREAM" to "v1_0/streams/contact_form_example.json",
     ),
 )
 
@@ -54,6 +56,21 @@ val generateConformanceCases = embedSpecDocuments(
     packageName = "dev.ynagai.a2ui.core.conformance",
     objectName = "ConformanceSources",
     directory = "v1_0/cases",
+)
+
+/**
+ * The cross-SDK conformance suites under upstream's `conformance/core/` that this module runs: the
+ * data model's, and the reserved-key suite.
+ *
+ * Upstream writes these in YAML. They are vendored converted to JSON -- see `spec/README.md` --
+ * because the embedding task and the tests that read the result run on every target, and none of
+ * them has a YAML parser.
+ */
+val generateCoreConformanceSuites = embedSpecDocuments(
+    taskName = "generateCoreConformanceSuites",
+    packageName = "dev.ynagai.a2ui.core.conformance",
+    objectName = "CoreConformanceSources",
+    directory = "conformance/core",
 )
 
 /**
@@ -153,6 +170,7 @@ kotlin {
         commonTest {
             kotlin.srcDir(generateCatalogFixtures)
             kotlin.srcDir(generateConformanceCases)
+            kotlin.srcDir(generateCoreConformanceSuites)
         }
         commonMain.dependencies {
             api(libs.kotlinx.serialization.json)

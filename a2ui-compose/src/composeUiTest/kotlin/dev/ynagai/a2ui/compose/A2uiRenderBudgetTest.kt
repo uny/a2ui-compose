@@ -152,7 +152,7 @@ class A2uiRenderBudgetTest {
 
         renderer.applyAll(
             listOf(
-                """{"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","path":"/items/-",
+                """{"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","path":"/items/3",
                    "value":{"label":"row3","cells":[]}}}""",
             ).map { A2uiJson.strict.decodeFromString(AgentToRendererMessage.serializer(), it) },
         )
@@ -294,9 +294,9 @@ class A2uiRenderBudgetTest {
             }
             renderer.applyAll(
                 listOf(
-                    """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
-                    """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
-                    """{"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{"items":[$rows]}}}""",
+                    """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
+                    """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
+                    """{"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{"items":[$rows]}}}""",
                 ).map {
                     A2uiJson.strict.decodeFromString(
                         AgentToRendererMessage.serializer(),
@@ -311,13 +311,13 @@ class A2uiRenderBudgetTest {
 
         val TEMPLATE = """[
             {"id":"root","component":"List","children":{"componentId":"row","path":"/items"}},
-            {"id":"row","component":"Text","text":{"path":"label"}}
+            {"id":"row","component":"Text","text":{"@path":"label"}}
         ]"""
 
         val NESTED_TEMPLATE = """[
             {"id":"root","component":"List","children":{"componentId":"row","path":"/items"}},
             {"id":"row","component":"List","children":{"componentId":"cell","path":"cells"}},
-            {"id":"cell","component":"Text","text":{"path":"v"}}
+            {"id":"cell","component":"Text","text":{"@path":"v"}}
         ]"""
 
         val StackingRenderer = ComponentRenderer { scope, modifier ->

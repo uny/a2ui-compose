@@ -344,8 +344,8 @@ class AlignStretchTest {
     private fun surfaceWith(components: String) = A2uiRenderer().also { renderer ->
         renderer.applyAll(
             listOf(
-                """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE_ID","catalogId":"${BasicCatalog.id}"}}""",
-                """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE_ID","components":$components}}""",
+                """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE_ID","catalogId":"${BasicCatalog.id}"}}""",
+                """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE_ID","components":$components}}""",
             ).map { A2uiJson.strict.decodeFromString<AgentToRendererMessage>(it) },
         )
     }

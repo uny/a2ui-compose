@@ -27,7 +27,7 @@ private fun format(
     scope: EvaluationScope = EvaluationScope.Root,
 ): String {
     val wire = buildJsonObject {
-        put("call", JsonPrimitive("formatString"))
+        put("@call", JsonPrimitive("formatString"))
         put("args", buildJsonObject { put("value", JsonPrimitive(template)) })
     }
     val call = A2uiJson.strict.decodeFromJsonElement(FunctionCall.serializer(), wire)
@@ -37,7 +37,7 @@ private fun format(
 class ReviewLoopRegressionTest {
 
     private fun emailValid(value: String): Boolean? {
-        val wire = Json.parseToJsonElement("""{"call":"email","args":{"value":${JsonPrimitive(value)}}}""")
+        val wire = Json.parseToJsonElement("""{"@call":"email","args":{"value":${JsonPrimitive(value)}}}""")
         val result = context("{}").evaluate(
             A2uiJson.strict.decodeFromJsonElement(FunctionCall.serializer(), wire),
         ) as JsonObject
@@ -59,7 +59,7 @@ class ReviewLoopRegressionTest {
     fun indexDoesNotResolveItsOffsetTwiceInsideATemplate() {
         // `/holder` holds an object shaped like a binding. Every other function rejects it;
         // `@index` used to follow it to `/n` and answer 5.
-        val data = """{"rows":[{}],"holder":{"path":"/n"},"n":5}"""
+        val data = """{"rows":[{}],"holder":{"@path":"/n"},"n":5}"""
         val failure = assertFailsWith<A2uiFunctionException> {
             format("\${@index(offset:/holder)}", data, scope = itemScope("/rows", 0))
         }
@@ -80,22 +80,22 @@ class ReviewLoopRegressionTest {
         // malformed binding is read; the strict decoder's own exception is not one of the three
         // types this module documents.
         val failure = assertFailsWith<A2uiFunctionException> {
-            context("{}").evaluate(call("""{"call":"required","args":{"value":{"path":"/x","extra":1}}}"""))
+            context("{}").evaluate(call("""{"@call":"required","args":{"value":{"@path":"/x","extra":1}}}"""))
         }
         assertTrue(failure.message!!.contains("not a valid binding or call"), failure.message!!)
         assertFailsWith<A2uiFunctionException> {
-            context("{}").evaluate(call("""{"call":"required","args":{"value":{"path":5}}}"""))
+            context("{}").evaluate(call("""{"@call":"required","args":{"value":{"@path":5}}}"""))
         }
     }
 
     @Test
     fun theDeliberateFormatFailureIsStillAFormatFailure() {
         // `A2uiFormatException` extends `SerializationException`, so wrapping the latter must not
-        // swallow the former: an object carrying both `path` and `call` is a malformed payload,
+        // swallow the former: an object carrying both `@path` and `@call` is a malformed payload,
         // which a renderer classifies by catching `A2uiFormatException`.
         assertFailsWith<A2uiFormatException> {
             context("{}").evaluate(
-                call("""{"call":"required","args":{"value":{"path":"/x","call":"required"}}}"""),
+                call("""{"@call":"required","args":{"value":{"@path":"/x","@call":"required"}}}"""),
             )
         }
     }
@@ -105,25 +105,25 @@ class ReviewLoopRegressionTest {
         // An optional field capped at 200 characters must not report TOO_SHORT before the user
         // types — the empty string it becomes a moment later already passes.
         val absent = context("{}").evaluate(
-            call("""{"call":"length","args":{"value":{"path":"/form/notes"},"max":200}}"""),
+            call("""{"@call":"length","args":{"value":{"@path":"/form/notes"},"max":200}}"""),
         )
         assertEquals("""{"valid":true}""", absent.toString())
         // An explicit `min: 0` must agree with the empty string, which passes it.
         assertEquals(
             """{"valid":true}""",
             context("{}").evaluate(
-                call("""{"call":"length","args":{"value":{"path":"/x"},"min":0,"max":200}}"""),
+                call("""{"@call":"length","args":{"value":{"@path":"/x"},"min":0,"max":200}}"""),
             ).toString(),
         )
         assertEquals(
             """{"valid":true}""",
             context("{}").evaluate(
-                call("""{"call":"length","args":{"value":"","min":0,"max":200}}"""),
+                call("""{"@call":"length","args":{"value":"","min":0,"max":200}}"""),
             ).toString(),
         )
         // A declared minimum still fails, and still says why.
         val withMin = context("{}").evaluate(
-            call("""{"call":"length","args":{"value":{"path":"/form/name"},"min":1}}"""),
+            call("""{"@call":"length","args":{"value":{"@path":"/form/name"},"min":1}}"""),
         )
         assertEquals("""{"valid":false,"code":"TOO_SHORT"}""", withMin.toString())
     }
@@ -139,7 +139,7 @@ class ReviewLoopRegressionTest {
         val template = "\${openUrl(url:'https://example.com/a')}\${openUrl(url:'https://example.com/b')}"
         val wire = A2uiJson.strict.decodeFromJsonElement(
             FunctionCall.serializer(),
-            Json.parseToJsonElement("""{"call":"formatString","args":{"value":${JsonPrimitive(template)}}}"""),
+            Json.parseToJsonElement("""{"@call":"formatString","args":{"value":${JsonPrimitive(template)}}}"""),
         )
         assertFailsWith<A2uiFunctionException> { ctx.evaluate(wire) }
         assertEquals(listOf("https://example.com/a"), opened, "the second open must not happen")
@@ -150,7 +150,7 @@ class ReviewLoopRegressionTest {
         val secret = "4111111111111111-and-more"
         val failure = assertFailsWith<A2uiFunctionException> {
             context("""{"form":{"card":"$secret"}}""").evaluate(
-                call("""{"call":"formatNumber","args":{"value":{"path":"/form/card"}}}"""),
+                call("""{"@call":"formatNumber","args":{"value":{"@path":"/form/card"}}}"""),
             )
         }
         assertTrue(failure.message!!.contains("must be a number"), failure.message!!)
@@ -166,7 +166,7 @@ class ReviewLoopRegressionTest {
         // same treatment as the string branch.
         val digits = "9".repeat(50_000)
         val fromLiteral = assertFailsWith<A2uiFunctionException> {
-            context("{}").evaluate(call("""{"call":"not","args":{"value":$digits}}"""))
+            context("{}").evaluate(call("""{"@call":"not","args":{"value":$digits}}"""))
         }
         assertTrue(
             fromLiteral.message!!.length < 1_000,
@@ -179,7 +179,7 @@ class ReviewLoopRegressionTest {
         assertEquals(
             "\"item\"",
             context("{}").evaluate(
-                call("""{"call":"pluralize","args":{"value":-1,"one":"item","other":"items"}}"""),
+                call("""{"@call":"pluralize","args":{"value":-1,"one":"item","other":"items"}}"""),
             ).toString(),
         )
     }
@@ -213,7 +213,7 @@ class ReviewLoopBoundsTest {
         val template = "\${formatString(value:'ok',a:formatString(value:/big),b:formatString(value:/big))}"
         val failure = assertFailsWith<A2uiFunctionException> {
             val wire = buildJsonObject {
-                put("call", JsonPrimitive("formatString"))
+                put("@call", JsonPrimitive("formatString"))
                 put("args", buildJsonObject { put("value", JsonPrimitive(template)) })
             }
             context(data, limits = EvaluationLimits(maxResultLength = 1_000)).evaluate(
@@ -227,7 +227,7 @@ class ReviewLoopBoundsTest {
     fun theResultBudgetCoversFormattingFunctionsAndNotOnlyFormatString() {
         val failure = assertFailsWith<A2uiFunctionException> {
             context("{}", limits = EvaluationLimits(maxResultLength = 4)).evaluate(
-                call("""{"call":"formatNumber","args":{"value":1000000}}"""),
+                call("""{"@call":"formatNumber","args":{"value":1000000}}"""),
             )
         }
         assertTrue(failure.message!!.contains("maximum result length"), failure.message!!)
@@ -238,7 +238,7 @@ class ReviewLoopBoundsTest {
         val body = (0 until 200).joinToString(",") { "a$it:'x'" }
         val failure = assertFailsWith<A2uiFunctionException> {
             val wire = buildJsonObject {
-                put("call", JsonPrimitive("formatString"))
+                put("@call", JsonPrimitive("formatString"))
                 put("args", buildJsonObject { put("value", JsonPrimitive("\${formatString($body)}")) })
             }
             context("{}", limits = EvaluationLimits(maxSteps = 20)).evaluate(
@@ -254,13 +254,13 @@ class ReviewLoopBoundsTest {
         // character for it, and at the old 64 KiB bound that was a StackOverflowError.
         val subject = "a".repeat(DEFAULT_MAX_SUBJECT_LENGTH)
         val result = context("{}").evaluate(
-            call("""{"call":"regex","args":{"pattern":"(a|b)*","value":${JsonPrimitive(subject)}}}"""),
+            call("""{"@call":"regex","args":{"pattern":"(a|b)*","value":${JsonPrimitive(subject)}}}"""),
         )
         assertEquals("""{"valid":true}""", result.toString())
         val failure = assertFailsWith<A2uiFunctionException> {
             context("{}").evaluate(
                 call(
-                    """{"call":"regex","args":{"pattern":"(a|b)*","value":""" +
+                    """{"@call":"regex","args":{"pattern":"(a|b)*","value":""" +
                         "${JsonPrimitive("a".repeat(DEFAULT_MAX_SUBJECT_LENGTH + 1))}}}",
                 ),
             )
@@ -274,13 +274,13 @@ class ReviewLoopBoundsTest {
         assertEquals(
             """"USD 123,456,789,012,345.67"""",
             context("{}").evaluate(
-                call("""{"call":"formatCurrency","args":{"value":123456789012345.67,"currency":"USD"}}"""),
+                call("""{"@call":"formatCurrency","args":{"value":123456789012345.67,"currency":"USD"}}"""),
             ).toString(),
         )
         assertEquals(
             """"10,000,000,000,000,000"""",
             context("{}").evaluate(
-                call("""{"call":"formatNumber","args":{"value":1e16,"decimals":0}}"""),
+                call("""{"@call":"formatNumber","args":{"value":1e16,"decimals":0}}"""),
             ).toString(),
         )
     }
@@ -297,20 +297,20 @@ class ProgressiveRenderingTest {
 
     @Test
     fun theFormattingFunctionsAnswerWithNullWhenTheirValueHasNotArrived() {
-        assertEquals("null", evaluate("""{"call":"formatNumber","args":{"value":{"path":"/cart/total"}}}"""))
+        assertEquals("null", evaluate("""{"@call":"formatNumber","args":{"value":{"@path":"/cart/total"}}}"""))
         assertEquals(
             "null",
-            evaluate("""{"call":"formatCurrency","args":{"value":{"path":"/x"},"currency":"USD"}}"""),
+            evaluate("""{"@call":"formatCurrency","args":{"value":{"@path":"/x"},"currency":"USD"}}"""),
         )
         assertEquals(
             "null",
-            evaluate("""{"call":"formatDate","args":{"value":{"path":"/x"},"format":"yyyy"}}"""),
+            evaluate("""{"@call":"formatDate","args":{"value":{"@path":"/x"},"format":"yyyy"}}"""),
         )
         assertEquals(
             "null",
-            evaluate("""{"call":"pluralize","args":{"value":{"path":"/x"},"other":"items"}}"""),
+            evaluate("""{"@call":"pluralize","args":{"value":{"@path":"/x"},"other":"items"}}"""),
         )
-        assertEquals("null", evaluate("""{"call":"formatString","args":{"value":{"path":"/x"}}}"""))
+        assertEquals("null", evaluate("""{"@call":"formatString","args":{"value":{"@path":"/x"}}}"""))
     }
 
     @Test
@@ -326,10 +326,10 @@ class ProgressiveRenderingTest {
         // Tolerating these would render an amount whose currency is unknown, or a date with no
         // pattern — confidently wrong rather than visibly absent.
         assertFailsWith<A2uiFunctionException> {
-            evaluate("""{"call":"formatCurrency","args":{"value":5,"currency":{"path":"/x"}}}""")
+            evaluate("""{"@call":"formatCurrency","args":{"value":5,"currency":{"@path":"/x"}}}""")
         }
         assertFailsWith<A2uiFunctionException> {
-            evaluate("""{"call":"formatDate","args":{"value":0,"format":{"path":"/x"}}}""")
+            evaluate("""{"@call":"formatDate","args":{"value":0,"format":{"@path":"/x"}}}""")
         }
     }
 
@@ -337,7 +337,7 @@ class ProgressiveRenderingTest {
     fun aCheckWhoseConditionHasNotArrivedIsNotYetAFailure() {
         val condition = A2uiJson.strict.decodeFromJsonElement(
             dev.ynagai.a2ui.core.protocol.DataBinding.serializer(),
-            Json.parseToJsonElement("""{"path":"/checks/card"}"""),
+            Json.parseToJsonElement("""{"@path":"/checks/card"}"""),
         )
         assertEquals(true, context("{}").evaluateCheck(condition).valid)
         // A result that has arrived is still read as written.
@@ -350,6 +350,6 @@ class ProgressiveRenderingTest {
 
     @Test
     fun aValueThatIsPresentIsStillFormatted() {
-        assertEquals(""""1,234.50"""", evaluate("""{"call":"formatNumber","args":{"value":1234.5,"decimals":2}}"""))
+        assertEquals(""""1,234.50"""", evaluate("""{"@call":"formatNumber","args":{"value":1234.5,"decimals":2}}"""))
     }
 }

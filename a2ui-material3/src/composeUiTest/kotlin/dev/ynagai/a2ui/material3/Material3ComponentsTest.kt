@@ -567,7 +567,7 @@ class Material3ComponentsTest {
         renderer.apply(
             A2uiJson.strict.decodeFromString(
                 AgentToRendererMessage.serializer(),
-                """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
+                """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
                     {"id":"a","component":"Text","text":"$LONG_TEXT_A"}
                 ]}}""",
             ),
@@ -1160,12 +1160,12 @@ class Material3ComponentsTest {
         ).also { renderer ->
             renderer.applyAll(
                 listOf(
-                    """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
-                    """{"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
+                    """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
+                    """{"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
                         "user":{"name":"Ada"},"typed":"","justify":"center",
                         "items":[{"label":"one"},{"label":"two"},{"label":"three"}]
                     }}}""",
-                    """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
+                    """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
                 ).map {
                     A2uiJson.strict.decodeFromString(
                         AgentToRendererMessage.serializer(),
@@ -1227,15 +1227,15 @@ class Material3ComponentsTest {
         val BUTTON = """[
             {"id":"root","component":"Column","children":["action_button"]},
             {"id":"action_button","component":"Button","child":"label","variant":"primary",
-             "action":{"event":{"name":"submitted","context":{"who":{"path":"/user/name"}}}}},
+             "action":{"event":{"name":"submitted","context":{"who":{"@path":"/user/name"}}}}},
             {"id":"label","component":"Text","text":"Send"}
         ]"""
 
         val FIELD = """[
             {"id":"root","component":"Column","children":["input","echo"]},
-            {"id":"input","component":"TextField","label":"Type something:","value":{"path":"/typed"}},
+            {"id":"input","component":"TextField","label":"Type something:","value":{"@path":"/typed"}},
             {"id":"echo","component":"Text",
-             "text":{"call":"formatString","args":{"value":"You typed: ${'$'}{/typed}"}}}
+             "text":{"@call":"formatString","args":{"value":"You typed: ${'$'}{/typed}"}}}
         ]"""
 
         val LITERAL_FIELD = """[
@@ -1385,7 +1385,7 @@ class Material3ComponentsTest {
 
         val FIELD_BESIDE_LONG_TEXT = """[
             {"id":"root","component":"Row","children":["f","t"]},
-            {"id":"f","component":"TextField","label":"Search","value":{"path":"/typed"}},
+            {"id":"f","component":"TextField","label":"Search","value":{"@path":"/typed"}},
             {"id":"t","component":"Text","text":"$LONG_TEXT_A"}
         ]"""
 
@@ -1516,7 +1516,7 @@ class Material3ComponentsTest {
 
         val FIELD_AND_BUTTON = """[
             {"id":"root","component":"Row","children":["f","btn"]},
-            {"id":"f","component":"TextField","label":"Search","value":{"path":"/typed"}},
+            {"id":"f","component":"TextField","label":"Search","value":{"@path":"/typed"}},
             {"id":"btn","component":"Button","child":"lbl","action":{"event":{"name":"go"}}},
             {"id":"lbl","component":"Text","text":"GO"}
         ]"""
@@ -1539,7 +1539,7 @@ class Material3ComponentsTest {
         val OBSCURED_FIELD = """[
             {"id":"root","component":"Column","children":["input"]},
             {"id":"input","component":"TextField","label":"Password",
-             "value":{"path":"/typed"},"variant":"obscured"}
+             "value":{"@path":"/typed"},"variant":"obscured"}
         ]"""
 
         val MALFORMED_ACTION = """[
@@ -1553,7 +1553,7 @@ class Material3ComponentsTest {
             {"id":"root","component":"Row","children":["inner","date"],
              "justify":"spaceBetween","align":"center"},
             {"id":"inner","component":"Row","children":["origin"],
-             "justify":{"path":"/justify"},"align":"center"},
+             "justify":{"@path":"/justify"},"align":"center"},
             {"id":"origin","component":"Text","text":"origin"},
             {"id":"date","component":"Text","text":"date"}
         ]"""
@@ -1596,13 +1596,13 @@ class Material3ComponentsTest {
 
         val TEMPLATED_LIST = """[
             {"id":"root","component":"List","children":{"path":"/items","componentId":"item"}},
-            {"id":"item","component":"Text","text":{"path":"label"}}
+            {"id":"item","component":"Text","text":{"@path":"label"}}
         ]"""
 
         val LIST_THEN_TEXT = """[
             {"id":"root","component":"Column","children":["lst","after"]},
             {"id":"lst","component":"List","children":{"path":"/items","componentId":"item"}},
-            {"id":"item","component":"Text","text":{"path":"label"}},
+            {"id":"item","component":"Text","text":{"@path":"label"}},
             {"id":"after","component":"Text","text":"AFTER"}
         ]"""
 

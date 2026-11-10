@@ -105,7 +105,7 @@ class SurfaceModelTest {
     fun `a template is instantiated once per item — each in its own collection scope`() {
         val model = surface(
             """{"id": "root", "component": "List", "children": {"componentId": "row", "path": "/employees"}}""",
-            """{"id": "row", "component": "Text", "text": {"path": "name"}}""",
+            """{"id": "row", "component": "Text", "text": {"@path": "name"}}""",
             data = """{"employees": [{"name": "Alice"}, {"name": "Bob"}]}""",
         )
         val walked = model.walk(resolver)
@@ -224,7 +224,7 @@ class SurfaceModelTest {
         val model = surface(
             """{"id": "root", "component": "List", "children": {"componentId": "row", "path": "/rows"}}""",
             """{"id": "row", "component": "List", "children": {"componentId": "cell", "path": "cells"}}""",
-            """{"id": "cell", "component": "Text", "text": {"path": "v"}}""",
+            """{"id": "cell", "component": "Text", "text": {"@path": "v"}}""",
             data = """{"rows": [{"cells": [{"v": "a"}, {"v": "b"}]}, {"cells": [{"v": "c"}]}]}""",
         )
         val walked = model.walk(resolver)

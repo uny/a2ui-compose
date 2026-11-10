@@ -112,7 +112,7 @@ class ExampleCorpusTest {
         // required property, so it would still hold if the catalog's component list were never
         // consulted. Anchoring it against the accepted twin is what makes the name the variable.
         fun message(component: String) = A2uiJson.strict.parseToJsonElement(
-            """{"version":"v1.0","updateComponents":{"surfaceId":"s","components":""" +
+            """{"version":"1.0","updateComponents":{"surfaceId":"s","components":""" +
                 """[{"id":"root","component":"$component","text":"hello"}]}}""",
         )
 

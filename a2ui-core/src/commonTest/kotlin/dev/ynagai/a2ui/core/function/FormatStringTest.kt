@@ -20,7 +20,7 @@ private fun format(
     // Built as JSON rather than spliced into a string literal, so that a template containing a
     // quote or a backslash reaches the evaluator as written instead of breaking the payload.
     val wire = buildJsonObject {
-        put("call", JsonPrimitive("formatString"))
+        put("@call", JsonPrimitive("formatString"))
         put("args", buildJsonObject { put("value", JsonPrimitive(template)) })
     }
     val call = A2uiJson.strict.decodeFromJsonElement(FunctionCall.serializer(), wire)
@@ -328,7 +328,7 @@ class FormatStringTest {
     fun aPathResolvingToAnObjectShapedLikeABindingIsNotFollowedTwice() {
         // The parser has already resolved this argument; re-reading it as a `DataBinding` would
         // dereference `/decoy` a second time and produce "found" instead of the object itself.
-        val data = """{"holder":{"path":"/decoy"},"decoy":"found"}"""
-        assertEquals("""{"path":"/decoy"}""", format("\${/holder}", data))
+        val data = """{"holder":{"@path":"/decoy"},"decoy":"found"}"""
+        assertEquals("""{"@path":"/decoy"}""", format("\${/holder}", data))
     }
 }

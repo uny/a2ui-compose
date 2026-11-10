@@ -353,9 +353,9 @@ class StatefulComponentsTest {
         ).also { renderer ->
             renderer.applyAll(
                 listOf(
-                    """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
-                    """{"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","value":$DATA}}""",
-                    """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
+                    """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
+                    """{"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","value":$DATA}}""",
+                    """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
                 ).map {
                     A2uiJson.strict.decodeFromString(
                         AgentToRendererMessage.serializer(),
@@ -382,7 +382,7 @@ class StatefulComponentsTest {
 
         val BOUND_TABS = """[
             {"id":"root","component":"Tabs","tabs":[
-                {"title":{"path":"/title"},"child":"one"}
+                {"title":{"@path":"/title"},"child":"one"}
             ]},
             {"id":"one","component":"Text","text":"first tab"}
         ]"""
@@ -390,7 +390,7 @@ class StatefulComponentsTest {
         /** The first tab's title binds to a path the data model does not have. */
         val UNRESOLVED_TITLE_TABS = """[
             {"id":"root","component":"Tabs","tabs":[
-                {"title":{"path":"/nothing/here"},"child":"one"},
+                {"title":{"@path":"/nothing/here"},"child":"one"},
                 {"title":"Second","child":"two"}
             ]},
             {"id":"one","component":"Text","text":"first tab"},
@@ -407,7 +407,7 @@ class StatefulComponentsTest {
 
         val AUDIO = """[
             {"id":"root","component":"AudioPlayer","url":"https://example.test/a.mp3",
-             "description":{"path":"/episode"}}
+             "description":{"@path":"/episode"}}
         ]"""
 
         val VIDEO = """[

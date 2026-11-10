@@ -110,10 +110,10 @@ public data class ValidationResult(
  * below, read off the raw object.
  */
 public data class FunctionCallValidationSchema(public val raw: JsonObject) {
-    /** The function's name, from `properties.call.const`. Null for an `allOf`-shaped definition. */
+    /** The function's name, from `properties.@call.const`. Null for an `allOf`-shaped definition. */
     public val callName: String?
         get() = (raw["properties"] as? JsonObject)
-            ?.get("call")
+            ?.get(FunctionCall.KEY)
             ?.let { it as? JsonObject }
             ?.get("const")
             ?.let { (it as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content }
@@ -125,7 +125,7 @@ public data class FunctionCallValidationSchema(public val raw: JsonObject) {
     /**
      * The keys the call object must carry, or empty when the definition omits `required`.
      *
-     * A conformant v1.0 definition lists `call`, but an `allOf`-shaped one carries its `required`
+     * A conformant v1.0 definition lists `@call`, but an `allOf`-shaped one carries its `required`
      * inside a branch — so a caller must treat an empty list as "this definition does not say",
      * not as "nothing is required".
      */
@@ -222,6 +222,8 @@ public data class CatalogDefinition(
     public val components: Map<String, ComponentDefinition> = emptyMap(),
     public val functions: Map<String, FunctionDefinition> = emptyMap(),
     public val schemaKeywords: Map<String, JsonElement> = emptyMap(),
+    /** The catalog's `metadata.extensions` (upstream #3757), carried through unread. */
+    public val metadata: Metadata? = null,
 ) {
     init {
         checkEntityNames(catalogId, components, functions, schemaKeywords)
@@ -238,10 +240,11 @@ public data class CatalogDefinition(
         /**
          * The value [protocolVersion] carries on a v1.0 catalog.
          *
-         * Note the spelling: a catalog says `"1.0"`, while the message envelope and the
-         * capabilities key say `"v1.0"` ([dev.ynagai.a2ui.core.A2ui.PROTOCOL_VERSION]). They are
-         * not interchangeable, so comparing [effectiveProtocolVersion] against the envelope
-         * constant is always false — compare against this one.
+         * The same spelling as the message envelope and the capabilities key
+         * ([dev.ynagai.a2ui.core.A2ui.PROTOCOL_VERSION]) since upstream unified all three on a
+         * bare `"1.0"`. The two constants are kept apart anyway: one names what a catalog
+         * declares and the other what this library speaks, and nothing guarantees the next
+         * revision keeps them equal.
          */
         public const val PROTOCOL_VERSION: String = "1.0"
     }
@@ -393,7 +396,7 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
     private val SCHEMA_KEYWORDS = setOf("\$schema", "\$id", "\$defs")
     private val KEYS = SCHEMA_KEYWORDS + setOf(
         "protocolVersion", "title", "description", "catalogId", "instructions", "components",
-        "functions",
+        "functions", "metadata",
     )
 
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
@@ -412,8 +415,7 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
                 if (!PROTOCOL_VERSION_PATTERN.matches(it)) {
                     throw A2uiFormatException(
                         "CatalogDefinition: `$it` is not a protocol version; the schema's pattern " +
-                            "takes an unprefixed `major.minor[.patch]` (note that a catalog says " +
-                            "`1.0` where an envelope says `v1.0`).",
+                            "takes an unprefixed `major.minor[.patch]`, such as `1.0`.",
                     )
                 }
             }
@@ -432,6 +434,7 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
                     json.decodeFromJsonElement(FunctionDefinitionSerializer, element)
                 },
             schemaKeywords = obj.filterKeys { it in SCHEMA_KEYWORDS },
+            metadata = obj["metadata"]?.let { json.decodeFromJsonElement(Metadata.serializer(), it) },
         )
     }
 
@@ -446,6 +449,7 @@ internal object CatalogDefinitionSerializer : KSerializer<CatalogDefinition> {
                 value.title?.let { put("title", JsonPrimitive(it)) }
                 value.description?.let { put("description", JsonPrimitive(it)) }
                 value.instructions?.let { put("instructions", JsonPrimitive(it)) }
+                value.metadata?.let { put("metadata", json.json.encodeToJsonElement(Metadata.serializer(), it)) }
                 if (value.components.isNotEmpty()) {
                     put(
                         "components",

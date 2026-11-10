@@ -28,12 +28,12 @@ class MessageProcessorTest {
         MessageProcessor.applyAll(RendererState(), messages.map(::message))
 
     private val created =
-        """{"version": "v1.0", "createSurface": {"surfaceId": "s", "catalogId": "c"}}"""
+        """{"version": "1.0", "createSurface": {"surfaceId": "s", "catalogId": "c"}}"""
 
     @Test
     fun `createSurface records the settings the message fixed`() {
         val result = fold(
-            """{"version": "v1.0", "createSurface": {"surfaceId": "s", "catalogId": "c", "sendDataModel": true}}""",
+            """{"version": "1.0", "createSurface": {"surfaceId": "s", "catalogId": "c", "sendDataModel": true}}""",
         )
         val surface = result.state.surface("s")!!
         assertEquals("c", surface.catalogId)
@@ -50,7 +50,7 @@ class MessageProcessorTest {
     fun `createSurface may carry the opening components and data model inline`() {
         val result = fold(
             """
-            {"version": "v1.0", "createSurface": {
+            {"version": "1.0", "createSurface": {
               "surfaceId": "s",
               "components": [{"id": "root", "component": "Text", "text": "hi"}],
               "dataModel": {"user": {"name": "Jane"}}
@@ -80,7 +80,7 @@ class MessageProcessorTest {
     fun `a surface may be recreated once it has been deleted`() {
         val result = fold(
             created,
-            """{"version": "v1.0", "deleteSurface": {"surfaceId": "s"}}""",
+            """{"version": "1.0", "deleteSurface": {"surfaceId": "s"}}""",
             created,
         )
         assertEquals(setOf("s"), result.state.surfaces.keys)
@@ -89,13 +89,13 @@ class MessageProcessorTest {
     @Test
     fun `updating a surface that was never created is rejected`() {
         assertFailsWith<A2uiStateException> {
-            fold("""{"version": "v1.0", "updateComponents": {"surfaceId": "s", "components": [{"id": "root", "component": "Text"}]}}""")
+            fold("""{"version": "1.0", "updateComponents": {"surfaceId": "s", "components": [{"id": "root", "component": "Text"}]}}""")
         }
         assertFailsWith<A2uiStateException> {
-            fold("""{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "value": {}}}""")
+            fold("""{"version": "1.0", "updateDataModel": {"surfaceId": "s", "value": {}}}""")
         }
         assertFailsWith<A2uiStateException> {
-            fold("""{"version": "v1.0", "deleteSurface": {"surfaceId": "s"}}""")
+            fold("""{"version": "1.0", "deleteSurface": {"surfaceId": "s"}}""")
         }
     }
 
@@ -103,8 +103,8 @@ class MessageProcessorTest {
     fun `components accumulate across messages and may arrive before their parent`() {
         val result = fold(
             created,
-            """{"version": "v1.0", "updateComponents": {"surfaceId": "s", "components": [{"id": "label", "component": "Text", "text": "hi"}]}}""",
-            """{"version": "v1.0", "updateComponents": {"surfaceId": "s", "components": [{"id": "root", "component": "Card", "child": "label"}]}}""",
+            """{"version": "1.0", "updateComponents": {"surfaceId": "s", "components": [{"id": "label", "component": "Text", "text": "hi"}]}}""",
+            """{"version": "1.0", "updateComponents": {"surfaceId": "s", "components": [{"id": "root", "component": "Card", "child": "label"}]}}""",
         )
         val surface = result.state.surface("s")!!
         assertEquals(setOf("label", "root"), surface.components.keys)
@@ -115,9 +115,9 @@ class MessageProcessorTest {
     fun `updateDataModel folds successive writes into one model`() {
         val result = fold(
             created,
-            """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "path": "/user/firstName", "value": "Alice"}}""",
-            """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "path": "/user/lastName", "value": "Smith"}}""",
-            """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "path": "/user/firstName", "value": null}}""",
+            """{"version": "1.0", "updateDataModel": {"surfaceId": "s", "path": "/user/firstName", "value": "Alice"}}""",
+            """{"version": "1.0", "updateDataModel": {"surfaceId": "s", "path": "/user/lastName", "value": "Smith"}}""",
+            """{"version": "1.0", "updateDataModel": {"surfaceId": "s", "path": "/user/firstName", "value": null}}""",
         )
         val surface = result.state.surface("s")!!
         assertEquals(JsonPrimitive("Smith"), surface.read(JsonPointer.parse("/user/lastName")))
@@ -128,8 +128,8 @@ class MessageProcessorTest {
     fun `omitting the path replaces the whole data model`() {
         val result = fold(
             created,
-            """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "path": "/a", "value": 1}}""",
-            """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "value": {"b": 2}}}""",
+            """{"version": "1.0", "updateDataModel": {"surfaceId": "s", "path": "/a", "value": 1}}""",
+            """{"version": "1.0", "updateDataModel": {"surfaceId": "s", "value": {"b": 2}}}""",
         )
         assertEquals(
             json.parseToJsonElement("""{"b": 2}""") as JsonObject,
@@ -142,7 +142,7 @@ class MessageProcessorTest {
         val failure = assertFailsWith<A2uiStateException> {
             fold(
                 created,
-                """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "path": "user/name", "value": "x"}}""",
+                """{"version": "1.0", "updateDataModel": {"surfaceId": "s", "path": "user/name", "value": "x"}}""",
             )
         }
         assertEquals("s", failure.surfaceId)
@@ -157,7 +157,7 @@ class MessageProcessorTest {
         val failure = assertFailsWith<A2uiStateException> {
             fold(
                 created,
-                """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "path": "/a~2b", "value": 1}}""",
+                """{"version": "1.0", "updateDataModel": {"surfaceId": "s", "path": "/a~2b", "value": 1}}""",
             )
         }
         assertEquals("s", failure.surfaceId)
@@ -169,7 +169,7 @@ class MessageProcessorTest {
         val failure = assertFailsWith<A2uiStateException> {
             fold(
                 created,
-                """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "path": "$deep", "value": 1}}""",
+                """{"version": "1.0", "updateDataModel": {"surfaceId": "s", "path": "$deep", "value": 1}}""",
             )
         }
         assertEquals("s", failure.surfaceId)
@@ -180,7 +180,7 @@ class MessageProcessorTest {
         val failure = assertFailsWith<A2uiStateException> {
             fold(
                 created,
-                """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "value": 5}}""",
+                """{"version": "1.0", "updateDataModel": {"surfaceId": "s", "value": 5}}""",
             )
         }
         assertEquals("s", failure.surfaceId)
@@ -190,8 +190,8 @@ class MessageProcessorTest {
     fun `deleteSurface removes the components and data with the surface`() {
         val result = fold(
             created,
-            """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "path": "/a", "value": 1}}""",
-            """{"version": "v1.0", "deleteSurface": {"surfaceId": "s"}}""",
+            """{"version": "1.0", "updateDataModel": {"surfaceId": "s", "path": "/a", "value": 1}}""",
+            """{"version": "1.0", "deleteSurface": {"surfaceId": "s"}}""",
         )
         assertNull(result.state.surface("s"))
         assertEquals(RendererEffect.SurfaceDeleted("s"), result.effects.last())
@@ -201,8 +201,8 @@ class MessageProcessorTest {
     fun `surfaces are kept apart from one another`() {
         val result = fold(
             created,
-            """{"version": "v1.0", "createSurface": {"surfaceId": "t"}}""",
-            """{"version": "v1.0", "updateDataModel": {"surfaceId": "s", "path": "/a", "value": 1}}""",
+            """{"version": "1.0", "createSurface": {"surfaceId": "t"}}""",
+            """{"version": "1.0", "updateDataModel": {"surfaceId": "s", "path": "/a", "value": 1}}""",
         )
         assertEquals(JsonPrimitive(1), result.state.surface("s")!!.read(JsonPointer.parse("/a")))
         assertNull(result.state.surface("t")!!.read(JsonPointer.parse("/a")))
@@ -211,18 +211,29 @@ class MessageProcessorTest {
     @Test
     fun `callRendererFunction is reported rather than folded into state`() {
         val result = fold(
-            """{"version": "v1.0", "callRendererFunction": {"functionCallId": "1", "callFunction": {"call": "openUrl", "catalogId": "c"}}}""",
+            """{"version": "1.0", "callRendererFunction": {"functionCallId": "1", "callFunction": {"@call": "openUrl", "catalogId": "c"}}}""",
         )
         assertEquals(RendererState(), result.state)
         val effect = assertIs<RendererEffect.RendererFunctionRequested>(result.effects.single())
         assertEquals("1", effect.functionCallId)
         assertEquals("openUrl", effect.call.call)
+        // No surface named: the isolated empty context, never a fallback to an open surface.
+        assertNull(effect.surfaceId)
+    }
+
+    @Test
+    fun `callRendererFunction carries the surface it names`() {
+        val result = fold(
+            """{"version": "1.0", "callRendererFunction": {"functionCallId": "1", "surfaceId": "s", "callFunction": {"@call": "openUrl", "catalogId": "c"}}}""",
+        )
+        val effect = assertIs<RendererEffect.RendererFunctionRequested>(result.effects.single())
+        assertEquals("s", effect.surfaceId)
     }
 
     @Test
     fun `agentFunctionResponse is reported rather than folded into state`() {
         val result = fold(
-            """{"version": "v1.0", "agentFunctionResponse": {"functionCallId": "1", "value": 42}}""",
+            """{"version": "1.0", "agentFunctionResponse": {"functionCallId": "1", "value": 42}}""",
         )
         assertEquals(RendererState(), result.state)
         val effect = assertIs<RendererEffect.AgentFunctionResponded>(result.effects.single())
@@ -235,7 +246,7 @@ class MessageProcessorTest {
         // here would refuse every real component. The validator resolves this against the catalog.
         val result = fold(
             created,
-            """{"version": "v1.0", "updateComponents": {"surfaceId": "s", "components": [{"id": "root", "component": "NoSuchComponent", "whatever": true}]}}""",
+            """{"version": "1.0", "updateComponents": {"surfaceId": "s", "components": [{"id": "root", "component": "NoSuchComponent", "whatever": true}]}}""",
         )
         assertEquals("NoSuchComponent", result.state.surface("s")!!.root?.component)
     }

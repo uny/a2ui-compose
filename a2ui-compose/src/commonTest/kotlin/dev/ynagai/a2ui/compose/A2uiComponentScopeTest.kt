@@ -36,6 +36,14 @@ class A2uiComponentScopeTest {
     }
 
     @Test
+    fun a_boolean_bound_to_a_validation_result_reads_as_its_valid_flag() {
+        // a2ui_protocol.md: a DynamicBoolean resolving to a ValidationResult "is coerced to
+        // `result.valid`". Read as unreadable, a CheckBox bound to a check drew unchecked.
+        assertEquals(true, scopeFor("checked").boolean("value"))
+        assertEquals(false, scopeFor("unchecked").boolean("value"))
+    }
+
+    @Test
     fun a_bound_property_resolves_through_the_data_model() {
         val scope = scopeFor("bound")
         assertEquals("Ada", scope.string("text"))
@@ -136,7 +144,7 @@ class A2uiComponentScopeTest {
         val scope = scopeFor("button", onMessage = { sent += it })
         val action = A2uiJson.strict.decodeFromString(
             Action.serializer(),
-            """{"event":{"name":"submit","context":{"who":{"path":"/user/name"},"lit":"x"}}}""",
+            """{"event":{"name":"submit","context":{"who":{"@path":"/user/name"},"lit":"x"}}}""",
         )
         scope.dispatch(action)
         val message = assertNotNull(sent.singleOrNull() as? ActionMessage)
@@ -165,7 +173,7 @@ class A2uiComponentScopeTest {
         val scope = scopeFor("button", renderer)
         val action = A2uiJson.strict.decodeFromString(
             Action.serializer(),
-            """{"functionCall":{"call":"openUrl","args":{"url":"https://example.com/a"}}}""",
+            """{"functionCall":{"@call":"openUrl","args":{"url":"https://example.com/a"}}}""",
         )
         scope.dispatch(action)
         assertEquals(listOf("https://example.com/a"), opened)
@@ -175,11 +183,14 @@ class A2uiComponentScopeTest {
     fun a_write_the_data_model_cannot_take_leaves_it_unchanged_rather_than_raising() {
         val renderer = renderer()
         val before = renderer.state.surfaces.getValue(SURFACE).dataModel
-        // `/items` holds three entries, so index 9 would leave a gap and `JsonObject.write` refuses
-        // it. The address is the agent's -- it arrives as a component's `path` -- and this is what
-        // an input callback calls on every keystroke, so raising here would turn one malformed
+        // `/user/name` holds a string, so a write through it is refused by `JsonObject.write`. The
+        // address is the agent's -- it arrives as a component's `path` -- and this is what an
+        // input callback calls on every keystroke, so raising here would turn one malformed
         // binding into a crash on the first character typed.
-        renderer.write(SURFACE, JsonPointer.parse("/items/9/label"), JsonPrimitive("x"))
+        renderer.write(SURFACE, JsonPointer.parse("/user/name/first"), JsonPrimitive("x"))
+        assertEquals(before, renderer.state.surfaces.getValue(SURFACE).dataModel)
+        // So is a non-numeric token on an array.
+        renderer.write(SURFACE, JsonPointer.parse("/items/-"), JsonPrimitive("x"))
         assertEquals(before, renderer.state.surfaces.getValue(SURFACE).dataModel)
         // A root write of a non-object is the other branch that refuses.
         renderer.write(SURFACE, JsonPointer.parse("/"), JsonPrimitive("not an object"))
@@ -208,8 +219,8 @@ class A2uiComponentScopeTest {
         )
         renderer.applyAll(
             listOf(
-                """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE"}}""",
-                """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
+                """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE"}}""",
+                """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
                   {"id":"root","component":"Column","catalogId":"CATALOG_ID","children":["t1","t2"]},
                   {"id":"t1","component":"Text","catalogId":"CATALOG_ID","text":"one"},
                   {"id":"t2","component":"Text","catalogId":"CATALOG_ID","text":"two"}
@@ -269,9 +280,9 @@ class A2uiComponentScopeTest {
             A2uiJson.strict.decodeFromString(
                 Action.serializer(),
                 """{"event":{"name":"go","context":{
-                  "a":{"call":"openUrl","args":{"url":"https://example.com/1"}},
-                  "b":{"call":"openUrl","args":{"url":"https://example.com/2"}},
-                  "c":{"call":"openUrl","args":{"url":"https://example.com/3"}}
+                  "a":{"@call":"openUrl","args":{"url":"https://example.com/1"}},
+                  "b":{"@call":"openUrl","args":{"url":"https://example.com/2"}},
+                  "c":{"@call":"openUrl","args":{"url":"https://example.com/3"}}
                 }}}""",
             ),
         )
@@ -373,21 +384,23 @@ class A2uiComponentScopeTest {
         const val FIXED_TIMESTAMP = "2026-08-27T00:00:00Z"
 
         val MESSAGES: List<AgentToRendererMessage> = listOf(
-            """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
+            """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
             """
-            {"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
+            {"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
               {"id":"root","component":"Column","children":["title","bound"]},
               {"id":"column","component":"Column","children":["title","bound"]},
               {"id":"title","component":"Text","text":"Hello"},
-              {"id":"bound","component":"Text","text":{"path":"/user/name"}},
+              {"id":"bound","component":"Text","text":{"@path":"/user/name"}},
               {"id":"list","component":"List","children":{"componentId":"row","path":"/items"}},
-              {"id":"row","component":"Text","text":{"path":"label"}},
+              {"id":"row","component":"Text","text":{"@path":"label"}},
               {"id":"button","component":"Button","child":"title","action":{"event":{"name":"noop"}}},
-              {"id":"money","component":"Text","text":{"call":"formatCurrency","args":{"value":1234.5,"currency":"JPY"}}}
+              {"id":"money","component":"Text","text":{"@call":"formatCurrency","args":{"value":1234.5,"currency":"JPY"}}},
+              {"id":"checked","component":"CheckBox","label":"x","value":{"@call":"required","args":{"value":"present"}}},
+              {"id":"unchecked","component":"CheckBox","label":"x","value":{"@call":"required","args":{"value":""}}}
             ]}}
             """.trimIndent(),
             """
-            {"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
+            {"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
               "user":{"name":"Ada"},
               "items":[{"label":"one"},{"label":"two"},{"label":"three"}]
             }}}

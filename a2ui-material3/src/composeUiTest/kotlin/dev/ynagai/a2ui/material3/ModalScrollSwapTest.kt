@@ -72,10 +72,10 @@ class ModalScrollSwapTest {
         const val SURFACE_ID = "s"
 
         val CREATE =
-            """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE_ID","catalogId":"${BasicCatalog.id}"}}"""
+            """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE_ID","catalogId":"${BasicCatalog.id}"}}"""
 
         val COMPONENTS =
-            """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE_ID","components":[""" +
+            """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE_ID","components":[""" +
                 """{"id":"root","component":"Modal","trigger":"tr","content":"body"},""" +
                 """{"id":"tr","component":"Text","text":"open me"},""" +
                 """{"id":"body","component":"Text","text":"first body"}]}}"""
@@ -86,7 +86,7 @@ class ModalScrollSwapTest {
          * anything, so it would not meet the conditions the key is there for.
          */
         val REPLACEMENT =
-            """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE_ID","components":[""" +
+            """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE_ID","components":[""" +
                 """{"id":"body","component":"Card","child":"inner"},""" +
                 """{"id":"inner","component":"Text","text":"second body"}]}}"""
     }

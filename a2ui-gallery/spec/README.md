@@ -13,6 +13,6 @@ Gallery runs on Kotlin/JS and Kotlin/Wasm in a browser, where there is no disk t
 
 | File | Source | Revision |
 |:--|:--|:--|
-| `v1_0/examples/*.json` (43 files) | [`a2ui-project/a2ui`](https://github.com/a2ui-project/a2ui) `specification/v1_0/catalogs/basic/examples/` | `b571daf8` |
+| `v1_0/examples/*.json` (43 files) | [`a2ui-project/a2ui`](https://github.com/a2ui-project/a2ui) `catalogs/basic/v1/examples/` | `c69ed0dc` |
 
 Licensed under the Apache License 2.0. See the repository's `NOTICE`.

@@ -17,6 +17,7 @@ import dev.ynagai.a2ui.core.protocol.DataBinding
 import dev.ynagai.a2ui.core.protocol.DynamicString
 import dev.ynagai.a2ui.core.protocol.DynamicValue
 import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
+import dev.ynagai.a2ui.core.protocol.unescapeReservedKeys
 import dev.ynagai.a2ui.core.surface.ChildReference
 import dev.ynagai.a2ui.core.surface.EvaluationScope
 import dev.ynagai.a2ui.core.surface.JsonPointer
@@ -133,7 +134,7 @@ public data class A2uiComponentScope internal constructor(
             A2uiJson.strict.decodeFromJsonElement(DynamicValue.serializer(), raw)
         }.getOrNull() ?: return null
         return when (decoded) {
-            is DynamicValue.Literal -> decoded.value
+            is DynamicValue.Literal -> unescapeReservedKeys(decoded.value)
             is BoundValue -> {
                 val context = context(InvocationContext.RENDER) ?: return null
                 runCatching { context.evaluate(decoded) }.getOrNull()
@@ -336,7 +337,7 @@ public data class A2uiComponentScope internal constructor(
                     val context = context(InvocationContext.RENDER)
                     when {
                         context == null -> JsonNull
-                        bound is DynamicValue.Literal -> bound.value
+                        bound is DynamicValue.Literal -> unescapeReservedKeys(bound.value)
                         bound is BoundValue -> runCatching { context.evaluate(bound) }.getOrDefault(JsonNull)
                         else -> JsonNull
                     }

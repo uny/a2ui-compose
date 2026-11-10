@@ -219,7 +219,7 @@ internal object AgentToRendererMessageSerializer :
 }
 
 /**
- * The shared shape of both message envelopes: `{"version": "v1.0", "<messageKey>": {...}}`.
+ * The shared shape of both message envelopes: `{"version": "1.0", "<messageKey>": {...}}`.
  */
 internal abstract class EnvelopeSerializer<T : Any>(private val what: String) : KSerializer<T> {
     protected abstract val variants: Map<String, KSerializer<out T>>

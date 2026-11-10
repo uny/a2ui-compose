@@ -35,8 +35,8 @@ class PlaceholderSwapTest {
         val renderer = A2uiRenderer().also { renderer ->
             renderer.applyAll(
                 listOf(
-                    """{"version":"v1.0","createSurface":{"surfaceId":"s","catalogId":"${BasicCatalog.id}"}}""",
-                    """{"version":"v1.0","updateComponents":{"surfaceId":"s","components":[{"id":"root","component":"Nope"}]}}""",
+                    """{"version":"1.0","createSurface":{"surfaceId":"s","catalogId":"${BasicCatalog.id}"}}""",
+                    """{"version":"1.0","updateComponents":{"surfaceId":"s","components":[{"id":"root","component":"Nope"}]}}""",
                 ).map { A2uiJson.strict.decodeFromString<AgentToRendererMessage>(it) }
             )
         }

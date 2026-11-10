@@ -331,8 +331,8 @@ class RowBandTest {
     private fun rendererFor(components: String): A2uiRenderer = A2uiRenderer().also { renderer ->
         renderer.applyAll(
             listOf(
-                message("""{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"${BasicCatalog.id}"}}"""),
-                message("""{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}"""),
+                message("""{"version":"1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"${BasicCatalog.id}"}}"""),
+                message("""{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}"""),
             ),
         )
     }

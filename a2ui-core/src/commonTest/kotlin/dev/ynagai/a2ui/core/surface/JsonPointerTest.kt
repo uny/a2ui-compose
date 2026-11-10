@@ -14,8 +14,9 @@ import kotlin.test.assertTrue
 /**
  * JSON Pointer is the whole of A2UI's data binding, and `updateDataModel` uses the same syntax as
  * a write address. The cases below pin the two places A2UI departs from RFC 6901 — `/` means the
- * root, and the relative form exists at all — plus the upsert and delete semantics the
- * specification spells out for `updateDataModel`.
+ * root, and the relative form exists at all — plus the upsert and delete semantics of the
+ * upstream data models, which the conformance suite's `data_model.yaml` and `data_deletion.yaml`
+ * pin and `DataModelConformanceTest` runs.
  */
 class JsonPointerTest {
     private val json = A2uiJson.strict
@@ -88,10 +89,18 @@ class JsonPointerTest {
         assertEquals(JsonPrimitive("Alice"), replaced.resolve(JsonPointer.parse("/user/name")))
     }
 
+    // The five cases below are where 0.3.0 and the upstream data models disagreed; each one is
+    // pinned to the upstream behaviour and names the conformance case or blueprint rule it follows.
+
     @Test
-    fun `an absent container is created as an object even when the token looks like an index`() {
+    fun `an absent container is created as an array when the next token is an index`() {
+        // data_model.yaml `test_data_model_list_append`; blueprint JSON Pointer rule 2.
         val written = JsonObject(emptyMap()).write(JsonPointer.parse("/items/0"), JsonPrimitive("a"))
-        assertEquals("""{"items":{"0":"a"}}""", json.encodeToString(JsonObject.serializer(), written))
+        assertEquals("""{"items":["a"]}""", json.encodeToString(JsonObject.serializer(), written))
+        // A non-numeric token still creates an object, and so does a leading-zero one, which is
+        // not an index (see `a leading-zero index is not an array index`).
+        val keyed = JsonObject(emptyMap()).write(JsonPointer.parse("/items/01"), JsonPrimitive("a"))
+        assertEquals("""{"items":{"01":"a"}}""", json.encodeToString(JsonObject.serializer(), keyed))
     }
 
     @Test
@@ -102,14 +111,18 @@ class JsonPointerTest {
     }
 
     @Test
-    fun `deleting from an array removes the element and shifts the rest`() {
+    fun `deleting from an array empties the element and keeps the length`() {
+        // data_deletion.yaml `test_data_deletion_array_index_preservation`; blueprint rule 6.
+        // The indices after the deleted element do not move, so a binding to `/xs/2` still reads
+        // what it read before.
         val data = model("""{"xs": [1, 2, 3]}""")
         val deleted = data.write(JsonPointer.parse("/xs/1"), JsonNull)
-        assertEquals("""{"xs":[1,3]}""", json.encodeToString(JsonObject.serializer(), deleted))
+        assertEquals("""{"xs":[1,null,3]}""", json.encodeToString(JsonObject.serializer(), deleted))
+        assertEquals(JsonPrimitive(3), deleted.resolve(JsonPointer.parse("/xs/2")))
     }
 
     @Test
-    fun `writing at the end of an array or at the append token appends`() {
+    fun `writing at the end of an array appends`() {
         val data = model("""{"xs": [1]}""")
         assertEquals(
             """{"xs":[1,2]}""",
@@ -118,28 +131,97 @@ class JsonPointerTest {
                 data.write(JsonPointer.parse("/xs/1"), JsonPrimitive(2)),
             ),
         )
+    }
+
+    @Test
+    fun `the JSON Patch append token is refused on an array`() {
+        // `-` is a non-numeric segment on an array to `web_core`, Python `a2ui_core` and Swift
+        // `A2UICore` alike, and all three raise. The prose does not mention it.
+        val data = model("""{"xs": [1]}""")
+        assertFailsWith<A2uiStateException> {
+            data.write(JsonPointer.parse("/xs/-"), JsonPrimitive(9))
+        }
+        assertFailsWith<A2uiStateException> {
+            data.write(JsonPointer.parse("/xs/-/a"), JsonPrimitive(9))
+        }
+        assertNull(data.resolve(JsonPointer.parse("/xs/-")))
+    }
+
+    @Test
+    fun `an index past the end of an array pads the gap with nulls`() {
+        // data_model.yaml `test_data_model_sparse_list_write_pads_with_null`.
+        val data = model("""{"xs": [1, 2]}""")
         assertEquals(
-            """{"xs":[1,9]}""",
+            """{"xs":[1,2,null,null,null,9]}""",
             json.encodeToString(
                 JsonObject.serializer(),
-                data.write(JsonPointer.parse("/xs/-"), JsonPrimitive(9)),
+                data.write(JsonPointer.parse("/xs/5"), JsonPrimitive(9)),
+            ),
+        )
+        // Padding on the way to a nested write, too.
+        assertEquals(
+            """{"data":{"lists":[null,{"value":42}]}}""",
+            json.encodeToString(
+                JsonObject.serializer(),
+                JsonObject(emptyMap()).write(JsonPointer.parse("/data/lists/1/value"), JsonPrimitive(42)),
             ),
         )
     }
 
     @Test
-    fun `an index past the end of an array is rejected rather than leaving a gap`() {
-        val data = model("""{"xs": [1]}""")
+    fun `an index past the maximum is refused rather than padded to`() {
+        // data_model.yaml `test_data_model_rejects_excessive_list_index`.
+        val data = model("""{"xs": []}""")
         assertFailsWith<A2uiStateException> {
-            data.write(JsonPointer.parse("/xs/5"), JsonPrimitive(2))
+            data.write(JsonPointer.parse("/xs/${JsonPointer.MAX_ARRAY_INDEX + 1}"), JsonPrimitive(1))
+        }
+        assertFailsWith<A2uiStateException> {
+            JsonObject(emptyMap()).write(
+                JsonPointer.parse("/ys/${JsonPointer.MAX_ARRAY_INDEX + 1}/a"),
+                JsonPrimitive(1),
+            )
         }
     }
 
     @Test
-    fun `a scalar in the way is overwritten because updateDataModel is an upsert`() {
-        val data = model("""{"user": "anonymous"}""")
-        val written = data.write(JsonPointer.parse("/user/name"), JsonPrimitive("Jane"))
-        assertEquals(JsonPrimitive("Jane"), written.resolve(JsonPointer.parse("/user/name")))
+    fun `a primitive in the way is an error rather than overwritten`() {
+        // data_model.yaml `test_data_model_rejects_write_through_primitive` and
+        // `..._list_primitive`; blueprint rule 3.
+        val data = model("""{"user": "anonymous", "xs": [1]}""")
+        val error = assertFailsWith<A2uiStateException> {
+            data.write(JsonPointer.parse("/user/name"), JsonPrimitive("Jane"))
+        }
+        assertTrue("/user" in error.message.orEmpty(), error.message)
+        assertFailsWith<A2uiStateException> {
+            data.write(JsonPointer.parse("/xs/0/a"), JsonPrimitive("Jane"))
+        }
+        // A JSON null in the way is absent, not a primitive, and is replaced.
+        val withNull = model("""{"user": null}""")
+        assertEquals(
+            JsonPrimitive("Jane"),
+            withNull.write(JsonPointer.parse("/user/name"), JsonPrimitive("Jane"))
+                .resolve(JsonPointer.parse("/user/name")),
+        )
+        // Replacing the primitive itself is still an ordinary upsert.
+        assertEquals(
+            """{"user":{"name":"Jane"},"xs":[1]}""",
+            json.encodeToString(
+                JsonObject.serializer(),
+                data.write(JsonPointer.parse("/user"), model("""{"name": "Jane"}""")),
+            ),
+        )
+    }
+
+    @Test
+    fun `a forbidden segment is refused on reads and writes`() {
+        // data_model.yaml `test_data_model_rejects_forbidden_path_segments`; blueprint rule 4.
+        for (token in JsonPointer.FORBIDDEN_TOKENS) {
+            assertFailsWith<A2uiFormatException> { JsonPointer.parse("/$token/x") }
+            assertFailsWith<A2uiStateException> {
+                JsonObject(emptyMap()).write(JsonPointer.of(token), JsonPrimitive(1))
+            }
+            assertNull(model("""{"$token": 1}""").resolve(JsonPointer.of(token)))
+        }
     }
 
     @Test
@@ -186,16 +268,16 @@ class JsonPointerTest {
         // Nor may it replace whatever stands in the path.
         val scalar = model("""{"user": "anonymous"}""")
         assertEquals(scalar, scalar.write(JsonPointer.parse("/user/name"), JsonNull))
-        // Nor append through the array-append token.
+        // Nor raise over a token the write would have refused, since it never gets that far.
         val xs = model("""{"xs": [1]}""")
         assertEquals(xs, xs.write(JsonPointer.parse("/xs/-/a"), JsonNull))
-        // An out-of-range array delete does nothing, at the end and past it alike — the set
-        // path still rejects a gap, but a delete cannot leave one.
+        // An out-of-range array delete does nothing, at the end and past it alike: it does not
+        // pad the array out to an index that was never set.
         assertEquals(xs, xs.write(JsonPointer.parse("/xs/1"), JsonNull))
         assertEquals(xs, xs.write(JsonPointer.parse("/xs/9"), JsonNull))
-        // The delete that does address something still deletes.
+        // The delete that does address something still deletes, keeping the length.
         assertEquals(
-            model("""{"xs": []}"""),
+            model("""{"xs": [null]}"""),
             xs.write(JsonPointer.parse("/xs/0"), JsonNull),
         )
     }

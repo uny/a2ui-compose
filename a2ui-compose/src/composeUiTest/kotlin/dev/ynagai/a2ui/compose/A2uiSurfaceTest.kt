@@ -104,9 +104,9 @@ class A2uiSurfaceTest {
         ).also { renderer ->
             renderer.applyAll(
                 listOf(
-                    """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
-                    """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
-                    """{"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
+                    """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
+                    """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
+                    """{"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
                         "user":{"name":"Ada"},
                         "items":[{"label":"one"},{"label":"two"},{"label":"three"}]
                     }}}""",
@@ -126,12 +126,12 @@ class A2uiSurfaceTest {
             {"id":"root","component":"Column","children":["a","b","c"]},
             {"id":"a","component":"Text","text":"outer"},
             {"id":"b","component":"Text","text":"inner"},
-            {"id":"c","component":"Text","text":{"path":"/user/name"}}
+            {"id":"c","component":"Text","text":{"@path":"/user/name"}}
         ]"""
 
         val TEMPLATE = """[
             {"id":"root","component":"List","children":{"componentId":"row","path":"/items"}},
-            {"id":"row","component":"Text","text":{"path":"label"}}
+            {"id":"row","component":"Text","text":{"@path":"label"}}
         ]"""
 
         val CYCLIC = """[

@@ -110,10 +110,10 @@ public data class ValidationResult(
  * below, read off the raw object.
  */
 public data class FunctionCallValidationSchema(public val raw: JsonObject) {
-    /** The function's name, from `properties.call.const`. Null for an `allOf`-shaped definition. */
+    /** The function's name, from `properties.@call.const`. Null for an `allOf`-shaped definition. */
     public val callName: String?
         get() = (raw["properties"] as? JsonObject)
-            ?.get("call")
+            ?.get(FunctionCall.KEY)
             ?.let { it as? JsonObject }
             ?.get("const")
             ?.let { (it as? JsonPrimitive)?.takeIf(JsonPrimitive::isString)?.content }
@@ -125,7 +125,7 @@ public data class FunctionCallValidationSchema(public val raw: JsonObject) {
     /**
      * The keys the call object must carry, or empty when the definition omits `required`.
      *
-     * A conformant v1.0 definition lists `call`, but an `allOf`-shaped one carries its `required`
+     * A conformant v1.0 definition lists `@call`, but an `allOf`-shaped one carries its `required`
      * inside a branch — so a caller must treat an empty list as "this definition does not say",
      * not as "nothing is required".
      */
@@ -238,10 +238,11 @@ public data class CatalogDefinition(
         /**
          * The value [protocolVersion] carries on a v1.0 catalog.
          *
-         * Note the spelling: a catalog says `"1.0"`, while the message envelope and the
-         * capabilities key say `"v1.0"` ([dev.ynagai.a2ui.core.A2ui.PROTOCOL_VERSION]). They are
-         * not interchangeable, so comparing [effectiveProtocolVersion] against the envelope
-         * constant is always false — compare against this one.
+         * The same spelling as the message envelope and the capabilities key
+         * ([dev.ynagai.a2ui.core.A2ui.PROTOCOL_VERSION]) since upstream unified all three on a
+         * bare `"1.0"`. The two constants are kept apart anyway: one names what a catalog
+         * declares and the other what this library speaks, and nothing guarantees the next
+         * revision keeps them equal.
          */
         public const val PROTOCOL_VERSION: String = "1.0"
     }

@@ -243,8 +243,8 @@ class A2uiScopeStabilityTest {
         ).also {
             it.applyAll(
                 listOf(
-                    """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
-                    """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
+                    """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
+                    """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
                         {"id":"root","component":"Column","children":["leaf"]},
                         {"id":"leaf","component":"Text","text":"hello"}
                     ]}}""",
@@ -265,8 +265,8 @@ class A2uiScopeStabilityTest {
             it.applyAll(
                 listOf("a", "b").flatMap { id ->
                     listOf(
-                        """{"version":"v1.0","createSurface":{"surfaceId":"$id","catalogId":"CATALOG_ID"}}""",
-                        """{"version":"v1.0","updateComponents":{"surfaceId":"$id","components":[
+                        """{"version":"1.0","createSurface":{"surfaceId":"$id","catalogId":"CATALOG_ID"}}""",
+                        """{"version":"1.0","updateComponents":{"surfaceId":"$id","components":[
                             {"id":"root","component":"Text","text":"$id"}
                         ]}}""",
                     )

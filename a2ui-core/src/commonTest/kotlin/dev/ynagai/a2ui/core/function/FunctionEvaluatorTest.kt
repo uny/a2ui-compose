@@ -50,7 +50,7 @@ class FunctionEvaluatorTest {
     fun requiredAcceptsANonEmptyString() {
         assertEquals(
             json("""{"valid":true}"""),
-            context().evaluate(call("""{"call":"required","args":{"value":"a"}}""")),
+            context().evaluate(call("""{"@call":"required","args":{"value":"a"}}""")),
         )
     }
 
@@ -58,7 +58,7 @@ class FunctionEvaluatorTest {
     fun requiredRejectsTheEmptyStringWithACode() {
         assertEquals(
             json("""{"valid":false,"code":"REQUIRED"}"""),
-            context().evaluate(call("""{"call":"required","args":{"value":""}}""")),
+            context().evaluate(call("""{"@call":"required","args":{"value":""}}""")),
         )
     }
 
@@ -67,19 +67,19 @@ class FunctionEvaluatorTest {
         val evaluator = context()
         assertEquals(
             false,
-            evaluator.valid(call("""{"call":"required","args":{"value":[]}}""")),
+            evaluator.valid(call("""{"@call":"required","args":{"value":[]}}""")),
         )
         assertEquals(
             true,
-            evaluator.valid(call("""{"call":"required","args":{"value":[0]}}""")),
+            evaluator.valid(call("""{"@call":"required","args":{"value":[0]}}""")),
         )
     }
 
     @Test
     fun requiredAcceptsZeroAndFalseWhichAreNotEmptiness() {
         val evaluator = context()
-        assertEquals(true, evaluator.valid(call("""{"call":"required","args":{"value":0}}""")))
-        assertEquals(true, evaluator.valid(call("""{"call":"required","args":{"value":false}}""")))
+        assertEquals(true, evaluator.valid(call("""{"@call":"required","args":{"value":0}}""")))
+        assertEquals(true, evaluator.valid(call("""{"@call":"required","args":{"value":false}}""")))
     }
 
     @Test
@@ -87,14 +87,14 @@ class FunctionEvaluatorTest {
         val evaluator = context("""{"user":{}}""")
         assertEquals(
             false,
-            evaluator.valid(call("""{"call":"required","args":{"value":{"path":"/user/name"}}}""")),
+            evaluator.valid(call("""{"@call":"required","args":{"value":{"@path":"/user/name"}}}""")),
         )
     }
 
     @Test
     fun anAbsentArgumentIsACallFailureRatherThanAnInvalidResult() {
         val failure = assertFailsWith<A2uiFunctionException> {
-            context().evaluate(call("""{"call":"required","args":{}}"""))
+            context().evaluate(call("""{"@call":"required","args":{}}"""))
         }
         assertEquals("required", failure.call)
     }
@@ -104,16 +104,16 @@ class FunctionEvaluatorTest {
     @Test
     fun regexSearchesRatherThanMatchingTheWholeString() {
         val evaluator = context()
-        val partial = """{"call":"regex","args":{"value":"abc123","pattern":"[0-9]+"}}"""
+        val partial = """{"@call":"regex","args":{"value":"abc123","pattern":"[0-9]+"}}"""
         assertEquals(true, evaluator.valid(call(partial)))
-        val anchored = """{"call":"regex","args":{"value":"abc123","pattern":"^[0-9]+$"}}"""
+        val anchored = """{"@call":"regex","args":{"value":"abc123","pattern":"^[0-9]+$"}}"""
         assertEquals(false, evaluator.valid(call(anchored)))
     }
 
     @Test
     fun regexReportsAnUnusableValueAsInvalid() {
         val evaluator = context("{}")
-        val wire = """{"call":"regex","args":{"value":{"path":"/nope"},"pattern":"x"}}"""
+        val wire = """{"@call":"regex","args":{"value":{"@path":"/nope"},"pattern":"x"}}"""
         assertEquals(
             json("""{"valid":false,"code":"PATTERN_MISMATCH"}"""),
             evaluator.evaluate(call(wire)),
@@ -124,7 +124,7 @@ class FunctionEvaluatorTest {
     fun regexRefusesAPatternLongerThanTheBound() {
         val pattern = "a".repeat(EvaluationLimits.DEFAULT.maxPatternLength + 1)
         val failure = assertFailsWith<A2uiFunctionException> {
-            context().evaluate(call("""{"call":"regex","args":{"value":"a","pattern":"$pattern"}}"""))
+            context().evaluate(call("""{"@call":"regex","args":{"value":"a","pattern":"$pattern"}}"""))
         }
         assertTrue(failure.message!!.contains("exceeds the maximum"))
     }
@@ -132,7 +132,7 @@ class FunctionEvaluatorTest {
     @Test
     fun regexReportsAnUncompilablePatternAsACallFailure() {
         assertFailsWith<A2uiFunctionException> {
-            context().evaluate(call("""{"call":"regex","args":{"value":"a","pattern":"[a-"}}"""))
+            context().evaluate(call("""{"@call":"regex","args":{"value":"a","pattern":"[a-"}}"""))
         }
     }
 
@@ -142,7 +142,7 @@ class FunctionEvaluatorTest {
     fun lengthChecksBothEndsInclusively() {
         val evaluator = context()
         fun check(value: String) =
-            evaluator.evaluate(call("""{"call":"length","args":{"value":"$value","min":2,"max":4}}"""))
+            evaluator.evaluate(call("""{"@call":"length","args":{"value":"$value","min":2,"max":4}}"""))
         assertEquals(json("""{"valid":false,"code":"TOO_SHORT"}"""), check("a"))
         assertEquals(json("""{"valid":true}"""), check("ab"))
         assertEquals(json("""{"valid":true}"""), check("abcd"))
@@ -152,7 +152,7 @@ class FunctionEvaluatorTest {
     @Test
     fun lengthNeedsABound() {
         assertFailsWith<A2uiFunctionException> {
-            context().evaluate(call("""{"call":"length","args":{"value":"a"}}"""))
+            context().evaluate(call("""{"@call":"length","args":{"value":"a"}}"""))
         }
     }
 
@@ -160,7 +160,7 @@ class FunctionEvaluatorTest {
     fun lengthCountsUtf16CodeUnitsAsJavaScriptDoes() {
         // A single astral character is two code units, so `max: 1` rejects it.
         val evaluator = context()
-        val wire = """{"call":"length","args":{"value":"😀","max":1}}"""
+        val wire = """{"@call":"length","args":{"value":"😀","max":1}}"""
         assertEquals(false, evaluator.valid(call(wire)))
     }
 
@@ -170,7 +170,7 @@ class FunctionEvaluatorTest {
     fun numericChecksTheRange() {
         val evaluator = context()
         fun check(value: String) =
-            evaluator.valid(call("""{"call":"numeric","args":{"value":$value,"min":1,"max":10}}"""))
+            evaluator.valid(call("""{"@call":"numeric","args":{"value":$value,"min":1,"max":10}}"""))
         assertEquals(false, check("0"))
         assertEquals(true, check("1"))
         assertEquals(true, check("10"))
@@ -180,14 +180,14 @@ class FunctionEvaluatorTest {
     @Test
     fun numericParsesAStringTheWayATextFieldWritesItBack() {
         val evaluator = context("""{"form":{"age":" 42 "}}""")
-        val wire = """{"call":"numeric","args":{"value":{"path":"/form/age"},"min":0}}"""
+        val wire = """{"@call":"numeric","args":{"value":{"@path":"/form/age"},"min":0}}"""
         assertEquals(true, evaluator.valid(call(wire)))
     }
 
     @Test
     fun numericReportsAnUnparseableValueAsInvalid() {
         val evaluator = context("""{"form":{"age":"old"}}""")
-        val wire = """{"call":"numeric","args":{"value":{"path":"/form/age"},"min":0}}"""
+        val wire = """{"@call":"numeric","args":{"value":{"@path":"/form/age"},"min":0}}"""
         assertEquals(
             json("""{"valid":false,"code":"NOT_A_NUMBER"}"""),
             evaluator.evaluate(call(wire)),
@@ -200,7 +200,7 @@ class FunctionEvaluatorTest {
     fun emailFollowsTheGuidesPattern() {
         val evaluator = context()
         fun check(value: String) =
-            evaluator.valid(call("""{"call":"email","args":{"value":"$value"}}"""))
+            evaluator.valid(call("""{"@call":"email","args":{"value":"$value"}}"""))
         assertEquals(true, check("a@b.co"))
         assertEquals(false, check("a@b"))
         assertEquals(false, check("a b@c.de"))
@@ -212,10 +212,10 @@ class FunctionEvaluatorTest {
     @Test
     fun andAndOrFoldTheirValues() {
         val evaluator = context()
-        val both = """{"call":"and","args":{"values":[true,true]}}"""
-        val mixedAnd = """{"call":"and","args":{"values":[true,false]}}"""
-        val mixedOr = """{"call":"or","args":{"values":[false,true]}}"""
-        val neither = """{"call":"or","args":{"values":[false,false]}}"""
+        val both = """{"@call":"and","args":{"values":[true,true]}}"""
+        val mixedAnd = """{"@call":"and","args":{"values":[true,false]}}"""
+        val mixedOr = """{"@call":"or","args":{"values":[false,true]}}"""
+        val neither = """{"@call":"or","args":{"values":[false,false]}}"""
         assertEquals(JsonPrimitive(true), evaluator.evaluate(call(both)))
         assertEquals(JsonPrimitive(false), evaluator.evaluate(call(mixedAnd)))
         assertEquals(JsonPrimitive(true), evaluator.evaluate(call(mixedOr)))
@@ -225,20 +225,20 @@ class FunctionEvaluatorTest {
     @Test
     fun andShortCircuitsBeforeEvaluatingAFailingArgument() {
         // The second value would raise if it were reached; the fold must not reach it.
-        val wire = """{"call":"and","args":{"values":[false,{"call":"noSuchFunction"}]}}"""
+        val wire = """{"@call":"and","args":{"values":[false,{"@call":"noSuchFunction"}]}}"""
         assertEquals(JsonPrimitive(false), context().evaluate(call(wire)))
     }
 
     @Test
     fun orShortCircuitsBeforeEvaluatingAFailingArgument() {
-        val wire = """{"call":"or","args":{"values":[true,{"call":"noSuchFunction"}]}}"""
+        val wire = """{"@call":"or","args":{"values":[true,{"@call":"noSuchFunction"}]}}"""
         assertEquals(JsonPrimitive(true), context().evaluate(call(wire)))
     }
 
     @Test
     fun logicAcceptsAnArrayThatArrivesThroughABinding() {
         val evaluator = context("""{"flags":[true,false]}""")
-        val wire = """{"call":"and","args":{"values":{"path":"/flags"}}}"""
+        val wire = """{"@call":"and","args":{"values":{"@path":"/flags"}}}"""
         assertEquals(JsonPrimitive(false), evaluator.evaluate(call(wire)))
     }
 
@@ -249,9 +249,9 @@ class FunctionEvaluatorTest {
         // refused before it gets here, but a bound list has no such bound: `and(values:/errors)`
         // is satisfied when the list is empty, so the answer must not drift.
         val evaluator = context("""{"none":[]}""")
-        assertEquals(JsonPrimitive(true), evaluator.evaluate(call("""{"call":"and","args":{"values":[]}}""")))
-        assertEquals(JsonPrimitive(false), evaluator.evaluate(call("""{"call":"or","args":{"values":[]}}""")))
-        val bound = """{"call":"and","args":{"values":{"path":"/none"}}}"""
+        assertEquals(JsonPrimitive(true), evaluator.evaluate(call("""{"@call":"and","args":{"values":[]}}""")))
+        assertEquals(JsonPrimitive(false), evaluator.evaluate(call("""{"@call":"or","args":{"values":[]}}""")))
+        val bound = """{"@call":"and","args":{"values":{"@path":"/none"}}}"""
         assertEquals(JsonPrimitive(true), evaluator.evaluate(call(bound)))
     }
 
@@ -261,12 +261,12 @@ class FunctionEvaluatorTest {
         // `Dynamic*` arguments, each evaluated on demand; a bound array is values. From a
         // `formatString` template the parser has evaluated everything already, so the items are
         // values too -- the path this test pins.
-        val template = """{"call":"formatString","args":{"value":"${'$'}{and(values:/flags)}"}}"""
+        val template = """{"@call":"formatString","args":{"value":"${'$'}{and(values:/flags)}"}}"""
         assertEquals(JsonPrimitive("false"), context("""{"flags":[true,false]}""").evaluate(call(template)))
         assertEquals(JsonPrimitive("true"), context("""{"flags":[true,true]}""").evaluate(call(template)))
         // An item shaped like a binding is a value here, not a binding to follow: read as an
         // argument it would resolve `/decoy` and the check would pass.
-        val decoy = context("""{"flags":[{"path":"/decoy"}],"decoy":true}""")
+        val decoy = context("""{"flags":[{"@path":"/decoy"}],"decoy":true}""")
         val failure = assertFailsWith<A2uiFunctionException> { decoy.evaluate(call(template)) }
         assertTrue(failure.message!!.contains("must be a boolean"), failure.message!!)
     }
@@ -275,17 +275,17 @@ class FunctionEvaluatorTest {
     fun aValuesArgumentThatIsNotAnArrayIsACallFailure() {
         val evaluator = context("""{"flag":true}""")
         val literal = assertFailsWith<A2uiFunctionException> {
-            evaluator.evaluate(call("""{"call":"and","args":{"values":true}}"""))
+            evaluator.evaluate(call("""{"@call":"and","args":{"values":true}}"""))
         }
         assertTrue(literal.message!!.contains("must be an array"), literal.message!!)
         assertEquals("and", literal.call)
         val bound = assertFailsWith<A2uiFunctionException> {
-            evaluator.evaluate(call("""{"call":"or","args":{"values":{"path":"/flag"}}}"""))
+            evaluator.evaluate(call("""{"@call":"or","args":{"values":{"@path":"/flag"}}}"""))
         }
         assertTrue(bound.message!!.contains("must be an array"), bound.message!!)
         assertEquals("or", bound.call)
         // And the pre-evaluated path, where the value arrives already resolved.
-        val template = """{"call":"formatString","args":{"value":"${'$'}{and(values:/flag)}"}}"""
+        val template = """{"@call":"formatString","args":{"value":"${'$'}{and(values:/flag)}"}}"""
         val evaluated = assertFailsWith<A2uiFunctionException> { evaluator.evaluate(call(template)) }
         assertTrue(evaluated.message!!.contains("must be an array"), evaluated.message!!)
         assertEquals("and", evaluated.call)
@@ -295,14 +295,14 @@ class FunctionEvaluatorTest {
     fun notNegates() {
         assertEquals(
             JsonPrimitive(false),
-            context().evaluate(call("""{"call":"not","args":{"value":true}}""")),
+            context().evaluate(call("""{"@call":"not","args":{"value":true}}""")),
         )
     }
 
     @Test
     fun callsNestInsideArguments() {
         val wire = """
-            {"call":"not","args":{"value":{"call":"or","args":{"values":[false,false]}}}}
+            {"@call":"not","args":{"value":{"@call":"or","args":{"values":[false,false]}}}}
         """.trimIndent()
         assertEquals(JsonPrimitive(true), context().evaluate(call(wire)))
     }
@@ -310,7 +310,7 @@ class FunctionEvaluatorTest {
     @Test
     fun aNonBooleanValueIsACallFailure() {
         assertFailsWith<A2uiFunctionException> {
-            context().evaluate(call("""{"call":"not","args":{"value":"true"}}"""))
+            context().evaluate(call("""{"@call":"not","args":{"value":"true"}}"""))
         }
     }
 
@@ -326,22 +326,22 @@ class FunctionEvaluatorTest {
         // would fail the payloads the specification ships to demonstrate `checks`.
         val evaluator = context("""{"email":"ada@example.com","blank":""}""")
         val passing = """
-            {"call":"and","args":{"values":[
-              {"call":"email","args":{"value":{"path":"/email"}}},
-              {"call":"required","args":{"value":{"path":"/email"}}}
+            {"@call":"and","args":{"values":[
+              {"@call":"email","args":{"value":{"@path":"/email"}}},
+              {"@call":"required","args":{"value":{"@path":"/email"}}}
             ]}}
         """.trimIndent()
         val failing = """
-            {"call":"and","args":{"values":[
-              {"call":"email","args":{"value":{"path":"/email"}}},
-              {"call":"required","args":{"value":{"path":"/blank"}}}
+            {"@call":"and","args":{"values":[
+              {"@call":"email","args":{"value":{"@path":"/email"}}},
+              {"@call":"required","args":{"value":{"@path":"/blank"}}}
             ]}}
         """.trimIndent()
         assertEquals(JsonPrimitive(true), evaluator.evaluate(call(passing)))
         assertEquals(JsonPrimitive(false), evaluator.evaluate(call(failing)))
         // `or` and `not` fold through the same reading, so neither can drift from `and`.
         val eitherWay = """
-            {"call":"not","args":{"value":{"call":"required","args":{"value":{"path":"/blank"}}}}}
+            {"@call":"not","args":{"value":{"@call":"required","args":{"value":{"@path":"/blank"}}}}}
         """.trimIndent()
         assertEquals(JsonPrimitive(true), evaluator.evaluate(call(eitherWay)))
     }
@@ -354,13 +354,13 @@ class FunctionEvaluatorTest {
         val evaluator = context("""{"result":{"valid":true}}""")
         assertFailsWith<A2uiFunctionException> {
             evaluator.evaluate(
-                call("""{"call":"formatNumber","args":{"value":1000,"grouping":{"path":"/result"}}}"""),
+                call("""{"@call":"formatNumber","args":{"value":1000,"grouping":{"@path":"/result"}}}"""),
             )
         }
         // And an object that is not a validation result at all reaches the same refusal from
         // inside `and`, rather than being read as some other kind of truth.
         assertFailsWith<A2uiFunctionException> {
-            evaluator.evaluate(call("""{"call":"and","args":{"values":[{"path":"/nothing"},true]}}"""))
+            evaluator.evaluate(call("""{"@call":"and","args":{"values":[{"@path":"/nothing"},true]}}"""))
         }
     }
 
@@ -369,7 +369,7 @@ class FunctionEvaluatorTest {
     @Test
     fun indexReturnsThePositionOfTheItemBeingRendered() {
         val evaluator = context("""{"rows":[1,2,3]}""", scope = itemScope("/rows", 2))
-        assertEquals(JsonPrimitive(2), evaluator.evaluate(call("""{"call":"@index"}""")))
+        assertEquals(JsonPrimitive(2), evaluator.evaluate(call("""{"@call":"@index"}""")))
     }
 
     @Test
@@ -377,14 +377,14 @@ class FunctionEvaluatorTest {
         val evaluator = context("""{"rows":[1,2,3]}""", scope = itemScope("/rows", 0))
         assertEquals(
             JsonPrimitive(1),
-            evaluator.evaluate(call("""{"call":"@index","args":{"offset":1}}""")),
+            evaluator.evaluate(call("""{"@call":"@index","args":{"offset":1}}""")),
         )
     }
 
     @Test
     fun indexOutsideACollectionScopeIsAnError() {
         val failure = assertFailsWith<A2uiFunctionException> {
-            context("""{"rows":[1]}""").evaluate(call("""{"call":"@index"}"""))
+            context("""{"rows":[1]}""").evaluate(call("""{"@call":"@index"}"""))
         }
         assertTrue(failure.message!!.contains("list template"))
     }
@@ -393,7 +393,7 @@ class FunctionEvaluatorTest {
     fun indexTakesNoCatalogId() {
         val evaluator = context("""{"rows":[1]}""", scope = itemScope("/rows", 0))
         assertFailsWith<A2uiFunctionException> {
-            evaluator.evaluate(call("""{"call":"@index","catalogId":"basic"}"""))
+            evaluator.evaluate(call("""{"@call":"@index","catalogId":"basic"}"""))
         }
     }
 
@@ -402,7 +402,7 @@ class FunctionEvaluatorTest {
         val outer = EvaluationScope.Root.iterate(JsonPointer.parse("/rows"), 1)
         val inner = outer.iterate(JsonPointer.parse("cells"), 3)
         val evaluator = context("""{"rows":[{"cells":[]},{"cells":[0,1,2,3]}]}""", scope = inner)
-        assertEquals(JsonPrimitive(3), evaluator.evaluate(call("""{"call":"@index"}""")))
+        assertEquals(JsonPrimitive(3), evaluator.evaluate(call("""{"@call":"@index"}""")))
     }
 
     // ---- bindings ---------------------------------------------------------------------
@@ -426,7 +426,7 @@ class FunctionEvaluatorTest {
         val opened = mutableListOf<String>()
         val evaluator = context(invocation = InvocationContext.RENDER, urlOpener = opened::add)
         assertFailsWith<A2uiFunctionException> {
-            evaluator.evaluate(call("""{"call":"openUrl","args":{"url":"https://example.com"}}"""))
+            evaluator.evaluate(call("""{"@call":"openUrl","args":{"url":"https://example.com"}}"""))
         }
         assertTrue(opened.isEmpty())
     }
@@ -436,7 +436,7 @@ class FunctionEvaluatorTest {
         val opened = mutableListOf<String>()
         val evaluator = context(invocation = InvocationContext.USER_ACTION, urlOpener = opened::add)
         val result =
-            evaluator.evaluate(call("""{"call":"openUrl","args":{"url":"https://example.com/x"}}"""))
+            evaluator.evaluate(call("""{"@call":"openUrl","args":{"url":"https://example.com/x"}}"""))
         assertEquals(JsonNull, result)
         assertEquals(listOf("https://example.com/x"), opened)
     }
@@ -447,7 +447,7 @@ class FunctionEvaluatorTest {
         val evaluator = context(invocation = InvocationContext.USER_ACTION, urlOpener = opened::add)
         for (url in listOf("javascript:alert(1)", "data:text/html;base64,x", "file:///etc/passwd")) {
             assertFailsWith<A2uiFunctionException> {
-                evaluator.evaluate(call("""{"call":"openUrl","args":{"url":"$url"}}"""))
+                evaluator.evaluate(call("""{"@call":"openUrl","args":{"url":"$url"}}"""))
             }
         }
         assertTrue(opened.isEmpty())
@@ -460,7 +460,7 @@ class FunctionEvaluatorTest {
             urlOpener = { error("must not be reached") },
         )
         assertFailsWith<A2uiFunctionException> {
-            evaluator.evaluate(call("""{"call":"openUrl","args":{"url":"/settings"}}"""))
+            evaluator.evaluate(call("""{"@call":"openUrl","args":{"url":"/settings"}}"""))
         }
     }
 
@@ -468,7 +468,7 @@ class FunctionEvaluatorTest {
     fun openUrlFailsVisiblyWithNoOpenerInstalled() {
         val evaluator = context(invocation = InvocationContext.USER_ACTION)
         val failure = assertFailsWith<A2uiFunctionException> {
-            evaluator.evaluate(call("""{"call":"openUrl","args":{"url":"https://example.com"}}"""))
+            evaluator.evaluate(call("""{"@call":"openUrl","args":{"url":"https://example.com"}}"""))
         }
         assertTrue(failure.message!!.contains("UrlOpener"))
     }
@@ -477,7 +477,7 @@ class FunctionEvaluatorTest {
 
     @Test
     fun aCheckConditionEvaluatesToAValidationResult() {
-        val result = context().evaluateCheck(call("""{"call":"email","args":{"value":"nope"}}"""))
+        val result = context().evaluateCheck(call("""{"@call":"email","args":{"value":"nope"}}"""))
         assertEquals(false, result.valid)
         assertEquals(ValidationCode.INVALID_EMAIL, result.code)
         assertNull(result.severity)
@@ -498,7 +498,7 @@ class FunctionEvaluatorTest {
     @Test
     fun aConditionThatIsNotAnObjectIsAMalformedCheckRatherThanAFailedOne() {
         val failure = assertFailsWith<A2uiFunctionException> {
-            context().evaluateCheck(call("""{"call":"and","args":{"values":[true,true]}}"""))
+            context().evaluateCheck(call("""{"@call":"and","args":{"values":[true,true]}}"""))
         }
         assertTrue(failure.message!!.contains("must evaluate to a ValidationResult"), failure.message!!)
     }
@@ -523,8 +523,8 @@ class FunctionEvaluatorTest {
     @Test
     fun nestingPastTheDepthBoundIsRefused() {
         val limits = EvaluationLimits(maxDepth = 4)
-        var wire = """{"call":"not","args":{"value":true}}"""
-        repeat(limits.maxDepth + 2) { wire = """{"call":"not","args":{"value":$wire}}""" }
+        var wire = """{"@call":"not","args":{"value":true}}"""
+        repeat(limits.maxDepth + 2) { wire = """{"@call":"not","args":{"value":$wire}}""" }
         val failure = assertFailsWith<A2uiFunctionException> {
             context(limits = limits).evaluate(call(wire))
         }
@@ -539,8 +539,8 @@ class FunctionEvaluatorTest {
 
     @Test
     fun exhaustingTheStepBudgetIsRefused() {
-        val values = List(20) { """{"call":"not","args":{"value":false}}""" }.joinToString(",")
-        val wire = """{"call":"and","args":{"values":[$values]}}"""
+        val values = List(20) { """{"@call":"not","args":{"value":false}}""" }.joinToString(",")
+        val wire = """{"@call":"and","args":{"values":[$values]}}"""
         assertFailsWith<A2uiFunctionException> {
             context(limits = EvaluationLimits(maxSteps = 5)).evaluate(call(wire))
         }
@@ -554,9 +554,9 @@ class FunctionEvaluatorTest {
         val data = """{"form":{"cardNumber":4111111111111111,"note":"hunter2","consent":true}}"""
         val evaluator = context(data)
         val calls = listOf(
-            """{"call":"not","args":{"value":{"path":"/form/cardNumber"}}}""",
-            """{"call":"formatNumber","args":{"value":{"path":"/form/note"}}}""",
-            """{"call":"formatDate","args":{"value":{"path":"/form/consent"},"format":"yyyy"}}""",
+            """{"@call":"not","args":{"value":{"@path":"/form/cardNumber"}}}""",
+            """{"@call":"formatNumber","args":{"value":{"@path":"/form/note"}}}""",
+            """{"@call":"formatDate","args":{"value":{"@path":"/form/consent"},"format":"yyyy"}}""",
         )
         for (wire in calls) {
             val message =
@@ -570,7 +570,7 @@ class FunctionEvaluatorTest {
     @Test
     fun anUnimplementedFunctionIsReportedByName() {
         val failure = assertFailsWith<A2uiFunctionException> {
-            context().evaluate(call("""{"call":"validateCreditCard","args":{"n":1}}"""))
+            context().evaluate(call("""{"@call":"validateCreditCard","args":{"n":1}}"""))
         }
         assertEquals("validateCreditCard", failure.call)
     }
@@ -578,7 +578,7 @@ class FunctionEvaluatorTest {
     @Test
     fun anArgumentTheFunctionDoesNotReadIsIgnoredRatherThanRefused() {
         // Checking a call against its catalog schema is the catalog-driven checker's job.
-        val wire = """{"call":"required","args":{"value":"a","surplus":{"call":"noSuchFunction"}}}"""
+        val wire = """{"@call":"required","args":{"value":"a","surplus":{"@call":"noSuchFunction"}}}"""
         assertEquals(true, context().valid(call(wire)))
     }
 }

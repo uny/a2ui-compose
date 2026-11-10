@@ -231,7 +231,12 @@ private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>
                         // `properties` is it a name the rule governs -- a `$defs` entry name, a
                         // `patternProperties` regex and a `dependencies` trigger are none of them.
                         if (keyword == PROPERTIES) {
-                            requireIdentifier(name, "property name in $owner")
+                            // The two protocol directives are the one exception: a function
+                            // definition has to spell `@call` to say which name it answers to,
+                            // and `@` is not `XID_Start`. `run_tests.py` exempts the same pair.
+                            if (name !in RESERVED_DIRECTIVES) {
+                                requireIdentifier(name, "property name in $owner")
+                            }
                             if (callIsFunction && name == CALL) requireNoSystemCall(subschema, owner)
                         }
                         // A draft-07 `dependencies` entry may hold an array of required property
@@ -254,7 +259,7 @@ private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>
  * The rule is enforced on the keys of `functions`, but a call is never validated against that
  * map: `common_types.json` reaches `catalog.json#/$defs/anyFunction`, and the catalog supplies
  * that schema itself. So a catalog with an empty `functions` map could still write
- * `{"call": {"const": "@evil"}}` under `$defs/anyFunction` and have `@evil` validate (#48).
+ * `{"@call": {"const": "@evil"}}` under `$defs/anyFunction` and have `@evil` validate (#48).
  * Whatever schema text admits a `call` name is where the catalog defines a function, by the only
  * definition that matters to the checker -- so a `call` property whose `const` or `enum` names
  * a `@`-prefixed string is refused, wherever in the catalog it sits.
@@ -267,7 +272,7 @@ private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>
  * something points at it. The check therefore keys on the name wherever it stands, and a
  * component data property that happens to be called `call` and enumerates `@here` is refused
  * with the rest -- the cost of not chasing references. The one position that is read
- * differently is `not`, where spelling a name excludes it: `{"not": {"properties": {"call":
+ * differently is `not`, where spelling a name excludes it: `{"not": {"properties": {"@call":
  * {"const": "@index"}}}}` is a catalog keeping the system function *out* of `anyFunction`.
  *
  * Only the two literal keywords are read, and only where they sit directly on the `call`
@@ -496,8 +501,11 @@ private val PERMITTED_COMMON_TYPES: Set<String> = linkedSetOf(
 /** The prefix `a2ui_protocol.md`'s System Namespace Rule reserves. */
 private const val SYSTEM_FUNCTION_PREFIX: String = "@"
 
+/** The keys `a2ui_protocol.md` reserves as protocol directives, exempt from the name rule. */
+private val RESERVED_DIRECTIVES: Set<String> = setOf(DataBinding.KEY, FunctionCall.KEY)
+
 /** The property a function call's name travels in; see [requireNoSystemCall]. */
-private const val CALL: String = "call"
+private const val CALL: String = FunctionCall.KEY
 
 /** In [SUBSCHEMA], but handled first: what it holds is what the schema refuses. */
 private const val NOT: String = "not"

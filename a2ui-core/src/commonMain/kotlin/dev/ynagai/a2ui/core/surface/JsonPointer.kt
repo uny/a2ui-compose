@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A JSON Pointer ([RFC 6901](https://www.rfc-editor.org/rfc/rfc6901)) into a surface's data model.
@@ -66,10 +67,35 @@ public class JsonPointer private constructor(
         /**
          * The token JSON Patch uses for "one past the last element" of an array.
          *
-         * It resolves to nothing, and is only meaningful as the last token of a write, where it
-         * appends. RFC 6901 gives it no meaning at all for evaluation.
+         * It has no meaning in A2UI. Every upstream data model (`web_core`, `a2ui_core` in
+         * Python, `A2UICore` in Swift) treats it as what it is to them -- a non-numeric segment
+         * on an array -- and refuses the write, so [write] does too, and on a read it resolves to
+         * nothing. Kept so that code naming it still compiles; append by writing the index equal
+         * to the array's size.
          */
+        @Deprecated(
+            "A2UI v1.0 data models refuse `-` on an array. Write the index equal to the array's " +
+                "size to append.",
+        )
         public const val APPEND: String = "-"
+
+        /**
+         * The largest array index a write may name, the bound every upstream data model applies.
+         *
+         * A write past an array's end pads the gap with nulls, so without a bound one
+         * `updateDataModel` of `/items/2000000000` would ask the renderer for two billion of them.
+         */
+        public const val MAX_ARRAY_INDEX: Int = 10_000
+
+        /**
+         * Segments refused anywhere in a pointer, on reads and writes alike.
+         *
+         * They only mean something to a runtime with prototype chains, but the blueprint makes the
+         * rule normative in every language "so that a payload behaves the same everywhere": an
+         * agent whose writes to `/constructor` land on Kotlin renderers and fail on JavaScript
+         * ones would be relying on which renderer it happened to reach.
+         */
+        public val FORBIDDEN_TOKENS: Set<String> = setOf("__proto__", "constructor", "prototype")
 
         /**
          * The most tokens a pointer may carry.
@@ -84,8 +110,9 @@ public class JsonPointer private constructor(
         public const val MAX_TOKENS: Int = 256
 
         /**
-         * Parses [raw], rejecting a malformed escape rather than reading it literally and a
-         * pointer with more than [MAX_TOKENS] tokens rather than recursing on it.
+         * Parses [raw], rejecting a malformed escape rather than reading it literally, a pointer
+         * with more than [MAX_TOKENS] tokens rather than recursing on it, and one that names any
+         * of [FORBIDDEN_TOKENS].
          */
         public fun parse(raw: String): JsonPointer {
             if (raw.isEmpty() || raw == "/") return ROOT
@@ -101,7 +128,13 @@ public class JsonPointer private constructor(
                         "maximum of $MAX_TOKENS.",
                 )
             }
-            return JsonPointer(split.map { unescape(it, raw) }, absolute)
+            val tokens = split.map { unescape(it, raw) }
+            tokens.firstOrNull { it in FORBIDDEN_TOKENS }?.let { token ->
+                throw A2uiFormatException(
+                    "JSON Pointer `${raw.take(64)}`: `$token` is a forbidden path segment.",
+                )
+            }
+            return JsonPointer(tokens, absolute)
         }
 
         /** Builds an absolute pointer from already-unescaped [tokens]. */
@@ -154,6 +187,8 @@ public class JsonPointer private constructor(
  * [EvaluationScope] should rebase it first — see [EvaluationScope.resolve].
  */
 public fun JsonElement.resolve(pointer: JsonPointer): JsonElement? {
+    // `parse` refuses these, but a pointer assembled with `of` or `child` has not been through it.
+    if (pointer.tokens.any { it in JsonPointer.FORBIDDEN_TOKENS }) return null
     var current: JsonElement = this
     for (token in pointer.tokens) {
         current = when (current) {
@@ -168,23 +203,28 @@ public fun JsonElement.resolve(pointer: JsonPointer): JsonElement? {
 /**
  * [value] written at [pointer], returning a new data model.
  *
- * The semantics are the specification's, not JSON Patch's:
+ * The semantics are the A2UI data model's -- the `a2ui_core` blueprint's JSON Pointer rules and
+ * the conformance suite's `data_model.yaml` and `data_deletion.yaml` -- not JSON Patch's:
  *
  * - **Upsert.** A pointer that already exists is replaced; one that does not is created, along
- *   with any missing containers on the way to it.
- * - **Null deletes.** An explicit `null` removes what [pointer] addresses — a member from an
- *   object, an element from an array (shifting the rest down). There is therefore no way for an
- *   `updateDataModel` to *store* a JSON null; the specification spends `null` on the delete verb.
- *   A delete of something [pointer] does not address changes nothing at all: it neither creates
- *   the containers on the way to it nor disturbs whatever stands in the path.
+ *   with any missing containers on the way to it. A missing container is an array when the token
+ *   that indexes it is numeric and an object otherwise, so `/items/0` against an empty model
+ *   writes `{"items": [...]}` (rule 2, "Auto-typing").
+ * - **Arrays take indices only.** A non-numeric token on an array is an error, and that includes
+ *   JSON Patch's `-`. An index past the end pads the gap with nulls; one past
+ *   [JsonPointer.MAX_ARRAY_INDEX] is an error.
+ * - **A primitive in the way is an error** (rule 3). Writing `/a/b` where `/a` holds a string
+ *   would otherwise replace committed data with a fresh container, silently. A null in the way
+ *   counts as absent and is replaced.
+ * - **Null deletes.** An explicit `null` removes a member from an object. On an array it empties
+ *   the element and keeps the array's length (rule 6), so `[1,2,3]` with `/1` deleted is
+ *   `[1,null,3]` and the indices after it do not move. A delete of something [pointer] does not
+ *   address changes nothing at all (rule 7).
  * - **Root.** A [JsonPointer.ROOT] write replaces the whole data model, and a root delete empties
- *   it. The replacement must be an object, because that is what the schema types a data model as.
+ *   it (rule 8). The replacement must be an object, because that is what the schema types a data
+ *   model as.
  *
- * Missing containers are created as objects — on a write that *stores* a value; see the delete
- * rule above — even when the next token looks like an array index.
- * `/items/0` against an absent `items` is genuinely ambiguous, and choosing an object keeps the
- * write reversible: a later write of an actual array at `/items` replaces the object outright,
- * whereas guessing an array would make `{"0": ...}` unrepresentable.
+ * Every refusal raises [A2uiStateException] naming the pointer and leaves the model unchanged.
  */
 public fun JsonObject.write(pointer: JsonPointer, value: JsonElement): JsonObject {
     require(pointer.isAbsolute) {
@@ -198,6 +238,9 @@ public fun JsonObject.write(pointer: JsonPointer, value: JsonElement): JsonObjec
                 "maximum of ${JsonPointer.MAX_TOKENS}.",
         )
     }
+    pointer.tokens.firstOrNull { it in JsonPointer.FORBIDDEN_TOKENS }?.let { token ->
+        throw A2uiStateException("updateDataModel `$pointer`: `$token` is a forbidden path segment.")
+    }
     if (pointer.isRoot) {
         if (value is JsonNull) return JsonObject(emptyMap())
         return value as? JsonObject
@@ -205,17 +248,20 @@ public fun JsonObject.write(pointer: JsonPointer, value: JsonElement): JsonObjec
                 "updateDataModel: replacing the whole data model requires an object.",
             )
     }
-    // A delete removes what [pointer] addresses and nothing else, so a delete of something
-    // that is not there is a no-op. Without this the recursion below would materialize the
-    // containers on the way to the absent member — `{}` would gain `{"user":{}}` from a
-    // delete of `/user/name` — replace a scalar standing in the path with an empty object,
-    // and append `{}` to an array addressed through `-`. It also makes an out-of-range array
-    // delete uniformly do nothing, rather than being ignored at `size` and raising a
-    // "would leave a gap" error just past it.
+    // Rule 7: a delete of something that is not there is a no-op. Without this the recursion
+    // below would materialize the containers on the way to the absent member -- `{}` would gain
+    // `{"user":{}}` from a delete of `/user/name` -- and could raise over a primitive standing in
+    // a path the delete was never going to reach.
     if (value is JsonNull && resolve(pointer) == null) return this
     return writeIn(this, pointer.tokens, 0, value, pointer) as JsonObject
 }
 
+/**
+ * [node] with [value] written at `tokens[depth..]`.
+ *
+ * [node] is null when nothing stands at this depth yet (or a JSON null does), and the container
+ * created for it then follows rule 2: an array when this depth's token is numeric.
+ */
 private fun writeIn(
     node: JsonElement?,
     tokens: List<String>,
@@ -225,50 +271,54 @@ private fun writeIn(
 ): JsonElement {
     val token = tokens[depth]
     val last = depth == tokens.lastIndex
-    return when (node) {
+    val container: JsonElement = when (node) {
+        null, JsonNull -> if (arrayIndex(token) != null) JsonArray(emptyList()) else JsonObject(emptyMap())
+        is JsonArray, is JsonObject -> node
+        is JsonPrimitive -> throw A2uiStateException(
+            "updateDataModel `$pointer`: `${pointer.prefix(depth)}` holds a primitive, so the " +
+                "write cannot pass through it.",
+        )
+    }
+    return when (container) {
         is JsonArray -> {
-            val appending = token == JsonPointer.APPEND || arrayIndex(token) == node.size
-            val index = if (appending) node.size else arrayIndex(token)
-                ?: throw A2uiStateException(
-                    "updateDataModel `$pointer`: `$token` is not an array index.",
-                )
-            if (index > node.size) {
+            val index = arrayIndex(token) ?: throw A2uiStateException(
+                "updateDataModel `$pointer`: `$token` is not an array index.",
+            )
+            if (index > JsonPointer.MAX_ARRAY_INDEX) {
                 throw A2uiStateException(
-                    "updateDataModel `$pointer`: index $index would leave a gap in an array of " +
-                        "size ${node.size}.",
+                    "updateDataModel `$pointer`: index $index exceeds the maximum of " +
+                        "${JsonPointer.MAX_ARRAY_INDEX}.",
                 )
             }
-            when {
-                last && value is JsonNull -> {
-                    if (appending) node else JsonArray(node.filterIndexed { i, _ -> i != index })
-                }
-                last -> JsonArray(
-                    if (appending) node + value else node.mapIndexed { i, e -> if (i == index) value else e },
-                )
-                else -> {
-                    val child = writeIn(node.getOrNull(index), tokens, depth + 1, value, pointer)
-                    JsonArray(
-                        if (appending) node + child else node.mapIndexed { i, e -> if (i == index) child else e },
-                    )
-                }
+            val written = when {
+                // Only reached for an index that exists: the no-op check in `write` already
+                // returned for one past the end.
+                last && value is JsonNull -> JsonNull
+                last -> value
+                else -> writeIn(container.getOrNull(index), tokens, depth + 1, value, pointer)
             }
+            val padded = if (index < container.size) {
+                container.toMutableList()
+            } else {
+                (container + List(index - container.size + 1) { JsonNull }).toMutableList()
+            }
+            padded[index] = written
+            JsonArray(padded)
         }
-        else -> {
-            // Anything that is not an object — a primitive, a null, or an absent node — is
-            // replaced by the object this write needs, rather than failing. `updateDataModel` is
-            // specified as an upsert, so the agent overwriting a scalar with a subtree is a
-            // legitimate update and not a type error.
-            val obj = node as? JsonObject ?: JsonObject(emptyMap())
-            when {
-                last && value is JsonNull -> JsonObject(obj - token)
-                last -> JsonObject(obj + (token to value))
-                else -> JsonObject(
-                    obj + (token to writeIn(obj[token], tokens, depth + 1, value, pointer)),
-                )
-            }
+        is JsonObject -> when {
+            last && value is JsonNull -> JsonObject(container - token)
+            last -> JsonObject(container + (token to value))
+            else -> JsonObject(
+                container + (token to writeIn(container[token], tokens, depth + 1, value, pointer)),
+            )
         }
+        else -> error("unreachable: the container is always an array or an object")
     }
 }
+
+/** The first [count] tokens of this pointer, as an absolute pointer string. */
+private fun JsonPointer.prefix(count: Int): String =
+    JsonPointer.of(*tokens.subList(0, count).toTypedArray()).toString()
 
 /**
  * [token] as an array index, or null when it is not one.

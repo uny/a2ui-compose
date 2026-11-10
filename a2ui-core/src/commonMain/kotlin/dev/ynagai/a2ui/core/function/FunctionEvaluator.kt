@@ -8,6 +8,7 @@ import dev.ynagai.a2ui.core.protocol.FunctionCall
 import dev.ynagai.a2ui.core.protocol.ValidationResult
 import dev.ynagai.a2ui.core.protocol.decodeBoundValue
 import dev.ynagai.a2ui.core.protocol.encodeNumber
+import dev.ynagai.a2ui.core.protocol.unescapeReservedKeys
 import dev.ynagai.a2ui.core.surface.EvaluationScope
 import dev.ynagai.a2ui.core.surface.JsonPointer
 import dev.ynagai.a2ui.core.surface.currentIndex
@@ -498,7 +499,7 @@ internal class Evaluator(val context: EvaluationContext) {
      * Evaluates one wire-level argument: a binding, a nested call, or a literal.
      *
      * The three are told apart by [decodeBoundValue] rather than by trying each in turn, which is
-     * what keeps an object literal that happens to carry a `path` key from being read as a
+     * what keeps an object literal that happens to carry a `@path` key from being read as a
      * binding — see that function for why the distinction is by key presence.
      */
     fun argument(element: JsonElement, depth: Int): JsonElement {
@@ -508,7 +509,7 @@ internal class Evaluator(val context: EvaluationContext) {
             // Let through before the catch below, because `A2uiFormatException` *is* a
             // `SerializationException`. Catching the supertype alone relabelled the one failure
             // this module raises deliberately for a malformed payload — an object carrying both
-            // `path` and `call` — as a call failure, and a renderer that classifies malformed
+            // `@path` and `@call` — as a call failure, and a renderer that classifies malformed
             // payloads by catching `A2uiFormatException` stopped seeing it.
             throw e
         } catch (e: SerializationException) {
@@ -518,10 +519,10 @@ internal class Evaluator(val context: EvaluationContext) {
             // `SerializationException` escapes as a fourth exception type on a path this
             // module documents as raising three.
             throw A2uiFunctionException(
-                "a function argument carries `path` or `call` but is not a valid binding or " +
+                "a function argument carries `@path` or `@call` but is not a valid binding or " +
                     "call (${e.message?.take(MESSAGE_EXCERPT)}).",
             )
-        } ?: return element
+        } ?: return unescapeReservedKeys(element)
         return evaluate(bound, depth + 1)
     }
 
@@ -848,7 +849,7 @@ internal class Evaluator(val context: EvaluationContext) {
  * [preEvaluated] distinguishes the two ways a call reaches [Evaluator.invoke]. From the wire, each
  * argument is a `Dynamic*` union that still has to be resolved. From inside a `formatString`
  * expression, the parser has already resolved each argument to a value — and re-resolving it would
- * be wrong, not merely wasteful: a data path that resolved to `{"path": "/x"}` would be read as a
+ * be wrong, not merely wasteful: a data path that resolved to `{"@path": "/x"}` would be read as a
  * binding and followed a second time.
  *
  * Arguments the function does not name are ignored rather than refused. What a call may carry is

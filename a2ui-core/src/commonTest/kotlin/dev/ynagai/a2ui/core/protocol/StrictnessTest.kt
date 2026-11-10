@@ -104,7 +104,7 @@ class StrictnessTest {
         // to the surface's default catalog.
         assertFailsWith<SerializationException> {
             json.decodeFromString<AgentToRendererMessage>(
-                """{"version":"v1.0","createSurface":{"surfaceId":"s","components":[{"id":"r","component":"T","catalogId":123}]}}""",
+                """{"version":"1.0","createSurface":{"surfaceId":"s","components":[{"id":"r","component":"T","catalogId":123}]}}""",
             )
         }
     }
@@ -113,7 +113,7 @@ class StrictnessTest {
     fun `a wrong-typed action or validation field is rejected rather than erased`() {
         assertFailsWith<SerializationException> {
             json.decodeFromString<RendererToAgentMessage>(
-                """{"version":"v1.0","action":{"name":"n","surfaceId":"s","sourceComponentId":"c","timestamp":"t","context":{},"userMessage":42}}""",
+                """{"version":"1.0","action":{"name":"n","surfaceId":"s","sourceComponentId":"c","timestamp":"t","context":{},"userMessage":42}}""",
             )
         }
         // Was: severity read as null, so the ERROR default was reported for a payload that did
@@ -132,12 +132,12 @@ class StrictnessTest {
         // passed the oneOf check and was re-encoded with the conflicting key gone.
         assertFailsWith<SerializationException> {
             json.decodeFromString<RendererToAgentMessage>(
-                """{"version":"v1.0","error":{"code":"E","message":"m","surfaceId":123,"functionCallId":"c1"}}""",
+                """{"version":"1.0","error":{"code":"E","message":"m","surfaceId":123,"functionCallId":"c1"}}""",
             )
         }
         assertFailsWith<SerializationException> {
             json.decodeFromString<RendererToAgentMessage>(
-                """{"version":"v1.0","error":{"code":"E","message":"m","surfaceId":"s","functionCallId":"c1"}}""",
+                """{"version":"1.0","error":{"code":"E","message":"m","surfaceId":"s","functionCallId":"c1"}}""",
             )
         }
     }
@@ -154,7 +154,7 @@ class StrictnessTest {
         assertEquals(
             setOf("main"),
             json.decodeFromString<RendererDataModel>(
-                """{"version":"v1.0","surfaces":{"main":{}}}""",
+                """{"version":"1.0","surfaces":{"main":{}}}""",
             ).surfaces.keys,
         )
     }
@@ -181,12 +181,12 @@ class StrictnessTest {
             ),
         )
         assertEquals(
-            """{"v1.0":{"supportedCatalogIds":["a"]}}""",
+            """{"1.0":{"supportedCatalogIds":["a"]}}""",
             json.encodeToString(
                 AgentCapabilities.serializer(),
                 AgentCapabilities(
                     AgentCapabilitiesV1(listOf("a")),
-                    otherVersions = mapOf("v1.0" to JsonPrimitive("shadow")),
+                    otherVersions = mapOf("1.0" to JsonPrimitive("shadow")),
                 ),
             ),
         )
@@ -256,7 +256,7 @@ class StrictnessTest {
     fun `lenient tolerates an unknown envelope key that strict refuses`() {
         // Was: the envelope counted keys itself and never consulted ignoreUnknownKeys, so the
         // opt-in configuration rejected a trace id just as strict did.
-        val payload = """{"version":"v1.0","deleteSurface":{"surfaceId":"s"},"traceId":"x"}"""
+        val payload = """{"version":"1.0","deleteSurface":{"surfaceId":"s"},"traceId":"x"}"""
         assertFailsWith<SerializationException> {
             json.decodeFromString<AgentToRendererMessage>(payload)
         }
@@ -317,12 +317,14 @@ class StrictnessTest {
     }
 
     @Test
-    fun `the catalog and envelope protocol versions are spelled differently on purpose`() {
+    fun `the catalog and envelope protocol versions share upstream's bare spelling`() {
+        // Upstream unified them on `"1.0"` (#3726). They stay two constants because one is what
+        // a catalog declares and the other what this library speaks.
         val catalog = json.decodeFromString<CatalogDefinition>(
             """{"catalogId":"c","protocolVersion":"1.0"}""",
         )
         assertEquals(CatalogDefinition.PROTOCOL_VERSION, catalog.effectiveProtocolVersion)
-        assertEquals("v1.0", dev.ynagai.a2ui.core.A2ui.PROTOCOL_VERSION)
+        assertEquals("1.0", dev.ynagai.a2ui.core.A2ui.PROTOCOL_VERSION)
     }
 
     @Test
@@ -336,12 +338,12 @@ class StrictnessTest {
     @Test
     fun `a surface data model must be an object`() {
         assertFailsWith<SerializationException> {
-            json.decodeFromString<RendererDataModel>("""{"version":"v1.0","surfaces":{"a":1}}""")
+            json.decodeFromString<RendererDataModel>("""{"version":"1.0","surfaces":{"a":1}}""")
         }
         assertEquals(
             JsonObject(emptyMap()),
             json.decodeFromString<RendererDataModel>(
-                """{"version":"v1.0","surfaces":{"a":{}}}""",
+                """{"version":"1.0","surfaces":{"a":{}}}""",
             ).surfaces.getValue("a"),
         )
     }

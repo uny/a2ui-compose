@@ -79,7 +79,7 @@ class CatalogValidatorTest {
         // Falling back to "the only catalog loaded" would make a payload mean different things in
         // two renderers that hold different sets.
         assertIs<CatalogResolution.Unspecified>(VALIDATOR.resolve(null, null))
-        val result = VALIDATOR.validate(call("""{"call": "email", "args": {"value": "a@b.c"}}"""))
+        val result = VALIDATOR.validate(call("""{"@call": "email", "args": {"value": "a@b.c"}}"""))
         assertFalse(result.isValid)
     }
 
@@ -88,7 +88,7 @@ class CatalogValidatorTest {
         val resolution = VALIDATOR.resolve("urn:nope", null)
         assertEquals(CatalogResolution.Unknown("urn:nope"), resolution)
         val result = VALIDATOR.validate(
-            call("""{"call": "email", "catalogId": "urn:nope", "args": {"value": "a@b.c"}}"""),
+            call("""{"@call": "email", "catalogId": "urn:nope", "args": {"value": "a@b.c"}}"""),
         )
         assertFalse(result.isValid)
         assertTrue(
@@ -102,18 +102,18 @@ class CatalogValidatorTest {
     @Test
     fun accepts_every_function_the_basic_catalog_defines() {
         val calls = listOf(
-            """{"call": "required", "args": {"value": "x"}}""",
-            """{"call": "regex", "args": {"value": "x", "pattern": "^x"}}""",
-            """{"call": "length", "args": {"value": "x", "min": 1, "max": 3}}""",
-            """{"call": "numeric", "args": {"value": 2, "min": 1}}""",
-            """{"call": "email", "args": {"value": "a@b.c"}}""",
-            """{"call": "formatString", "args": {"value": "hi ${'$'}{/name}"}}""",
-            """{"call": "formatNumber", "args": {"value": 1, "decimals": 2}}""",
-            """{"call": "formatCurrency", "args": {"value": 1, "currency": "USD"}}""",
-            """{"call": "formatDate", "args": {"value": "2026-01-01", "format": "yyyy"}}""",
-            """{"call": "pluralize", "args": {"value": 1, "one": "x", "other": "y"}}""",
-            """{"call": "openUrl", "args": {"url": "https://example.dev"}}""",
-            """{"call": "not", "args": {"value": true}}""",
+            """{"@call": "required", "args": {"value": "x"}}""",
+            """{"@call": "regex", "args": {"value": "x", "pattern": "^x"}}""",
+            """{"@call": "length", "args": {"value": "x", "min": 1, "max": 3}}""",
+            """{"@call": "numeric", "args": {"value": 2, "min": 1}}""",
+            """{"@call": "email", "args": {"value": "a@b.c"}}""",
+            """{"@call": "formatString", "args": {"value": "hi ${'$'}{/name}"}}""",
+            """{"@call": "formatNumber", "args": {"value": 1, "decimals": 2}}""",
+            """{"@call": "formatCurrency", "args": {"value": 1, "currency": "USD"}}""",
+            """{"@call": "formatDate", "args": {"value": "2026-01-01", "format": "yyyy"}}""",
+            """{"@call": "pluralize", "args": {"value": 1, "one": "x", "other": "y"}}""",
+            """{"@call": "openUrl", "args": {"url": "https://example.dev"}}""",
+            """{"@call": "not", "args": {"value": true}}""",
         )
         for (payload in calls) {
             val result = checkCall(payload)
@@ -128,9 +128,9 @@ class CatalogValidatorTest {
         // resolves back through the catalog.
         val result = checkCall(
             """
-            {"call": "and", "args": {"values": [
-              {"call": "required", "args": {"value": "a"}},
-              {"call": "regex", "args": {"value": "a", "pattern": "^a"}}
+            {"@call": "and", "args": {"values": [
+              {"@call": "required", "args": {"value": "a"}},
+              {"@call": "regex", "args": {"value": "a", "pattern": "^a"}}
             ]}}
             """.trimIndent(),
         )
@@ -141,8 +141,8 @@ class CatalogValidatorTest {
     fun accepts_the_index_system_function_without_a_catalog() {
         // `@index` is defined by `common_types.json`, not by any catalog, so it resolves with no
         // surface default in play.
-        assertTrue(VALIDATOR.validate(call("""{"call": "@index"}""")).isValid)
-        assertTrue(VALIDATOR.validate(call("""{"call": "@index", "args": {"offset": 1}}""")).isValid)
+        assertTrue(VALIDATOR.validate(call("""{"@call": "@index"}""")).isValid)
+        assertTrue(VALIDATOR.validate(call("""{"@call": "@index", "args": {"offset": 1}}""")).isValid)
     }
 
     @Test
@@ -150,51 +150,51 @@ class CatalogValidatorTest {
         // `function_catalog_validation` #46. No catalog defines `@index`, so naming one is not a
         // redundancy to tolerate -- it asks for something that cannot exist.
         assertFalse(
-            VALIDATOR.validate(call("""{"call": "@index", "catalogId": "$BASIC_ID"}""")).isValid,
+            VALIDATOR.validate(call("""{"@call": "@index", "catalogId": "$BASIC_ID"}""")).isValid,
         )
     }
 
     @Test
     fun rejects_an_at_prefixed_name_that_is_not_the_one_system_function() {
         // v1.0 reserves no `@` namespace: `@nope` is a catalog function no catalog defines.
-        assertFalse(checkCall("""{"call": "@nope", "args": {}}""").isValid)
+        assertFalse(checkCall("""{"@call": "@nope", "args": {}}""").isValid)
     }
 
     @Test
     fun rejects_the_argument_defects_the_conformance_cases_name() {
         val cases = mapOf(
-            "#1  required: empty args" to """{"call": "required", "args": {}}""",
-            "#4  regex: missing pattern" to """{"call": "regex", "args": {"value": "a"}}""",
-            "#7  length: empty constraint" to """{"call": "length", "args": {"value": "a"}}""",
+            "#1  required: empty args" to """{"@call": "required", "args": {}}""",
+            "#4  regex: missing pattern" to """{"@call": "regex", "args": {"value": "a"}}""",
+            "#7  length: empty constraint" to """{"@call": "length", "args": {"value": "a"}}""",
             // The case descriptions call this argument `precision` and `formatDate`'s
             // `pattern`; the catalog names them `decimals` and `format`. The payloads are what
             // count -- a test written from the prose would be rejected for the wrong reason.
             "#13 formatNumber: decimals type" to
-                """{"call": "formatNumber", "args": {"value": 1, "decimals": "2"}}""",
+                """{"@call": "formatNumber", "args": {"value": 1, "decimals": "2"}}""",
             "#29 formatNumber: decimals is a boolean" to
-                """{"call": "formatNumber", "args": {"value": 1, "decimals": true}}""",
+                """{"@call": "formatNumber", "args": {"value": 1, "decimals": true}}""",
             "#31 formatDate: format is null" to
-                """{"call": "formatDate", "args": {"value": "2026-01-01", "format": null}}""",
+                """{"@call": "formatDate", "args": {"value": "2026-01-01", "format": null}}""",
             "#30 formatCurrency: currency code type" to
-                """{"call": "formatCurrency", "args": {"value": 1, "currency": 7}}""",
+                """{"@call": "formatCurrency", "args": {"value": 1, "currency": 7}}""",
             "#15 formatCurrency: missing currency" to
-                """{"call": "formatCurrency", "args": {"value": 1}}""",
+                """{"@call": "formatCurrency", "args": {"value": 1}}""",
             "#18 pluralize: missing other" to
-                """{"call": "pluralize", "args": {"value": 1, "one": "x"}}""",
-            "#22 length: min type" to """{"call": "length", "args": {"value": "a", "min": "1"}}""",
-            "#23 length: negative max" to """{"call": "length", "args": {"value": "a", "max": -1}}""",
-            "#24 numeric: min type" to """{"call": "numeric", "args": {"value": 1, "min": "1"}}""",
-            "#26 regex: pattern type" to """{"call": "regex", "args": {"value": "a", "pattern": 7}}""",
+                """{"@call": "pluralize", "args": {"value": 1, "one": "x"}}""",
+            "#22 length: min type" to """{"@call": "length", "args": {"value": "a", "min": "1"}}""",
+            "#23 length: negative max" to """{"@call": "length", "args": {"value": "a", "max": -1}}""",
+            "#24 numeric: min type" to """{"@call": "numeric", "args": {"value": 1, "min": "1"}}""",
+            "#26 regex: pattern type" to """{"@call": "regex", "args": {"value": "a", "pattern": 7}}""",
             "#27 email: too many args" to
-                """{"call": "email", "args": {"value": "a@b.c", "extra": 1}}""",
-            "#28 formatString: format string type" to """{"call": "formatString", "args": {"value": 7}}""",
-            "#32 openUrl: not a URI" to """{"call": "openUrl", "args": {"url": "not a uri"}}""",
+                """{"@call": "email", "args": {"value": "a@b.c", "extra": 1}}""",
+            "#28 formatString: format string type" to """{"@call": "formatString", "args": {"value": 7}}""",
+            "#32 openUrl: not a URI" to """{"@call": "openUrl", "args": {"url": "not a uri"}}""",
             "#34 and: single value" to
-                """{"call": "and", "args": {"values": [{"call": "required", "args": {"value": "a"}}]}}""",
-            "#38 not: string argument" to """{"call": "not", "args": {"value": "x"}}""",
+                """{"@call": "and", "args": {"values": [{"@call": "required", "args": {"value": "a"}}]}}""",
+            "#38 not: string argument" to """{"@call": "not", "args": {"value": "x"}}""",
             "#40 required: too many args" to
-                """{"call": "required", "args": {"value": "a", "extra": 1}}""",
-            "#44 @index: string offset" to """{"call": "@index", "args": {"offset": "1"}}""",
+                """{"@call": "required", "args": {"value": "a", "extra": 1}}""",
+            "#44 @index: string offset" to """{"@call": "@index", "args": {"offset": "1"}}""",
         )
         for ((name, payload) in cases) {
             val result = checkCall(payload)
@@ -211,7 +211,7 @@ class CatalogValidatorTest {
         // survives decoding to reach this entry point. It is checked through `validateMessage`,
         // which takes the wire form, in `rejects_an_extra_key_on_a_call_in_a_message`.
         val result = VALIDATOR.validate(
-            call("""{"call": "email", "args": {"value": "a@b.c"}}""").copy(catalogId = BASIC_ID),
+            call("""{"@call": "email", "args": {"value": "a@b.c"}}""").copy(catalogId = BASIC_ID),
         )
         assertTrue(result.isValid, result.violations.toString())
     }
@@ -276,7 +276,7 @@ class CatalogValidatorTest {
             "icon_checks #4: svgPath type" to
                 """{"id": "i", "component": "Icon", "name": {"svgPath": 7}}""",
             "icon_checks #5: svgPath binding with extras" to
-                """{"id": "i", "component": "Icon", "name": {"svgPath": {"path": "/p", "extra": 1}}}""",
+                """{"id": "i", "component": "Icon", "name": {"svgPath": {"@path": "/p", "extra": 1}}}""",
         )
         for ((name, payload) in cases) {
             val result = checkComponent(payload)
@@ -607,7 +607,7 @@ private const val PLACEHOLDER_URI = "https://a2ui.org/specification/v1_0/catalog
 
 /** A component of a type no catalog defines, carrying a property no catalog declares. */
 private const val UNDECLARED_COMPONENT_MESSAGE = """
-{"version": "v1.0", "createSurface": {"surfaceId": "s",
+{"version": "1.0", "createSurface": {"surfaceId": "s",
  "components": [{"id": "root", "component": "TotallyMadeUp", "bogusProp": 1}]}}
 """
 
@@ -675,7 +675,7 @@ class CatalogIdentityTest {
         val definition = catalog(IMPOSTOR_CATALOG)
         val validator = CatalogValidator.of(listOf(BASIC, definition))
         val result = validator.validate(
-            call("""{"call": "email", "args": {"value": "not-an-email", "extra": 1}}"""),
+            call("""{"@call": "email", "args": {"value": "not-an-email", "extra": 1}}"""),
             BASIC_ID,
         )
         // Still checked against the real `common_types.json`, so the extra argument is refused.
@@ -714,7 +714,7 @@ class CatalogIdentityTest {
         for (inPlay in listOf(BASIC_ID, shadow.catalogId)) {
             // `@index` naming a catalog is refused by `FunctionCall` in `common_types.json` and by
             // nothing else, so it is valid exactly when that document has been displaced.
-            val result = validator.validate(call("""{"call": "@index", "catalogId": "$inPlay"}"""))
+            val result = validator.validate(call("""{"@call": "@index", "catalogId": "$inPlay"}"""))
             assertFalse(result.isValid, "an inlined catalog answered for `FunctionCall`")
         }
     }

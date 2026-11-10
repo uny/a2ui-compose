@@ -24,8 +24,8 @@ class ConformanceTest {
         // A guard on the harness rather than on the implementation. Reading the wrong directory,
         // or a codegen that silently dropped a file, would otherwise show up as a green run over
         // fewer cases than the specification has.
-        assertEquals(153, CONFORMANCE_CASES.size, "the suite should hold 153 assertions")
-        assertEquals(14, CONFORMANCE_CASES.map { it.file }.distinct().size)
+        assertEquals(177, CONFORMANCE_CASES.size, "the suite should hold 177 assertions")
+        assertEquals(17, CONFORMANCE_CASES.map { it.file }.distinct().size)
     }
 
     @Test
@@ -66,17 +66,17 @@ class ConformanceTest {
     @Test
     fun both_catalogs_the_suites_name_are_actually_exercised() {
         // Three suites bind the placeholder to the testing catalog. Running everything against the
-        // basic one gets ten assertions wrong, and this is what keeps that from being reintroduced
-        // quietly -- the harness would still be green on the other 143.
+        // basic one gets assertions wrong, and this is what keeps that from being reintroduced
+        // quietly -- the harness would still be green on the rest.
         val catalogs = CONFORMANCE_CASES.map { it.suite.catalogId }.distinct()
         assertEquals(2, catalogs.size, "expected both catalogs to be in play, got $catalogs")
         assertTrue(CONFORMANCE_CASES.any { it.suite.catalogId == TESTING.catalogId })
     }
 
     @Test
-    fun all_three_target_schemas_are_exercised() {
+    fun all_four_target_documents_are_exercised() {
         val targets = CONFORMANCE_CASES.map { it.suite.target }.distinct()
-        assertEquals(3, targets.size, "expected all three documents to be in play, got $targets")
+        assertEquals(4, targets.size, "expected all four documents to be in play, got $targets")
     }
 }
 

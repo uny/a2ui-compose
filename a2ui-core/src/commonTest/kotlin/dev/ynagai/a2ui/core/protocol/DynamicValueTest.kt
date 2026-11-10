@@ -43,37 +43,68 @@ class DynamicValueTest {
 
     @Test
     fun `path key selects DataBinding and call key selects FunctionCall`() {
-        assertEquals(DataBinding("/my/data/pointer"), value("""{"path": "/my/data/pointer"}"""))
+        assertEquals(DataBinding("/my/data/pointer"), value("""{"@path": "/my/data/pointer"}"""))
         assertEquals(
             FunctionCall("openUrl", args = mapOf("url" to JsonPrimitive("https://example.com"))),
-            value("""{"call": "openUrl", "args": {"url": "https://example.com"}}"""),
+            value("""{"@call": "openUrl", "args": {"url": "https://example.com"}}"""),
         )
     }
 
     @Test
     fun `a malformed DataBinding is rejected rather than read as an object literal`() {
         assertFailsWith<SerializationException> {
-            value("""{"path": "/my/data/pointer", "extra": "field"}""")
+            value("""{"@path": "/my/data/pointer", "extra": "field"}""")
         }
     }
 
     @Test
     fun `a malformed FunctionCall is rejected rather than read as an object literal`() {
         assertFailsWith<SerializationException> {
-            value("""{"call": "openUrl", "args": {"url": "https://x"}, "extra": "field"}""")
+            value("""{"@call": "openUrl", "args": {"url": "https://x"}, "extra": "field"}""")
         }
     }
 
     @Test
     fun `an object carrying both discriminators is ambiguous and rejected`() {
-        assertFailsWith<SerializationException> { value("""{"path": "/x", "call": "openUrl"}""") }
+        assertFailsWith<SerializationException> { value("""{"@path": "/x", "@call": "openUrl"}""") }
+    }
+
+    // reserved_keys.yaml: the four cases on the literal-object branch of DynamicValue.
+
+    @Test
+    fun `a plain object with path and call keys is a literal`() {
+        // `test_plain_object_with_literal_path_and_call`. Before v1.0 took the `@` prefix this
+        // was a malformed binding; now it is ordinary data.
+        val text = """{"path": "/var/log/system.log", "call": "audit"}"""
+        assertEquals(DynamicValue.Literal(json.parseToJsonElement(text)), value(text))
+    }
+
+    @Test
+    fun `a doubled at key is a literal that reads back with one at`() {
+        // `test_plain_object_escaped_doubled_at_key` and `test_escaped_doubled_at_unescaping`.
+        val text = """{"@@path": "/static/file", "@@type": "Resource"}"""
+        val decoded = value(text) as DynamicValue.Literal
+        // Decoded as sent, so it re-encodes to what the agent wrote ...
+        assertEquals(json.parseToJsonElement(text), decoded.value)
+        // ... and unescaped where it is read as a value.
+        assertEquals(
+            json.parseToJsonElement("""{"@path": "/static/file", "@type": "Resource"}"""),
+            unescapeReservedKeys(decoded.value),
+        )
+    }
+
+    @Test
+    fun `an unknown single at key is refused`() {
+        // `test_disallowed_unknown_single_at_key` and `test_disallowed_bare_at_key`.
+        assertFailsWith<SerializationException> { value("""{"@if": true, "then": "active"}""") }
+        assertFailsWith<SerializationException> { value("""{"@": "reserved"}""") }
     }
 
     @Test
     fun `lenient tolerates the extra key that strict rejects`() {
         val decoded = A2uiJson.lenient.decodeFromString(
             DynamicValueSerializer,
-            """{"path": "/my/data/pointer", "extra": "field"}""",
+            """{"@path": "/my/data/pointer", "extra": "field"}""",
         )
         assertEquals(DataBinding("/my/data/pointer"), decoded)
     }
@@ -113,12 +144,12 @@ class DynamicValueTest {
 
     @Test
     fun `every union routes a binding and a call through the same two branches`() {
-        assertEquals(DataBinding("/x"), json.decodeFromString(DynamicStringSerializer, """{"path": "/x"}"""))
-        assertEquals(DataBinding("/x"), json.decodeFromString(DynamicNumberSerializer, """{"path": "/x"}"""))
-        assertEquals(DataBinding("/x"), json.decodeFromString(DynamicBooleanSerializer, """{"path": "/x"}"""))
+        assertEquals(DataBinding("/x"), json.decodeFromString(DynamicStringSerializer, """{"@path": "/x"}"""))
+        assertEquals(DataBinding("/x"), json.decodeFromString(DynamicNumberSerializer, """{"@path": "/x"}"""))
+        assertEquals(DataBinding("/x"), json.decodeFromString(DynamicBooleanSerializer, """{"@path": "/x"}"""))
         assertEquals(
             FunctionCall("f"),
-            json.decodeFromString(DynamicStringListSerializer, """{"call": "f"}"""),
+            json.decodeFromString(DynamicStringListSerializer, """{"@call": "f"}"""),
         )
     }
 
@@ -130,12 +161,12 @@ class DynamicValueTest {
 
     @Test
     fun `absent args stays distinct from empty args`() {
-        val absent = json.decodeFromString(FunctionCall.serializer(), """{"call": "ping"}""")
-        val empty = json.decodeFromString(FunctionCall.serializer(), """{"call": "ping", "args": {}}""")
+        val absent = json.decodeFromString(FunctionCall.serializer(), """{"@call": "ping"}""")
+        val empty = json.decodeFromString(FunctionCall.serializer(), """{"@call": "ping", "args": {}}""")
         assertEquals(null, absent.args)
         assertEquals(emptyMap(), empty.args)
-        assertEquals("""{"call":"ping"}""", json.encodeToString(FunctionCall.serializer(), absent))
-        assertEquals("""{"call":"ping","args":{}}""", json.encodeToString(FunctionCall.serializer(), empty))
+        assertEquals("""{"@call":"ping"}""", json.encodeToString(FunctionCall.serializer(), absent))
+        assertEquals("""{"@call":"ping","args":{}}""", json.encodeToString(FunctionCall.serializer(), empty))
     }
 
     @Test
@@ -145,8 +176,8 @@ class DynamicValueTest {
             "42",
             "true",
             """{"vega":"lite"}""",
-            """{"path":"/a/b"}""",
-            """{"call":"openUrl","args":{"url":"https://example.com"}}""",
+            """{"@path":"/a/b"}""",
+            """{"@call":"openUrl","args":{"url":"https://example.com"}}""",
         )
         for (case in cases) {
             assertEquals(case, json.encodeToString(DynamicValueSerializer, value(case)))
@@ -161,7 +192,7 @@ class DynamicValueTest {
 
     @Test
     fun `a bound value is readable on its own`() {
-        val condition = json.decodeFromString(BoundValueSerializer, """{"call":"required"}""")
+        val condition = json.decodeFromString(BoundValueSerializer, """{"@call":"required"}""")
         assertEquals(FunctionCall("required"), condition)
         assertFailsWith<SerializationException> {
             json.decodeFromString(BoundValueSerializer, buildJsonObject { }.toString())

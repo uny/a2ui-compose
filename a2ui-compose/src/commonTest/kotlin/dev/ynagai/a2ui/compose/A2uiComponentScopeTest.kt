@@ -136,7 +136,7 @@ class A2uiComponentScopeTest {
         val scope = scopeFor("button", onMessage = { sent += it })
         val action = A2uiJson.strict.decodeFromString(
             Action.serializer(),
-            """{"event":{"name":"submit","context":{"who":{"path":"/user/name"},"lit":"x"}}}""",
+            """{"event":{"name":"submit","context":{"who":{"@path":"/user/name"},"lit":"x"}}}""",
         )
         scope.dispatch(action)
         val message = assertNotNull(sent.singleOrNull() as? ActionMessage)
@@ -165,7 +165,7 @@ class A2uiComponentScopeTest {
         val scope = scopeFor("button", renderer)
         val action = A2uiJson.strict.decodeFromString(
             Action.serializer(),
-            """{"functionCall":{"call":"openUrl","args":{"url":"https://example.com/a"}}}""",
+            """{"functionCall":{"@call":"openUrl","args":{"url":"https://example.com/a"}}}""",
         )
         scope.dispatch(action)
         assertEquals(listOf("https://example.com/a"), opened)
@@ -208,8 +208,8 @@ class A2uiComponentScopeTest {
         )
         renderer.applyAll(
             listOf(
-                """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE"}}""",
-                """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
+                """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE"}}""",
+                """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
                   {"id":"root","component":"Column","catalogId":"CATALOG_ID","children":["t1","t2"]},
                   {"id":"t1","component":"Text","catalogId":"CATALOG_ID","text":"one"},
                   {"id":"t2","component":"Text","catalogId":"CATALOG_ID","text":"two"}
@@ -269,9 +269,9 @@ class A2uiComponentScopeTest {
             A2uiJson.strict.decodeFromString(
                 Action.serializer(),
                 """{"event":{"name":"go","context":{
-                  "a":{"call":"openUrl","args":{"url":"https://example.com/1"}},
-                  "b":{"call":"openUrl","args":{"url":"https://example.com/2"}},
-                  "c":{"call":"openUrl","args":{"url":"https://example.com/3"}}
+                  "a":{"@call":"openUrl","args":{"url":"https://example.com/1"}},
+                  "b":{"@call":"openUrl","args":{"url":"https://example.com/2"}},
+                  "c":{"@call":"openUrl","args":{"url":"https://example.com/3"}}
                 }}}""",
             ),
         )
@@ -373,21 +373,21 @@ class A2uiComponentScopeTest {
         const val FIXED_TIMESTAMP = "2026-08-27T00:00:00Z"
 
         val MESSAGES: List<AgentToRendererMessage> = listOf(
-            """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
+            """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
             """
-            {"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
+            {"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":[
               {"id":"root","component":"Column","children":["title","bound"]},
               {"id":"column","component":"Column","children":["title","bound"]},
               {"id":"title","component":"Text","text":"Hello"},
-              {"id":"bound","component":"Text","text":{"path":"/user/name"}},
+              {"id":"bound","component":"Text","text":{"@path":"/user/name"}},
               {"id":"list","component":"List","children":{"componentId":"row","path":"/items"}},
-              {"id":"row","component":"Text","text":{"path":"label"}},
+              {"id":"row","component":"Text","text":{"@path":"label"}},
               {"id":"button","component":"Button","child":"title","action":{"event":{"name":"noop"}}},
-              {"id":"money","component":"Text","text":{"call":"formatCurrency","args":{"value":1234.5,"currency":"JPY"}}}
+              {"id":"money","component":"Text","text":{"@call":"formatCurrency","args":{"value":1234.5,"currency":"JPY"}}}
             ]}}
             """.trimIndent(),
             """
-            {"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
+            {"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
               "user":{"name":"Ada"},
               "items":[{"label":"one"},{"label":"two"},{"label":"three"}]
             }}}

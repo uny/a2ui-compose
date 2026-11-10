@@ -177,11 +177,11 @@ class ReplacedRefusalTest {
 
         width = WIDTH - 40.dp
         waitForIdle()
-        renderer.apply(message("""{"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{"n":1}}}"""))
+        renderer.apply(message("""{"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{"n":1}}}"""))
         waitForIdle()
         assertEquals(first, asked, "neither a narrower host nor a data model write asks again")
 
-        renderer.apply(message("""{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":[{"id":"b","component":"Text","text":"$LONG_B"}]}}"""))
+        renderer.apply(message("""{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":[{"id":"b","component":"Text","text":"$LONG_B"}]}}"""))
         waitForIdle()
         val second = asked
         assertTrue(second > first, "a components update asks again")
@@ -252,14 +252,14 @@ class ReplacedRefusalTest {
     private fun rendererFor(components: String): A2uiRenderer = A2uiRenderer().also { renderer ->
         renderer.applyAll(
             listOf(
-                message("""{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"${BasicCatalog.id}"}}"""),
-                message("""{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}"""),
+                message("""{"version":"1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"${BasicCatalog.id}"}}"""),
+                message("""{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}"""),
             ),
         )
     }
 
     private fun updateOf(components: String) =
-        message("""{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""")
+        message("""{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""")
 
     private fun message(json: String) = A2uiJson.strict.decodeFromString(AgentToRendererMessage.serializer(), json)
 

@@ -1343,6 +1343,9 @@ final class dev.ynagai.a2ui.core.protocol/DataBinding : dev.ynagai.a2ui.core.pro
     }
 
     final object Companion { // dev.ynagai.a2ui.core.protocol/DataBinding.Companion|null[0]
+        final const val KEY // dev.ynagai.a2ui.core.protocol/DataBinding.Companion.KEY|{}KEY[0]
+            final fun <get-KEY>(): kotlin/String // dev.ynagai.a2ui.core.protocol/DataBinding.Companion.KEY.<get-KEY>|<get-KEY>(){}[0]
+
         final fun serializer(): kotlinx.serialization/KSerializer<dev.ynagai.a2ui.core.protocol/DataBinding> // dev.ynagai.a2ui.core.protocol/DataBinding.Companion.serializer|serializer(){}[0]
     }
 }
@@ -1405,6 +1408,8 @@ final class dev.ynagai.a2ui.core.protocol/FunctionCall : dev.ynagai.a2ui.core.pr
     final object Companion { // dev.ynagai.a2ui.core.protocol/FunctionCall.Companion|null[0]
         final const val INDEX // dev.ynagai.a2ui.core.protocol/FunctionCall.Companion.INDEX|{}INDEX[0]
             final fun <get-INDEX>(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionCall.Companion.INDEX.<get-INDEX>|<get-INDEX>(){}[0]
+        final const val KEY // dev.ynagai.a2ui.core.protocol/FunctionCall.Companion.KEY|{}KEY[0]
+            final fun <get-KEY>(): kotlin/String // dev.ynagai.a2ui.core.protocol/FunctionCall.Companion.KEY.<get-KEY>|<get-KEY>(){}[0]
 
         final val $childSerializers // dev.ynagai.a2ui.core.protocol/FunctionCall.Companion.$childSerializers|{}$childSerializers[0]
 
@@ -1742,9 +1747,13 @@ final class dev.ynagai.a2ui.core.surface/JsonPointer { // dev.ynagai.a2ui.core.s
     final object Companion { // dev.ynagai.a2ui.core.surface/JsonPointer.Companion|null[0]
         final const val APPEND // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.APPEND|{}APPEND[0]
             final fun <get-APPEND>(): kotlin/String // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.APPEND.<get-APPEND>|<get-APPEND>(){}[0]
+        final const val MAX_ARRAY_INDEX // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.MAX_ARRAY_INDEX|{}MAX_ARRAY_INDEX[0]
+            final fun <get-MAX_ARRAY_INDEX>(): kotlin/Int // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.MAX_ARRAY_INDEX.<get-MAX_ARRAY_INDEX>|<get-MAX_ARRAY_INDEX>(){}[0]
         final const val MAX_TOKENS // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.MAX_TOKENS|{}MAX_TOKENS[0]
             final fun <get-MAX_TOKENS>(): kotlin/Int // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.MAX_TOKENS.<get-MAX_TOKENS>|<get-MAX_TOKENS>(){}[0]
 
+        final val FORBIDDEN_TOKENS // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.FORBIDDEN_TOKENS|{}FORBIDDEN_TOKENS[0]
+            final fun <get-FORBIDDEN_TOKENS>(): kotlin.collections/Set<kotlin/String> // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.FORBIDDEN_TOKENS.<get-FORBIDDEN_TOKENS>|<get-FORBIDDEN_TOKENS>(){}[0]
         final val ROOT // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.ROOT|{}ROOT[0]
             final fun <get-ROOT>(): dev.ynagai.a2ui.core.surface/JsonPointer // dev.ynagai.a2ui.core.surface/JsonPointer.Companion.ROOT.<get-ROOT>|<get-ROOT>(){}[0]
 
@@ -2138,3 +2147,4 @@ final fun (kotlinx.serialization.json/JsonObject).dev.ynagai.a2ui.core.surface/w
 final fun dev.ynagai.a2ui.core.function/localeFormatter(kotlin/String): dev.ynagai.a2ui.core.function/LocaleFormatter // dev.ynagai.a2ui.core.function/localeFormatter|localeFormatter(kotlin.String){}[0]
 final fun dev.ynagai.a2ui.core.function/platformLocaleData(kotlin/String?): dev.ynagai.a2ui.core.function/LocaleData // dev.ynagai.a2ui.core.function/platformLocaleData|platformLocaleData(kotlin.String?){}[0]
 final fun dev.ynagai.a2ui.core.function/systemLocaleFormatter(): dev.ynagai.a2ui.core.function/LocaleFormatter // dev.ynagai.a2ui.core.function/systemLocaleFormatter|systemLocaleFormatter(){}[0]
+final fun dev.ynagai.a2ui.core.protocol/unescapeReservedKeys(kotlinx.serialization.json/JsonElement): kotlinx.serialization.json/JsonElement // dev.ynagai.a2ui.core.protocol/unescapeReservedKeys|unescapeReservedKeys(kotlinx.serialization.json.JsonElement){}[0]

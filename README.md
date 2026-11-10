@@ -75,16 +75,24 @@ changes any floor says so in its notes rather than leaving it to be discovered.
 
 **This library targets A2UI v1.0 and carries no v0.8/v0.9 compatibility layer.**
 
-The spec site currently labels v0.9.1 "Current" and v1.0 a "release candidate", so that choice
-deserves an explanation. The official renderers already ship v1.0: `@a2ui/react` 0.10.2,
-`@a2ui/angular` 0.10.5 and `@a2ui/lit` 0.10.3 are all on the 0.10.x line, which is v1.0 under its
-former draft name. The "RC" label lags the reference implementations.
+v1.0 is the specification's current version (upstream `specification/versions.json`). The vendored
+schemas, catalogs, test cases and examples are all taken at one upstream revision, recorded in
+[`a2ui-core/spec/README.md`](a2ui-core/spec/README.md), and the specification's own test cases and
+the cross-SDK data model suites run in `a2ui-core`'s tests.
 
-Every other Kotlin renderer is on v0.9. Rather than add a fifth v0.9 implementation and inherit a
-compatibility layer on day one, this one starts where the official renderers already are.
+v1.0 changed its wire format on the way to current, and the unreleased line follows it. `0.3.0`
+speaks the earlier draft and does not read what current agents send:
 
-If v1.0 takes a breaking change before GA, the fallback is a stable-v0.9.1 / experimental-v1.0 split
-rather than a rewrite.
+| | `0.3.0` | Current v1.0 |
+|:--|:--|:--|
+| Envelope `version`, capabilities key | `"v1.0"` | `"1.0"` |
+| Data binding | `{"path": "/x"}` | `{"@path": "/x"}`; `{"path": …}` is a plain object |
+| Function call | `{"call": "f", …}` | `{"@call": "f", …}` |
+| `updateDataModel` of `/items/0` on an empty model | `{"items": {"0": …}}` | `{"items": […]}` |
+| `null` written at `/xs/1` of `[1, 2, 3]` | `[1, 3]` | `[1, null, 3]` |
+| Write at `/xs/-` | appends | refused |
+| Write at `/xs/5` of `[1, 2]` | refused | pads with `null` (up to index 10000) |
+| Write at `/a/b` where `/a` is a string | replaces it with an object | refused |
 
 ### UAX #31 is enforced on catalogs and in `formatString`
 

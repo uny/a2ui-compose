@@ -41,6 +41,10 @@ class A2uiComponentScopeTest {
         // `result.valid`". Read as unreadable, a CheckBox bound to a check drew unchecked.
         assertEquals(true, scopeFor("checked").boolean("value"))
         assertEquals(false, scopeFor("unchecked").boolean("value"))
+        // Read by the rule `checks` applies to the same value: an object that does not decode as a
+        // ValidationResult -- here a `severity` the protocol does not define -- is unreadable in
+        // both places, rather than a verdict here and nothing there.
+        assertEquals(null, scopeFor("loose").boolean("value"))
     }
 
     @Test
@@ -396,13 +400,15 @@ class A2uiComponentScopeTest {
               {"id":"button","component":"Button","child":"title","action":{"event":{"name":"noop"}}},
               {"id":"money","component":"Text","text":{"@call":"formatCurrency","args":{"value":1234.5,"currency":"JPY"}}},
               {"id":"checked","component":"CheckBox","label":"x","value":{"@call":"required","args":{"value":"present"}}},
-              {"id":"unchecked","component":"CheckBox","label":"x","value":{"@call":"required","args":{"value":""}}}
+              {"id":"unchecked","component":"CheckBox","label":"x","value":{"@call":"required","args":{"value":""}}},
+              {"id":"loose","component":"CheckBox","label":"x","value":{"@path":"/notAResult"}}
             ]}}
             """.trimIndent(),
             """
             {"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
               "user":{"name":"Ada"},
-              "items":[{"label":"one"},{"label":"two"},{"label":"three"}]
+              "items":[{"label":"one"},{"label":"two"},{"label":"three"}],
+              "notAResult":{"valid":true,"severity":"fatal"}
             }}}
             """.trimIndent(),
         ).map { text ->

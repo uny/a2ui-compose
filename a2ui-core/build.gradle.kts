@@ -60,7 +60,7 @@ val generateConformanceCases = embedSpecDocuments(
 
 /**
  * The cross-SDK conformance suites under upstream's `conformance/core/` that this module runs: the
- * data model's, and the reserved-key suite.
+ * three data model suites (`data_model`, `data_deletion`, `data_model_pointers`).
  *
  * Upstream writes these in YAML. They are vendored converted to JSON -- see `spec/README.md` --
  * because the embedding task and the tests that read the result run on every target, and none of

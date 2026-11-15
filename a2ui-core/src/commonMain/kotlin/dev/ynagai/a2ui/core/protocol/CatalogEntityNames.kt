@@ -260,24 +260,24 @@ private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>
  * map: `common_types.json` reaches `catalog.json#/$defs/anyFunction`, and the catalog supplies
  * that schema itself. So a catalog with an empty `functions` map could still write
  * `{"@call": {"const": "@evil"}}` under `$defs/anyFunction` and have `@evil` validate (#48).
- * Whatever schema text admits a `call` name is where the catalog defines a function, by the only
- * definition that matters to the checker -- so a `call` property whose `const` or `enum` names
+ * Whatever schema text admits a `@call` name is where the catalog defines a function, by the only
+ * definition that matters to the checker -- so a `@call` property whose `const` or `enum` names
  * a `@`-prefixed string is refused, wherever in the catalog it sits.
  *
  * `@index` included: it is composed in by `common_types.json`, and a catalog re-admitting it is
  * still a catalog defining into the namespace.
  *
- * Which `call` property names a function cannot be told by position: `anyFunction` may `$ref`
- * `#/components/Text`, which rule 3 permits, so a component's `call` is a function's the moment
+ * Which `@call` property names a function cannot be told by position: `anyFunction` may `$ref`
+ * `#/components/Text`, which rule 3 permits, so a component's `@call` is a function's the moment
  * something points at it. The check therefore keys on the name wherever it stands, and a
- * component data property that happens to be called `call` and enumerates `@here` is refused
+ * component data property that happens to be called `@call` and enumerates `@here` is refused
  * with the rest -- the cost of not chasing references. The one position that is read
  * differently is `not`, where spelling a name excludes it: `{"not": {"properties": {"@call":
  * {"const": "@index"}}}}` is a catalog keeping the system function *out* of `anyFunction`.
  *
- * Only the two literal keywords are read, and only where they sit directly on the `call`
+ * Only the two literal keywords are read, and only where they sit directly on the `@call`
  * subschema. This is a rule about what a catalog *spells*, not a boundary against what it
- * *admits*: a `call` typed as a bare string, or matched by a `pattern`, admits any name at all,
+ * *admits*: a `@call` typed as a bare string, or matched by a `pattern`, admits any name at all,
  * and so does one whose `const` is reached through `anyOf`, a `$ref`, `patternProperties` or
  * `additionalProperties`. Chasing those would only move the line, since the bare string stays
  * open either way; closing it is a different question -- whether `anyFunction` must correspond

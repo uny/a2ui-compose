@@ -42,10 +42,10 @@ class CommonTypeTest {
         )
         assertEquals(
             Action.Invoke(FunctionCall("openUrl")),
-            json.decodeFromString<Action>("""{"functionCall":{"call":"openUrl"}}"""),
+            json.decodeFromString<Action>("""{"functionCall":{"@call":"openUrl"}}"""),
         )
         assertFailsWith<SerializationException> {
-            json.decodeFromString<Action>("""{"event":{"name":"a"},"functionCall":{"call":"f"}}""")
+            json.decodeFromString<Action>("""{"event":{"name":"a"},"functionCall":{"@call":"f"}}""")
         }
         assertFailsWith<SerializationException> { json.decodeFromString<Action>("""{}""") }
         assertFailsWith<SerializationException> {
@@ -57,8 +57,8 @@ class CommonTypeTest {
     fun `an event context resolves each value as a dynamic value`() {
         val action = assertIs<Action.Event>(
             json.decodeFromString<Action>(
-                """{"event":{"name":"buy","userMessage":{"path":"/label"},
-                   "context":{"id":"static","qty":{"path":"/cart/qty"}}}}""",
+                """{"event":{"name":"buy","userMessage":{"@path":"/label"},
+                   "context":{"id":"static","qty":{"@path":"/cart/qty"}}}}""",
             ),
         )
         assertEquals(DataBinding("/label"), action.event.userMessage)
@@ -74,7 +74,7 @@ class CommonTypeTest {
     @Test
     fun `accessibility attributes accept literals and bindings alike`() {
         val attributes = json.decodeFromString<AccessibilityAttributes>(
-            """{"label":"Mute","description":{"path":"/hint"},"live":"assertive","hidden":{"call":"isHidden"}}""",
+            """{"label":"Mute","description":{"@path":"/hint"},"live":"assertive","hidden":{"@call":"isHidden"}}""",
         )
         assertEquals(DynamicString.Literal("Mute"), attributes.label)
         assertEquals(DataBinding("/hint"), attributes.description)
@@ -97,7 +97,7 @@ class CommonTypeTest {
     fun `a check rule binds its condition to a path or a call`() {
         assertEquals(
             CheckRule(condition = FunctionCall("required"), message = "Required"),
-            json.decodeFromString<CheckRule>("""{"condition":{"call":"required"},"message":"Required"}"""),
+            json.decodeFromString<CheckRule>("""{"condition":{"@call":"required"},"message":"Required"}"""),
         )
         assertFailsWith<SerializationException> {
             json.decodeFromString<CheckRule>("""{"condition":"required"}""")

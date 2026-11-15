@@ -176,7 +176,7 @@ private fun evaluateExpression(evaluator: Evaluator, source: String, depth: Int)
  *
  * `@index` is dispatched here like every other function rather than being sent back through the
  * wire-shaped path. Sending it back looked safe — its only argument is a number — but the argument
- * is only a number *after* evaluation: `${@index(offset:/o)}` where `/o` holds `{"path":"/n"}`
+ * is only a number *after* evaluation: `${@index(offset:/o)}` where `/o` holds `{"@path":"/n"}`
  * resolves to that object here and would then be read as a binding and followed a second time,
  * which is exactly what [CallArguments] documents `preEvaluated` as preventing. There is no
  * `catalogId` to check on this path, because the template grammar has no way to write one.

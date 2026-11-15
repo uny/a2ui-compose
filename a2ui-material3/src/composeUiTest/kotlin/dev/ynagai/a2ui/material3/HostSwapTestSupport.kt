@@ -10,8 +10,8 @@ import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
 internal fun hostSwapSurfaceWith(components: String) = A2uiRenderer().also { renderer ->
     renderer.applyAll(
         listOf(
-            """{"version":"v1.0","createSurface":{"surfaceId":"s","catalogId":"${BasicCatalog.id}"}}""",
-            """{"version":"v1.0","updateComponents":{"surfaceId":"s","components":[$components]}}""",
+            """{"version":"1.0","createSurface":{"surfaceId":"s","catalogId":"${BasicCatalog.id}"}}""",
+            """{"version":"1.0","updateComponents":{"surfaceId":"s","components":[$components]}}""",
         ).map { A2uiJson.strict.decodeFromString<AgentToRendererMessage>(it) }
     )
 }

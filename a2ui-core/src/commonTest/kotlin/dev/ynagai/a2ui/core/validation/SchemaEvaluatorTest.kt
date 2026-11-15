@@ -26,8 +26,8 @@ private val COMMON_TYPES = """
   "${'$'}defs": {
     "DataBinding": {
       "type": "object",
-      "properties": { "path": { "type": "string" } },
-      "required": ["path"],
+      "properties": { "@path": { "type": "string" } },
+      "required": ["@path"],
       "additionalProperties": false
     },
     "DynamicString": {
@@ -44,11 +44,11 @@ private val COMMON_TYPES = """
     "FunctionCall": {
       "type": "object",
       "properties": {
-        "call": { "type": "string" },
+        "@call": { "type": "string" },
         "catalogId": { "type": "string" },
         "args": { "type": "object" }
       },
-      "required": ["call"],
+      "required": ["@call"],
       "oneOf": [{ "${'$'}ref": "catalog.json#/${'$'}defs/anyFunction" }],
       "unevaluatedProperties": false
     }
@@ -74,7 +74,7 @@ private val CATALOG = """
         {
           "type": "object",
           "properties": {
-            "call": { "const": "regex" },
+            "@call": { "const": "regex" },
             "args": {
               "type": "object",
               "properties": {
@@ -85,7 +85,7 @@ private val CATALOG = """
               "unevaluatedProperties": false
             }
           },
-          "required": ["call", "args"]
+          "required": ["@call", "args"]
         }
       ],
       "unevaluatedProperties": false
@@ -99,7 +99,7 @@ private val CATALOG = """
         {
           "type": "object",
           "properties": {
-            "call": { "const": "openUrl" },
+            "@call": { "const": "openUrl" },
             "args": {
               "type": "object",
               "properties": {
@@ -114,7 +114,7 @@ private val CATALOG = """
               "unevaluatedProperties": false
             }
           },
-          "required": ["call", "args"]
+          "required": ["@call", "args"]
         }
       ],
       "unevaluatedProperties": false
@@ -145,27 +145,27 @@ private fun check(payload: String, limits: ValidationLimits = ValidationLimits.D
 class SchemaEvaluatorTest {
     @Test
     fun accepts_a_well_formed_call() {
-        val result = check("""{"call": "regex", "args": {"value": "abc", "pattern": "^a"}}""")
+        val result = check("""{"@call": "regex", "args": {"value": "abc", "pattern": "^a"}}""")
         assertTrue(result.isValid, result.violations.toString())
         assertEquals(emptySet(), result.unsupportedKeywords)
     }
 
     @Test
     fun rejects_a_call_no_function_in_the_catalog_defines() {
-        assertFalse(check("""{"call": "nope", "args": {}}""").isValid)
+        assertFalse(check("""{"@call": "nope", "args": {}}""").isValid)
     }
 
     @Test
     fun rejects_a_missing_required_argument() {
         // `function_catalog_validation` #4: regex without a pattern.
-        val result = check("""{"call": "regex", "args": {"value": "abc"}}""")
+        val result = check("""{"@call": "regex", "args": {"value": "abc"}}""")
         assertFalse(result.isValid)
     }
 
     @Test
     fun rejects_an_argument_of_the_wrong_type() {
         // #26: a numeric pattern.
-        assertFalse(check("""{"call": "regex", "args": {"value": "a", "pattern": 7}}""").isValid)
+        assertFalse(check("""{"@call": "regex", "args": {"value": "a", "pattern": 7}}""").isValid)
     }
 
     // --- unevaluatedProperties ------------------------------------------------------------
@@ -177,7 +177,7 @@ class SchemaEvaluatorTest {
         // `properties`, `FunctionCommon` through a `$ref`, and the matching `oneOf` branch's
         // `allOf` — so a checker that did not carry annotations across all three would either
         // reject every call or accept this one.
-        val result = check("""{"call": "regex", "args": {"value": "a", "pattern": "^a"}, "extra": "field"}""")
+        val result = check("""{"@call": "regex", "args": {"value": "a", "pattern": "^a"}, "extra": "field"}""")
         assertFalse(result.isValid)
         assertTrue(result.violations.any { "extra" in it.message }, result.violations.toString())
     }
@@ -188,7 +188,7 @@ class SchemaEvaluatorTest {
         // inside the `oneOf` branch. It is three applicators away from the
         // `unevaluatedProperties` that has to know about it.
         val result = check(
-            """{"call": "regex", "catalogId": "x", "args": {"value": "a", "pattern": "^a"}}""",
+            """{"@call": "regex", "catalogId": "x", "args": {"value": "a", "pattern": "^a"}}""",
         )
         assertTrue(result.isValid, result.violations.toString())
     }
@@ -196,7 +196,7 @@ class SchemaEvaluatorTest {
     @Test
     fun rejects_an_extra_key_nested_inside_args() {
         val result = check(
-            """{"call": "regex", "args": {"value": "a", "pattern": "^a", "extra": 1}}""",
+            """{"@call": "regex", "args": {"value": "a", "pattern": "^a", "extra": 1}}""",
         )
         assertFalse(result.isValid)
     }
@@ -209,7 +209,7 @@ class SchemaEvaluatorTest {
         // exist — no catalog is published under `.../v1_0/catalog.json`, and the basic catalog's
         // own `$id` is `.../catalogs/basic/catalog.json`. Reaching a function definition at all
         // proves the placeholder was bound rather than resolved.
-        assertTrue(check("""{"call": "regex", "args": {"value": "a", "pattern": "^a"}}""").isValid)
+        assertTrue(check("""{"@call": "regex", "args": {"value": "a", "pattern": "^a"}}""").isValid)
     }
 
     @Test
@@ -217,7 +217,7 @@ class SchemaEvaluatorTest {
         val registry = SchemaRegistry.of(listOf(parse(COMMON_TYPES)), activeCatalog = null)
         val schema = parse(COMMON_TYPES).pointer("/\$defs/FunctionCall")!!
         val result = SchemaEvaluator(registry)
-            .validate(schema, FUNCTION_CALL, Json.parseToJsonElement("""{"call": "regex"}"""))
+            .validate(schema, FUNCTION_CALL, Json.parseToJsonElement("""{"@call": "regex"}"""))
         // Not silently valid: an unresolvable reference means nothing checked the call.
         assertFalse(result.isValid)
         assertTrue(
@@ -232,21 +232,21 @@ class SchemaEvaluatorTest {
     fun rejects_a_url_that_is_not_a_uri() {
         // #32. `format` is an annotation by default in 2020-12; treating it as one here would
         // accept this, because the alternative that catches it is `{"type": "string"}`.
-        val result = check("""{"call": "openUrl", "args": {"url": "not a uri"}}""")
+        val result = check("""{"@call": "openUrl", "args": {"url": "not a uri"}}""")
         assertFalse(result.isValid)
     }
 
     @Test
     fun accepts_a_url_that_is_a_uri() {
         assertTrue(
-            check("""{"call": "openUrl", "args": {"url": "https://example.com/x"}}""").isValid,
+            check("""{"@call": "openUrl", "args": {"url": "https://example.com/x"}}""").isValid,
         )
     }
 
     @Test
     fun accepts_a_binding_where_a_uri_is_allowed() {
         assertTrue(
-            check("""{"call": "openUrl", "args": {"url": {"path": "/form/url"}}}""").isValid,
+            check("""{"@call": "openUrl", "args": {"url": {"@path": "/form/url"}}}""").isValid,
         )
     }
 
@@ -254,7 +254,7 @@ class SchemaEvaluatorTest {
     fun rejects_a_binding_carrying_an_extra_key() {
         // `dynamic_value_validation` #7, through `additionalProperties: false`.
         assertFalse(
-            check("""{"call": "openUrl", "args": {"url": {"path": "/x", "extra": 1}}}""").isValid,
+            check("""{"@call": "openUrl", "args": {"url": {"@path": "/x", "extra": 1}}}""").isValid,
         )
     }
 
@@ -263,8 +263,8 @@ class SchemaEvaluatorTest {
     @Test
     fun follows_a_call_nested_in_an_argument() {
         val nested = """
-            {"call": "regex", "args": {
-              "value": {"call": "regex", "args": {"value": "a", "pattern": "^a"}},
+            {"@call": "regex", "args": {
+              "value": {"@call": "regex", "args": {"value": "a", "pattern": "^a"}},
               "pattern": "^a"
             }}
         """.trimIndent()
@@ -273,9 +273,9 @@ class SchemaEvaluatorTest {
 
     @Test
     fun stops_on_an_instance_that_nests_past_the_depth_bound() {
-        var payload = """{"call": "regex", "args": {"value": "a", "pattern": "^a"}}"""
+        var payload = """{"@call": "regex", "args": {"value": "a", "pattern": "^a"}}"""
         repeat(40) {
-            payload = """{"call": "regex", "args": {"value": $payload, "pattern": "^a"}}"""
+            payload = """{"@call": "regex", "args": {"value": $payload, "pattern": "^a"}}"""
         }
         val result = check(payload, ValidationLimits(maxDepth = 16))
         assertFalse(result.isValid)
@@ -284,9 +284,9 @@ class SchemaEvaluatorTest {
 
     @Test
     fun stops_on_a_payload_that_outgrows_the_step_budget() {
-        var payload = """{"call": "regex", "args": {"value": "a", "pattern": "^a"}}"""
+        var payload = """{"@call": "regex", "args": {"value": "a", "pattern": "^a"}}"""
         repeat(20) {
-            payload = """{"call": "regex", "args": {"value": $payload, "pattern": "^a"}}"""
+            payload = """{"@call": "regex", "args": {"value": $payload, "pattern": "^a"}}"""
         }
         val result = check(payload, ValidationLimits(maxDepth = 512, maxSteps = 200))
         assertFalse(result.isValid)
@@ -301,9 +301,9 @@ class SchemaEvaluatorTest {
         // first pass avoids. Left to spend the whole budget it takes the answer with it: the
         // exhaustion unwinds past the violation it was about to report. What must survive is a
         // violation the agent can locate, rather than one about the renderer's own budget.
-        var payload = """{"call": "regex", "args": {"value": "a", "pattern": 7}}"""
+        var payload = """{"@call": "regex", "args": {"value": "a", "pattern": 7}}"""
         repeat(3) {
-            payload = """{"call": "regex", "args": {"value": $payload, "pattern": "^a"}}"""
+            payload = """{"@call": "regex", "args": {"value": $payload, "pattern": "^a"}}"""
         }
         val result = check(payload)
         assertFalse(result.isValid)
@@ -368,7 +368,7 @@ class SchemaEvaluatorTest {
     fun never_quotes_a_value_read_from_the_instance() {
         // A renderer turns these into the `error` it sends the agent, so a quoted value goes back
         // over the wire. The failing value here is what a card number would be.
-        val result = check("""{"call": "regex", "args": {"value": "a", "pattern": 4111111111111111}}""")
+        val result = check("""{"@call": "regex", "args": {"value": "a", "pattern": 4111111111111111}}""")
         assertFalse(result.isValid)
         assertTrue(
             result.violations.none { "4111111111111111" in it.message },
@@ -378,7 +378,7 @@ class SchemaEvaluatorTest {
 
     @Test
     fun locates_a_violation_by_json_pointer() {
-        val result = check("""{"call": "regex", "args": {"value": "a", "pattern": 7}}""")
+        val result = check("""{"@call": "regex", "args": {"value": "a", "pattern": 7}}""")
         assertTrue(
             result.violations.any { it.location == "/args/pattern" },
             result.violations.toString(),

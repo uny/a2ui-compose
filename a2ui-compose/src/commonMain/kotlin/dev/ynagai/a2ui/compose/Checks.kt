@@ -105,11 +105,20 @@ private fun A2uiComponentScope.evaluateCondition(rule: CheckRule): ValidationRes
     (element as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull?.let {
         return ValidationResult(valid = it)
     }
-    if (element !is JsonObject) return null
-    return runCatching {
-        A2uiJson.strict.decodeFromJsonElement(ValidationResult.serializer(), element)
-    }.getOrNull()
+    return (element as? JsonObject)?.let(::decodeValidationResult)
 }
+
+/**
+ * [element] read as a `ValidationResult`, or null when it is not one.
+ *
+ * Shared with [A2uiComponentScope.boolean], so that a value bound to a check's condition and the
+ * same value bound to a boolean property are recognised by one rule: the schema leaves the object
+ * open, so extra keys are carried, but a `valid` that is not a boolean or a `severity` the
+ * protocol does not define makes it unreadable in both places.
+ */
+internal fun decodeValidationResult(element: JsonObject): ValidationResult? = runCatching {
+    A2uiJson.strict.decodeFromJsonElement(ValidationResult.serializer(), element)
+}.getOrNull()
 
 /**
  * The failing checks, recomposing the caller only when they change.

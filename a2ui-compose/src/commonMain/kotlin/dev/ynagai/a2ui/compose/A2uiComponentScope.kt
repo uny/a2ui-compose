@@ -17,6 +17,7 @@ import dev.ynagai.a2ui.core.protocol.DataBinding
 import dev.ynagai.a2ui.core.protocol.DynamicString
 import dev.ynagai.a2ui.core.protocol.DynamicValue
 import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
+import dev.ynagai.a2ui.core.protocol.unescapeReservedKeys
 import dev.ynagai.a2ui.core.surface.ChildReference
 import dev.ynagai.a2ui.core.surface.EvaluationScope
 import dev.ynagai.a2ui.core.surface.JsonPointer
@@ -133,7 +134,7 @@ public data class A2uiComponentScope internal constructor(
             A2uiJson.strict.decodeFromJsonElement(DynamicValue.serializer(), raw)
         }.getOrNull() ?: return null
         return when (decoded) {
-            is DynamicValue.Literal -> decoded.value
+            is DynamicValue.Literal -> unescapeReservedKeys(decoded.value)
             is BoundValue -> {
                 val context = context(InvocationContext.RENDER) ?: return null
                 runCatching { context.evaluate(decoded) }.getOrNull()
@@ -173,9 +174,19 @@ public data class A2uiComponentScope internal constructor(
      */
     public fun number(name: String): Double? = (value(name) as? JsonPrimitive)?.doubleOrNull
 
-    /** Property [name] as a boolean. */
-    public fun boolean(name: String): Boolean? = value(name)?.let {
-        (it as? JsonPrimitive)?.booleanOrNull
+    /**
+     * Property [name] as a boolean.
+     *
+     * A `DynamicBoolean` may be a call returning a `ValidationResult`, and `a2ui_protocol.md`
+     * coerces that object "to `result.valid`" -- so `CheckBox.value` bound to `required(...)`
+     * reads as the check's outcome rather than as unreadable. An object is coerced when it decodes
+     * as a `ValidationResult` -- the same rule `checks` uses -- and the rest of the
+     * coercion table (strings, numbers, other objects) is not yet applied.
+     */
+    public fun boolean(name: String): Boolean? = when (val resolved = value(name)) {
+        is JsonPrimitive -> resolved.booleanOrNull
+        is JsonObject -> decodeValidationResult(resolved)?.valid
+        else -> null
     }
 
     /**
@@ -336,7 +347,7 @@ public data class A2uiComponentScope internal constructor(
                     val context = context(InvocationContext.RENDER)
                     when {
                         context == null -> JsonNull
-                        bound is DynamicValue.Literal -> bound.value
+                        bound is DynamicValue.Literal -> unescapeReservedKeys(bound.value)
                         bound is BoundValue -> runCatching { context.evaluate(bound) }.getOrDefault(JsonNull)
                         else -> JsonNull
                     }

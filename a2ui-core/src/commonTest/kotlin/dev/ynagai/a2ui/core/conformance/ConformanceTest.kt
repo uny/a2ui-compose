@@ -1,6 +1,16 @@
 package dev.ynagai.a2ui.core.conformance
 
+import dev.ynagai.a2ui.core.protocol.A2uiJson
+import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
+import dev.ynagai.a2ui.core.protocol.CatalogDefinition
+import dev.ynagai.a2ui.core.protocol.RendererToAgentMessage
+import dev.ynagai.a2ui.core.surface.MessageProcessor
+import dev.ynagai.a2ui.core.surface.RendererState
+import dev.ynagai.a2ui.core.validation.CatalogFixtures
+import dev.ynagai.a2ui.core.validation.MessageDirection
 import dev.ynagai.a2ui.core.validation.ValidationLimits
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -24,8 +34,8 @@ class ConformanceTest {
         // A guard on the harness rather than on the implementation. Reading the wrong directory,
         // or a codegen that silently dropped a file, would otherwise show up as a green run over
         // fewer cases than the specification has.
-        assertEquals(153, CONFORMANCE_CASES.size, "the suite should hold 153 assertions")
-        assertEquals(14, CONFORMANCE_CASES.map { it.file }.distinct().size)
+        assertEquals(177, CONFORMANCE_CASES.size, "the suite should hold 177 assertions")
+        assertEquals(17, CONFORMANCE_CASES.map { it.file }.distinct().size)
     }
 
     @Test
@@ -66,17 +76,65 @@ class ConformanceTest {
     @Test
     fun both_catalogs_the_suites_name_are_actually_exercised() {
         // Three suites bind the placeholder to the testing catalog. Running everything against the
-        // basic one gets ten assertions wrong, and this is what keeps that from being reintroduced
-        // quietly -- the harness would still be green on the other 143.
+        // basic one gets assertions wrong, and this is what keeps that from being reintroduced
+        // quietly -- the harness would still be green on the rest.
         val catalogs = CONFORMANCE_CASES.map { it.suite.catalogId }.distinct()
         assertEquals(2, catalogs.size, "expected both catalogs to be in play, got $catalogs")
         assertTrue(CONFORMANCE_CASES.any { it.suite.catalogId == TESTING.catalogId })
     }
 
     @Test
-    fun all_three_target_schemas_are_exercised() {
+    fun all_four_target_documents_are_exercised() {
         val targets = CONFORMANCE_CASES.map { it.suite.target }.distinct()
-        assertEquals(3, targets.size, "expected all three documents to be in play, got $targets")
+        assertEquals(4, targets.size, "expected all four documents to be in play, got $targets")
+    }
+
+    @Test
+    fun every_message_the_suite_accepts_also_decodes() {
+        // The cases are validated against the schema, not decoded -- so a field the schema gained
+        // and the model did not (`callRendererFunction.surfaceId`, upstream #3110) passed the
+        // suite above while the strict decoder refused the same message. A host decodes before it
+        // does anything else, so what the specification accepts has to survive this too.
+        val refused = CONFORMANCE_CASES
+            .filter { it.expectedValid }
+            .mapNotNull { case ->
+                runCatching {
+                    when (case.suite.target) {
+                        SchemaTarget.AgentToRenderer -> A2uiJson.strict
+                            .decodeFromJsonElement(AgentToRendererMessage.serializer(), case.data)
+                        SchemaTarget.RendererToAgent -> A2uiJson.strict
+                            .decodeFromJsonElement(RendererToAgentMessage.serializer(), case.data)
+                        SchemaTarget.CatalogDefinitionDocument -> A2uiJson.strict
+                            .decodeFromJsonElement(CatalogDefinition.serializer(), case.data)
+                        SchemaTarget.AgentCapabilitiesDocument -> Unit
+                    }
+                }.exceptionOrNull()?.let { "$case\n    ${it.message?.take(200)}" }
+            }
+        assertTrue(refused.isEmpty(), "${refused.size} accepted message(s) do not decode:\n" + refused.joinToString("\n"))
+    }
+
+    @Test
+    fun the_contact_form_stream_validates_and_builds_a_surface() {
+        // `run_tests.py`'s `validate_jsonl_example`: every line must be a valid message. Applying
+        // them in order on top of that is what a renderer does with the stream.
+        val messages = Json.parseToJsonElement(CatalogFixtures.CONTACT_FORM_STREAM) as JsonArray
+        assertEquals(4, messages.size)
+        messages.forEachIndexed { index, message ->
+            val result = validatorAt(ValidationLimits.DEFAULT).validateMessage(
+                message = message,
+                direction = MessageDirection.AGENT_TO_RENDERER,
+                catalogId = BASIC.catalogId,
+            )
+            assertTrue(result.isValid, "line $index: ${result.violations.take(3)}")
+        }
+        val decoded = messages.map {
+            A2uiJson.strict.decodeFromJsonElement(AgentToRendererMessage.serializer(), it)
+        }
+        // The stream ends by deleting the surface, so look at it one message before that.
+        val built = MessageProcessor.applyAll(RendererState(), decoded.dropLast(1)).state
+        assertTrue(built.surface("contact_form_1")?.isRenderable == true)
+        val ended = MessageProcessor.apply(built, decoded.last()).state
+        assertEquals(null, ended.surface("contact_form_1"))
     }
 }
 

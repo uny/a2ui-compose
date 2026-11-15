@@ -1,6 +1,7 @@
 package dev.ynagai.a2ui.core.protocol
 
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
@@ -29,9 +30,20 @@ public sealed interface BoundValue :
     DynamicBoolean,
     DynamicStringList
 
-/** A JSON Pointer into the surface's data model. */
+/**
+ * A JSON Pointer into the surface's data model.
+ *
+ * On the wire the pointer travels under `@path`, not `path`: v1.0 reserves the `@` prefix for
+ * protocol directives so that a plain object with a `path` key is ordinary data
+ * (`a2ui_protocol.md`, "Reserved Protocol Directives").
+ */
 @Serializable
-public data class DataBinding(public val path: String) : BoundValue
+public data class DataBinding(@SerialName(DataBinding.KEY) public val path: String) : BoundValue {
+    public companion object {
+        /** The wire key that makes an object a [DataBinding]. */
+        public const val KEY: String = "@path"
+    }
+}
 
 /**
  * An invocation of a catalog function, or of the `@index` system function.
@@ -47,7 +59,7 @@ public data class DataBinding(public val path: String) : BoundValue
  */
 @Serializable
 public data class FunctionCall(
-    public val call: String,
+    @SerialName(FunctionCall.KEY) public val call: String,
     public val catalogId: String? = null,
     public val args: Map<String, JsonElement>? = null,
 ) : BoundValue {
@@ -70,6 +82,9 @@ public data class FunctionCall(
     public companion object {
         /** The `@index` system function, available only inside a list template's item scope. */
         public const val INDEX: String = "@index"
+
+        /** The wire key that makes an object a [FunctionCall]; its value is the function name. */
+        public const val KEY: String = "@call"
     }
 }
 
@@ -77,8 +92,10 @@ public data class FunctionCall(
  * A value that may be a literal of any JSON type, a [DataBinding], or a [FunctionCall].
  *
  * Note that a literal here may be an arbitrary object. That is what forces the discrimination
- * rule in [decodeBoundValue]: an object is only ever read as a literal when it carries neither a
- * `path` nor a `call` key, so a malformed binding cannot slip through as "just some object".
+ * rule in [decodeBoundValue]: an object is only ever read as a literal when it carries neither an
+ * `@path` nor an `@call` key, so a malformed binding cannot slip through as "just some object".
+ * A literal object may not carry any other single-`@` key either, and its `@@`-prefixed keys stand
+ * for literal `@` keys — see [unescapeReservedKeys].
  */
 @Serializable(with = DynamicValueSerializer::class)
 public sealed interface DynamicValue {
@@ -134,27 +151,68 @@ public sealed interface DynamicStringList {
  * read as a literal instead.
  *
  * The discrimination is by key presence, not by "whichever branch happens to parse". An object
- * with a `path` key is a [DataBinding] and is held to that schema even when it is malformed;
- * likewise `call` and [FunctionCall]. Falling back to "try each branch" would let
- * `{"path": "/x", "extra": 1}` — which the specification rejects — be accepted as a literal
+ * with an `@path` key is a [DataBinding] and is held to that schema even when it is malformed;
+ * likewise `@call` and [FunctionCall]. Falling back to "try each branch" would let
+ * `{"@path": "/x", "extra": 1}` — which the specification rejects — be accepted as a literal
  * object, since [DynamicValue] admits arbitrary object literals.
  *
  * An object carrying both keys is ambiguous and is rejected rather than resolved by precedence.
+ *
+ * Any other key matching `^@([^@]|$)` is refused too. `common_types.json` gives the literal-object
+ * branch `propertyNames: {not: {pattern: "^@([^@]|$)"}}`, and the prose's Single-`@` Directive
+ * Rule says such a key is "disallowed and rejected by renderers and validators": the namespace is
+ * held for future directives, and reading `{"@if": …}` as data today would make it mean something
+ * else tomorrow. `path` and `call` without the prefix are ordinary keys of a literal object.
  */
 internal fun decodeBoundValue(element: JsonElement, json: Json, owner: String): BoundValue? {
     if (element !is JsonObject) return null
-    val hasPath = "path" in element
-    val hasCall = "call" in element
+    val hasPath = DataBinding.KEY in element
+    val hasCall = FunctionCall.KEY in element
     return when {
         hasPath && hasCall -> throw A2uiFormatException(
-            "$owner: object carries both `path` and `call`, so it is neither a DataBinding nor " +
-                "a FunctionCall.",
+            "$owner: object carries both `${DataBinding.KEY}` and `${FunctionCall.KEY}`, so it " +
+                "is neither a DataBinding nor a FunctionCall.",
         )
         hasPath -> json.decodeFromJsonElement(DataBinding.serializer(), element)
         hasCall -> json.decodeFromJsonElement(FunctionCall.serializer(), element)
-        else -> null
+        else -> {
+            element.keys.firstOrNull(::isReservedKey)?.let { key ->
+                throw A2uiFormatException(
+                    "$owner: `${key.take(KEY_EXCERPT)}` is not a protocol directive. Keys " +
+                        "beginning with a single `@` are reserved; write `@$key` for a literal key.",
+                )
+            }
+            null
+        }
     }
 }
+
+/** Whether [key] matches `^@([^@]|$)`: a single, undoubled `@` prefix. */
+internal fun isReservedKey(key: String): Boolean = key.startsWith('@') && !key.startsWith("@@")
+
+/**
+ * A literal object with its escaped keys restored: `@@path` becomes `@path`.
+ *
+ * The specification's "Escaping via Prefix Doubling" — a plain object whose data needs a key that
+ * starts with `@` writes it doubled, and it "evaluates to" the single form. Applied where a
+ * literal is *read* as a value rather than where it is decoded, so that the decoded
+ * [DynamicValue.Literal] still re-encodes to what the agent sent; unescaping on decode would turn
+ * `{"@@path": …}` into `{"@path": …}`, which reads back as a binding.
+ *
+ * Only the object's own keys: the reservation in `common_types.json` is on the literal object a
+ * `DynamicValue` is, not on objects nested inside it, which the schema leaves as plain data.
+ */
+public fun unescapeReservedKeys(element: JsonElement): JsonElement {
+    if (element !is JsonObject || element.keys.none { it.startsWith("@@") }) return element
+    return JsonObject(
+        element.entries.associate { (key, value) ->
+            (if (key.startsWith("@@")) key.substring(1) else key) to value
+        },
+    )
+}
+
+/** How much of an agent-chosen key an error message quotes. */
+private const val KEY_EXCERPT: Int = 64
 
 internal fun encodeBoundValue(value: BoundValue, json: Json): JsonElement = when (value) {
     is DataBinding -> json.encodeToJsonElement(DataBinding.serializer(), value)

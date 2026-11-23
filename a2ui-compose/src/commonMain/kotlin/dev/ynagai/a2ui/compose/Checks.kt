@@ -10,10 +10,12 @@ import dev.ynagai.a2ui.core.protocol.CheckRule
 import dev.ynagai.a2ui.core.protocol.Severity
 import dev.ynagai.a2ui.core.protocol.ValidationResult
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.doubleOrNull
 
 /**
  * One failed `checks` rule, in the terms a widget needs to show it.
@@ -41,12 +43,14 @@ public data class A2uiCheckFailure internal constructor(
  * rule that will not decode as a `CheckRule` is left out of this list rather than reported as
  * invalid: that is the agent describing a rule this version does not understand, and it should
  * cost its own rule -- the same degradation [A2uiComponentScope.value] gives a malformed property.
- * Once the rule is read, though, its condition is what holds the gate, and anything other than a
- * passing answer counts as a failure: a condition whose evaluation *raises*, because the user
- * decides whether it raises (`regex` refuses a subject past the evaluator's limits, so skipping
- * would let anyone re-open a gated `Button` by pasting enough characters into the field the rule
- * is about), and a result that is neither a boolean nor an object with a boolean `valid`, because
- * dropping it opens the same gate for a value the agent or a host function produced.
+ * Once the rule is read, though, its condition is what holds the gate, and it is never dropped. A
+ * condition whose evaluation *raises* fails, because the user decides whether it raises (`regex`
+ * refuses a subject past the evaluator's limits, so skipping would let anyone re-open a gated
+ * `Button` by pasting enough characters into the field the rule is about). A result that is
+ * neither a boolean nor an object with a boolean `valid` is read by the protocol's coercion table
+ * -- `"true"` in any case and a non-zero number pass, every other string, `0`, an array and any
+ * other object fail -- because dropping it opens the same gate for a value the agent or a host
+ * function produced.
  *
  * A condition that resolves to nothing -- a path whose `updateDataModel` has not arrived -- is
  * neither of those. It is skipped, because progressive rendering is not a validation failure. The
@@ -83,8 +87,8 @@ public fun A2uiComponentScope.checkFailures(): List<A2uiCheckFailure> {
 }
 
 /**
- * [rule]'s condition as a [ValidationResult]: a failure when evaluating it raises or when its result
- * is not a validity, and null only when it resolves to nothing yet.
+ * [rule]'s condition as a [ValidationResult]: a failure when evaluating it raises, the protocol's
+ * coercion of its result otherwise, and null only when it resolves to nothing yet.
  *
  * The distinction is the whole point and it is not a detail of the implementation -- see the
  * comment on the `getOrElse` below before changing either branch. Collapsing the raising case back
@@ -113,14 +117,26 @@ private fun A2uiComponentScope.evaluateCondition(rule: CheckRule): ValidationRes
     // that returns `null` too; this cannot tell them apart, so all three are skipped (upstream
     // fails the last two).
     if (element is JsonNull) return null
-    (element as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull?.let {
-        return ValidationResult(valid = it)
-    }
-    // **A value that is not a validity has not passed.** Read as "no rule" -- what this did
-    // before -- `{"valid": false, "message": null}` from a serializer that writes its nulls, or a
-    // condition resolving to a string, re-opened the gate the agent wrote. The rule's own message
-    // and `Severity.DEFAULT` stand in for the fields such a value does not supply.
-    return (element as? JsonObject)?.let(::readValidationResult) ?: ValidationResult(valid = false)
+    (element as? JsonObject)?.let(::readValidationResult)?.let { return it }
+    // **Any other value is read by the protocol's coercion table, never dropped.** Read as "no
+    // rule" -- what this did before -- `{"valid": false, "message": null}` from a serializer that
+    // writes its nulls, or a condition resolving to a string, re-opened the gate the agent wrote.
+    // `a2ui_protocol.md` ("`DynamicBoolean` and `CheckRule` Coercion", rule 3) says what each
+    // shape means, so a condition and the same value under `and`/`not` agree; a `false` reading
+    // takes the rule's own message and `Severity.DEFAULT`, as rule 2 asks.
+    return ValidationResult(valid = coercedBoolean(element))
+}
+
+/**
+ * [element] by rule 3 of the protocol's coercion table, for a value that is neither a boolean nor a
+ * `ValidationResult`: a string is `true` only when it spells `true` in any letter case, a number is
+ * `true` unless it is `0`, and anything else -- an object, an array, `null` -- is `false`.
+ */
+private fun coercedBoolean(element: JsonElement): Boolean {
+    val primitive = element as? JsonPrimitive ?: return false
+    if (primitive is JsonNull) return false
+    if (primitive.isString) return primitive.content.equals("true", ignoreCase = true)
+    return primitive.booleanOrNull ?: primitive.doubleOrNull?.let { it != 0.0 } ?: false
 }
 
 /**

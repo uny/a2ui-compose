@@ -131,17 +131,19 @@ class ChecksTest {
     }
 
     @Test
-    fun a_condition_that_is_not_a_validity_fails() {
-        // A string, a number, an array, an object with no `valid`, and an object whose `valid` is a
-        // string: none is a boolean or a ValidationResult. Read as "no rule", which is what this
-        // did before #132, each one dropped the rule and re-opened the gate. Upstream does not
-        // agree on these -- Swift fails all five, Python fails the two objects and passes the
-        // rest by truthiness, TS reads each by JavaScript truthiness -- so the reading here is the
-        // one that keeps the gate shut, with the rule's message.
-        for (id in listOf("not_a_validity", "a_number", "an_array", "object_without_valid", "string_valid")) {
+    fun a_condition_that_is_not_a_validity_is_read_by_the_coercion_table() {
+        // Before #132 every one of these dropped the rule, and a dropped rule is an open gate.
+        // `a2ui_protocol.md`, "`DynamicBoolean` and `CheckRule` Coercion", rule 3, says what each
+        // shape means, and a `false` reading takes the rule's message and `error` (rule 2).
+        // Upstream does not agree here -- Swift fails all of them, TS and Python read JavaScript /
+        // Python truthiness, which passes `"false"` and `[true]` -- so this follows the prose.
+        for (id in listOf("not_a_validity", "string_false", "a_zero", "an_array", "object_without_valid", "string_valid")) {
             val failures = scopeFor(id).checkFailures()
             assertEquals(listOf("Check this"), failures.map { it.message }, id)
             assertTrue(failures.hasError(), "$id should disable the action it gates")
+        }
+        for (id in listOf("string_true_any_case", "a_number")) {
+            assertEquals(emptyList(), scopeFor(id).checkFailures(), id)
         }
     }
 
@@ -245,6 +247,9 @@ class ChecksTest {
               "noValid":{"message":"no verdict here"},
               "stringValid":{"valid":"true"},
               "aNumber":1,
+              "aZero":0,
+              "stringTrue":"TRUE",
+              "stringFalse":"false",
               "anArray":[true]
             }}}
             """.trimIndent(),
@@ -280,6 +285,12 @@ class ChecksTest {
                "checks":[{"condition":{"@path":"/unknownSeverityPasses"},"message":"Check this"}]},
               {"id":"a_number","component":"TextField","label":"X","value":{"@path":"/blank"},
                "checks":[{"condition":{"@path":"/aNumber"},"message":"Check this"}]},
+              {"id":"a_zero","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/aZero"},"message":"Check this"}]},
+              {"id":"string_true_any_case","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/stringTrue"},"message":"Check this"}]},
+              {"id":"string_false","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/stringFalse"},"message":"Check this"}]},
               {"id":"an_array","component":"TextField","label":"X","value":{"@path":"/blank"},
                "checks":[{"condition":{"@path":"/anArray"},"message":"Check this"}]},
               {"id":"object_without_valid","component":"TextField","label":"X","value":{"@path":"/blank"},

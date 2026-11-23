@@ -49,7 +49,9 @@ public data class A2uiCheckFailure internal constructor(
  * dropping it opens the same gate for a value the agent or a host function produced.
  *
  * A condition that resolves to nothing -- a path whose `updateDataModel` has not arrived -- is
- * neither of those. It is skipped, because progressive rendering is not a validation failure.
+ * neither of those. It is skipped, because progressive rendering is not a validation failure. The
+ * evaluator answers JSON `null` for it, so an explicit `null` and a function returning `null` are
+ * skipped the same way.
  *
  * A failure's severity comes from the result; a result that omits it is an error, per
  * [Severity.DEFAULT]. Callers that gate an interaction should gate on
@@ -106,7 +108,10 @@ private fun A2uiComponentScope.evaluateCondition(rule: CheckRule): ValidationRes
     // this particular mistake to fail, and it is loud enough for the agent to notice.
     val element = outcome.getOrElse { return ValidationResult(valid = false) }
     // Nothing behind the condition yet -- a path whose `updateDataModel` has not arrived. That is
-    // progressive rendering, not an answer, so the rule waits rather than failing.
+    // progressive rendering, not an answer, so the rule waits rather than failing. The evaluator
+    // answers JSON `null` for that, and for an explicit `null` in the data model and a function
+    // that returns `null` too; this cannot tell them apart, so all three are skipped (upstream
+    // fails the last two).
     if (element is JsonNull) return null
     (element as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull?.let {
         return ValidationResult(valid = it)

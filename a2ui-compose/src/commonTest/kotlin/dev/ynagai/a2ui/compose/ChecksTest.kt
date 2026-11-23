@@ -132,12 +132,13 @@ class ChecksTest {
 
     @Test
     fun a_condition_that_is_not_a_validity_fails() {
-        // A string, an object with no `valid`, and an object whose `valid` is a string: none is a
-        // boolean or a ValidationResult. Read as "no rule", which is what this did before #132,
-        // each one dropped the rule and re-opened the gate. Upstream does not agree on these --
-        // Swift fails all three, Python the two objects, TS reads each by JavaScript truthiness --
-        // so the reading here is the one that keeps the gate shut, with the rule's message.
-        for (id in listOf("not_a_validity", "object_without_valid", "string_valid")) {
+        // A string, a number, an array, an object with no `valid`, and an object whose `valid` is a
+        // string: none is a boolean or a ValidationResult. Read as "no rule", which is what this
+        // did before #132, each one dropped the rule and re-opened the gate. Upstream does not
+        // agree on these -- Swift fails all five, Python fails the two objects and passes the
+        // rest by truthiness, TS reads each by JavaScript truthiness -- so the reading here is the
+        // one that keeps the gate shut, with the rule's message.
+        for (id in listOf("not_a_validity", "a_number", "an_array", "object_without_valid", "string_valid")) {
             val failures = scopeFor(id).checkFailures()
             assertEquals(listOf("Check this"), failures.map { it.message }, id)
             assertTrue(failures.hasError(), "$id should disable the action it gates")
@@ -242,7 +243,9 @@ class ChecksTest {
               "nullMessagePasses":{"valid":true,"message":null},
               "unknownSeverityPasses":{"valid":true,"severity":"fatal"},
               "noValid":{"message":"no verdict here"},
-              "stringValid":{"valid":"true"}
+              "stringValid":{"valid":"true"},
+              "aNumber":1,
+              "anArray":[true]
             }}}
             """.trimIndent(),
             """
@@ -275,6 +278,10 @@ class ChecksTest {
                "checks":[{"condition":{"@path":"/nullMessagePasses"},"message":"Check this"}]},
               {"id":"unknown_severity_passes","component":"TextField","label":"X","value":{"@path":"/blank"},
                "checks":[{"condition":{"@path":"/unknownSeverityPasses"},"message":"Check this"}]},
+              {"id":"a_number","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/aNumber"},"message":"Check this"}]},
+              {"id":"an_array","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/anArray"},"message":"Check this"}]},
               {"id":"object_without_valid","component":"TextField","label":"X","value":{"@path":"/blank"},
                "checks":[{"condition":{"@path":"/noValid"},"message":"Check this"}]},
               {"id":"string_valid","component":"TextField","label":"X","value":{"@path":"/blank"},

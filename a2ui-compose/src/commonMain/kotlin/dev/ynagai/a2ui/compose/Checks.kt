@@ -10,6 +10,7 @@ import dev.ynagai.a2ui.core.protocol.CheckRule
 import dev.ynagai.a2ui.core.protocol.Severity
 import dev.ynagai.a2ui.core.protocol.ValidationResult
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -36,14 +37,16 @@ public data class A2uiCheckFailure internal constructor(
  * Evaluated on every read rather than cached, like every other bound property here: a check reads
  * the data model, so its answer changes as the user types.
  *
- * **A check that cannot be *read* does not fail; a check that cannot be *evaluated* does.** A rule
- * that will not decode, or a result that is neither a boolean nor a `ValidationResult`, is left
- * out of this list rather than reported as invalid: that is the agent describing a rule this
- * version does not understand, and it should cost its own rule -- the same degradation
- * [A2uiComponentScope.value] gives a malformed property. A condition whose evaluation *raises* is
- * the opposite case and counts as a failure, because the user decides whether it raises: `regex`
- * refuses a subject past the evaluator's limits, so skipping would let anyone re-open a gated
- * `Button` by pasting enough characters into the field the rule is about.
+ * **A rule that cannot be *read* is left out; a condition that does not answer "valid" fails.** A
+ * rule that will not decode as a `CheckRule` is left out of this list rather than reported as
+ * invalid: that is the agent describing a rule this version does not understand, and it should
+ * cost its own rule -- the same degradation [A2uiComponentScope.value] gives a malformed property.
+ * Once the rule is read, though, its condition is what holds the gate, and anything other than a
+ * passing answer counts as a failure: a condition whose evaluation *raises*, because the user
+ * decides whether it raises (`regex` refuses a subject past the evaluator's limits, so skipping
+ * would let anyone re-open a gated `Button` by pasting enough characters into the field the rule
+ * is about), and a result that is neither a boolean nor an object with a boolean `valid`, because
+ * dropping it opens the same gate for a value the agent or a host function produced.
  *
  * A condition that resolves to nothing -- a path whose `updateDataModel` has not arrived -- is
  * neither of those. It is skipped, because progressive rendering is not a validation failure.
@@ -78,8 +81,8 @@ public fun A2uiComponentScope.checkFailures(): List<A2uiCheckFailure> {
 }
 
 /**
- * [rule]'s condition as a [ValidationResult]: a failure when evaluating it raises, and null when it
- * cannot be *read* as one.
+ * [rule]'s condition as a [ValidationResult]: a failure when evaluating it raises or when its result
+ * is not a validity, and null only when it resolves to nothing yet.
  *
  * The distinction is the whole point and it is not a detail of the implementation -- see the
  * comment on the `getOrElse` below before changing either branch. Collapsing the raising case back
@@ -102,23 +105,57 @@ private fun A2uiComponentScope.evaluateCondition(rule: CheckRule): ValidationRes
     // wrong type -- now disables the action rather than being ignored. That is the safe way for
     // this particular mistake to fail, and it is loud enough for the agent to notice.
     val element = outcome.getOrElse { return ValidationResult(valid = false) }
+    // Nothing behind the condition yet -- a path whose `updateDataModel` has not arrived. That is
+    // progressive rendering, not an answer, so the rule waits rather than failing.
+    if (element is JsonNull) return null
     (element as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull?.let {
         return ValidationResult(valid = it)
     }
-    return (element as? JsonObject)?.let(::decodeValidationResult)
+    // **A value that is not a validity has not passed.** Read as "no rule" -- what this did
+    // before -- `{"valid": false, "message": null}` from a serializer that writes its nulls, or a
+    // condition resolving to a string, re-opened the gate the agent wrote. The rule's own message
+    // and `Severity.DEFAULT` stand in for the fields such a value does not supply.
+    return (element as? JsonObject)?.let(::readValidationResult) ?: ValidationResult(valid = false)
 }
 
 /**
- * [element] read as a `ValidationResult`, or null when it is not one.
+ * [element] read as a `ValidationResult`, or null when it is not one: an object is one exactly when
+ * its `valid` is a boolean.
  *
  * Shared with [A2uiComponentScope.boolean], so that a value bound to a check's condition and the
- * same value bound to a boolean property are recognised by one rule: the schema leaves the object
- * open, so extra keys are carried, but a `valid` that is not a boolean or a `severity` the
- * protocol does not define makes it unreadable in both places.
+ * same value bound to a boolean property are recognised by one rule -- the rule `a2ui_protocol.md`
+ * gives ("an object with a boolean `valid` property") and the three upstream SDKs apply (TS
+ * `validityOf`, Python `validity_of`, Swift `coercedDynamicBoolean`), and the one this library's
+ * own evaluator applies to `and`/`or`/`not`.
+ *
+ * **Lenient on purpose, unlike the wire serializer.** The other fields are read the way upstream's
+ * `checks` binders read them: a `code` or `message` that is not a string -- an explicit `null`
+ * included -- is absent, and a `severity` that is present but not one the protocol defines is
+ * [Severity.ERROR], so an unrecognised severity can never soften a failure into a warning. Decoding
+ * with [ValidationResult]'s strict serializer instead made all of those shapes unreadable, and an
+ * unreadable result was the one a check then dropped.
  */
-internal fun decodeValidationResult(element: JsonObject): ValidationResult? = runCatching {
-    A2uiJson.strict.decodeFromJsonElement(ValidationResult.serializer(), element)
-}.getOrNull()
+internal fun readValidationResult(element: JsonObject): ValidationResult? {
+    val valid = (element["valid"] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull
+        ?: return null
+    return ValidationResult(
+        valid = valid,
+        code = element.stringOrNull("code"),
+        message = element.stringOrNull("message"),
+        severity = when (val raw = element["severity"]) {
+            null, JsonNull -> null
+            else -> Severity.entries.firstOrNull {
+                raw is JsonPrimitive && raw.isString && it.wireName == raw.content
+            } ?: Severity.ERROR
+        },
+        additional = element.filterKeys { it !in VALIDATION_RESULT_KEYS },
+    )
+}
+
+private val VALIDATION_RESULT_KEYS = setOf("valid", "code", "message", "severity")
+
+private fun JsonObject.stringOrNull(key: String): String? =
+    (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
 
 /**
  * The failing checks, recomposing the caller only when they change.

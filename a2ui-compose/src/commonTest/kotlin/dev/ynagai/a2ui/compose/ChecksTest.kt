@@ -3,8 +3,11 @@ package dev.ynagai.a2ui.compose
 import dev.ynagai.a2ui.core.protocol.A2uiJson
 import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
 import dev.ynagai.a2ui.core.protocol.Severity
+import dev.ynagai.a2ui.core.protocol.ValidationResult
 import dev.ynagai.a2ui.core.surface.EvaluationScope
 import dev.ynagai.a2ui.core.surface.RenderLimits
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -66,14 +69,78 @@ class ChecksTest {
     }
 
     @Test
-    fun a_check_that_cannot_be_read_does_not_fail() {
-        // Two ways to be unreadable, neither of which is an invalid answer: a condition that
-        // resolves to a string, and a path with nothing behind it -- the second being ordinary
-        // progressive rendering, before the `updateDataModel` carrying it has arrived. A renderer
-        // that counted these as failures would disable a button for a payload that never said
-        // anything was wrong.
-        for (id in listOf("not_a_validity", "absent_path")) {
-            assertEquals(emptyList(), scopeFor(id).checkFailures(), "$id should report nothing")
+    fun a_condition_with_nothing_behind_it_yet_does_not_fail() {
+        // A path with nothing behind it is ordinary progressive rendering, before the
+        // `updateDataModel` carrying it has arrived. A renderer that counted it as a failure would
+        // disable a button for a payload that never said anything was wrong.
+        assertEquals(emptyList(), scopeFor("absent_path").checkFailures())
+    }
+
+    @Test
+    fun a_failing_result_with_null_or_unknown_fields_still_fails() {
+        // #132. Each of these decoded strictly as nothing, and the rule was dropped -- an open
+        // gate. Upstream's three `checks` binders (TS `extractValidationResult`, Python
+        // `_process_rule_val`, Swift `makePathBoundCheck`) all read each one as a failure: a `null`
+        // message falls back to the rule's, a non-string `code` is absent, and a severity the
+        // protocol does not define is an error.
+        val cases = mapOf(
+            "null_message" to A2uiCheckFailure("Check this", null, Severity.ERROR),
+            "unknown_severity" to A2uiCheckFailure("Check this", null, Severity.ERROR),
+            "numeric_code" to A2uiCheckFailure("Own message", null, Severity.ERROR),
+        )
+        for ((id, expected) in cases) {
+            val failures = scopeFor(id).checkFailures()
+            assertEquals(listOf(expected), failures, id)
+            assertTrue(failures.hasError(), "$id should disable the action it gates")
+        }
+    }
+
+    @Test
+    fun the_reader_takes_any_object_with_a_boolean_valid() {
+        // Directly, so that the `null`s are certainly on the object: a data model write may treat a
+        // `null` member differently from the value that reached `checks` in a real payload.
+        fun read(json: String) = readValidationResult(A2uiJson.strict.parseToJsonElement(json).jsonObject)
+        assertEquals(
+            ValidationResult(valid = false),
+            read("""{"valid":false,"message":null,"code":null,"severity":null}"""),
+        )
+        assertEquals(
+            ValidationResult(valid = true, severity = Severity.ERROR),
+            read("""{"valid":true,"severity":"fatal"}"""),
+        )
+        assertEquals(ValidationResult(valid = false, severity = Severity.ERROR), read("""{"valid":false,"severity":3}"""))
+        assertEquals(
+            ValidationResult(valid = false, message = "m", severity = Severity.WARNING,
+                additional = mapOf("field" to JsonPrimitive("card"))),
+            read("""{"valid":false,"code":5,"message":"m","severity":"warning","field":"card"}"""),
+        )
+        for (notOne in listOf("""{"valid":"true"}""", """{"valid":null}""", """{"message":"x"}""", """{"valid":1}""")) {
+            assertEquals(null, read(notOne), notOne)
+        }
+    }
+
+    @Test
+    fun a_passing_result_with_null_or_unknown_fields_passes() {
+        // The same leniency in the other direction: `valid` decides, the other fields do not. All
+        // three upstream SDKs pass `null_message_passes`. `unknown_severity_passes` passes in TS
+        // and Swift and the protocol prose; Python's strict `ValidationResult` model is the one
+        // reading that rejects it.
+        for (id in listOf("null_message_passes", "unknown_severity_passes")) {
+            assertEquals(emptyList(), scopeFor(id).checkFailures(), id)
+        }
+    }
+
+    @Test
+    fun a_condition_that_is_not_a_validity_fails() {
+        // A string, an object with no `valid`, and an object whose `valid` is a string: none is a
+        // boolean or a ValidationResult. Read as "no rule", which is what this did before #132,
+        // each one dropped the rule and re-opened the gate. Upstream does not agree on these --
+        // Swift fails all three, Python the two objects, TS reads each by JavaScript truthiness --
+        // so the reading here is the one that keeps the gate shut, with the rule's message.
+        for (id in listOf("not_a_validity", "object_without_valid", "string_valid")) {
+            val failures = scopeFor(id).checkFailures()
+            assertEquals(listOf("Check this"), failures.map { it.message }, id)
+            assertTrue(failures.hasError(), "$id should disable the action it gates")
         }
     }
 
@@ -168,7 +235,14 @@ class ChecksTest {
               "unusual":{"valid":false,"severity":"warning","message":"Looks unusual"},
               "note":"not a validity",
               "long":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-              "short":"OK123"
+              "short":"OK123",
+              "nullMessage":{"valid":false,"message":null,"code":null,"severity":null},
+              "unknownSeverity":{"valid":false,"severity":"fatal"},
+              "numericCode":{"valid":false,"code":5,"message":"Own message"},
+              "nullMessagePasses":{"valid":true,"message":null},
+              "unknownSeverityPasses":{"valid":true,"severity":"fatal"},
+              "noValid":{"message":"no verdict here"},
+              "stringValid":{"valid":"true"}
             }}}
             """.trimIndent(),
             """
@@ -190,7 +264,21 @@ class ChecksTest {
                "checks":[{"condition":{"@call":"noSuchFunction","args":{"value":{"@path":"/blank"}}},
                           "message":"never shown"}]},
               {"id":"not_a_validity","component":"TextField","label":"X","value":{"@path":"/blank"},
-               "checks":[{"condition":{"@path":"/note"},"message":"never shown"}]},
+               "checks":[{"condition":{"@path":"/note"},"message":"Check this"}]},
+              {"id":"null_message","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/nullMessage"},"message":"Check this"}]},
+              {"id":"unknown_severity","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/unknownSeverity"},"message":"Check this"}]},
+              {"id":"numeric_code","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/numericCode"},"message":"Check this"}]},
+              {"id":"null_message_passes","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/nullMessagePasses"},"message":"Check this"}]},
+              {"id":"unknown_severity_passes","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/unknownSeverityPasses"},"message":"Check this"}]},
+              {"id":"object_without_valid","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/noValid"},"message":"Check this"}]},
+              {"id":"string_valid","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/stringValid"},"message":"Check this"}]},
               {"id":"absent_path","component":"TextField","label":"X","value":{"@path":"/blank"},
                "checks":[{"condition":{"@path":"/nothing/here"},"message":"never shown"}]},
               {"id":"subject_too_long","component":"TextField","label":"X","value":{"@path":"/long"},

@@ -190,7 +190,7 @@ private fun checkCarriedKeywords(
  * rather than raising something a caller could catch.
  */
 private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>) {
-    // Each entry carries whether a `call` property found in it admits a name -- true everywhere
+    // Each entry carries whether a `@call` property found in it admits a name -- true everywhere
     // but under `not`; see [requireNoSystemCall] for why it cannot be decided by position.
     val pending = ArrayDeque<Pair<JsonElement, Boolean>>()
     pending.addLast(root to true)

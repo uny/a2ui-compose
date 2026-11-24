@@ -123,8 +123,8 @@ class Material3MarkdownRendererTest {
         A2uiRenderer(A2uiRendererConfig.Default).also { renderer ->
             renderer.applyAll(
                 listOf(
-                    """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
-                    """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
+                    """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
+                    """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
                 ).map {
                     A2uiJson.strict.decodeFromString(
                         AgentToRendererMessage.serializer(),

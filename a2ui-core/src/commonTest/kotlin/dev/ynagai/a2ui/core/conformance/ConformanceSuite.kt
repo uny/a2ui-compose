@@ -1,6 +1,7 @@
 package dev.ynagai.a2ui.core.conformance
 
 import dev.ynagai.a2ui.core.protocol.A2uiJson
+import dev.ynagai.a2ui.core.protocol.AgentCapabilities
 import dev.ynagai.a2ui.core.protocol.CatalogDefinition
 import dev.ynagai.a2ui.core.validation.CatalogValidator
 import dev.ynagai.a2ui.core.validation.MessageDirection
@@ -9,6 +10,7 @@ import dev.ynagai.a2ui.core.validation.SchemaEvaluator
 import dev.ynagai.a2ui.core.validation.SchemaLocation
 import dev.ynagai.a2ui.core.validation.SchemaRegistry
 import dev.ynagai.a2ui.core.validation.SchemaValidation
+import dev.ynagai.a2ui.core.validation.SchemaViolation
 import dev.ynagai.a2ui.core.validation.ValidationLimits
 import dev.ynagai.a2ui.core.validation.CatalogFixtures
 import kotlinx.serialization.json.Json
@@ -40,7 +42,7 @@ internal data class ConformanceCase(
 /**
  * A suite file: a list of cases, plus the schema and the catalog they are checked against.
  *
- * Both are read from the file rather than assumed. Three of the fourteen suites bind the
+ * Both are read from the file rather than assumed. Three of the seventeen suites bind the
  * `catalog.json` placeholder to the specification's testing catalog rather than to the basic one,
  * and running those against the basic catalog gets ten assertions wrong — in both directions, so
  * a harness that assumed would not simply look stricter.
@@ -55,6 +57,7 @@ internal data class ConformanceSuite(
         "agent_to_renderer.json" -> SchemaTarget.AgentToRenderer
         "renderer_to_agent.json" -> SchemaTarget.RendererToAgent
         "catalog_definition.json" -> SchemaTarget.CatalogDefinitionDocument
+        "agent_capabilities.json" -> SchemaTarget.AgentCapabilitiesDocument
         else -> error("$file names a schema this harness does not hold: $schema")
     }
 
@@ -83,6 +86,15 @@ internal sealed interface SchemaTarget {
      * placeholder to bind.
      */
     data object CatalogDefinitionDocument : SchemaTarget
+
+    /**
+     * An agent's capabilities object, the version-keyed `{"1.0": {...}}` an agent card carries.
+     *
+     * Judged by this library's own decoder rather than by `agent_capabilities.json`, which is
+     * not vendored: the schema is three keywords deep, and the decoder is the thing a renderer
+     * reading an agent card actually runs.
+     */
+    data object AgentCapabilitiesDocument : SchemaTarget
 }
 
 internal val BASIC: CatalogDefinition =
@@ -153,6 +165,17 @@ internal fun verdict(
         direction = MessageDirection.RENDERER_TO_AGENT,
         catalogId = case.suite.catalogId,
     )
+
+    SchemaTarget.AgentCapabilitiesDocument -> {
+        val decoded = runCatching {
+            A2uiJson.strict.decodeFromJsonElement(AgentCapabilities.serializer(), case.data)
+        }
+        SchemaValidation(
+            violations = decoded.exceptionOrNull()?.let {
+                listOf(SchemaViolation("", it.message ?: it.toString()))
+            }.orEmpty(),
+        )
+    }
 
     SchemaTarget.CatalogDefinitionDocument -> {
         val registry = SchemaRegistry.of(ProtocolSchemas.documents)

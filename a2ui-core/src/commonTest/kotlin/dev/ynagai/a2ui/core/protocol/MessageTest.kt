@@ -22,12 +22,13 @@ class MessageTest {
     @Test
     fun `every agent-to-renderer message round trips`() {
         val cases = listOf(
-            """{"version":"v1.0","createSurface":{"surfaceId":"s","catalogId":"c","components":[{"id":"root","component":"Text","text":"hi"}]}}""",
-            """{"version":"v1.0","updateComponents":{"surfaceId":"s","components":[{"id":"root","component":"Text","text":"hi"}]}}""",
-            """{"version":"v1.0","updateDataModel":{"surfaceId":"s","path":"/user/name","value":"Alice"}}""",
-            """{"version":"v1.0","deleteSurface":{"surfaceId":"s"}}""",
-            """{"version":"v1.0","callRendererFunction":{"functionCallId":"c1","callFunction":{"call":"openUrl","catalogId":"cat","args":{"url":"https://example.com"}}}}""",
-            """{"version":"v1.0","agentFunctionResponse":{"functionCallId":"c1","value":42}}""",
+            """{"version":"1.0","createSurface":{"surfaceId":"s","catalogId":"c","components":[{"id":"root","component":"Text","text":"hi"}]}}""",
+            """{"version":"1.0","updateComponents":{"surfaceId":"s","components":[{"id":"root","component":"Text","text":"hi"}]}}""",
+            """{"version":"1.0","updateDataModel":{"surfaceId":"s","path":"/user/name","value":"Alice"}}""",
+            """{"version":"1.0","deleteSurface":{"surfaceId":"s"}}""",
+            """{"version":"1.0","callRendererFunction":{"functionCallId":"c1","callFunction":{"@call":"openUrl","catalogId":"cat","args":{"url":"https://example.com"}}}}""",
+            """{"version":"1.0","callRendererFunction":{"functionCallId":"c2","callFunction":{"@call":"openUrl","catalogId":"cat","args":{"url":"https://example.com"}},"surfaceId":"main"}}""",
+            """{"version":"1.0","agentFunctionResponse":{"functionCallId":"c1","value":42}}""",
         )
         for (case in cases) {
             assertEquals(case, json.encodeToString<AgentToRendererMessage>(agent(case)))
@@ -37,11 +38,11 @@ class MessageTest {
     @Test
     fun `every renderer-to-agent message round trips`() {
         val cases = listOf(
-            """{"version":"v1.0","action":{"name":"submit","surfaceId":"main","sourceComponentId":"btn","timestamp":"2023-10-27T10:00:00Z","context":{"foo":"bar"}}}""",
-            """{"version":"v1.0","callAgentFunction":{"surfaceId":"s","functionCallId":"c1","callFunction":{"call":"ping"}}}""",
-            """{"version":"v1.0","rendererFunctionResponse":{"functionCallId":"c1","error":{"code":"E","message":"m"}}}""",
-            """{"version":"v1.0","error":{"code":"VALIDATION_FAILED","surfaceId":"main","path":"/components/0/text","message":"Invalid type"}}""",
-            """{"version":"v1.0","error":{"code":"FUNCTION_FAILED","message":"boom","functionCallId":"c1"}}""",
+            """{"version":"1.0","action":{"name":"submit","surfaceId":"main","sourceComponentId":"btn","timestamp":"2023-10-27T10:00:00Z","context":{"foo":"bar"}}}""",
+            """{"version":"1.0","callAgentFunction":{"surfaceId":"s","functionCallId":"c1","callFunction":{"@call":"ping"}}}""",
+            """{"version":"1.0","rendererFunctionResponse":{"functionCallId":"c1","error":{"code":"E","message":"m"}}}""",
+            """{"version":"1.0","error":{"code":"VALIDATION_FAILED","surfaceId":"main","path":"/components/0/text","message":"Invalid type"}}""",
+            """{"version":"1.0","error":{"code":"FUNCTION_FAILED","message":"boom","functionCallId":"c1"}}""",
         )
         for (case in cases) {
             assertEquals(case, json.encodeToString<RendererToAgentMessage>(renderer(case)))
@@ -54,23 +55,23 @@ class MessageTest {
         assertFailsWith<SerializationException> {
             agent("""{"version":"v0.9","deleteSurface":{"surfaceId":"s"}}""")
         }
-        assertFailsWith<SerializationException> { agent("""{"version":"v1.0"}""") }
+        assertFailsWith<SerializationException> { agent("""{"version":"1.0"}""") }
         assertFailsWith<SerializationException> {
-            agent("""{"version":"v1.0","deleteSurface":{"surfaceId":"s"},"updateDataModel":{"surfaceId":"s","value":1}}""")
+            agent("""{"version":"1.0","deleteSurface":{"surfaceId":"s"},"updateDataModel":{"surfaceId":"s","value":1}}""")
         }
     }
 
     @Test
     fun `a renderer-to-agent envelope refuses an agent-to-renderer message`() {
         assertFailsWith<SerializationException> {
-            renderer("""{"version":"v1.0","updateDataModel":{"surfaceId":"main","path":"/user/name","value":"Alice"}}""")
+            renderer("""{"version":"1.0","updateDataModel":{"surfaceId":"main","path":"/user/name","value":"Alice"}}""")
         }
     }
 
     @Test
     fun `a component keeps its catalog-defined properties without interpreting them`() {
         val message = agent(
-            """{"version":"v1.0","createSurface":{"surfaceId":"s","components":[
+            """{"version":"1.0","createSurface":{"surfaceId":"s","components":[
                {"id":"root","component":"Text","text":"hi","accessibility":{"label":"Greeting"},
                 "metadata":{"extensions":{"custom_theme":{"variant":"dark"}}}}]}}""",
         )
@@ -88,16 +89,16 @@ class MessageTest {
     @Test
     fun `a component requires an id and a type`() {
         assertFailsWith<SerializationException> {
-            agent("""{"version":"v1.0","createSurface":{"surfaceId":"s","components":[{"component":"Text","text":"hi"}]}}""")
+            agent("""{"version":"1.0","createSurface":{"surfaceId":"s","components":[{"component":"Text","text":"hi"}]}}""")
         }
         assertFailsWith<SerializationException> {
-            agent("""{"version":"v1.0","createSurface":{"surfaceId":"s","components":[{"id":"root","text":"hi"}]}}""")
+            agent("""{"version":"1.0","createSurface":{"surfaceId":"s","components":[{"id":"root","text":"hi"}]}}""")
         }
     }
 
     @Test
     fun `a closed payload rejects an unknown key under strict and keeps it under lenient`() {
-        val payload = """{"version":"v1.0","createSurface":{"surfaceId":"s","unexpected":true}}"""
+        val payload = """{"version":"1.0","createSurface":{"surfaceId":"s","unexpected":true}}"""
         assertFailsWith<SerializationException> { agent(payload) }
         val lenient = A2uiJson.lenient.decodeFromString<AgentToRendererMessage>(payload)
         assertEquals("s", assertIs<CreateSurfaceMessage>(lenient).surfaceId)
@@ -106,69 +107,69 @@ class MessageTest {
     @Test
     fun `a null component in the list is rejected`() {
         assertFailsWith<SerializationException> {
-            agent("""{"version":"v1.0","createSurface":{"surfaceId":"s","components":[null]}}""")
+            agent("""{"version":"1.0","createSurface":{"surfaceId":"s","components":[null]}}""")
         }
     }
 
     @Test
     fun `an explicit null value in updateDataModel is a delete rather than an absent value`() {
         val deletion = assertIs<UpdateDataModelMessage>(
-            agent("""{"version":"v1.0","updateDataModel":{"surfaceId":"s","path":"/a","value":null}}"""),
+            agent("""{"version":"1.0","updateDataModel":{"surfaceId":"s","path":"/a","value":null}}"""),
         )
         assertEquals(JsonNull, deletion.value)
         assertFailsWith<SerializationException> {
-            agent("""{"version":"v1.0","updateDataModel":{"surfaceId":"s","path":"/a"}}""")
+            agent("""{"version":"1.0","updateDataModel":{"surfaceId":"s","path":"/a"}}""")
         }
     }
 
     @Test
     fun `callRendererFunction requires the call to name its catalog`() {
         assertFailsWith<SerializationException> {
-            agent("""{"version":"v1.0","callRendererFunction":{"functionCallId":"c1","callFunction":{"call":"openUrl"}}}""")
+            agent("""{"version":"1.0","callRendererFunction":{"functionCallId":"c1","callFunction":{"@call":"openUrl"}}}""")
         }
     }
 
     @Test
     fun `a function response carries a value or an error but never both and never neither`() {
         val nullValue = assertIs<AgentFunctionResponseMessage>(
-            agent("""{"version":"v1.0","agentFunctionResponse":{"functionCallId":"c1","value":null}}"""),
+            agent("""{"version":"1.0","agentFunctionResponse":{"functionCallId":"c1","value":null}}"""),
         )
         assertEquals(FunctionResponse.Success("c1", JsonNull), nullValue.response)
 
         assertFailsWith<SerializationException> {
-            agent("""{"version":"v1.0","agentFunctionResponse":{"functionCallId":"c1","value":1,"error":{"code":"E","message":"m"}}}""")
+            agent("""{"version":"1.0","agentFunctionResponse":{"functionCallId":"c1","value":1,"error":{"code":"E","message":"m"}}}""")
         }
         assertFailsWith<SerializationException> {
-            agent("""{"version":"v1.0","agentFunctionResponse":{"functionCallId":"c1"}}""")
+            agent("""{"version":"1.0","agentFunctionResponse":{"functionCallId":"c1"}}""")
         }
         assertFailsWith<SerializationException> {
-            agent("""{"version":"v1.0","agentFunctionResponse":{"value":1}}""")
+            agent("""{"version":"1.0","agentFunctionResponse":{"value":1}}""")
         }
     }
 
     @Test
     fun `a generic error names either its surface or its call but never both and never neither`() {
         val onCall = assertIs<RendererErrorMessage.Generic>(
-            renderer("""{"version":"v1.0","error":{"code":"FUNCTION_FAILED","functionCallId":"c1","message":"boom"}}"""),
+            renderer("""{"version":"1.0","error":{"code":"FUNCTION_FAILED","functionCallId":"c1","message":"boom"}}"""),
         )
         assertEquals(RendererErrorMessage.Scope.OnCall("c1"), onCall.scope)
 
         assertFailsWith<SerializationException> {
-            renderer("""{"version":"v1.0","error":{"code":"FUNCTION_FAILED","functionCallId":"c1","surfaceId":"main","message":"boom"}}""")
+            renderer("""{"version":"1.0","error":{"code":"FUNCTION_FAILED","functionCallId":"c1","surfaceId":"main","message":"boom"}}""")
         }
         assertFailsWith<SerializationException> {
-            renderer("""{"version":"v1.0","error":{"code":"FUNCTION_FAILED","message":"boom"}}""")
+            renderer("""{"version":"1.0","error":{"code":"FUNCTION_FAILED","message":"boom"}}""")
         }
     }
 
     @Test
     fun `a reserved code takes the structured error shape`() {
         val validation = assertIs<RendererErrorMessage.Validation>(
-            renderer("""{"version":"v1.0","error":{"code":"UNALLOWED_PARENT","surfaceId":"main","path":"/components/1","message":"nope"}}"""),
+            renderer("""{"version":"1.0","error":{"code":"UNALLOWED_PARENT","surfaceId":"main","path":"/components/1","message":"nope"}}"""),
         )
         assertEquals(ValidationErrorCode.UNALLOWED_PARENT, validation.validationCode)
         assertFailsWith<SerializationException> {
-            renderer("""{"version":"v1.0","error":{"code":"UNALLOWED_CHILD","surfaceId":"main","message":"nope"}}""")
+            renderer("""{"version":"1.0","error":{"code":"UNALLOWED_CHILD","surfaceId":"main","message":"nope"}}""")
         }
         assertFailsWith<A2uiFormatException> {
             RendererErrorMessage.Generic(
@@ -183,7 +184,7 @@ class MessageTest {
     fun `an action keeps the keys the schema leaves open`() {
         val action = assertIs<ActionMessage>(
             renderer(
-                """{"version":"v1.0","action":{"name":"submit","surfaceId":"main","sourceComponentId":"btn",
+                """{"version":"1.0","action":{"name":"submit","surfaceId":"main","sourceComponentId":"btn",
                    "timestamp":"2023-10-27T10:00:00Z","context":{"foo":"bar"},"vendorKey":1}}""",
             ),
         )
@@ -194,7 +195,7 @@ class MessageTest {
     @Test
     fun `an action requires the fields the schema marks required`() {
         assertFailsWith<SerializationException> {
-            renderer("""{"version":"v1.0","action":{"name":"submit","surfaceId":"main","sourceComponentId":"btn","timestamp":"t"}}""")
+            renderer("""{"version":"1.0","action":{"name":"submit","surfaceId":"main","sourceComponentId":"btn","timestamp":"t"}}""")
         }
     }
 
@@ -202,7 +203,7 @@ class MessageTest {
     fun `an action rejects a metadata object the schema closes`() {
         assertFailsWith<SerializationException> {
             renderer(
-                """{"version":"v1.0","action":{"name":"submit","surfaceId":"main","sourceComponentId":"btn",
+                """{"version":"1.0","action":{"name":"submit","surfaceId":"main","sourceComponentId":"btn",
                    "timestamp":"t","context":{},"metadata":{"unknownProperty":"value"}}}""",
             )
         }
@@ -213,11 +214,11 @@ class MessageTest {
         assertEquals(
             JsonObject(emptyMap()),
             assertIs<CreateSurfaceMessage>(
-                agent("""{"version":"v1.0","createSurface":{"surfaceId":"s","dataModel":{}}}"""),
+                agent("""{"version":"1.0","createSurface":{"surfaceId":"s","dataModel":{}}}"""),
             ).dataModel,
         )
         assertFailsWith<SerializationException> {
-            agent("""{"version":"v1.0","createSurface":{"surfaceId":"s","dataModel":"not an object"}}""")
+            agent("""{"version":"1.0","createSurface":{"surfaceId":"s","dataModel":"not an object"}}""")
         }
     }
 }

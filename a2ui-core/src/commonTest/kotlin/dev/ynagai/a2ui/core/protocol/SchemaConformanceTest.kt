@@ -116,12 +116,12 @@ class SchemaConformanceTest {
     fun `an unmodelled key on the open capability objects is carried not refused`() {
         // agent_capabilities.json / renderer_capabilities.json set no additionalProperties:false
         // on their v1.0 object. This is the one place the model was stricter than the schema.
-        val agentSource = """{"v1.0":{"supportedCatalogIds":["a"],"futureFlag":true}}"""
+        val agentSource = """{"1.0":{"supportedCatalogIds":["a"],"futureFlag":true}}"""
         val agent = json.decodeFromString<AgentCapabilities>(agentSource)
         assertEquals(mapOf("futureFlag" to JsonPrimitive(true)), agent.v1.additional)
         assertEquals(agentSource, json.encodeToString(agent))
 
-        val rendererSource = """{"v1.0":{"supportedCatalogIds":["a"],"futureFlag":true}}"""
+        val rendererSource = """{"1.0":{"supportedCatalogIds":["a"],"futureFlag":true}}"""
         val renderer = json.decodeFromString<RendererCapabilities>(rendererSource)
         assertEquals(mapOf("futureFlag" to JsonPrimitive(true)), renderer.v1.additional)
         assertEquals(rendererSource, json.encodeToString(renderer))
@@ -130,18 +130,18 @@ class SchemaConformanceTest {
     @Test
     fun `supportedCatalogIds is optional for an agent and required for a renderer`() {
         // The asymmetry is the schema's: only renderer_capabilities.json marks it required.
-        assertNull(json.decodeFromString<AgentCapabilities>("""{"v1.0":{}}""").v1.supportedCatalogIds)
+        assertNull(json.decodeFromString<AgentCapabilities>("""{"1.0":{}}""").v1.supportedCatalogIds)
         assertFailsWith<SerializationException> {
-            json.decodeFromString<RendererCapabilities>("""{"v1.0":{}}""")
+            json.decodeFromString<RendererCapabilities>("""{"1.0":{}}""")
         }
         assertFailsWith<SerializationException> {
-            json.decodeFromString<AgentCapabilities>("""{"v1.0":{"supportedCatalogIds":"a"}}""")
+            json.decodeFromString<AgentCapabilities>("""{"1.0":{"supportedCatalogIds":"a"}}""")
         }
     }
 
     @Test
     fun `an inline catalog still round trips through renderer capabilities`() {
-        val source = """{"v1.0":{"supportedCatalogIds":["a"],"inlineCatalogs":[{"catalogId":"b","protocolVersion":"1.0"}]}}"""
+        val source = """{"1.0":{"supportedCatalogIds":["a"],"inlineCatalogs":[{"catalogId":"b","protocolVersion":"1.0"}]}}"""
         val decoded = json.decodeFromString<RendererCapabilities>(source)
         assertEquals("b", decoded.v1.inlineCatalogs?.single()?.catalogId)
         assertEquals(source, json.encodeToString(decoded))

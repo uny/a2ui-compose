@@ -71,11 +71,14 @@ public sealed interface RendererEffect {
      * The agent asked the renderer to run [call].
      *
      * The renderer MUST answer with a `rendererFunctionResponse` or an `error` carrying
-     * [functionCallId], even when the function returns void.
+     * [functionCallId], even when the function returns void. [surfaceId] is the surface whose
+     * data model the call resolves against, or null for the isolated empty one -- see
+     * [dev.ynagai.a2ui.core.protocol.CallRendererFunctionMessage.surfaceId].
      */
     public data class RendererFunctionRequested(
         public val functionCallId: CallId,
         public val call: FunctionCall,
+        override val surfaceId: String? = null,
     ) : RendererEffect
 
     /** The agent answered a `callAgentFunction` the renderer had sent. */
@@ -118,6 +121,7 @@ public object MessageProcessor {
                     RendererEffect.RendererFunctionRequested(
                         message.functionCallId,
                         message.callFunction,
+                        message.surfaceId,
                     ),
                 ),
             )

@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
 private const val REFERENCE: Long = 1_756_200_600_000L
 
 private fun text(call: String, args: String): String {
-    val result = context().evaluate(call("""{"call":"$call","args":$args}"""))
+    val result = context().evaluate(call("""{"@call":"$call","args":$args}"""))
     return (result as JsonPrimitive).content
 }
 

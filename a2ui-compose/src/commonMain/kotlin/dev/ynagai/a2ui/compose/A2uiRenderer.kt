@@ -123,7 +123,8 @@ public class A2uiRenderer(
         val surface = state.surfaces[surfaceId] ?: return
         // [pointer] is the agent's, not the host's: it arrives as a component's `path` and reaches
         // here through [A2uiComponentScope.binding]. `JsonObject.write` refuses some of those --
-        // an array index past the end, a root write of a non-object -- by raising, and this is
+        // a write through a primitive, a non-numeric token on an array, an index past
+        // `JsonPointer.MAX_ARRAY_INDEX`, a root write of a non-object -- by raising, and this is
         // called from an input callback, so an uncaught raise turns one malformed `path` into a
         // crash on the first keystroke. Left unwritten instead, which is what every other
         // agent-driven path in this library does with a payload it cannot honour.

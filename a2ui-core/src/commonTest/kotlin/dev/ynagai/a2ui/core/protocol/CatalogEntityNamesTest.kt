@@ -96,19 +96,19 @@ class CatalogEntityNamesTest {
         // catalog re-admitting it is still writing into the namespace.
         listOf(
             """"${'$'}defs": {"anyFunction": {"type": "object",
-                "properties": {"call": {"const": "@evil"}}, "required": ["call"]}}""",
+                "properties": {"@call": {"const": "@evil"}}, "required": ["@call"]}}""",
             """"${'$'}defs": {"anyFunction": {"type": "object",
-                "properties": {"call": {"enum": ["required", "@evil"]}}, "required": ["call"]}}""",
+                "properties": {"@call": {"enum": ["required", "@evil"]}}, "required": ["@call"]}}""",
             """"${'$'}defs": {"anyFunction": {"oneOf": [{"type": "object",
-                "properties": {"call": {"const": "@index"}}}]}}""",
+                "properties": {"@call": {"const": "@index"}}}]}}""",
             // A non-string `enum` entry is skipped, not tripped over, and the string beside it
             // is still read.
             """"${'$'}defs": {"anyFunction": {"type": "object",
-                "properties": {"call": {"enum": [{"x": 1}, "@evil"]}}, "required": ["call"]}}""",
+                "properties": {"@call": {"enum": [{"x": 1}, "@evil"]}}, "required": ["@call"]}}""",
             // The bundled catalogs' real shape: `anyFunction` points into `functions`, and the
             // name is spelled in the definition. The key `helper` passes; the `const` does not.
             """"functions": {"helper": {"type": "object", "returnType": "void",
-                "properties": {"call": {"const": "@evil"}}, "required": ["call"]}},
+                "properties": {"@call": {"const": "@evil"}}, "required": ["@call"]}},
                 "${'$'}defs": {"anyFunction": {"oneOf": [{"${'$'}ref": "#/functions/helper"}]}}""",
         ).map(::catalogCarrying).plus(
             // Rule 3 lets `anyFunction` point at a component, so a component's `call` is a
@@ -117,7 +117,7 @@ class CatalogEntityNamesTest {
             """{"catalogId": "example.com:testing",
                 "${'$'}defs": {"anyFunction": {"oneOf": [{"${'$'}ref": "#/components/Text"}]}},
                 "components": {"Text": {"type": "object",
-                "properties": {"call": {"const": "@evil"}}, "required": ["call"]}}}""",
+                "properties": {"@call": {"const": "@evil"}}, "required": ["@call"]}}}""",
         ).forEach { catalog ->
             val failure = assertFailsWith<A2uiFormatException>("should have been refused: $catalog") {
                 json.decodeFromString<CatalogDefinition>(catalog)
@@ -132,7 +132,7 @@ class CatalogEntityNamesTest {
         json.decodeFromString<CatalogDefinition>(
             catalogCarrying(
                 """"${'$'}defs": {"anyFunction": {"type": "object",
-                    "properties": {"call": {"const": "helper"}}, "required": ["call"]}}""",
+                    "properties": {"@call": {"const": "helper"}}, "required": ["@call"]}}""",
             ),
         )
         // The check keys on the name wherever it stands (the case above is why), so a component
@@ -140,12 +140,12 @@ class CatalogEntityNamesTest {
         // spells no name and is left alone; one spelling `@here` is refused, whatever the
         // component means by it.
         json.decodeFromString<CatalogDefinition>(
-            catalogWithComponentBody("""{"type": "object", "properties": {"call": {"type": "string"}}}"""),
+            catalogWithComponentBody("""{"type": "object", "properties": {"@call": {"type": "string"}}}"""),
         )
         val component = assertFailsWith<A2uiFormatException> {
             json.decodeFromString<CatalogDefinition>(
                 catalogWithComponentBody(
-                    """{"type": "object", "properties": {"call": {"enum": ["@here", "@channel"]}}}""",
+                    """{"type": "object", "properties": {"@call": {"enum": ["@here", "@channel"]}}}""",
                 ),
             )
         }
@@ -155,16 +155,16 @@ class CatalogEntityNamesTest {
         json.decodeFromString<CatalogDefinition>(
             catalogCarrying(
                 """"functions": {"helper": {"type": "object", "returnType": "void",
-                    "properties": {"call": {"const": "helper"}}, "required": ["call"]}},
+                    "properties": {"@call": {"const": "helper"}}, "required": ["@call"]}},
                     "${'$'}defs": {"anyFunction": {"allOf": [{"${'$'}ref": "#/functions/helper"}],
-                    "not": {"properties": {"call": {"const": "@index"}}, "required": ["call"]}}}""",
+                    "not": {"properties": {"@call": {"const": "@index"}}, "required": ["@call"]}}}""",
             ),
         )
         // Shapes the check declines rather than trips over: a boolean subschema, and a `const`
         // that is not a string.
         listOf(
-            """"${'$'}defs": {"anyFunction": {"type": "object", "properties": {"call": true}}}""",
-            """"${'$'}defs": {"anyFunction": {"type": "object", "properties": {"call": {"const": 42}}}}""",
+            """"${'$'}defs": {"anyFunction": {"type": "object", "properties": {"@call": true}}}""",
+            """"${'$'}defs": {"anyFunction": {"type": "object", "properties": {"@call": {"const": 42}}}}""",
         ).forEach { carried ->
             json.decodeFromString<CatalogDefinition>(catalogCarrying(carried))
         }
@@ -178,9 +178,9 @@ class CatalogEntityNamesTest {
         // `type: string` admits every name regardless, so chasing these would only move the line.
         listOf(
             """"${'$'}defs": {"anyFunction": {"type": "object",
-                "properties": {"call": {"anyOf": [{"const": "@evil"}]}}, "required": ["call"]}}""",
+                "properties": {"@call": {"anyOf": [{"const": "@evil"}]}}, "required": ["@call"]}}""",
             """"${'$'}defs": {"evil": {"const": "@evil"}, "anyFunction": {"type": "object",
-                "properties": {"call": {"${'$'}ref": "#/${'$'}defs/evil"}}, "required": ["call"]}}""",
+                "properties": {"@call": {"${'$'}ref": "#/${'$'}defs/evil"}}, "required": ["@call"]}}""",
         ).forEach { carried ->
             json.decodeFromString<CatalogDefinition>(catalogCarrying(carried))
         }
@@ -817,7 +817,7 @@ class CatalogEntityNamesTest {
     @Test
     fun a_catalog_inlined_in_renderer_capabilities_is_checked_too() {
         val source = """
-            {"v1.0":{"supportedCatalogIds":["example.com:testing"],"inlineCatalogs":[
+            {"1.0":{"supportedCatalogIds":["example.com:testing"],"inlineCatalogs":[
               ${catalog(component = "my-component")}
             ]}}
         """.trimIndent()
@@ -945,7 +945,7 @@ class CatalogEntityNamesTest {
             "$function": {
               "type": "object",
               "properties": {
-                "call": {"const": "$function"},
+                "@call": {"const": "$function"},
                 "args": {"type": "object", "properties": {"$functionArgument": {"type": "string"}}}
               },
               "returnType": "void"

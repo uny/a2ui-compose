@@ -31,10 +31,10 @@ class CatalogDefinitionTest {
             "openUrl": {
               "type": "object",
               "properties": {
-                "call": {"const": "openUrl"},
+                "@call": {"const": "openUrl"},
                 "args": {"type": "object", "properties": {"url": {"type": "string"}}}
               },
-              "required": ["call"],
+              "required": ["@call"],
               "returnType": "void",
               "allowedCallers": "rendererOnly",
               "requiresUserActivation": true
@@ -60,7 +60,7 @@ class CatalogDefinitionTest {
         assertEquals(AllowedCallers.RENDERER_ONLY, openUrl.effectiveAllowedCallers)
         assertEquals(true, openUrl.requiresUserActivation)
         assertEquals("openUrl", openUrl.schema.callName)
-        assertEquals(listOf("call"), openUrl.schema.required)
+        assertEquals(listOf("@call"), openUrl.schema.required)
         assertEquals(
             json.parseToJsonElement("""{"type":"object","properties":{"url":{"type":"string"}}}"""),
             assertNotNull(openUrl.schema.argsSchema),
@@ -68,9 +68,18 @@ class CatalogDefinitionTest {
     }
 
     @Test
+    fun `a catalog carries its metadata extensions through`() {
+        // catalog_schema_relaxation.json #0; upstream #3757.
+        val text = """{"catalogId":"c","metadata":{"extensions":{"google_material":{"version":"3.0"}}}}"""
+        val decoded = json.decodeFromString<CatalogDefinition>(text)
+        assertEquals(setOf("google_material"), decoded.metadata?.extensions?.keys)
+        assertEquals(text, json.encodeToString(CatalogDefinition.serializer(), decoded))
+    }
+
+    @Test
     fun `the schema defaults apply when a catalog omits them`() {
         val minimal = json.decodeFromString<CatalogDefinition>(
-            """{"catalogId":"c","functions":{"f":{"type":"object","properties":{"call":{"const":"f"}},"required":["call"],"returnType":"any"}}}""",
+            """{"catalogId":"c","functions":{"f":{"type":"object","properties":{"@call":{"const":"f"}},"required":["@call"],"returnType":"any"}}}""",
         )
         assertEquals("0.9", minimal.effectiveProtocolVersion)
         assertNull(minimal.protocolVersion)
@@ -133,7 +142,7 @@ class CatalogDefinitionTest {
     @Test
     fun `renderer capabilities carry inline catalogs`() {
         val capabilities = json.decodeFromString<RendererCapabilities>(
-            """{"v1.0":{"supportedCatalogIds":["a"],"inlineCatalogs":[{"catalogId":"b"}]}}""",
+            """{"1.0":{"supportedCatalogIds":["a"],"inlineCatalogs":[{"catalogId":"b"}]}}""",
         )
         assertEquals(listOf("a"), capabilities.v1.supportedCatalogIds)
         assertEquals("b", capabilities.v1.inlineCatalogs?.single()?.catalogId)
@@ -141,14 +150,14 @@ class CatalogDefinitionTest {
 
     @Test
     fun `agent capabilities default to refusing inline catalogs`() {
-        val capabilities = json.decodeFromString<AgentCapabilities>("""{"v1.0":{"supportedCatalogIds":["a"]}}""")
+        val capabilities = json.decodeFromString<AgentCapabilities>("""{"1.0":{"supportedCatalogIds":["a"]}}""")
         assertEquals(false, capabilities.v1.acceptsInlineCatalogsOrDefault)
         assertNull(capabilities.v1.acceptsInlineCatalogs)
     }
 
     @Test
     fun `a card advertising other protocol versions is kept rather than refused`() {
-        val source = """{"v1.0":{"supportedCatalogIds":["a"]},"v0.9":{"supportedCatalogIds":["legacy"]}}"""
+        val source = """{"1.0":{"supportedCatalogIds":["a"]},"v0.9":{"supportedCatalogIds":["legacy"]}}"""
         val capabilities = json.decodeFromString<AgentCapabilities>(source)
         assertEquals(listOf("a"), capabilities.v1.supportedCatalogIds)
         assertEquals(setOf("v0.9"), capabilities.otherVersions.keys)
@@ -165,11 +174,11 @@ class CatalogDefinitionTest {
     @Test
     fun `the renderer data model is keyed by surface`() {
         val model = json.decodeFromString<RendererDataModel>(
-            """{"version":"v1.0","surfaces":{"main":{"user":{"name":"Alice"}}}}""",
+            """{"version":"1.0","surfaces":{"main":{"user":{"name":"Alice"}}}}""",
         )
         assertEquals(setOf("main"), model.surfaces.keys)
         assertEquals(
-            """{"version":"v1.0","surfaces":{"main":{"user":{"name":"Alice"}}}}""",
+            """{"version":"1.0","surfaces":{"main":{"user":{"name":"Alice"}}}}""",
             json.encodeToString(model),
         )
     }

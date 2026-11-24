@@ -652,9 +652,9 @@ class InputComponentsTest {
         ).also { renderer ->
             renderer.applyAll(
                 listOf(
-                    """{"version":"v1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
-                    """{"version":"v1.0","updateDataModel":{"surfaceId":"$SURFACE","value":$DATA}}""",
-                    """{"version":"v1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
+                    """{"version":"1.0","createSurface":{"surfaceId":"$SURFACE","catalogId":"CATALOG_ID"}}""",
+                    """{"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","value":$DATA}}""",
+                    """{"version":"1.0","updateComponents":{"surfaceId":"$SURFACE","components":$components}}""",
                 ).map {
                     A2uiJson.strict.decodeFromString(
                         AgentToRendererMessage.serializer(),
@@ -713,7 +713,7 @@ class InputComponentsTest {
         val NAN_SLIDER = """[
           {"id":"root","component":"Column","children":["vol","after"]},
           {"id":"vol","component":"Slider","label":"Volume","min":0,"max":100,
-           "value":{"path":"/notANumber"}},
+           "value":{"@path":"/notANumber"}},
           {"id":"after","component":"Text","text":"after"}
         ]"""
 
@@ -721,51 +721,51 @@ class InputComponentsTest {
         val HUGE_STEPS_SLIDER = """[
           {"id":"root","component":"Column","children":["vol","after"]},
           {"id":"vol","component":"Slider","label":"Volume","min":0,"max":100,"steps":2147483647,
-           "value":{"path":"/volume"}},
+           "value":{"@path":"/volume"}},
           {"id":"after","component":"Text","text":"after"}
         ]"""
 
         val CHECKBOX = """[
           {"id":"root","component":"Column","children":["box","echo","literal"]},
-          {"id":"box","component":"CheckBox","label":"Subscribe","value":{"path":"/subscribe"}},
-          {"id":"echo","component":"Text","text":{"call":"formatString","args":{"value":"${'$'}{/subscribe}"}}},
+          {"id":"box","component":"CheckBox","label":"Subscribe","value":{"@path":"/subscribe"}},
+          {"id":"echo","component":"Text","text":{"@call":"formatString","args":{"value":"${'$'}{/subscribe}"}}},
           {"id":"literal","component":"CheckBox","label":"Literal","value":false}
         ]"""
 
         val PICKER = """[
           {"id":"root","component":"Column","children":["one","many"]},
           {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive",
-           "value":{"path":"/preference"},
+           "value":{"@path":"/preference"},
            "options":[{"label":"Email","value":"email"},{"label":"Phone","value":"phone"}]},
           {"id":"many","component":"ChoicePicker","variant":"multipleSelection","filterable":true,
-           "value":{"path":"/genres"},
+           "value":{"@path":"/genres"},
            "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
         ]"""
 
         val SLIDER = """[
           {"id":"root","component":"Column","children":["vol","echo"]},
           {"id":"vol","component":"Slider","label":"Volume","min":0,"max":100,"steps":4,
-           "value":{"path":"/volume"}},
-          {"id":"echo","component":"Text","text":{"call":"formatString","args":{"value":"${'$'}{/volume}"}}}
+           "value":{"@path":"/volume"}},
+          {"id":"echo","component":"Text","text":{"@call":"formatString","args":{"value":"${'$'}{/volume}"}}}
         ]"""
 
         val BAD_SLIDER = """[
           {"id":"root","component":"Column","children":["vol","after"]},
-          {"id":"vol","component":"Slider","label":"Volume","min":10,"max":10,"value":{"path":"/volume"}},
+          {"id":"vol","component":"Slider","label":"Volume","min":10,"max":10,"value":{"@path":"/volume"}},
           {"id":"after","component":"Text","text":"after"}
         ]"""
 
         val SLIDER_IN_ROW = """[
           {"id":"root","component":"Row","children":["vol","after"],"align":"center"},
-          {"id":"vol","component":"Slider","min":0,"max":100,"value":{"path":"/volume"}},
+          {"id":"vol","component":"Slider","min":0,"max":100,"value":{"@path":"/volume"}},
           {"id":"after","component":"Text","text":"after"}
         ]"""
 
         val BOUND_LABEL = """[
           {"id":"root","component":"Column","children":["picker"]},
           {"id":"picker","component":"ChoicePicker","variant":"mutuallyExclusive",
-           "value":{"path":"/picked"},
-           "options":[{"label":{"path":"/who"},"value":"a"}]}
+           "value":{"@path":"/picked"},
+           "options":[{"label":{"@path":"/who"},"value":"a"}]}
         ]"""
 
         /**
@@ -780,7 +780,7 @@ class InputComponentsTest {
         val MIXED = """[
           {"id":"root","component":"Column","children":["many"]},
           {"id":"many","component":"ChoicePicker","variant":"multipleSelection",
-           "value":{"path":"/mixed"},
+           "value":{"@path":"/mixed"},
            "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
         ]"""
 
@@ -788,7 +788,7 @@ class InputComponentsTest {
         val MIXED_EXCLUSIVE = """[
           {"id":"root","component":"Column","children":["one"]},
           {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive",
-           "value":{"path":"/mixed"},
+           "value":{"@path":"/mixed"},
            "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
         ]"""
 
@@ -796,7 +796,7 @@ class InputComponentsTest {
         val DUPES_MULTI = """[
           {"id":"root","component":"Column","children":["many"]},
           {"id":"many","component":"ChoicePicker","variant":"multipleSelection",
-           "value":{"path":"/dupes"},
+           "value":{"@path":"/dupes"},
            "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
         ]"""
 
@@ -804,7 +804,7 @@ class InputComponentsTest {
         val FILTERED_EXCLUSIVE = """[
           {"id":"root","component":"Column","children":["one"]},
           {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive","filterable":true,
-           "value":{"path":"/filtered"},
+           "value":{"@path":"/filtered"},
            "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
         ]"""
 
@@ -812,7 +812,7 @@ class InputComponentsTest {
         val NUMERIC_MATCH = """[
           {"id":"root","component":"Column","children":["many"]},
           {"id":"many","component":"ChoicePicker","variant":"multipleSelection",
-           "value":{"path":"/numeric"},
+           "value":{"@path":"/numeric"},
            "options":[{"label":"One","value":"1"},{"label":"Jazz","value":"jazz"}]}
         ]"""
 
@@ -820,29 +820,29 @@ class InputComponentsTest {
         val UNRESOLVED_LABEL = """[
           {"id":"root","component":"Column","children":["one"]},
           {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive",
-           "value":{"path":"/hidden"},
-           "options":[{"label":{"path":"/nope"},"value":"rock"},{"label":"Jazz","value":"jazz"}]}
+           "value":{"@path":"/hidden"},
+           "options":[{"label":{"@path":"/nope"},"value":"rock"},{"label":"Jazz","value":"jazz"}]}
         ]"""
 
         /** An exclusive picker whose one answer the agent wrote down twice. */
         val DUPES = """[
           {"id":"root","component":"Column","children":["one"]},
           {"id":"one","component":"ChoicePicker","variant":"mutuallyExclusive",
-           "value":{"path":"/dupes"},
+           "value":{"@path":"/dupes"},
            "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
         ]"""
 
         val CHIPS = """[
           {"id":"root","component":"Column","children":["many"]},
           {"id":"many","component":"ChoicePicker","variant":"multipleSelection","displayStyle":"chips",
-           "value":{"path":"/genres"},
+           "value":{"@path":"/genres"},
            "options":[{"label":"Jazz","value":"jazz"},{"label":"Rock","value":"rock"}]}
         ]"""
 
         val DATE_TIME = """[
           {"id":"root","component":"Column","children":["day","literal"]},
           {"id":"day","component":"DateTimeInput","label":"When","enableDate":true,
-           "value":{"path":"/when"}},
+           "value":{"@path":"/when"}},
           {"id":"literal","component":"DateTimeInput","label":"Literal date","enableDate":true,
            "value":"2026-01-01"}
         ]"""
@@ -850,55 +850,55 @@ class InputComponentsTest {
         val DATE_AND_TIME = """[
           {"id":"root","component":"Column","children":["appointment"]},
           {"id":"appointment","component":"DateTimeInput","label":"Appointment","enableDate":true,
-           "enableTime":true,"value":{"path":"/appointment"}}
+           "enableTime":true,"value":{"@path":"/appointment"}}
         ]"""
 
         val BOUNDED_TIME = """[
           {"id":"root","component":"Column","children":["closes","opens"]},
           {"id":"closes","component":"DateTimeInput","label":"Closes","enableTime":true,
-           "min":"09:00","max":"17:00","value":{"path":"/closes"}},
+           "min":"09:00","max":"17:00","value":{"@path":"/closes"}},
           {"id":"opens","component":"DateTimeInput","label":"Opens","enableTime":true,
-           "min":"09:00","max":"17:00","value":{"path":"/opens"}}
+           "min":"09:00","max":"17:00","value":{"@path":"/opens"}}
         ]"""
 
         val BOUNDED_DATE_TIME = """[
           {"id":"root","component":"Column","children":["held","free","handed","early"]},
           {"id":"held","component":"DateTimeInput","label":"Held","enableDate":true,"enableTime":true,
-           "min":"2026-08-15T09:00","value":{"path":"/held"}},
+           "min":"2026-08-15T09:00","value":{"@path":"/held"}},
           {"id":"free","component":"DateTimeInput","label":"Free","enableDate":true,"enableTime":true,
-           "min":"2026-08-15T09:00","value":{"path":"/free"}},
+           "min":"2026-08-15T09:00","value":{"@path":"/free"}},
           {"id":"handed","component":"DateTimeInput","label":"Handed","enableDate":true,"enableTime":true,
-           "min":"2026-08-15T09:00","value":{"path":"/handed"}},
+           "min":"2026-08-15T09:00","value":{"@path":"/handed"}},
           {"id":"early","component":"DateTimeInput","label":"Early","enableDate":true,"enableTime":true,
-           "min":"2026-08-15T09:00","value":{"path":"/early"}}
+           "min":"2026-08-15T09:00","value":{"@path":"/early"}}
         ]"""
 
         val FAR_DATE = """[
           {"id":"root","component":"Column","children":["born","after"]},
           {"id":"born","component":"DateTimeInput","label":"Born","enableDate":true,
-           "value":{"path":"/born"}},
+           "value":{"@path":"/born"}},
           {"id":"after","component":"Text","text":"after"}
         ]"""
 
         val VALIDATED = """[
           {"id":"root","component":"Column","children":["email","submit"]},
-          {"id":"email","component":"TextField","label":"Email","value":{"path":"/email"},
-           "checks":[{"condition":{"call":"required","args":{"value":{"path":"/email"}}},
+          {"id":"email","component":"TextField","label":"Email","value":{"@path":"/email"},
+           "checks":[{"condition":{"@call":"required","args":{"value":{"@path":"/email"}}},
                       "message":"Email is required"}]},
           {"id":"submit","component":"Button","child":"submit_label","variant":"primary",
            "action":{"event":{"name":"signIn"}},
-           "checks":[{"condition":{"call":"required","args":{"value":{"path":"/email"}}},
+           "checks":[{"condition":{"@call":"required","args":{"value":{"@path":"/email"}}},
                       "message":"Fix the errors first"}]},
           {"id":"submit_label","component":"Text","text":"Sign in"}
         ]"""
 
         val WARNED = """[
           {"id":"root","component":"Column","children":["amount","submit"]},
-          {"id":"amount","component":"TextField","label":"Amount","value":{"path":"/email"},
-           "checks":[{"condition":{"path":"/unusual"}}]},
+          {"id":"amount","component":"TextField","label":"Amount","value":{"@path":"/email"},
+           "checks":[{"condition":{"@path":"/unusual"}}]},
           {"id":"submit","component":"Button","child":"submit_label",
            "action":{"event":{"name":"submit"}},
-           "checks":[{"condition":{"path":"/unusual"}}]},
+           "checks":[{"condition":{"@path":"/unusual"}}]},
           {"id":"submit_label","component":"Text","text":"Submit"}
         ]"""
     }

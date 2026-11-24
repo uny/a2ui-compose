@@ -34,7 +34,7 @@ class MessageValidationTest {
     fun accepts_a_create_surface_message() {
         val result = check(
             """
-            {"version": "v1.0", "createSurface": {
+            {"version": "1.0", "createSurface": {
               "surfaceId": "s",
               "catalogId": "${BASIC.catalogId}",
               "components": [{"id": "root", "component": "Text", "text": "hi"}]
@@ -51,7 +51,7 @@ class MessageValidationTest {
         // which is exactly why a per-component pass cannot see it.
         val result = check(
             """
-            {"version": "v1.0", "createSurface": {
+            {"version": "1.0", "createSurface": {
               "surfaceId": "s", "catalogId": "${BASIC.catalogId}", "components": []
             }}
             """.trimIndent(),
@@ -64,10 +64,10 @@ class MessageValidationTest {
         // `initial_state_validation` #9 and #10 -- once through `createSurface`, once through
         // `updateComponents`, and the rule is the same both times.
         for (payload in listOf(
-            """{"version": "v1.0", "createSurface": {"surfaceId": "s",
+            """{"version": "1.0", "createSurface": {"surfaceId": "s",
                 "catalogId": "${BASIC.catalogId}",
                 "components": [{"id": "root", "component": "Surface"}]}}""",
-            """{"version": "v1.0", "updateComponents": {"surfaceId": "s",
+            """{"version": "1.0", "updateComponents": {"surfaceId": "s",
                 "components": [{"id": "x", "component": "Surface"}]}}""",
         )) {
             assertFalse(check(payload).isValid, payload)
@@ -79,7 +79,7 @@ class MessageValidationTest {
         // `initial_state_validation` #19.
         val result = check(
             """
-            {"version": "v1.0", "updateComponents": {"surfaceId": "s", "components": [
+            {"version": "1.0", "updateComponents": {"surfaceId": "s", "components": [
               {"id": "t", "component": "Text", "text": "hi", "unexpected": true}
             ]}}
             """.trimIndent(),
@@ -91,11 +91,11 @@ class MessageValidationTest {
     fun rejects_an_extension_key_that_is_not_an_identifier() {
         // `initial_state_validation` #13 at the surface level, #16 at the component level.
         for (payload in listOf(
-            """{"version": "v1.0", "createSurface": {"surfaceId": "s",
+            """{"version": "1.0", "createSurface": {"surfaceId": "s",
                 "catalogId": "${BASIC.catalogId}",
                 "metadata": {"extensions": {"bad-key": 1}},
                 "components": [{"id": "root", "component": "Text", "text": "x"}]}}""",
-            """{"version": "v1.0", "updateComponents": {"surfaceId": "s", "components": [
+            """{"version": "1.0", "updateComponents": {"surfaceId": "s", "components": [
                 {"id": "t", "component": "Text", "text": "x",
                  "metadata": {"extensions": {"123bad": 1}}}]}}""",
         )) {
@@ -109,9 +109,9 @@ class MessageValidationTest {
         // The call is well-formed on its own; only the message says the id is not optional here.
         val result = check(
             """
-            {"version": "v1.0", "callRendererFunction": {
+            {"version": "1.0", "callRendererFunction": {
               "functionCallId": "c1",
-              "callFunction": {"call": "required", "args": {"value": "a"}}
+              "callFunction": {"@call": "required", "args": {"value": "a"}}
             }}
             """.trimIndent(),
         )
@@ -125,9 +125,9 @@ class MessageValidationTest {
         // catalog -- and that one defines only `openUrl` and `pingAgent`, so `required` is not a
         // function `anyFunction` reaches and the message is refused.
         val payload = """
-            {"version": "v1.0", "callRendererFunction": {
+            {"version": "1.0", "callRendererFunction": {
               "functionCallId": "c1",
-              "callFunction": {"call": "required", "catalogId": "${BASIC.catalogId}",
+              "callFunction": {"@call": "required", "catalogId": "${BASIC.catalogId}",
                                "args": {"value": {"nested": "object"}}}
             }}
         """.trimIndent()
@@ -141,7 +141,7 @@ class MessageValidationTest {
     fun checks_a_renderer_to_agent_message_against_the_other_document() {
         val result = check(
             """
-            {"version": "v1.0", "action": {
+            {"version": "1.0", "action": {
               "name": "go", "surfaceId": "s", "sourceComponentId": "b",
               "timestamp": "2026-08-27T09:00:00Z", "context": {}
             }}
@@ -164,9 +164,9 @@ class MessageValidationTest {
         // before a checker ever sees it.
         val result = check(
             """
-            {"version": "v1.0", "updateComponents": {"surfaceId": "s", "components": [
+            {"version": "1.0", "updateComponents": {"surfaceId": "s", "components": [
               {"id": "t", "component": "Text",
-               "text": {"call": "formatString", "args": {"template": "hi"}, "junk": 1}}
+               "text": {"@call": "formatString", "args": {"template": "hi"}, "junk": 1}}
             ]}}
             """.trimIndent(),
         )
@@ -175,7 +175,7 @@ class MessageValidationTest {
 
     @Test
     fun rejects_a_message_that_names_no_known_type() {
-        assertFalse(check("""{"version": "v1.0", "somethingElse": {}}""").isValid)
+        assertFalse(check("""{"version": "1.0", "somethingElse": {}}""").isValid)
     }
 
     @Test
@@ -194,15 +194,15 @@ class MessageValidationTest {
     fun accepts_the_accessibility_attributes_the_protocol_defines() {
         for (attributes in listOf(
             """{"label": "Submit"}""",
-            """{"label": {"path": "/labels/submit"}}""",
+            """{"label": {"@path": "/labels/submit"}}""",
             """{"description": "Sends the form", "live": "polite"}""",
             """{"hidden": true}""",
-            """{"hidden": {"call": "not", "catalogId": "${BASIC.catalogId}",
+            """{"hidden": {"@call": "not", "catalogId": "${BASIC.catalogId}",
                  "args": {"value": true}}}""",
             """{"label": "x", "description": "y", "live": "assertive", "hidden": false}""",
         )) {
             val result = check(
-                """{"version": "v1.0", "updateComponents": {"surfaceId": "s", "components": [
+                """{"version": "1.0", "updateComponents": {"surfaceId": "s", "components": [
                     {"id": "t", "component": "Text", "text": "x", "accessibility": $attributes}]}}""",
             )
             assertTrue(result.isValid, "$attributes -> ${result.violations}")
@@ -218,7 +218,7 @@ class MessageValidationTest {
             """{"role": "button"}""",
         )) {
             val result = check(
-                """{"version": "v1.0", "updateComponents": {"surfaceId": "s", "components": [
+                """{"version": "1.0", "updateComponents": {"surfaceId": "s", "components": [
                     {"id": "t", "component": "Text", "text": "x", "accessibility": $attributes}]}}""",
             )
             assertFalse(result.isValid, "$attributes should have been rejected")

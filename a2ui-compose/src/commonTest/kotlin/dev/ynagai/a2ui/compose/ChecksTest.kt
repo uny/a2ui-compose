@@ -170,6 +170,9 @@ class ChecksTest {
             assertEquals(listOf("Check this"), failures.map { it.message }, id)
             assertTrue(failures.hasError(), "$id should disable the action it gates")
         }
+        // The control: the same bound shape over a boolean passes, so the two failures above come
+        // from the value, not from `and`/`not` failing to resolve the `@path` inside them.
+        assertEquals(emptyList(), scopeFor("and_of_a_true").checkFailures())
     }
 
     @Test
@@ -277,7 +280,8 @@ class ChecksTest {
               "stringFalse":"false",
               "anArray":[true],
               "aFloatZero":0.0,
-              "aNegativeZero":-0
+              "aNegativeZero":-0,
+              "aTrue":true
             }}}
             """.trimIndent(),
             """
@@ -330,6 +334,8 @@ class ChecksTest {
                "checks":[{"condition":{"@path":"/aNegativeZero"},"message":"Check this"}]},
               {"id":"and_of_a_string_true","component":"TextField","label":"X","value":{"@path":"/blank"},
                "checks":[{"condition":{"@call":"and","args":{"values":[{"@path":"/stringTrue"}]}},"message":"Check this"}]},
+              {"id":"and_of_a_true","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@call":"and","args":{"values":[{"@path":"/aTrue"}]}},"message":"Check this"}]},
               {"id":"not_of_a_zero","component":"TextField","label":"X","value":{"@path":"/blank"},
                "checks":[{"condition":{"@call":"not","args":{"value":{"@path":"/aZero"}}},"message":"Check this"}]},
               {"id":"absent_path","component":"TextField","label":"X","value":{"@path":"/blank"},

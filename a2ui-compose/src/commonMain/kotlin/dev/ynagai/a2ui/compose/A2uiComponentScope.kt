@@ -182,8 +182,10 @@ public data class A2uiComponentScope internal constructor(
      * reads as the check's outcome rather than as unreadable. An object is coerced when its `valid`
      * is a boolean -- the rule upstream's three SDKs apply, and the one `checks` uses -- whatever
      * its other fields hold: a `message` of `null` or a `severity` the protocol does not define
-     * does not make it unreadable. An object whose `valid` is not a boolean reads as null, and the
-     * rest of the coercion table (strings, numbers, other objects) is not yet applied.
+     * does not make it unreadable. A primitive reads through `booleanOrNull`, so `true`/`false`
+     * and the strings `"true"`/`"false"` in any letter case are read. The rest of the coercion
+     * table is not yet applied: a number, any other string, an array and an object whose `valid`
+     * is not a boolean read as null, where `checks` reads them by the table.
      */
     public fun boolean(name: String): Boolean? = when (val resolved = value(name)) {
         is JsonPrimitive -> resolved.booleanOrNull

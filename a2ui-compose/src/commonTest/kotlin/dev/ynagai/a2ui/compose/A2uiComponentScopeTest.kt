@@ -41,10 +41,15 @@ class A2uiComponentScopeTest {
         // `result.valid`". Read as unreadable, a CheckBox bound to a check drew unchecked.
         assertEquals(true, scopeFor("checked").boolean("value"))
         assertEquals(false, scopeFor("unchecked").boolean("value"))
-        // Read by the rule `checks` applies to the same value: an object that does not decode as a
-        // ValidationResult -- here a `severity` the protocol does not define -- is unreadable in
-        // both places, rather than a verdict here and nothing there.
-        assertEquals(null, scopeFor("loose").boolean("value"))
+        // Read by the rule `checks` applies to the same value, which is upstream's: an object whose
+        // `valid` is a boolean is a ValidationResult whatever else it holds. TS `validityOf`,
+        // Python `validity_of` and Swift `coercedDynamicBoolean` all read these two as their
+        // `valid`; a strict decode read them as unreadable.
+        assertEquals(true, scopeFor("loose").boolean("value"))
+        assertEquals(false, scopeFor("null_message").boolean("value"))
+        // An object whose `valid` is not a boolean is not one. Upstream coerces it to false through
+        // the rest of the coercion table, which this does not apply yet; it stays unreadable.
+        assertEquals(null, scopeFor("string_valid").boolean("value"))
     }
 
     @Test
@@ -401,14 +406,18 @@ class A2uiComponentScopeTest {
               {"id":"money","component":"Text","text":{"@call":"formatCurrency","args":{"value":1234.5,"currency":"JPY"}}},
               {"id":"checked","component":"CheckBox","label":"x","value":{"@call":"required","args":{"value":"present"}}},
               {"id":"unchecked","component":"CheckBox","label":"x","value":{"@call":"required","args":{"value":""}}},
-              {"id":"loose","component":"CheckBox","label":"x","value":{"@path":"/notAResult"}}
+              {"id":"loose","component":"CheckBox","label":"x","value":{"@path":"/unknownSeverity"}},
+              {"id":"null_message","component":"CheckBox","label":"x","value":{"@path":"/nullMessage"}},
+              {"id":"string_valid","component":"CheckBox","label":"x","value":{"@path":"/stringValid"}}
             ]}}
             """.trimIndent(),
             """
             {"version":"1.0","updateDataModel":{"surfaceId":"$SURFACE","value":{
               "user":{"name":"Ada"},
               "items":[{"label":"one"},{"label":"two"},{"label":"three"}],
-              "notAResult":{"valid":true,"severity":"fatal"}
+              "unknownSeverity":{"valid":true,"severity":"fatal"},
+              "nullMessage":{"valid":false,"message":null,"code":null},
+              "stringValid":{"valid":"true"}
             }}}
             """.trimIndent(),
         ).map { text ->

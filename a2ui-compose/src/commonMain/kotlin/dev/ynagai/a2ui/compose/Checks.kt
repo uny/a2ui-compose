@@ -122,19 +122,22 @@ private fun A2uiComponentScope.evaluateCondition(rule: CheckRule): ValidationRes
     // rule" -- what this did before -- `{"valid": false, "message": null}` from a serializer that
     // writes its nulls, or a condition resolving to a string, re-opened the gate the agent wrote.
     // `a2ui_protocol.md` ("`DynamicBoolean` and `CheckRule` Coercion", rule 3) says what each
-    // shape means, so a condition and the same value under `and`/`not` agree; a `false` reading
-    // takes the rule's own message and `Severity.DEFAULT`, as rule 2 asks.
+    // shape means; a `false` reading takes the rule's own message and `Severity.DEFAULT`, as rule
+    // 2 asks. **This reading covers a bare condition only.** The core evaluator's `and`/`or`/`not`
+    // accept a boolean or a validity and raise on anything else, so the same `"true"` or `1`
+    // passes here and fails as `and(values: ["true"])` or `not(value: 1)` -- through the raising
+    // branch above, which fails closed rather than opening the gate.
     return ValidationResult(valid = coercedBoolean(element))
 }
 
 /**
  * [element] by rule 3 of the protocol's coercion table, for a value that is neither a boolean nor a
  * `ValidationResult`: a string is `true` only when it spells `true` in any letter case, a number is
- * `true` unless it is `0`, and anything else -- an object, an array, `null` -- is `false`.
+ * `true` unless it is zero (`0`, `0.0` and `-0` alike), and an object or an array is `false`.
+ * JSON `null` never reaches this: [evaluateCondition] skips it first.
  */
 private fun coercedBoolean(element: JsonElement): Boolean {
     val primitive = element as? JsonPrimitive ?: return false
-    if (primitive is JsonNull) return false
     if (primitive.isString) return primitive.content.equals("true", ignoreCase = true)
     return primitive.booleanOrNull ?: primitive.doubleOrNull?.let { it != 0.0 } ?: false
 }

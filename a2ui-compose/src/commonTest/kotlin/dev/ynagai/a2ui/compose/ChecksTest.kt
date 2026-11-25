@@ -148,6 +148,31 @@ class ChecksTest {
     }
 
     @Test
+    fun a_zero_of_any_spelling_fails() {
+        // Rule 3 says a number is `true` unless it is zero. `0.0` and `-0` are zero too, and a
+        // reading that compared the literal instead of the value would let them through.
+        for (id in listOf("a_float_zero", "a_negative_zero")) {
+            val failures = scopeFor(id).checkFailures()
+            assertEquals(listOf("Check this"), failures.map { it.message }, id)
+            assertTrue(failures.hasError(), "$id should disable the action it gates")
+        }
+    }
+
+    @Test
+    fun a_logic_function_over_a_value_that_is_not_a_validity_fails_closed() {
+        // The coercion table above applies to a bare condition only. `and`/`or`/`not` in core
+        // accept a boolean or a validity and raise on anything else, so `"TRUE"` under `and` and
+        // `0` under `not` -- which the table would read as passing -- raise, and a raising
+        // condition fails. Pinned so that the divergence is visible, and so that it stays on the
+        // closed side until the logic functions read the same table.
+        for (id in listOf("and_of_a_string_true", "not_of_a_zero")) {
+            val failures = scopeFor(id).checkFailures()
+            assertEquals(listOf("Check this"), failures.map { it.message }, id)
+            assertTrue(failures.hasError(), "$id should disable the action it gates")
+        }
+    }
+
+    @Test
     fun a_condition_that_raises_is_a_failure_rather_than_a_skip() {
         // The other half, and the half the user controls. `regex` refuses a subject past
         // `maxSubjectLength`, so a rule gating a `Button` on a field's contents raises the moment
@@ -250,7 +275,9 @@ class ChecksTest {
               "aZero":0,
               "stringTrue":"TRUE",
               "stringFalse":"false",
-              "anArray":[true]
+              "anArray":[true],
+              "aFloatZero":0.0,
+              "aNegativeZero":-0
             }}}
             """.trimIndent(),
             """
@@ -297,6 +324,14 @@ class ChecksTest {
                "checks":[{"condition":{"@path":"/noValid"},"message":"Check this"}]},
               {"id":"string_valid","component":"TextField","label":"X","value":{"@path":"/blank"},
                "checks":[{"condition":{"@path":"/stringValid"},"message":"Check this"}]},
+              {"id":"a_float_zero","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/aFloatZero"},"message":"Check this"}]},
+              {"id":"a_negative_zero","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/aNegativeZero"},"message":"Check this"}]},
+              {"id":"and_of_a_string_true","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@call":"and","args":{"values":[{"@path":"/stringTrue"}]}},"message":"Check this"}]},
+              {"id":"not_of_a_zero","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@call":"not","args":{"value":{"@path":"/aZero"}}},"message":"Check this"}]},
               {"id":"absent_path","component":"TextField","label":"X","value":{"@path":"/blank"},
                "checks":[{"condition":{"@path":"/nothing/here"},"message":"never shown"}]},
               {"id":"subject_too_long","component":"TextField","label":"X","value":{"@path":"/long"},

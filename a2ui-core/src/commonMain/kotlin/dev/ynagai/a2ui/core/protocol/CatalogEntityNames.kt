@@ -231,10 +231,11 @@ private fun checkSchema(root: JsonElement, owner: String, selfNames: Set<String>
                         // `properties` is it a name the rule governs -- a `$defs` entry name, a
                         // `patternProperties` regex and a `dependencies` trigger are none of them.
                         if (keyword == PROPERTIES) {
-                            // The two protocol directives are the one exception: a function
+                            // The two protocol directives are one exception: a function
                             // definition has to spell `@call` to say which name it answers to,
                             // and `@` is not `XID_Start`. `run_tests.py` exempts the same pair.
-                            if (name !in RESERVED_DIRECTIVES) {
+                            // The four envelope keys are the other: see [RESERVED_ENVELOPE_KEYS].
+                            if (name !in RESERVED_DIRECTIVES && name !in RESERVED_ENVELOPE_KEYS) {
                                 requireIdentifier(name, "property name in $owner")
                             }
                             if (callIsFunction && name == CALL) requireNoSystemCall(subschema, owner)
@@ -503,6 +504,24 @@ private const val SYSTEM_FUNCTION_PREFIX: String = "@"
 
 /** The keys `a2ui_protocol.md` reserves as protocol directives, exempt from the name rule. */
 private val RESERVED_DIRECTIVES: Set<String> = setOf(DataBinding.KEY, FunctionCall.KEY)
+
+/**
+ * The component envelope keys, exempt from the name rule where a catalog declares them.
+ *
+ * Upstream renamed them into the reserved namespace after `c69ed0dc` (google/A2UI#4044, see #130):
+ * "Component-level envelope mixins (`@catalogId`, `@accessibility`, `@metadata`, and `@checks`)
+ * use the `@` sigil so they never collide with UAX #31 catalog property names" (`a2ui_protocol.md`,
+ * component envelope). They are therefore not catalog property names, and the rule that governs
+ * those does not reach them -- but a catalog may still have to declare one, as a custom input
+ * component that spells `"@checks"` inline in its `properties` rather than composing
+ * `common_types.json#/$defs/Checkable` does. Refusing that refused the whole catalog.
+ *
+ * Exactly these four, and nothing else under `@`: the namespace stays the protocol's, so an
+ * `@`-prefixed name the specification does not reserve is refused as before. Admitting the
+ * declaration is all this does; reading the prefixed keys on a component is the rest of #130.
+ */
+private val RESERVED_ENVELOPE_KEYS: Set<String> =
+    setOf("@catalogId", "@accessibility", "@metadata", "@checks")
 
 /** The property a function call's name travels in; see [requireNoSystemCall]. */
 private const val CALL: String = FunctionCall.KEY

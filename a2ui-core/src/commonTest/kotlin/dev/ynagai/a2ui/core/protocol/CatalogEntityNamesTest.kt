@@ -208,6 +208,28 @@ class CatalogEntityNamesTest {
     }
 
     @Test
+    fun a_component_may_declare_the_reserved_envelope_keys_as_properties() {
+        // The spelling a custom catalog written after google/A2UI#4044 uses for an input: the
+        // envelope key declared inline rather than composed in from `Checkable` (#130).
+        listOf("@checks", "@accessibility", "@metadata", "@catalogId").forEach {
+            val decoded = json.decodeFromString<CatalogDefinition>(catalog(componentProperty = it))
+            assertEquals(setOf("Text"), decoded.components.keys, "`$it` should have been accepted")
+        }
+    }
+
+    @Test
+    fun an_at_prefixed_property_name_the_specification_does_not_reserve_is_still_refused() {
+        // The exemption is the four envelope keys, not the `@` namespace: a near miss, a bare `@`
+        // and the old unprefixed spelling with a sigil in front of it are all still names the
+        // catalog has no business declaring.
+        listOf("@foo", "@check", "@Checks", "@", "@@checks").forEach {
+            assertFailsWith<A2uiFormatException>("`$it` should have been refused") {
+                json.decodeFromString<CatalogDefinition>(catalog(componentProperty = it))
+            }
+        }
+    }
+
+    @Test
     fun a_function_argument_name_that_is_not_an_identifier_is_refused() {
         val failure = assertFailsWith<A2uiFormatException> {
             json.decodeFromString<CatalogDefinition>(catalog(functionArgument = "target-url"))

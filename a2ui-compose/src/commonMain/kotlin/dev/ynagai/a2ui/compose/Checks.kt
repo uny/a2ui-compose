@@ -6,9 +6,13 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import dev.ynagai.a2ui.core.protocol.A2uiJson
+import dev.ynagai.a2ui.core.protocol.BoundValue
 import dev.ynagai.a2ui.core.protocol.CheckRule
+import dev.ynagai.a2ui.core.protocol.DataBinding
 import dev.ynagai.a2ui.core.protocol.Severity
 import dev.ynagai.a2ui.core.protocol.ValidationResult
+import dev.ynagai.a2ui.core.surface.JsonPointer
+import dev.ynagai.a2ui.core.surface.resolve
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -52,10 +56,11 @@ public data class A2uiCheckFailure internal constructor(
  * other object fail -- because dropping it opens the same gate for a value the agent or a host
  * function produced.
  *
- * A condition that resolves to nothing -- a path whose `updateDataModel` has not arrived -- is
- * neither of those. It is skipped, because progressive rendering is not a validation failure. The
- * evaluator answers JSON `null` for it, so an explicit `null` and a function returning `null` are
- * skipped the same way.
+ * A condition that is a bare `@path` with nothing behind it -- a path whose `updateDataModel` has
+ * not arrived -- is neither of those. It is skipped, because progressive rendering is not a
+ * validation failure. That is the only `null` a check skips: a path that holds an explicit JSON
+ * `null`, and a function call that returns `null`, fail with the rule's message, because the
+ * agent sent something and it was not "valid".
  *
  * A failure's severity comes from the result; a result that omits it is an error, per
  * [Severity.DEFAULT]. Callers that gate an interaction should gate on
@@ -88,7 +93,8 @@ public fun A2uiComponentScope.checkFailures(): List<A2uiCheckFailure> {
 
 /**
  * [rule]'s condition as a [ValidationResult]: a failure when evaluating it raises, the protocol's
- * coercion of its result otherwise, and null only when it resolves to nothing yet.
+ * coercion of its result otherwise, and null only when it is a `@path` the data model does not
+ * reach yet.
  *
  * The distinction is the whole point and it is not a detail of the implementation -- see the
  * comment on the `getOrElse` below before changing either branch. Collapsing the raising case back
@@ -111,12 +117,23 @@ private fun A2uiComponentScope.evaluateCondition(rule: CheckRule): ValidationRes
     // wrong type -- now disables the action rather than being ignored. That is the safe way for
     // this particular mistake to fail, and it is loud enough for the agent to notice.
     val element = outcome.getOrElse { return ValidationResult(valid = false) }
-    // Nothing behind the condition yet -- a path whose `updateDataModel` has not arrived. That is
-    // progressive rendering, not an answer, so the rule waits rather than failing. The evaluator
-    // answers JSON `null` for that, and for an explicit `null` in the data model and a function
-    // that returns `null` too; this cannot tell them apart, so all three are skipped (upstream
-    // fails the last two).
-    if (element is JsonNull) return null
+    // **Only an absent path waits; every other `null` fails.** The evaluator answers JSON `null`
+    // for three different things, and only the first is progressive rendering:
+    //
+    // 1. a `@path` whose `updateDataModel` has not arrived -- skipped, the rule has not run yet;
+    // 2. a `@path` that holds an explicit `null` -- the agent sent a value, and it is not a
+    //    validity;
+    // 3. a function call that returns `null` -- `formatNumber` and friends over a missing value.
+    //
+    // Skipping all three, as this did before, made the rule vanish for (2) and (3) and left the
+    // `Button` it gates enabled. The upstream SDKs fail both (TS `coerceDynamicBoolean`, Python
+    // `_process_rule_val`, Swift `makePathBoundCheck` and `coercedDynamicBoolean`); they fail (1)
+    // too, which is the one place this keeps its own reading. The evaluator cannot say which of
+    // the three it saw, so (1) is told apart here by looking the path up again the way
+    // `Evaluator.resolve` does: absent is Kotlin `null`, an explicit one is [JsonNull].
+    if (element is JsonNull) {
+        return if (isAbsentPath(rule.condition)) null else ValidationResult(valid = false)
+    }
     (element as? JsonObject)?.let(::readValidationResult)?.let { return it }
     // **Any other value is read by the protocol's coercion table, never dropped.** Read as "no
     // rule" -- what this did before -- `{"valid": false, "message": null}` from a serializer that
@@ -131,10 +148,26 @@ private fun A2uiComponentScope.evaluateCondition(rule: CheckRule): ValidationRes
 }
 
 /**
+ * Whether [condition] is a `@path` that this scope's data model does not reach.
+ *
+ * The same lookup `Evaluator.resolve` makes -- the pointer parsed, rebased on [evaluationScope],
+ * resolved against the surface's data model -- kept to the one question the evaluator's answer
+ * loses. Anything this cannot look up counts as present, so that a doubt fails the rule rather
+ * than skipping it: a function call, a pointer that will not parse (the evaluation that reached
+ * here would already have raised on it), a surface that has gone.
+ */
+private fun A2uiComponentScope.isAbsentPath(condition: BoundValue): Boolean {
+    val binding = condition as? DataBinding ?: return false
+    val model = surface?.dataModel ?: return false
+    val pointer = runCatching { JsonPointer.parse(binding.path) }.getOrNull() ?: return false
+    return evaluationScope.resolve(model, pointer) == null
+}
+
+/**
  * [element] by rule 3 of the protocol's coercion table, for a value that is neither a boolean nor a
  * `ValidationResult`: a string is `true` only when it spells `true` in any letter case, a number is
  * `true` unless it is zero (`0`, `0.0` and `-0` alike), and an object or an array is `false`.
- * JSON `null` never reaches this: [evaluateCondition] skips it first.
+ * JSON `null` never reaches this: [evaluateCondition] skips or fails it first.
  */
 private fun coercedBoolean(element: JsonElement): Boolean {
     val primitive = element as? JsonPrimitive ?: return false

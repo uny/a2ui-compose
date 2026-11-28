@@ -5,7 +5,10 @@ import dev.ynagai.a2ui.core.protocol.AgentToRendererMessage
 import dev.ynagai.a2ui.core.protocol.Severity
 import dev.ynagai.a2ui.core.protocol.ValidationResult
 import dev.ynagai.a2ui.core.surface.EvaluationScope
+import dev.ynagai.a2ui.core.surface.JsonPointer
+import dev.ynagai.a2ui.core.surface.iterate
 import dev.ynagai.a2ui.core.surface.RenderLimits
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test
@@ -74,6 +77,50 @@ class ChecksTest {
         // `updateDataModel` carrying it has arrived. A renderer that counted it as a failure would
         // disable a button for a payload that never said anything was wrong.
         assertEquals(emptyList(), scopeFor("absent_path").checkFailures())
+    }
+
+    @Test
+    fun a_path_that_holds_an_explicit_null_fails_with_the_rule_s_message() {
+        // #134. The agent wrote a value there, and `null` is not "valid": the upstream SDKs read it
+        // as `false`. Skipping it, as this did before, removed the rule and left the `Button` it
+        // gates enabled. The null is written inside the root object, because a write of `null` to
+        // the member itself deletes it -- and then it is absent, not null (asserted first, so the
+        // failure below is about an explicit null and not about a fixture that lost it).
+        val scope = scopeFor("explicit_null")
+        assertEquals(JsonNull, scope.surface!!.dataModel["explicitNull"])
+        val failures = scope.checkFailures()
+        assertEquals(listOf(A2uiCheckFailure("Check this", null, Severity.ERROR)), failures)
+        assertTrue(failures.hasError(), "an explicit null must hold the gate shut")
+    }
+
+    @Test
+    fun an_array_slot_that_holds_null_fails_and_one_past_the_end_is_absent() {
+        // An array slot that exists and holds `null` -- what a deleted element or the padding
+        // before a far index leaves behind (write rule 6) -- is a value, so it fails. An index past
+        // the end reaches nothing, which is the progressive-rendering case and is still skipped.
+        assertEquals(listOf("Check this"), scopeFor("array_hole").checkFailures().map { it.message })
+        assertEquals(emptyList(), scopeFor("past_the_array").checkFailures())
+    }
+
+    @Test
+    fun a_function_that_returns_null_fails() {
+        // `formatNumber` over a value that has not arrived answers `null` rather than raising. The
+        // condition is a call, not a path, so there is no "not arrived yet" to wait for: what came
+        // back is not a validity, and the rule fails.
+        val failures = scopeFor("function_returning_null").checkFailures()
+        assertEquals(listOf("Check this"), failures.map { it.message })
+        assertTrue(failures.hasError())
+    }
+
+    @Test
+    fun a_relative_path_is_looked_up_in_the_template_scope_it_renders_in() {
+        // Inside a list template a relative `@path` resolves against the item. The absent-or-null
+        // question has to be asked there too: `flag` on item 0 is an explicit null and fails,
+        // `missing` is not on the item at all and is skipped. Asked at the root instead, both
+        // would be absent and both would be skipped.
+        val item = EvaluationScope.Root.iterate(JsonPointer.parse("/rows"), 0)
+        assertEquals(listOf("Check this"), scopeFor("relative_null", item).checkFailures().map { it.message })
+        assertEquals(emptyList(), scopeFor("relative_absent", item).checkFailures())
     }
 
     @Test
@@ -238,7 +285,10 @@ class ChecksTest {
         assertTrue(failures.hasError())
     }
 
-    private fun scopeFor(componentId: String): A2uiComponentScope {
+    private fun scopeFor(
+        componentId: String,
+        evaluationScope: EvaluationScope = EvaluationScope.Root,
+    ): A2uiComponentScope {
         val renderer = A2uiRenderer(A2uiRendererConfig.Default
             .withClock({ "2026-08-30T00:00:00Z" }),
         ).also { it.applyAll(MESSAGES) }
@@ -246,7 +296,7 @@ class ChecksTest {
             renderer = renderer,
             surfaceId = SURFACE,
             component = renderer.state.surfaces.getValue(SURFACE).components.getValue(componentId),
-            evaluationScope = EvaluationScope.Root,
+            evaluationScope = evaluationScope,
             budget = { RenderLimits.DEFAULT.maxInstances },
             onMessage = {},
         )
@@ -281,7 +331,10 @@ class ChecksTest {
               "anArray":[true],
               "aFloatZero":0.0,
               "aNegativeZero":-0,
-              "aTrue":true
+              "aTrue":true,
+              "explicitNull":null,
+              "withHole":[true,null],
+              "rows":[{"flag":null}]
             }}}
             """.trimIndent(),
             """
@@ -340,6 +393,19 @@ class ChecksTest {
                "checks":[{"condition":{"@call":"not","args":{"value":{"@path":"/aZero"}}},"message":"Check this"}]},
               {"id":"absent_path","component":"TextField","label":"X","value":{"@path":"/blank"},
                "checks":[{"condition":{"@path":"/nothing/here"},"message":"never shown"}]},
+              {"id":"explicit_null","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/explicitNull"},"message":"Check this"}]},
+              {"id":"array_hole","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/withHole/1"},"message":"Check this"}]},
+              {"id":"past_the_array","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"/withHole/5"},"message":"never shown"}]},
+              {"id":"function_returning_null","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@call":"formatNumber","args":{"value":{"@path":"/nothing/here"}}},
+                          "message":"Check this"}]},
+              {"id":"relative_null","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"flag"},"message":"Check this"}]},
+              {"id":"relative_absent","component":"TextField","label":"X","value":{"@path":"/blank"},
+               "checks":[{"condition":{"@path":"missing"},"message":"never shown"}]},
               {"id":"subject_too_long","component":"TextField","label":"X","value":{"@path":"/long"},
                "checks":[{"condition":{"@call":"regex","args":{"pattern":"^[A-Z0-9]+$","value":{"@path":"/long"}}},
                           "message":"Letters and digits only"}]},
